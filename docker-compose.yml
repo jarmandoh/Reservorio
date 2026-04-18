@@ -1,0 +1,70 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: reservorio-db
+    environment:
+      POSTGRES_USER: reservorio
+      POSTGRES_PASSWORD: reservorio_pass
+      POSTGRES_DB: reservorio
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./backend/db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    networks:
+      - reservorio-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U reservorio -d reservorio"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: reservorio-backend
+    env_file: ./backend/.env
+    environment:
+      PORT: 3000
+      DATABASE_URL: postgres://reservorio:reservorio_pass@db:5432/reservorio
+      # Google OAuth (configurar en .env o aquí)
+      # GOOGLE_CLIENT_ID: ""
+      # GOOGLE_CLIENT_SECRET: ""
+      # GOOGLE_REDIRECT_URI: ""
+      # GOOGLE_TOKENS_KEY: ""
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - reservorio-net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: reservorio-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - reservorio-net
+
+networks:
+  reservorio-net:
+    driver: bridge
+
+volumes:
+  pgdata:

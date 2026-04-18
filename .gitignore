@@ -1,0 +1,46 @@
+# Dependencies
+node_modules/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Build outputs
+dist/
+build/
+.angular/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE / Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Docker
+pgdata/
+
+# Angular
+.angular/cache/
+frontend/.angular/
+
+# Coverage & testing
+coverage/
+.nyc_output/
+
+# Misc
+*.tgz
+*.tar.gz
+tmp/
+temp/

@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reservorio — Reserva tu servicio</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<div class="app-shell" id="app">
+
+  <!-- ── TOP BAR ── -->
+  <header class="top-bar">
+    <div class="logo-mark">
+      <span class="material-icons-round" style="font-size:1rem">event_available</span>
+    </div>
+    <span class="app-title">Reservorio</span>
+    <button class="icon-btn" id="btn-refresh" title="Actualizar" aria-label="Actualizar datos">
+      <span class="material-icons-round">refresh</span>
+    </button>
+  </header>
+
+  <!-- ── STEPPER ── -->
+  <div class="stepper" id="stepper">
+    <div class="stepper-dot active" id="dot-1"></div>
+    <div class="stepper-dot" id="dot-2"></div>
+    <div class="stepper-dot" id="dot-3"></div>
+  </div>
+
+  <!-- ══════════════════════════════
+       STEP 1 — Selección de horario
+       ══════════════════════════════ -->
+  <div id="step-1" class="page-content">
+
+    <div>
+      <p class="section-label">Paso 1 de 3</p>
+      <h2 class="headline-sm">¿Cuándo quieres venir?</h2>
+      <p class="body-md" style="color:var(--on-surface-variant);margin-top:.25rem">
+        Elige una franja horaria disponible.
+      </p>
+    </div>
+
+    <!-- Loading skeleton -->
+    <div id="slots-loading">
+      <div class="skeleton loading-bar" style="height:2.5rem;margin-bottom:.5rem"></div>
+      <div class="slots-grid">
+        <div class="skeleton loading-bar" style="height:2.2rem"></div>
+        <div class="skeleton loading-bar" style="height:2.2rem"></div>
+        <div class="skeleton loading-bar" style="height:2.2rem"></div>
+        <div class="skeleton loading-bar" style="height:2.2rem"></div>
+        <div class="skeleton loading-bar" style="height:2.2rem"></div>
+        <div class="skeleton loading-bar" style="height:2.2rem"></div>
+      </div>
+    </div>
+
+    <!-- Error state -->
+    <div id="slots-error" class="hidden" style="
+      background:var(--error-container);
+      border-radius:var(--radius-lg);
+      padding:1.25rem;
+      display:none;
+      flex-direction:column;gap:.75rem">
+      <div style="display:flex;align-items:center;gap:.5rem;color:var(--on-error-container)">
+        <span class="material-icons-round">warning</span>
+        <span class="label-lg" style="color:var(--on-error-container)">No se pudo cargar la disponibilidad</span>
+      </div>
+      <p class="body-md" id="error-msg" style="color:var(--on-error-container)"></p>
+      <p class="body-md" style="color:var(--on-error-container)">
+        Asegúrate de que la hoja de cálculo es pública 
+        (<em>Compartir → Cualquier persona con el enlace puede ver</em>).
+      </p>
+      <button class="btn btn-secondary btn-sm" onclick="Reservorio.Store.loadAll()">Reintentar</button>
+    </div>
+
+    <!-- Franjas horarias -->
+    <div id="slots-container" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem">
+        <p class="section-label" style="margin:0">Horarios disponibles</p>
+        <div id="availability-legend" style="display:flex;gap:.4rem;flex-wrap:wrap"></div>
+      </div>
+      <div class="slots-grid" id="slots-grid"></div>
+    </div>
+
+    <!-- Selected slot preview -->
+    <div id="selected-slot-preview" class="card-flat" style="display:none;gap:.5rem;flex-direction:column">
+      <p class="label-sm" style="color:var(--outline)">Tu selección</p>
+      <div style="display:flex;align-items:center;gap:.5rem">
+        <span class="material-icons-round" style="color:var(--primary);font-size:1.1rem">schedule</span>
+        <span class="title-md" id="preview-franja"></span>
+      </div>
+      <div id="preview-notas-wrap" style="display:none">
+        <span class="body-md" id="preview-notas" style="color:var(--on-surface-variant)"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════
+       STEP 2 — Selección de servicio
+       ══════════════════════════════ -->
+  <div id="step-2" class="page-content" style="display:none">
+    <div>
+      <p class="section-label">Paso 2 de 3</p>
+      <h2 class="headline-sm">¿Qué necesitas?</h2>
+      <p class="body-md" style="color:var(--on-surface-variant);margin-top:.25rem">
+        Elige el servicio que deseas reservar.
+      </p>
+    </div>
+
+    <!-- Resumen franja elegida -->
+    <div class="card" style="display:flex;align-items:center;gap:.75rem;padding:.875rem 1.25rem">
+      <span class="material-icons-round" style="color:var(--primary)">schedule</span>
+      <div>
+        <p class="label-sm" style="color:var(--outline)">Franja seleccionada</p>
+        <p class="title-md" id="step2-franja"></p>
+      </div>
+    </div>
+
+    <div id="services-loading2" style="display:none">
+      <div class="skeleton loading-bar"></div>
+      <div class="skeleton loading-bar"></div>
+    </div>
+
+    <div id="services-list" style="display:flex;flex-direction:column;gap:.5rem"></div>
+
+    <div id="no-services-msg" style="display:none" class="empty-state">
+      <span class="material-icons-round empty-icon">category</span>
+      <h3>Sin servicios configurados</h3>
+      <p>El administrador aún no ha cargado los servicios disponibles.</p>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════
+       STEP 3 — Datos del cliente
+       ══════════════════════════════ -->
+  <div id="step-3" class="page-content" style="display:none">
+    <div>
+      <p class="section-label">Paso 3 de 3</p>
+      <h2 class="headline-sm">Tus datos</h2>
+      <p class="body-md" style="color:var(--on-surface-variant);margin-top:.25rem">
+        Completa tu información para confirmar la reserva.
+      </p>
+    </div>
+
+    <!-- Resumen -->
+    <div class="card-flat" style="display:flex;flex-direction:column;gap:.75rem">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <p class="label-sm" style="color:var(--outline)">Resumen</p>
+        <button class="btn btn-tertiary btn-sm" id="btn-change-slot">Cambiar</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:.5rem">
+        <span class="material-icons-round" style="color:var(--primary);font-size:1rem">schedule</span>
+        <span class="body-md" id="step3-franja"></span>
+      </div>
+      <div style="display:flex;align-items:center;gap:.5rem">
+        <span class="material-icons-round" style="color:var(--primary);font-size:1rem">spa</span>
+        <span class="service-tag" id="step3-servicio"></span>
+      </div>
+    </div>
+
+    <form id="booking-form" novalidate style="display:flex;flex-direction:column;gap:1rem">
+      <div class="form-group">
+        <label class="form-label" for="input-nombre">Nombre completo</label>
+        <input class="form-input" id="input-nombre" type="text" placeholder="Ej. Ana García" required autocomplete="name" />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="input-telefono">Teléfono</label>
+        <input class="form-input" id="input-telefono" type="tel" placeholder="Ej. 600 123 456" required autocomplete="tel" pattern="[0-9+\s\-]{7,15}" />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="input-notas">Notas adicionales <span style="opacity:.5;font-weight:400">(opcional)</span></label>
+        <textarea class="form-textarea" id="input-notas" placeholder="Cuéntanos algo que debamos saber…"></textarea>
+      </div>
+    </form>
+  </div>
+
+  <!-- ══════════════════════════════
+       STEP 4 — Confirmación
+       ══════════════════════════════ -->
+  <div id="step-4" class="page-content" style="display:none">
+    <div class="confirmation-card">
+      <div class="confirmation-icon">
+        <span class="material-icons-round" style="font-size:2rem">check_circle</span>
+      </div>
+      <h2 class="headline-sm" style="color:#fff;margin-bottom:.5rem">¡Reserva enviada!</h2>
+      <p style="opacity:.9;font-size:.875rem">Tu solicitud fue registrada. Te contactaremos para confirmar.</p>
+    </div>
+
+    <div class="card">
+      <p class="section-label">Detalles de tu reserva</p>
+      <div style="display:flex;flex-direction:column;gap:.75rem;margin-top:.5rem">
+        <div style="display:flex;justify-content:space-between">
+          <span class="body-md" style="color:var(--on-surface-variant)">Franja</span>
+          <span class="label-lg" id="conf-franja"></span>
+        </div>
+        <div class="divider"></div>
+        <div style="display:flex;justify-content:space-between">
+          <span class="body-md" style="color:var(--on-surface-variant)">Servicio</span>
+          <span class="service-tag" id="conf-servicio"></span>
+        </div>
+        <div class="divider"></div>
+        <div style="display:flex;justify-content:space-between">
+          <span class="body-md" style="color:var(--on-surface-variant)">Nombre</span>
+          <span class="label-lg" id="conf-nombre"></span>
+        </div>
+        <div class="divider"></div>
+        <div style="display:flex;justify-content:space-between">
+          <span class="body-md" style="color:var(--on-surface-variant)">Teléfono</span>
+          <span class="label-lg" id="conf-telefono"></span>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:.75rem">
+      <div style="background:var(--primary-fixed);border-radius:var(--radius-lg);padding:1rem;display:flex;gap:.75rem;align-items:flex-start">
+        <span class="material-icons-round" style="color:var(--primary);font-size:1.1rem;margin-top:.1rem">info</span>
+        <p class="body-md" style="color:var(--primary)">La reserva está <strong>pendiente de confirmación</strong> por el administrador. Te avisaremos pronto.</p>
+      </div>
+      <button class="btn btn-secondary btn-full" id="btn-nueva-reserva">
+        <span class="material-icons-round">add</span>
+        Nueva reserva
+      </button>
+    </div>
+  </div>
+
+  <!-- ── STICKY FOOTER CTA ── -->
+  <div class="sticky-cta" id="sticky-cta">
+    <button class="btn btn-primary" id="btn-next" disabled>
+      <span id="btn-next-label">Selecciona un horario</span>
+      <span class="material-icons-round">arrow_forward</span>
+    </button>
+  </div>
+
+</div><!-- /app-shell -->
+
+<!-- ── TOAST ── -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- ── MODAL: Configurar Script URL ── -->
+<div class="modal-backdrop hidden" id="modal-script">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <h3 class="headline-sm" style="margin-bottom:.5rem">Configurar escritura</h3>
+    <p class="body-md" style="color:var(--on-surface-variant);margin-bottom:1.5rem">
+      Para guardar reservas, necesitas desplegar la Apps Script Web App de la hoja de cálculo. 
+      <a href="SETUP.md" style="color:var(--primary);font-weight:600">Ver instrucciones</a>
+    </p>
+    <div class="form-group" style="margin-bottom:1rem">
+      <label class="form-label">URL del Web App (Apps Script)</label>
+      <input class="form-input" id="input-script-url" type="url" placeholder="https://script.google.com/macros/s/…/exec" />
+    </div>
+    <div style="display:flex;gap:.75rem">
+      <button class="btn btn-secondary" style="flex:1" id="btn-cancel-script">Cancelar</button>
+      <button class="btn btn-primary" style="flex:2" id="btn-save-script">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  const { Store, showToast, writeToSheet, saveScriptUrl } = window.Reservorio;
+
+  // ── State ──────────────────────────────────────────────────────────────
+  let currentStep = 1;
+  let selectedFranja = null;
+  let selectedServicio = null;
+
+  // ── DOM refs ───────────────────────────────────────────────────────────
+  const steps       = [1,2,3,4].map(n => document.getElementById(`step-${n}`));
+  const dots        = [1,2,3].map(n => document.getElementById(`dot-${n}`));
+  const btnNext     = document.getElementById('btn-next');
+  const btnNextLbl  = document.getElementById('btn-next-label');
+  const stickyCTA   = document.getElementById('sticky-cta');
+
+  // ── Navigate steps ─────────────────────────────────────────────────────
+  function goToStep(n) {
+    currentStep = n;
+    steps.forEach((el, i) => {
+      el.style.display = (i + 1 === n) ? 'flex' : 'none';
+    });
+    dots.forEach((dot, i) => {
+      dot.classList.remove('active', 'completed');
+      if (i + 1 < n)      dot.classList.add('completed');
+      else if (i + 1 === n && n <= 3) dot.classList.add('active');
+    });
+    stickyCTA.style.display = (n === 4) ? 'none' : 'block';
+    updateNextBtn();
+  }
+
+  function updateNextBtn() {
+    if (currentStep === 1) {
+      btnNext.disabled = !selectedFranja;
+      btnNextLbl.textContent = selectedFranja ? 'Elegir servicio' : 'Selecciona un horario';
+    } else if (currentStep === 2) {
+      btnNext.disabled = !selectedServicio;
+      btnNextLbl.textContent = selectedServicio ? 'Completar datos' : 'Selecciona un servicio';
+    } else if (currentStep === 3) {
+      btnNext.disabled = false;
+      btnNextLbl.textContent = 'Confirmar reserva';
+    }
+  }
+
+  // ── Render slots ───────────────────────────────────────────────────────
+  function renderSlots(reservas) {
+    document.getElementById('slots-loading').style.display = 'none';
+    document.getElementById('slots-error').style.display = 'none';
+
+    const grid = document.getElementById('slots-grid');
+    const container = document.getElementById('slots-container');
+
+    if (!reservas.length) {
+      container.style.display = 'none';
+      document.getElementById('slots-error').style.display = 'flex';
+      document.getElementById('error-msg').textContent = 'La hoja no tiene datos o no es accesible.';
+      return;
+    }
+
+    grid.innerHTML = '';
+    container.style.display = 'block';
+
+    reservas.forEach(row => {
+      const franja = row.franja || '—';
+      const disp   = String(row.disponibilidad || '').toLowerCase();
+      const isAvail = !disp || disp.includes('dis') || disp === '1' || disp === 'true' || disp === 'sí' || disp === 'si';
+      const isTaken = disp.includes('ocup') || disp.includes('reserv') || disp === '0' || disp === 'no';
+
+      const btn = document.createElement('button');
+      btn.className = 'slot-chip' + (isTaken ? ' taken' : '');
+      btn.textContent = franja;
+      btn.disabled = isTaken;
+      btn.dataset.franja = franja;
+      btn.dataset.notas  = row.notas || '';
+
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.slot-chip').forEach(c => c.classList.remove('selected'));
+        btn.classList.add('selected');
+        selectedFranja = franja;
+
+        // Preview
+        const preview = document.getElementById('selected-slot-preview');
+        document.getElementById('preview-franja').textContent = franja;
+        const notasWrap = document.getElementById('preview-notas-wrap');
+        const notasEl   = document.getElementById('preview-notas');
+        if (row.notas) {
+          notasEl.textContent = row.notas;
+          notasWrap.style.display = 'block';
+        } else {
+          notasWrap.style.display = 'none';
+        }
+        preview.style.display = 'flex';
+        updateNextBtn();
+      });
+
+      grid.appendChild(btn);
+    });
+  }
+
+  // ── Render services ────────────────────────────────────────────────────
+  function renderServices(servicios) {
+    const list    = document.getElementById('services-list');
+    const noSvc   = document.getElementById('no-services-msg');
+    document.getElementById('services-loading2').style.display = 'none';
+    list.innerHTML = '';
+
+    if (!servicios.length) {
+      noSvc.style.display = 'flex';
+      return;
+    }
+    noSvc.style.display = 'none';
+
+    servicios.forEach(svc => {
+      const btn = document.createElement('button');
+      btn.style.cssText = `
+        display:flex;align-items:center;justify-content:space-between;
+        padding:.875rem 1.25rem;border-radius:var(--radius-xl);
+        background:var(--surface-lowest);
+        box-shadow:var(--shadow-card);
+        cursor:pointer;border:none;text-align:left;width:100%;
+        font-family:var(--font-display);font-size:.9375rem;font-weight:500;
+        color:var(--on-surface);transition:background .15s;gap:.75rem;
+      `;
+      btn.innerHTML = `
+        <div style="display:flex;align-items:center;gap:.75rem">
+          <span class="material-icons-round" style="color:var(--primary);font-size:1.25rem">spa</span>
+          <span>${svc}</span>
+        </div>
+        <span class="material-icons-round" id="check-${CSS.escape(svc)}" style="color:transparent;font-size:1.1rem">check_circle</span>
+      `;
+      btn.addEventListener('mouseenter', () => btn.style.background = 'var(--surface-low)');
+      btn.addEventListener('mouseleave', () => btn.style.background = btn.dataset.selected ? 'var(--primary-fixed)' : 'var(--surface-lowest)');
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('#services-list button').forEach(b => {
+          b.style.background = 'var(--surface-lowest)';
+          b.style.outline = 'none';
+          delete b.dataset.selected;
+          b.querySelector('span:last-child').style.color = 'transparent';
+        });
+        btn.style.background = 'var(--primary-fixed)';
+        btn.style.outline = `2px solid var(--primary)`;
+        btn.dataset.selected = 'true';
+        btn.querySelector('span:last-child').style.color = 'var(--primary)';
+        selectedServicio = svc;
+        updateNextBtn();
+      });
+      list.appendChild(btn);
+    });
+  }
+
+  // ── Next button handler ────────────────────────────────────────────────
+  btnNext.addEventListener('click', () => {
+    if (currentStep === 1 && selectedFranja) {
+      document.getElementById('step2-franja').textContent = selectedFranja;
+      renderServices(Store.servicios);
+      goToStep(2);
+    } else if (currentStep === 2 && selectedServicio) {
+      document.getElementById('step3-franja').textContent = selectedFranja;
+      document.getElementById('step3-servicio').textContent = selectedServicio;
+      goToStep(3);
+    } else if (currentStep === 3) {
+      submitBooking();
+    }
+  });
+
+  document.getElementById('btn-change-slot').addEventListener('click', () => goToStep(1));
+
+  // ── Submit booking ─────────────────────────────────────────────────────
+  async function submitBooking() {
+    const nombre    = document.getElementById('input-nombre').value.trim();
+    const telefono  = document.getElementById('input-telefono').value.trim();
+    const notas     = document.getElementById('input-notas').value.trim();
+
+    if (!nombre || !telefono) {
+      showToast('Por favor completa nombre y teléfono.', 'error');
+      return;
+    }
+    if (!/^[0-9+\s\-]{7,15}$/.test(telefono)) {
+      showToast('El teléfono no parece válido.', 'error');
+      return;
+    }
+    // Sanitize inputs
+    function sanitize(str) { return String(str).replace(/[<>"'`]/g, ''); }
+
+    btnNext.disabled = true;
+    btnNextLbl.textContent = 'Enviando…';
+
+    const payload = {
+      franja:    sanitize(selectedFranja),
+      cliente:   sanitize(nombre),
+      telefono:  sanitize(telefono),
+      servicio:  sanitize(selectedServicio),
+      notas:     sanitize(notas),
+    };
+
+    try {
+      await writeToSheet('reservar', payload);
+      showConfirmation(payload);
+    } catch (e) {
+      // Si no hay script URL, mostrar modal de configuración
+      if (e.message.includes('URL')) {
+        document.getElementById('modal-script').classList.remove('hidden');
+      } else {
+        showToast('Error al enviar: ' + e.message, 'error');
+      }
+      btnNext.disabled = false;
+      btnNextLbl.textContent = 'Confirmar reserva';
+    }
+  }
+
+  function showConfirmation(data) {
+    document.getElementById('conf-franja').textContent    = data.franja;
+    document.getElementById('conf-servicio').textContent  = data.servicio;
+    document.getElementById('conf-nombre').textContent    = data.cliente;
+    document.getElementById('conf-telefono').textContent  = data.telefono;
+    goToStep(4);
+    showToast('¡Reserva enviada con éxito!', 'success');
+  }
+
+  // ── Nueva reserva ──────────────────────────────────────────────────────
+  document.getElementById('btn-nueva-reserva').addEventListener('click', () => {
+    selectedFranja  = null;
+    selectedServicio = null;
+    document.getElementById('booking-form').reset();
+    document.getElementById('selected-slot-preview').style.display = 'none';
+    Store.loadAll();
+    goToStep(1);
+  });
+
+  // ── Refresh ────────────────────────────────────────────────────────────
+  document.getElementById('btn-refresh').addEventListener('click', () => {
+    Store.loadAll();
+    showToast('Actualizando disponibilidad…');
+  });
+
+  // ── Script URL modal ───────────────────────────────────────────────────
+  document.getElementById('btn-save-script').addEventListener('click', () => {
+    const url = document.getElementById('input-script-url').value.trim();
+    if (!url.startsWith('https://script.google.com/')) {
+      showToast('La URL debe ser de script.google.com', 'error');
+      return;
+    }
+    saveScriptUrl(url);
+    document.getElementById('modal-script').classList.add('hidden');
+    showToast('URL guardada. Intenta de nuevo tu reserva.', 'success');
+  });
+  document.getElementById('btn-cancel-script').addEventListener('click', () => {
+    document.getElementById('modal-script').classList.add('hidden');
+  });
+  document.getElementById('input-script-url').value = localStorage.getItem('reservorio_script_url') || '';
+
+  // ── Store events ───────────────────────────────────────────────────────
+  Store.on('loading', isLoading => {
+    if (isLoading && currentStep === 1) {
+      document.getElementById('slots-loading').style.display = 'block';
+      document.getElementById('slots-container').style.display = 'none';
+      document.getElementById('slots-error').style.display = 'none';
+    }
+  });
+
+  Store.on('data', ({ reservas }) => {
+    if (currentStep === 1) renderSlots(reservas);
+  });
+
+  Store.on('error', msg => {
+    document.getElementById('slots-loading').style.display = 'none';
+    const errEl = document.getElementById('slots-error');
+    document.getElementById('error-msg').textContent = msg;
+    errEl.style.display = 'flex';
+  });
+
+  // ── Init ───────────────────────────────────────────────────────────────
+  goToStep(1);
+  Store.loadAll();
+
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reservorio — Panel de Administración</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body style="background:var(--surface-low)">
+
+<!-- ══════════════ ADMIN LAYOUT ══════════════ -->
+<div class="admin-shell">
+  <div class="admin-layout">
+
+    <!-- ── SIDEBAR ── -->
+    <aside class="admin-sidebar">
+      <div style="display:flex;align-items:center;gap:.625rem;padding:.25rem .5rem .75rem;margin-bottom:.5rem;border-bottom:1px solid rgba(193,198,214,.25)">
+        <div style="
+          width:32px;height:32px;
+          background:linear-gradient(135deg,var(--primary),var(--primary-container));
+          border-radius:var(--radius-md);
+          display:flex;align-items:center;justify-content:center;
+          color:#fff;font-size:1rem;flex-shrink:0
+        ">
+          <span class="material-icons-round" style="font-size:1rem">event_available</span>
+        </div>
+        <div>
+          <p style="font-family:var(--font-display);font-size:.875rem;font-weight:700;line-height:1;color:var(--on-surface)">Reservorio</p>
+          <p style="font-size:.65rem;color:var(--outline);font-weight:500;letter-spacing:.04em">Admin Panel</p>
+        </div>
+      </div>
+
+      <button class="nav-item active" data-tab="reservas">
+        <span class="material-icons-round">calendar_month</span>
+        <span class="nav-label">Reservas</span>
+      </button>
+      <button class="nav-item" data-tab="servicios">
+        <span class="material-icons-round">spa</span>
+        <span class="nav-label">Servicios</span>
+      </button>
+      <button class="nav-item" data-tab="ajustes">
+        <span class="material-icons-round">settings</span>
+        <span class="nav-label">Ajustes</span>
+      </button>
+
+      <div style="flex:1"></div>
+
+      <a href="index.html" class="nav-item" style="color:var(--primary)">
+        <span class="material-icons-round">open_in_new</span>
+        <span class="nav-label">Vista usuario</span>
+      </a>
+    </aside>
+
+    <!-- ── MAIN CONTENT ── -->
+    <main class="admin-content">
+
+      <!-- ════════════════════
+           TAB: RESERVAS
+           ════════════════════ -->
+      <section id="tab-reservas">
+
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:1.5rem;gap:1rem;flex-wrap:wrap">
+          <div>
+            <p class="label-sm" style="color:var(--outline);margin-bottom:.25rem">Panel de administración</p>
+            <h1 class="headline-md">Reservas</h1>
+          </div>
+          <div style="display:flex;gap:.75rem;align-items:center;flex-wrap:wrap">
+            <div style="position:relative">
+              <span class="material-icons-round" style="position:absolute;left:.75rem;top:50%;transform:translateY(-50%);color:var(--outline);font-size:1.1rem;pointer-events:none">search</span>
+              <input id="search-input" type="search" placeholder="Buscar…" style="
+                background:var(--surface-lowest);border:none;border-radius:var(--radius-lg);
+                padding:.625rem .75rem .625rem 2.5rem;font-size:.875rem;color:var(--on-surface);
+                outline:none;width:200px;box-shadow:var(--shadow-card)
+              " />
+            </div>
+            <button class="btn btn-secondary btn-sm" id="btn-reload">
+              <span class="material-icons-round" style="font-size:1rem">refresh</span>
+              Actualizar
+            </button>
+          </div>
+        </div>
+
+        <!-- Stats row -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:1rem;margin-bottom:1.5rem">
+          <div class="card" style="gap:.25rem;display:flex;flex-direction:column">
+            <p class="label-sm" style="color:var(--outline)">Total franjas</p>
+            <p class="headline-md" id="stat-total">—</p>
+          </div>
+          <div class="card" style="gap:.25rem;display:flex;flex-direction:column">
+            <p class="label-sm" style="color:var(--outline)">Disponibles</p>
+            <p class="headline-md" style="color:#1b5e20" id="stat-available">—</p>
+          </div>
+          <div class="card" style="gap:.25rem;display:flex;flex-direction:column">
+            <p class="label-sm" style="color:var(--outline)">Reservadas</p>
+            <p class="headline-md" style="color:var(--primary)" id="stat-reserved">—</p>
+          </div>
+          <div class="card" style="gap:.25rem;display:flex;flex-direction:column">
+            <p class="label-sm" style="color:var(--outline)">Pendientes</p>
+            <p class="headline-md" style="color:var(--tertiary)" id="stat-pending">—</p>
+          </div>
+        </div>
+
+        <!-- Filter tabs -->
+        <div class="tabs" style="margin-bottom:1rem;max-width:420px">
+          <button class="tab-btn active" data-filter="all">Todas</button>
+          <button class="tab-btn" data-filter="disponible">Disponibles</button>
+          <button class="tab-btn" data-filter="pendiente">Pendientes</button>
+          <button class="tab-btn" data-filter="confirmado">Confirmadas</button>
+        </div>
+
+        <!-- Loading skeleton -->
+        <div id="table-loading">
+          <div style="background:var(--surface-lowest);border-radius:var(--radius-xl);padding:1.5rem;display:flex;flex-direction:column;gap:.75rem">
+            <div class="skeleton loading-bar" style="height:1.5rem;width:60%"></div>
+            <div class="skeleton loading-bar"></div>
+            <div class="skeleton loading-bar"></div>
+            <div class="skeleton loading-bar"></div>
+          </div>
+        </div>
+
+        <!-- Error -->
+        <div id="table-error" style="display:none;background:var(--error-container);border-radius:var(--radius-xl);padding:1.5rem">
+          <div style="display:flex;gap:.5rem;align-items:center;color:var(--on-error-container);margin-bottom:.75rem">
+            <span class="material-icons-round">warning</span>
+            <strong>Error al cargar los datos</strong>
+          </div>
+          <p class="body-md" style="color:var(--on-error-container)" id="table-error-msg"></p>
+          <br>
+          <p class="body-md" style="color:var(--on-error-container)">Verifica que la hoja de cálculo esté compartida públicamente.</p>
+          <br>
+          <button class="btn btn-secondary btn-sm" onclick="Reservorio.Store.loadAll()">Reintentar</button>
+        </div>
+
+        <!-- Data table -->
+        <div id="table-container" style="display:none">
+          <div class="data-table-wrapper">
+            <table class="data-table" id="reservas-table">
+              <thead>
+                <tr>
+                  <th>Franja horaria</th>
+                  <th>Disponibilidad</th>
+                  <th>Cliente</th>
+                  <th>Teléfono</th>
+                  <th>Servicio</th>
+                  <th>Notas</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="reservas-tbody"></tbody>
+            </table>
+          </div>
+          <p class="label-md" style="color:var(--outline);margin-top:.75rem;text-align:right" id="table-count"></p>
+        </div>
+
+        <!-- Empty state -->
+        <div id="table-empty" class="empty-state" style="display:none">
+          <span class="material-icons-round empty-icon">calendar_today</span>
+          <h3>No hay reservas</h3>
+          <p>Aún no se han registrado reservas o no coincide ningún filtro.</p>
+        </div>
+
+      </section>
+
+      <!-- ════════════════════
+           TAB: SERVICIOS
+           ════════════════════ -->
+      <section id="tab-servicios" style="display:none">
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:1.5rem;gap:1rem;flex-wrap:wrap">
+          <div>
+            <p class="label-sm" style="color:var(--outline);margin-bottom:.25rem">Configuración</p>
+            <h1 class="headline-md">Servicios</h1>
+          </div>
+          <button class="btn btn-primary btn-sm" id="btn-add-service">
+            <span class="material-icons-round" style="font-size:1rem">add</span>
+            Nuevo servicio
+          </button>
+        </div>
+
+        <div class="card" style="margin-bottom:1rem">
+          <p class="body-md" style="color:var(--on-surface-variant)">
+            Los servicios se leen desde la hoja <strong>"Servicios"</strong> (columna A). 
+            Añade o edita directamente en la hoja de cálculo y pulsa <em>Actualizar</em>.
+          </p>
+        </div>
+
+        <div id="services-loading-admin" style="display:none">
+          <div class="skeleton loading-bar" style="height:3rem;margin-bottom:.5rem"></div>
+          <div class="skeleton loading-bar" style="height:3rem;margin-bottom:.5rem"></div>
+        </div>
+
+        <div id="services-admin-list" style="display:flex;flex-direction:column;gap:.5rem"></div>
+
+        <div id="services-admin-empty" class="empty-state" style="display:none">
+          <span class="material-icons-round empty-icon">category</span>
+          <h3>Sin servicios</h3>
+          <p>Crea una hoja llamada "Servicios" con los nombres en la columna A.</p>
+        </div>
+
+        <!-- New service form (inline) -->
+        <div id="new-service-form" style="display:none;margin-top:1rem" class="card">
+          <p class="title-md" style="margin-bottom:1rem">Nuevo servicio</p>
+          <div class="form-group" style="margin-bottom:1rem">
+            <label class="form-label" for="input-new-service">Nombre del servicio</label>
+            <input class="form-input" id="input-new-service" type="text" placeholder="Ej. Masaje terapéutico" />
+          </div>
+          <div style="display:flex;gap:.75rem">
+            <button class="btn btn-secondary" style="flex:1" id="btn-cancel-service">Cancelar</button>
+            <button class="btn btn-primary" style="flex:2" id="btn-save-service">
+              <span class="material-icons-round" style="font-size:1rem">save</span>
+              Guardar
+            </button>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ════════════════════
+           TAB: AJUSTES
+           ════════════════════ -->
+      <section id="tab-ajustes" style="display:none">
+        <div style="margin-bottom:1.5rem">
+          <p class="label-sm" style="color:var(--outline);margin-bottom:.25rem">Configuración</p>
+          <h1 class="headline-md">Ajustes</h1>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:1rem;max-width:560px">
+
+          <!-- Hoja de cálculo -->
+          <div class="card">
+            <p class="title-md" style="margin-bottom:.5rem">
+              <span class="material-icons-round" style="vertical-align:middle;font-size:1.1rem;color:var(--primary)">table_chart</span>
+              Hoja de cálculo
+            </p>
+            <p class="body-md" style="color:var(--on-surface-variant);margin-bottom:.75rem">
+              ID configurado en <code>app.js</code>:
+            </p>
+            <code style="
+              display:block;background:var(--surface-low);padding:.75rem;
+              border-radius:var(--radius-md);font-size:.8125rem;
+              word-break:break-all;color:var(--on-surface)
+            " id="display-sheet-id"></code>
+            <div style="margin-top:.75rem;display:flex;gap:.5rem;flex-wrap:wrap">
+              <a id="link-sheet" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm">
+                <span class="material-icons-round" style="font-size:1rem">open_in_new</span>
+                Abrir hoja
+              </a>
+            </div>
+          </div>
+
+          <!-- Apps Script Web App URL -->
+          <div class="card">
+            <p class="title-md" style="margin-bottom:.5rem">
+              <span class="material-icons-round" style="vertical-align:middle;font-size:1.1rem;color:var(--primary)">code</span>
+              Apps Script Web App
+            </p>
+            <p class="body-md" style="color:var(--on-surface-variant);margin-bottom:.75rem">
+              Necesaria para escribir reservas y confirmarlas. 
+              <a href="SETUP.md" style="color:var(--primary);font-weight:600">Ver instrucciones de despliegue →</a>
+            </p>
+            <div class="form-group" style="margin-bottom:.75rem">
+              <label class="form-label">URL del Web App</label>
+              <input class="form-input" id="settings-script-url" type="url"
+                placeholder="https://script.google.com/macros/s/…/exec" />
+            </div>
+            <button class="btn btn-primary btn-sm" id="btn-save-script-settings">
+              <span class="material-icons-round" style="font-size:1rem">save</span>
+              Guardar URL
+            </button>
+          </div>
+
+          <!-- PIN admin -->
+          <div class="card">
+            <p class="title-md" style="margin-bottom:.5rem">
+              <span class="material-icons-round" style="vertical-align:middle;font-size:1.1rem;color:var(--primary)">lock</span>
+              PIN de acceso al panel
+            </p>
+            <p class="body-md" style="color:var(--on-surface-variant);margin-bottom:.75rem">
+              PIN de 4 dígitos almacenado localmente en este dispositivo.
+            </p>
+            <div class="form-group" style="margin-bottom:.75rem">
+              <label class="form-label">PIN actual</label>
+              <input class="form-input" id="input-current-pin" type="password" maxlength="4" placeholder="••••" />
+            </div>
+            <div class="form-group" style="margin-bottom:.75rem">
+              <label class="form-label">Nuevo PIN</label>
+              <input class="form-input" id="input-new-pin" type="password" maxlength="4" placeholder="••••" />
+            </div>
+            <button class="btn btn-secondary btn-sm" id="btn-save-pin">Cambiar PIN</button>
+          </div>
+
+          <div class="card-flat">
+            <p class="label-sm" style="color:var(--outline);margin-bottom:.5rem">Estructura esperada de la hoja</p>
+            <table style="width:100%;font-size:.8rem;border-collapse:collapse">
+              <tr style="background:var(--surface-container)">
+                <th style="padding:.4rem .6rem;text-align:left;color:var(--outline)">Col</th>
+                <th style="padding:.4rem .6rem;text-align:left;color:var(--outline)">Encabezado esperado</th>
+                <th style="padding:.4rem .6rem;text-align:left;color:var(--outline)">Descripción</th>
+              </tr>
+              <tr><td style="padding:.4rem .6rem">A</td><td style="padding:.4rem .6rem"><strong>Franja horaria</strong></td><td style="padding:.4rem .6rem;color:var(--on-surface-variant)">Ej. "10:00 – 11:00"</td></tr>
+              <tr><td style="padding:.4rem .6rem">B</td><td style="padding:.4rem .6rem"><strong>Disponibilidad</strong></td><td style="padding:.4rem .6rem;color:var(--on-surface-variant)">Disponible / Reservado / Pendiente / Confirmado</td></tr>
+              <tr><td style="padding:.4rem .6rem">C</td><td style="padding:.4rem .6rem"><strong>Cliente</strong></td><td style="padding:.4rem .6rem;color:var(--on-surface-variant)">Nombre del cliente</td></tr>
+              <tr><td style="padding:.4rem .6rem">D</td><td style="padding:.4rem .6rem"><strong>Teléfono</strong></td><td style="padding:.4rem .6rem;color:var(--on-surface-variant)">Número de contacto</td></tr>
+              <tr><td style="padding:.4rem .6rem">E</td><td style="padding:.4rem .6rem"><strong>Servicio</strong></td><td style="padding:.4rem .6rem;color:var(--on-surface-variant)">Servicio seleccionado</td></tr>
+              <tr><td style="padding:.4rem .6rem">F</td><td style="padding:.4rem .6rem"><strong>Notas</strong></td><td style="padding:.4rem .6rem;color:var(--on-surface-variant)">Observaciones adicionales</td></tr>
+            </table>
+          </div>
+
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<!-- ── MODAL: Confirmar/Cancelar reserva ── -->
+<div class="modal-backdrop hidden" id="modal-action">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <h3 class="headline-sm" style="margin-bottom:.5rem" id="modal-action-title">Acción</h3>
+    <p class="body-md" style="color:var(--on-surface-variant);margin-bottom:1.5rem" id="modal-action-body"></p>
+    <div style="display:flex;flex-direction:column;gap:.75rem">
+      <div class="form-group" id="modal-notas-group" style="display:none;margin-bottom:.5rem">
+        <label class="form-label">Notas (opcional)</label>
+        <textarea class="form-textarea" id="modal-notas-input" rows="2" placeholder="Añade una nota para el cliente…"></textarea>
+      </div>
+      <div style="display:flex;gap:.75rem">
+        <button class="btn btn-secondary" style="flex:1" id="btn-modal-cancel">Cancelar</button>
+        <button class="btn btn-primary" style="flex:2" id="btn-modal-confirm">Confirmar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL: PIN ── -->
+<div class="modal-backdrop" id="modal-pin">
+  <div class="modal-sheet" style="text-align:center">
+    <div class="modal-handle"></div>
+    <div style="margin:0 auto 1rem;width:56px;height:56px;background:linear-gradient(135deg,var(--primary),var(--primary-container));border-radius:50%;display:flex;align-items:center;justify-content:center">
+      <span class="material-icons-round" style="color:#fff;font-size:1.5rem">lock</span>
+    </div>
+    <h3 class="headline-sm" style="margin-bottom:.25rem">Acceso restringido</h3>
+    <p class="body-md" style="color:var(--on-surface-variant);margin-bottom:1.5rem">Introduce el PIN de administrador</p>
+    <div style="display:flex;justify-content:center;gap:.75rem;margin-bottom:1.5rem">
+      <input type="password" inputmode="numeric" maxlength="1" class="pin-box" style="width:52px;height:56px;text-align:center;font-size:1.5rem;font-weight:700;background:var(--surface-low);border:none;border-bottom:3px solid var(--outline-variant);border-radius:var(--radius-md) var(--radius-md) 0 0;outline:none;color:var(--on-surface)" />
+      <input type="password" inputmode="numeric" maxlength="1" class="pin-box" style="width:52px;height:56px;text-align:center;font-size:1.5rem;font-weight:700;background:var(--surface-low);border:none;border-bottom:3px solid var(--outline-variant);border-radius:var(--radius-md) var(--radius-md) 0 0;outline:none;color:var(--on-surface)" />
+      <input type="password" inputmode="numeric" maxlength="1" class="pin-box" style="width:52px;height:56px;text-align:center;font-size:1.5rem;font-weight:700;background:var(--surface-low);border:none;border-bottom:3px solid var(--outline-variant);border-radius:var(--radius-md) var(--radius-md) 0 0;outline:none;color:var(--on-surface)" />
+      <input type="password" inputmode="numeric" maxlength="1" class="pin-box" style="width:52px;height:56px;text-align:center;font-size:1.5rem;font-weight:700;background:var(--surface-low);border:none;border-bottom:3px solid var(--outline-variant);border-radius:var(--radius-md) var(--radius-md) 0 0;outline:none;color:var(--on-surface)" />
+    </div>
+    <p class="body-md" id="pin-error" style="color:var(--error);display:none;margin-bottom:.75rem">PIN incorrecto. Inténtalo de nuevo.</p>
+    <button class="btn btn-primary btn-full" id="btn-check-pin">Entrar</button>
+    <a href="index.html" class="btn btn-tertiary btn-full" style="margin-top:.5rem">Volver a la reserva</a>
+  </div>
+</div>
+
+<!-- ── TOAST ── -->
+<div class="toast-container" id="toast-container"></div>
+
+<script src="app.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  const { Store, showToast, writeToSheet, saveScriptUrl } = window.Reservorio;
+
+  // ── PIN guard ───────────────────────────────────────────────────────────
+  const DEFAULT_PIN = '1234';
+  function storedPin() { return localStorage.getItem('reservorio_admin_pin') || DEFAULT_PIN; }
+  function isUnlocked() { return sessionStorage.getItem('reservorio_unlocked') === '1'; }
+
+  const pinModal   = document.getElementById('modal-pin');
+  const pinBoxes   = Array.from(document.querySelectorAll('.pin-box'));
+  const pinError   = document.getElementById('pin-error');
+  const btnCheckPin = document.getElementById('btn-check-pin');
+
+  function showPinModal() { pinModal.classList.remove('hidden'); }
+  function hidePinModal() { pinModal.classList.add('hidden'); }
+
+  if (!isUnlocked()) showPinModal();
+  else hidePinModal();
+
+  // Auto-advance PIN boxes
+  pinBoxes.forEach((box, i) => {
+    box.addEventListener('input', () => {
+      box.value = box.value.replace(/\D/g, '').slice(0, 1);
+      if (box.value && i < pinBoxes.length - 1) pinBoxes[i + 1].focus();
+    });
+    box.addEventListener('keydown', e => {
+      if (e.key === 'Backspace' && !box.value && i > 0) pinBoxes[i - 1].focus();
+      if (e.key === 'Enter') checkPin();
+    });
+  });
+
+  function checkPin() {
+    const entered = pinBoxes.map(b => b.value).join('');
+    if (entered === storedPin()) {
+      sessionStorage.setItem('reservorio_unlocked', '1');
+      hidePinModal();
+      pinError.style.display = 'none';
+    } else {
+      pinError.style.display = 'block';
+      pinBoxes.forEach(b => { b.value = ''; b.style.borderBottomColor = 'var(--error)'; });
+      pinBoxes[0].focus();
+      setTimeout(() => pinBoxes.forEach(b => b.style.borderBottomColor = 'var(--outline-variant)'), 1200);
+    }
+  }
+  btnCheckPin.addEventListener('click', checkPin);
+
+  // ── PIN change ────────────────────────────────────────────────────────
+  document.getElementById('btn-save-pin').addEventListener('click', () => {
+    const curr = document.getElementById('input-current-pin').value;
+    const next = document.getElementById('input-new-pin').value;
+    if (curr !== storedPin()) { showToast('PIN actual incorrecto.', 'error'); return; }
+    if (!/^\d{4}$/.test(next)) { showToast('El nuevo PIN debe ser de 4 dígitos.', 'error'); return; }
+    localStorage.setItem('reservorio_admin_pin', next);
+    document.getElementById('input-current-pin').value = '';
+    document.getElementById('input-new-pin').value = '';
+    showToast('PIN actualizado.', 'success');
+  });
+
+  // ── Tabs ──────────────────────────────────────────────────────────────
+  const tabs = {
+    reservas:  document.getElementById('tab-reservas'),
+    servicios: document.getElementById('tab-servicios'),
+    ajustes:   document.getElementById('tab-ajustes'),
+  };
+  document.querySelectorAll('.nav-item[data-tab]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.nav-item[data-tab]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const t = btn.dataset.tab;
+      Object.entries(tabs).forEach(([k, el]) => el.style.display = k === t ? 'block' : 'none');
+      if (t === 'servicios') renderServicesAdmin(Store.servicios);
+    });
+  });
+
+  // ── Reservas table ────────────────────────────────────────────────────
+  let currentFilter = 'all';
+  let currentSearch = '';
+  let allReservas   = [];
+
+  document.querySelectorAll('.tab-btn[data-filter]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn[data-filter]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentFilter = btn.dataset.filter;
+      renderTable(allReservas);
+    });
+  });
+
+  document.getElementById('search-input').addEventListener('input', e => {
+    currentSearch = e.target.value.toLowerCase();
+    renderTable(allReservas);
+  });
+
+  document.getElementById('btn-reload').addEventListener('click', () => Store.loadAll());
+
+  function matchFilter(row) {
+    const disp = String(row.disponibilidad || '').toLowerCase();
+    if (currentFilter === 'all') return true;
+    if (currentFilter === 'disponible')  return disp.includes('dis') || disp === '' || disp === '1' || disp === 'sí' || disp === 'si';
+    if (currentFilter === 'pendiente')   return disp.includes('pend');
+    if (currentFilter === 'confirmado')  return disp.includes('conf');
+    return true;
+  }
+
+  function matchSearch(row) {
+    if (!currentSearch) return true;
+    const haystack = [row.franja, row.cliente, row.telefono, row.servicio, row.notas, row.disponibilidad]
+      .join(' ').toLowerCase();
+    return haystack.includes(currentSearch);
+  }
+
+  function dispBadge(disp) {
+    const d = String(disp || '').toLowerCase();
+    if (d.includes('conf'))  return `<span class="availability-badge badge-confirmed">Confirmado</span>`;
+    if (d.includes('pend'))  return `<span class="availability-badge badge-pending">Pendiente</span>`;
+    if (d.includes('ocup') || d.includes('reserv')) return `<span class="availability-badge badge-unavailable">Reservado</span>`;
+    if (d.includes('baja'))  return `<span class="availability-badge badge-low">Baja disp.</span>`;
+    return `<span class="availability-badge badge-available">${disp || 'Disponible'}</span>`;
+  }
+
+  function renderTable(reservas) {
+    allReservas = reservas;
+    const filtered = reservas.filter(r => matchFilter(r) && matchSearch(r));
+
+    // Stats
+    document.getElementById('stat-total').textContent    = reservas.length;
+    document.getElementById('stat-available').textContent = reservas.filter(r => {
+      const d = String(r.disponibilidad||'').toLowerCase();
+      return d.includes('dis') || d === '' || d === '1' || d === 'sí' || d === 'si';
+    }).length;
+    document.getElementById('stat-reserved').textContent  = reservas.filter(r => {
+      const d = String(r.disponibilidad||'').toLowerCase();
+      return d.includes('ocup') || d.includes('reserv') || d.includes('conf');
+    }).length;
+    document.getElementById('stat-pending').textContent   = reservas.filter(r =>
+      String(r.disponibilidad||'').toLowerCase().includes('pend')
+    ).length;
+
+    document.getElementById('table-loading').style.display = 'none';
+    document.getElementById('table-error').style.display   = 'none';
+
+    if (!filtered.length) {
+      document.getElementById('table-container').style.display = 'none';
+      document.getElementById('table-empty').style.display     = 'flex';
+      return;
+    }
+    document.getElementById('table-empty').style.display     = 'none';
+    document.getElementById('table-container').style.display  = 'block';
+
+    const tbody = document.getElementById('reservas-tbody');
+    tbody.innerHTML = '';
+
+    filtered.forEach((row, idx) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><strong>${escHtml(row.franja)}</strong></td>
+        <td>${dispBadge(row.disponibilidad)}</td>
+        <td>${escHtml(row.cliente)}</td>
+        <td>${row.telefono ? `<a href="tel:${encodeURIComponent(row.telefono)}" style="color:var(--primary)">${escHtml(row.telefono)}</a>` : '<span style="color:var(--outline)">—</span>'}</td>
+        <td>${row.servicio ? `<span class="service-tag">${escHtml(row.servicio)}</span>` : '<span style="color:var(--outline)">—</span>'}</td>
+        <td><span style="color:var(--on-surface-variant);font-size:.8125rem">${escHtml(row.notas) || '<span style="opacity:.4">—</span>'}</span></td>
+        <td>
+          <div style="display:flex;gap:.375rem;flex-wrap:wrap">
+            <button class="btn btn-sm" style="background:var(--primary-fixed);color:var(--primary);padding:.35rem .6rem"
+              data-action="confirmar" data-idx="${idx}" title="Confirmar reserva">
+              <span class="material-icons-round" style="font-size:.875rem">check</span>
+            </button>
+            <button class="btn btn-sm btn-danger" style="padding:.35rem .6rem"
+              data-action="cancelar" data-idx="${idx}" title="Cancelar reserva">
+              <span class="material-icons-round" style="font-size:.875rem">close</span>
+            </button>
+          </div>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    document.getElementById('table-count').textContent = `${filtered.length} de ${reservas.length} registros`;
+
+    // Bind action buttons
+    tbody.querySelectorAll('[data-action]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const action = btn.dataset.action;
+        const row    = filtered[parseInt(btn.dataset.idx)];
+        openActionModal(action, row);
+      });
+    });
+  }
+
+  // HTML escaping to prevent XSS
+  function escHtml(str) {
+    return String(str || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#x27;');
+  }
+
+  // ── Action modal ───────────────────────────────────────────────────────
+  let pendingAction = null;
+
+  function openActionModal(action, row) {
+    pendingAction = { action, row };
+    const modal = document.getElementById('modal-action');
+    const title = document.getElementById('modal-action-title');
+    const body  = document.getElementById('modal-action-body');
+    const notasGroup = document.getElementById('modal-notas-group');
+    const confirmBtn = document.getElementById('btn-modal-confirm');
+
+    if (action === 'confirmar') {
+      title.textContent = '¿Confirmar reserva?';
+      body.textContent  = `Se marcará como "Confirmado" la franja "${row.franja}" para ${row.cliente || 'el cliente'}.`;
+      confirmBtn.textContent = 'Confirmar';
+      confirmBtn.className = 'btn btn-primary';
+      notasGroup.style.display = 'flex';
+    } else {
+      title.textContent = '¿Cancelar reserva?';
+      body.textContent  = `Se marcará como "Disponible" (cancelada) la franja "${row.franja}". Esta acción no se puede deshacer.`;
+      confirmBtn.textContent = 'Cancelar reserva';
+      confirmBtn.className = 'btn btn-danger';
+      notasGroup.style.display = 'none';
+    }
+    modal.classList.remove('hidden');
+  }
+
+  document.getElementById('btn-modal-cancel').addEventListener('click', () => {
+    document.getElementById('modal-action').classList.add('hidden');
+    pendingAction = null;
+  });
+
+  document.getElementById('btn-modal-confirm').addEventListener('click', async () => {
+    if (!pendingAction) return;
+    const { action, row } = pendingAction;
+    const notasInput = document.getElementById('modal-notas-input').value.trim();
+    document.getElementById('modal-action').classList.add('hidden');
+    pendingAction = null;
+
+    try {
+      const newStatus = action === 'confirmar' ? 'Confirmado' : 'Disponible';
+      await writeToSheet('actualizar', {
+        rowIndex:      row._rowIndex,
+        disponibilidad: newStatus,
+        notas:         notasInput || row.notas,
+      });
+      showToast(action === 'confirmar' ? 'Reserva confirmada.' : 'Reserva cancelada.', 'success');
+      await Store.loadAll();
+    } catch (e) {
+      if (e.message.includes('URL')) {
+        showToast('Configura la URL del script en Ajustes.', 'error');
+      } else {
+        showToast('Error: ' + e.message, 'error');
+      }
+    }
+  });
+
+  // ── Services admin ─────────────────────────────────────────────────────
+  function renderServicesAdmin(servicios) {
+    document.getElementById('services-loading-admin').style.display = 'none';
+    const list = document.getElementById('services-admin-list');
+    const empty = document.getElementById('services-admin-empty');
+    list.innerHTML = '';
+
+    if (!servicios.length) {
+      empty.style.display = 'flex';
+      return;
+    }
+    empty.style.display = 'none';
+
+    servicios.forEach(svc => {
+      const item = document.createElement('div');
+      item.style.cssText = 'display:flex;align-items:center;justify-content:space-between;background:var(--surface-lowest);border-radius:var(--radius-lg);padding:.875rem 1.25rem;box-shadow:var(--shadow-card)';
+      item.innerHTML = `
+        <div style="display:flex;align-items:center;gap:.75rem">
+          <span class="material-icons-round" style="color:var(--primary);font-size:1.1rem">spa</span>
+          <span class="body-lg">${escHtml(svc)}</span>
+        </div>
+        <span class="label-sm" style="color:var(--outline)">Solo editable en la hoja</span>
+      `;
+      list.appendChild(item);
+    });
+  }
+
+  document.getElementById('btn-add-service').addEventListener('click', () => {
+    document.getElementById('new-service-form').style.display = 'block';
+    document.getElementById('input-new-service').focus();
+  });
+  document.getElementById('btn-cancel-service').addEventListener('click', () => {
+    document.getElementById('new-service-form').style.display = 'none';
+  });
+  document.getElementById('btn-save-service').addEventListener('click', async () => {
+    const name = document.getElementById('input-new-service').value.trim();
+    if (!name) { showToast('Escribe el nombre del servicio.', 'error'); return; }
+    if (name.length > 100) { showToast('Nombre demasiado largo.', 'error'); return; }
+    try {
+      await writeToSheet('addServicio', { nombre: name.replace(/[<>"'`]/g, '') });
+      showToast('Servicio añadido. Actualiza la tabla.', 'success');
+      document.getElementById('input-new-service').value = '';
+      document.getElementById('new-service-form').style.display = 'none';
+      await Store.loadAll();
+      renderServicesAdmin(Store.servicios);
+    } catch (e) {
+      showToast(e.message.includes('URL') ? 'Configura la URL del script en Ajustes.' : e.message, 'error');
+    }
+  });
+
+  // ── Settings tab ───────────────────────────────────────────────────────
+  const sheetId = window.Reservorio.SHEET_ID;
+  document.getElementById('display-sheet-id').textContent = sheetId;
+  document.getElementById('link-sheet').href = `https://docs.google.com/spreadsheets/d/${sheetId}/edit`;
+
+  const settingsScriptInput = document.getElementById('settings-script-url');
+  settingsScriptInput.value = localStorage.getItem('reservorio_script_url') || '';
+
+  document.getElementById('btn-save-script-settings').addEventListener('click', () => {
+    const url = settingsScriptInput.value.trim();
+    if (url && !url.startsWith('https://script.google.com/')) {
+      showToast('La URL debe ser de script.google.com', 'error'); return;
+    }
+    saveScriptUrl(url);
+    showToast('URL guardada correctamente.', 'success');
+  });
+
+  // ── Store events ───────────────────────────────────────────────────────
+  Store.on('loading', isLoading => {
+    if (isLoading) {
+      document.getElementById('table-loading').style.display = 'block';
+      document.getElementById('table-container').style.display = 'none';
+      document.getElementById('table-empty').style.display = 'none';
+      document.getElementById('table-error').style.display = 'none';
+    }
+  });
+
+  Store.on('data', ({ reservas, servicios }) => {
+    renderTable(reservas);
+    if (document.getElementById('tab-servicios').style.display !== 'none') {
+      renderServicesAdmin(servicios);
+    }
+  });
+
+  Store.on('error', msg => {
+    document.getElementById('table-loading').style.display = 'none';
+    document.getElementById('table-error-msg').textContent  = msg;
+    document.getElementById('table-error').style.display    = 'block';
+    document.getElementById('stat-total').textContent = '—';
+    document.getElementById('stat-available').textContent = '—';
+    document.getElementById('stat-reserved').textContent = '—';
+    document.getElementById('stat-pending').textContent = '—';
+  });
+
+  // ── Init ───────────────────────────────────────────────────────────────
+  Store.loadAll();
+
+})();
+</script>
+</body>
+</html>
