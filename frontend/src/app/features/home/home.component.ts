@@ -181,11 +181,13 @@ const CATEGORIES = ['Todos', 'Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci
       @if (!loading()) {
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           @for (biz of filtered(); track biz.id) {
-            <button
+            <div role="button" tabindex="0"
               class="g-card text-left bg-surface-lowest rounded-2xl shadow-card overflow-hidden
                      transition-all hover:-translate-y-0.5 hover:shadow-soft active:scale-[.98]
                      focus:outline-none focus:ring-2 focus:ring-primary/30 cursor-pointer"
-              (click)="goToBooking(biz)">
+              (click)="goToBooking(biz)"
+              (keydown.enter)="goToBooking(biz)"
+              (keydown.space)="goToBooking(biz)">
 
               <!-- Card header gradient -->
               <div class="relative h-28 flex items-end p-5" [style.background]="biz.gradient">
@@ -236,15 +238,23 @@ const CATEGORIES = ['Todos', 'Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci
                 </div>
 
                 <!-- CTA -->
-                <div class="flex items-center justify-between pt-1">
+                <div class="flex flex-col gap-3 pt-1 sm:flex-row sm:items-center sm:justify-between">
                   <span class="text-xs text-outline">{{ biz.category }}</span>
-                  <div class="flex items-center gap-1 text-primary text-sm font-semibold">
-                    Reservar ahora
-                    <span class="material-icons-round text-base">arrow_forward</span>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <button type="button"
+                            class="btn-secondary btn-sm"
+                            title="Ir al dashboard de negocio"
+                            (click)="$event.stopPropagation(); goBusinessLogin(biz)">
+                      Panel negocio
+                    </button>
+                    <div class="flex items-center gap-1 text-primary text-sm font-semibold">
+                      Reservar ahora
+                      <span class="material-icons-round text-base">arrow_forward</span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </button>
+            </div>
           }
         </div>
       }
@@ -370,6 +380,10 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
 
   goToBooking(biz: Business): void {
     this.router.navigate(['/booking', biz.id]);
+  }
+
+  goBusinessLogin(biz: Business): void {
+    this.router.navigate(['/business', biz.id, 'login']);
   }
 
   goAdmin(): void {

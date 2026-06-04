@@ -1,12 +1,35 @@
 ﻿'use strict';
 
 const express  = require('express');
-const { validateReservation, validateUpdate } = require('../middleware/sanitize');
-const { clean } = require('../middleware/sanitize');
+const { body, param, query } = require('express-validator');
+const { validateReservation, validateUpdate, clean } = require('../middleware/sanitize');
+const { requireAuth, canAccessBusinessId } = require('../middleware/auth');
+const { handleValidation } = require('../middleware/validation');
 const db = require('../db');
 const { syncInBackground } = require('../services/syncService');
 
 const router = express.Router();
+
+const reservationCreateValidators = [
+  body('businessId').trim().notEmpty().withMessage('businessId requerido'),
+  body('franja').trim().notEmpty().withMessage('franja requerido'),
+  body('cliente').trim().notEmpty().withMessage('cliente requerido'),
+  body('telefono').trim().notEmpty().withMessage('telefono requerido')
+    .matches(/^[0-9+\s\-]{7,15}$/).withMessage('telefono inválido'),
+  handleValidation,
+];
+
+const reservationUpdateValidators = [
+  param('id').toInt().isInt({ min: 1 }).withMessage('ID invalido'),
+  body('disponibilidad').trim().isIn(['Disponible', 'Pendiente', 'Reservado', 'Confirmado']).withMessage('Estado no permitido'),
+  body('notas').optional().trim().isLength({ max: 500 }).withMessage('notas demasiado largas'),
+  handleValidation,
+];
+
+const reservationListValidators = [
+  query('businessId').trim().notEmpty().withMessage('businessId requerido como query param'),
+  handleValidation,
+];
 
 // Deprecation header para todas las rutas legacy
 router.use((_req, res, next) => {
@@ -17,9 +40,8 @@ router.use((_req, res, next) => {
 
 // ── GET /api/reservations?businessId=xxx ──────────────────────────────────
 // Ruta legacy — requiere businessId como query param.
-router.get('/', async (req, res) => {
+router.get('/', requireAuth, reservationListValidators, async (req, res) => {
   const bizId = req.query.businessId;
-  if (!bizId) return res.status(400).json({ ok: false, message: 'businessId requerido como query param' });
   try {
     const { rows } = await db.query(
       'SELECT * FROM reservations WHERE business_id = $1 ORDER BY franja',
@@ -32,9 +54,8 @@ router.get('/', async (req, res) => {
 });
 
 // ── POST /api/reservations ────────────────────────────────────────────────
-router.post('/', validateReservation, async (req, res) => {
+router.post('/', reservationCreateValidators, validateReservation, async (req, res) => {
   const { businessId, franja, cliente, telefono, servicio, notas } = req.body ?? {};
-  if (!businessId) return res.status(400).json({ ok: false, message: 'businessId requerido' });
   try {
     const { rows: taken } = await db.query(
       `SELECT id FROM reservations WHERE business_id = $1 AND franja = $2 AND disponibilidad != 'Disponible'`,
@@ -56,15 +77,14 @@ router.post('/', validateReservation, async (req, res) => {
 });
 
 // ── PUT /api/reservations/:id ─────────────────────────────────────────────
-router.put('/:id', validateUpdate, async (req, res) => {
-  const id = parseInt(req.params.id);
-  if (!id || id < 1) return res.status(400).json({ ok: false, message: 'ID invalido' });
-  const allowed        = ['Disponible', 'Pendiente', 'Reservado', 'Confirmado'];
-  const disponibilidad = clean(req.body?.disponibilidad ?? '');
-  if (!allowed.includes(disponibilidad)) {
-    return res.status(400).json({ ok: false, message: 'Estado no permitido' });
-  }
+router.put('/:id', requireAuth, reservationUpdateValidators, async (req, res) => {
+  const id = parseInt(req.params.id, 10);
   try {
+    const { rows: existingRows } = await db.query('SELECT business_id FROM reservations WHERE id = $1', [id]);
+    if (!existingRows.length) return res.status(404).json({ ok: false, message: 'Reserva no encontrada' });
+    if (!canAccessBusinessId(req, res, existingRows[0].business_id)) return;
+
+    const disponibilidad = clean(req.body?.disponibilidad ?? '');
     const result = await db.query(
       `UPDATE reservations SET disponibilidad = $1, notas = $2, updated_at = now()
        WHERE id = $3 RETURNING *`,

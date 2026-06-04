@@ -5,11 +5,23 @@ node_modules/
 .env
 .env.*
 !.env.example
+backend/.env.example
 
 # Build outputs
 dist/
 build/
 .angular/
+
+#alucinaciones
+*.md
+tmp_pgdata
+tmp_pgdata/*
+playwright-report/
+playwright-report/*
+test-results/
+test-results/*
+playwright.config.ts
+tmp_pg_log.txt
 
 # Logs
 logs/

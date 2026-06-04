@@ -153,8 +153,13 @@ type BizTab = 'reservas' | 'servicios' | 'perfil' | 'google';
         <!-- Add service form -->
         <form [formGroup]="serviceForm" (ngSubmit)="addService()"
               class="card flex flex-col sm:flex-row gap-3">
-          <input type="text" class="form-input flex-1" formControlName="nombre"
-                 placeholder="Nombre del servicio…" />
+          <div class="flex-1">
+            <input type="text" class="form-input w-full" formControlName="nombre"
+                   placeholder="Nombre del servicio…" />
+            @if (fieldInvalid('nombre')) {
+              <p class="mt-1 text-xs text-error">El nombre del servicio es obligatorio y debe tener al menos 2 caracteres.</p>
+            }
+          </div>
           <button type="submit" class="btn-primary btn-sm whitespace-nowrap"
                   [disabled]="serviceForm.invalid || addingSvc()">
             @if (addingSvc()) {
@@ -507,6 +512,11 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
     const v = this.pinForm.value;
     return !!(v.pin && v.pinConfirm && v.pin !== v.pinConfirm);
   });
+
+  fieldInvalid(name: string): boolean {
+    const ctrl = this.serviceForm.get(name);
+    return !!ctrl && ctrl.invalid && (ctrl.dirty || ctrl.touched);
+  }
 
   readonly serviceForm = this.fb.group({
     nombre: ['', [Validators.required, Validators.minLength(2)]],

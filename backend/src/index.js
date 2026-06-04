@@ -3,16 +3,19 @@
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
-const express      = require('express');
-const cors         = require('cors');
-const helmet       = require('helmet');
-const rateLimit    = require('express-rate-limit');
-const db           = require('./db');
-const reservations = require('./routes/reservations.routes');
-const services     = require('./routes/services.routes');
-const businesses   = require('./routes/businesses.routes');
-const auth         = require('./routes/auth.routes');
-const googleOAuth  = require('./routes/google.routes');
+const { randomUUID } = require('crypto');
+const express        = require('express');
+const cors           = require('cors');
+const helmet         = require('helmet');
+const rateLimit      = require('express-rate-limit');
+const db             = require('./db');
+const reservations   = require('./routes/reservations.routes');
+const services       = require('./routes/services.routes');
+const businesses     = require('./routes/businesses.routes');
+const auth           = require('./routes/auth.routes');
+const googleOAuth    = require('./routes/google.routes');
+const uxRoutes       = require('./routes/ux.routes');
+const { notFound, errorHandler } = require('./middleware/errorHandler');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -48,26 +51,29 @@ app.use('/api/', limiter);
 
 // ── Body parsing ─────────────────────────────────────────────────────────────
 app.use(express.json({ limit: '10kb' }));
-
+// ── Request tracing ─────────────────────────────────────────────────────────────────────
+app.use((req, res, next) => {
+  req.requestId = req.headers['x-request-id'] || randomUUID();
+  res.set('X-Request-Id', req.requestId);
+  console.log(`[${req.requestId}] ${req.method} ${req.originalUrl}`);
+  next();
+});
 // ── Routes ───────────────────────────────────────────────────────────────────
 app.use('/api/reservations', reservations);
 app.use('/api/services',     services);
 app.use('/api/businesses',   businesses);
 app.use('/api/auth',         auth);
 app.use('/api/google',       googleOAuth);
+app.use('/api/ux-tips',      uxRoutes);
 
 // ── Health check ─────────────────────────────────────────────────────────────
 app.get('/health', (_req, res) => res.json({ ok: true, service: 'reservorio-api' }));
 
 // ── 404 ───────────────────────────────────────────────────────────────────────
-app.use((_req, res) => res.status(404).json({ ok: false, message: 'Ruta no encontrada' }));
+app.use(notFound);
 
 // ── Global error handler ──────────────────────────────────────────────────────
-// eslint-disable-next-line no-unused-vars
-app.use((err, _req, res, _next) => {
-  console.error('[ERROR]', err.message);
-  res.status(500).json({ ok: false, message: 'Error interno del servidor' });
-});
+app.use(errorHandler);
 
 // ── Start ─────────────────────────────────────────────────────────────────────
 app.listen(PORT, async () => {

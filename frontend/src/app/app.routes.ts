@@ -35,5 +35,10 @@ export const routes: Routes = [
       import('./features/business-admin/business-admin.component').then(m => m.BusinessAdminComponent),
     canActivate: [businessGuard],
   },
+  {
+    path: 'ux-tips',
+    loadComponent: () =>
+      import('./features/ux-tips/ux-tips.component').then(m => m.UxTipsComponent),
+  },
   { path: '**', redirectTo: '' },
 ];

@@ -11,6 +11,7 @@ import {
   NewBusinessPayload,
   Reservation,
   UpdatePayload,
+  UxTip,
 } from '../models/reservation.model';
 
 @Injectable({ providedIn: 'root' })
@@ -82,6 +83,12 @@ export class ApiService {
       .pipe(map(r => r.data ?? []), catchError(this.handleError));
   }
 
+  getUxTips(): Observable<UxTip[]> {
+    return this.http
+      .get<ApiResponse<UxTip[]>>(`${this.base}/ux-tips`)
+      .pipe(map(r => r.data ?? []), catchError(this.handleError));
+  }
+
   // ── Multi-business (admin) ────────────────────────────────────────────
 
   getAllBusinesses(token: string): Observable<Business[]> {
@@ -105,6 +112,12 @@ export class ApiService {
   toggleBusiness(id: string, token: string): Observable<ApiResponse> {
     return this.http
       .patch<ApiResponse>(`${this.base}/businesses/${id}/toggle`, {}, this.authHeader(token))
+      .pipe(catchError(this.handleError));
+  }
+
+  deleteBusiness(id: string, token: string): Observable<ApiResponse> {
+    return this.http
+      .delete<ApiResponse>(`${this.base}/businesses/${id}`, this.authHeader(token))
       .pipe(catchError(this.handleError));
   }
 

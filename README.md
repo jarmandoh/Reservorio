@@ -6,9 +6,9 @@ Sistema de reservas multi-negocio. Permite a clientes consultar disponibilidad y
 
 | Capa | Tecnología |
 |---|---|
-| Frontend | Angular 17 + Tailwind CSS, servido con Nginx |
-| Backend | Node.js + Express 5 |
-| Base de datos | PostgreSQL 16 |
+| Frontend | Angular 21 + Tailwind CSS, servido con Nginx |
+| Backend | Node.js + Express |
+| Base de datos | PostgreSQL |
 | Infraestructura | Docker + Docker Compose |
 | Autenticación | JWT (jsonwebtoken) + bcrypt |
 

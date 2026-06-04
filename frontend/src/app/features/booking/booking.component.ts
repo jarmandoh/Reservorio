@@ -25,306 +25,385 @@ interface ConfirmedBooking {
     selector: 'app-booking',
     imports: [CommonModule, ReactiveFormsModule],
     template: `
-  <div class="flex flex-col min-h-screen max-w-[430px] mx-auto bg-surface-lowest shadow-soft">
+  <div class="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(26,115,232,0.26),_transparent_32%),linear-gradient(180deg,#040814_0%,#091324_52%,#0c1628_100%)] text-white">
+    <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
+      <div class="grid gap-8 lg:min-h-[calc(100vh-5rem)] lg:grid-cols-[minmax(0,1fr)_430px] lg:items-center lg:gap-12">
 
-    <!-- TOP BAR -->
-    <header class="sticky top-0 z-10 flex items-center gap-3 px-6 py-4 bg-surface-lowest">
-      @if (step() < 4) {
-        <button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container transition"
-                (click)="goBack()" aria-label="Volver">
-          <span class="material-icons-round text-on-surface-variant">arrow_back</span>
-        </button>
-      } @else {
-        <div class="w-10 h-10 flex items-center justify-center rounded-md text-white"
-             [style.background]="business()?.gradient ?? 'linear-gradient(135deg,#005bbf,#1a73e8)'">
-          <span class="material-icons-round text-base">{{ business()?.icon ?? 'event_available' }}</span>
-        </div>
-      }
-      <span class="font-display font-bold text-[1.1rem] flex-1">{{ business()?.name ?? 'Reserva' }}</span>
-      @if (step() < 4) {
-        <button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container transition"
-                (click)="startPolling()" aria-label="Actualizar" [disabled]="loading()">
-          <span class="material-icons-round text-on-surface-variant"
-                [class.animate-spin]="loading()">refresh</span>
-        </button>
-      }
-    </header>
-
-    <!-- STEPPER -->
-    @if (step() < 4) {
-      <div class="flex items-center justify-center gap-2 py-1">
-        @for (n of [1,2,3]; track n) {
-          <div class="rounded-full transition-all duration-200"
-               [class]="dotClass(n)"></div>
-        }
-      </div>
-    }
-
-    <!-- ══ STEP 1: Horarios ══════════════════════════════════════════ -->
-    @if (step() === 1) {
-      <div class="flex-1 flex flex-col gap-6 px-6 py-5 pb-28">
-
-        <div>
-          <p class="section-label">Paso 1 de 3</p>
-          <h2 class="font-display font-semibold text-[1.375rem]">¿Cuándo quieres venir?</h2>
-          <p class="text-sm text-on-surface-variant mt-1">Elige una franja horaria disponible.</p>
-        </div>
-
-        <!-- Skeleton -->
-        @if (loading()) {
-          <div class="grid grid-cols-3 gap-2">
-            @for (i of [1,2,3,4,5,6]; track i) {
-              <div class="skeleton h-10"></div>
-            }
-          </div>
-        }
-
-        <!-- Error -->
-        @if (error() && !loading()) {
-          <div class="bg-error-container rounded-xl p-5 flex flex-col gap-3">
-            <div class="flex items-center gap-2 text-[#93000a]">
-              <span class="material-icons-round">warning</span>
-              <span class="font-semibold text-sm">No se pudo cargar la disponibilidad</span>
-            </div>
-            <p class="text-sm text-[#93000a]">{{ error() }}</p>
-            <p class="text-sm text-[#93000a]">Asegúrate de que la hoja es pública.</p>
-            <button class="btn-secondary btn-sm self-start" (click)="startPolling()">Reintentar</button>
-          </div>
-        }
-
-        <!-- Slots grid -->
-        @if (!loading() && !error()) {
-          <div>
-            <p class="section-label">Horarios disponibles</p>
-            <div class="grid grid-cols-3 gap-2">
-              @for (row of reservations(); track row._rowIndex) {
-                <button
-                  [class]="slotClass(row)"
-                  [disabled]="isTaken(row)"
-                  (click)="selectSlot(row)">
-                  {{ row.franja }}
-                </button>
-              }
-              @if (!reservations().length) {
-                <p class="col-span-3 text-sm text-outline text-center py-4">Sin franjas disponibles</p>
-              }
-            </div>
+        <section class="flex flex-col justify-center gap-8 lg:pr-6">
+          <div class="space-y-4">
+            <p class="text-[11px] font-semibold uppercase tracking-[0.35em] text-[#8fb5ff]">Reserva sin esperas</p>
+            <h1 class="font-display text-4xl font-bold leading-none sm:text-5xl lg:text-6xl">
+              Agenda tu cita en minutos.<br>
+              <span class="text-[#6ec3ff]">Rapido, claro y al instante.</span>
+            </h1>
+            <p class="max-w-xl text-sm leading-6 text-slate-300 sm:text-base">
+              Elige tu servicio, revisa la disponibilidad y deja tus datos para pedir la reserva en un flujo simple.
+            </p>
           </div>
 
-          <!-- Preview selección -->
-          @if (selectedSlot()) {
-            <div class="card-flat flex flex-col gap-2 animate-fade-in">
-              <p class="section-label">Tu selección</p>
-              <div class="flex items-center gap-2">
-                <span class="material-icons-round text-primary text-[1.1rem]">schedule</span>
-                <span class="font-display font-semibold">{{ selectedSlot()!.franja }}</span>
-              </div>
-              @if (selectedSlot()!.notas) {
-                <p class="text-sm text-on-surface-variant">{{ selectedSlot()!.notas }}</p>
-              }
-            </div>
-          }
-        }
-      </div>
-    }
-
-    <!-- ══ STEP 2: Servicios ════════════════════════════════════════ -->
-    @if (step() === 2) {
-      <div class="flex-1 flex flex-col gap-6 px-6 py-5 pb-28">
-
-        <div>
-          <p class="section-label">Paso 2 de 3</p>
-          <h2 class="font-display font-semibold text-[1.375rem]">¿Qué necesitas?</h2>
-          <p class="text-sm text-on-surface-variant mt-1">Elige el servicio que deseas reservar.</p>
-        </div>
-
-        <!-- Resumen franja -->
-        <div class="card flex items-center gap-3 py-3.5">
-          <span class="material-icons-round text-primary">schedule</span>
-          <div>
-            <p class="text-[11px] uppercase tracking-widest text-outline font-semibold">Franja</p>
-            <p class="font-display font-semibold">{{ selectedSlot()?.franja }}</p>
-          </div>
-        </div>
-
-        <!-- Skeleton servicios -->
-        @if (servicesLoading()) {
-          <div class="flex flex-col gap-2">
-            <div class="skeleton h-14"></div>
-            <div class="skeleton h-14"></div>
-          </div>
-        }
-
-        <!-- Error servicios -->
-        @if (servicesError() && !servicesLoading()) {
-          <div class="bg-error-container rounded-xl p-5 flex flex-col gap-3">
-            <div class="flex items-center gap-2 text-[#93000a]">
-              <span class="material-icons-round">warning</span>
-              <span class="font-semibold text-sm">No se pudieron cargar los servicios</span>
-            </div>
-            <p class="text-sm text-[#93000a]">{{ servicesError() }}</p>
-            <button class="btn-secondary btn-sm self-start" (click)="loadServices()">Reintentar</button>
-          </div>
-        }
-
-        <!-- Lista de servicios -->
-        @if (!servicesLoading() && !servicesError()) {
-          @if (services().length) {
-            <div class="flex flex-col gap-2">
-              @for (svc of services(); track svc) {
-                <button
-                  class="flex items-center justify-between px-5 py-4 bg-surface-lowest rounded-xl shadow-card
-                         text-left font-display font-medium text-on-surface transition cursor-pointer"
-                  [class.bg-primary-fixed]="selectedService() === svc"
-                  [style.outline]="selectedService() === svc ? '2px solid #005bbf' : 'none'"
-                  (click)="selectService(svc)">
-                  <div class="flex items-center gap-3">
-                    <span class="material-icons-round text-primary text-xl">spa</span>
-                    <span>{{ svc }}</span>
+          <div class="grid gap-3 sm:max-w-xl">
+            @for (item of instructionItems; track item.order) {
+              <div class="rounded-3xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
+                <div class="flex items-start gap-4">
+                  <span class="pt-1 font-mono text-xs tracking-[0.28em] text-[#8fb5ff]">{{ item.order }}</span>
+                  <div>
+                    <p class="font-display text-lg font-semibold text-white">{{ item.title }}</p>
+                    <p class="mt-1 text-sm leading-6 text-slate-300">{{ item.description }}</p>
                   </div>
-                  @if (selectedService() === svc) {
-                    <span class="material-icons-round text-primary text-lg">check_circle</span>
+                </div>
+              </div>
+            }
+          </div>
+
+          <div class="rounded-[2rem] border border-white/10 bg-[linear-gradient(135deg,rgba(26,115,232,0.16),rgba(142,194,255,0.08))] p-5 backdrop-blur-sm sm:max-w-xl">
+            <p class="text-xs font-semibold uppercase tracking-[0.24em] text-[#8fb5ff]">Instrucciones</p>
+            <p class="mt-3 text-sm leading-6 text-slate-200">
+              Avanza paso a paso para reservar mas rapido. Si necesitas cambiar algo, vuelve atras y ajustalo sin empezar de nuevo.
+            </p>
+          </div>
+        </section>
+
+        <section class="flex justify-center lg:justify-end">
+          <div class="w-full max-w-[430px] rounded-[2.1rem] border border-white/10 bg-white/5 p-3 shadow-[0_32px_80px_rgba(0,0,0,0.45)] backdrop-blur-md">
+            <div class="overflow-hidden rounded-[1.8rem] border border-[#d8e2ff]/20 bg-surface-lowest text-on-surface shadow-soft">
+
+              <header class="border-b border-white/10 bg-[linear-gradient(135deg,#004ea8_0%,#005bbf_45%,#1a73e8_100%)] px-5 py-4 text-white">
+                <div class="flex items-center gap-3">
+                  @if (step() < 4) {
+                    <button class="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 transition hover:bg-white/15"
+                            (click)="goBack()" aria-label="Volver">
+                      <span class="material-icons-round text-[1.15rem]">arrow_back</span>
+                    </button>
+                  } @else {
+                    <div class="flex h-10 w-10 items-center justify-center rounded-full bg-white/15">
+                      <span class="material-icons-round text-[1.15rem]">check</span>
+                    </div>
                   }
-                </button>
-              }
+
+                  <div class="min-w-0 flex-1">
+                    <p class="truncate text-sm font-semibold">{{ business()?.name ?? 'Reserva tu cita' }}</p>
+                    <p class="text-xs text-white/80">Reserva online</p>
+                  </div>
+
+                  @if (step() < 4) {
+                    <button class="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 transition hover:bg-white/15"
+                            (click)="startPolling()" aria-label="Actualizar" [disabled]="loading()">
+                      <span class="material-icons-round text-[1.15rem]" [class.animate-spin]="loading()">refresh</span>
+                    </button>
+                  }
+                </div>
+
+                <div class="mt-4 flex items-center gap-2 overflow-x-auto pb-1">
+                  @for (item of bookingSteps; track item.value; let last = $last) {
+                    <div class="flex items-center gap-2">
+                      <div class="flex h-7 w-7 items-center justify-center rounded-full border text-[11px] font-semibold"
+                           [class.bg-white]="step() >= item.value"
+                           [class.text-primary]="step() >= item.value"
+                           [class.border-white]="step() >= item.value"
+                           [class.bg-transparent]="step() < item.value"
+                           [class.text-white/70]="step() < item.value"
+                           [class.border-white/25]="step() < item.value">
+                        {{ item.value }}
+                      </div>
+                      <span class="text-[11px] font-medium"
+                            [class.text-white]="step() >= item.value"
+                            [class.text-white/70]="step() < item.value">
+                        {{ item.label }}
+                      </span>
+                      @if (!last) {
+                        <div class="h-px w-4 bg-white/20"></div>
+                      }
+                    </div>
+                  }
+                </div>
+              </header>
+
+              <div class="flex flex-col">
+                @if (step() === 1) {
+                  <div class="flex flex-col gap-5 px-5 py-5">
+                    <div class="rounded-2xl border border-[#d8e2ff] bg-[#eff5ff] p-4 text-primary">
+                      <p class="text-[11px] font-semibold uppercase tracking-[0.2em]">Paso 1</p>
+                      <h2 class="mt-2 font-display text-2xl font-semibold text-on-surface">Elige tu servicio</h2>
+                      <p class="mt-1 text-sm text-on-surface-variant">Empieza por el servicio que quieres agendar.</p>
+                    </div>
+
+                    @if (servicesLoading()) {
+                      <div class="flex flex-col gap-3">
+                        <div class="skeleton h-20 rounded-2xl"></div>
+                        <div class="skeleton h-20 rounded-2xl"></div>
+                        <div class="skeleton h-20 rounded-2xl"></div>
+                      </div>
+                    }
+
+                    @if (servicesError() && !servicesLoading()) {
+                      <div class="rounded-2xl bg-error-container p-5">
+                        <div class="flex items-start gap-3 text-[#93000a]">
+                          <span class="material-icons-round mt-0.5">warning</span>
+                          <div>
+                            <p class="font-semibold">No se pudieron cargar los servicios</p>
+                            <p class="mt-1 text-sm">{{ servicesError() }}</p>
+                            <button class="btn-secondary btn-sm mt-4" (click)="loadServices()">Reintentar</button>
+                          </div>
+                        </div>
+                      </div>
+                    }
+
+                    @if (!servicesLoading() && !servicesError()) {
+                      @if (services().length) {
+                        <div class="flex flex-col gap-3">
+                          @for (svc of services(); track svc) {
+                            <button
+                              class="rounded-2xl border p-4 text-left transition"
+                              [class.border-primary]="selectedService() === svc"
+                              [class.bg-[#eff5ff]]="selectedService() === svc"
+                              [class.shadow-card]="selectedService() === svc"
+                              [class.border-outline-variant]="selectedService() !== svc"
+                              [class.bg-white]="selectedService() !== svc"
+                              (click)="selectService(svc)">
+                              <div class="flex items-center justify-between gap-3">
+                                <div class="flex items-center gap-3">
+                                  <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#005bbf,#1a73e8)] text-white">
+                                    <span class="material-icons-round text-[1.15rem]">content_cut</span>
+                                  </div>
+                                  <div>
+                                    <p class="font-display text-base font-semibold text-on-surface">{{ svc }}</p>
+                                    <p class="text-sm text-on-surface-variant">Disponible para agendar en linea</p>
+                                  </div>
+                                </div>
+
+                                @if (selectedService() === svc) {
+                                  <span class="material-icons-round text-primary">check_circle</span>
+                                }
+                              </div>
+                            </button>
+                          }
+                        </div>
+                      } @else {
+                        <div class="rounded-2xl border border-dashed border-outline-variant bg-surface-low p-8 text-center">
+                          <span class="material-icons-round text-[3rem] text-outline">category</span>
+                          <p class="mt-3 font-display text-lg font-semibold text-on-surface">Aun no hay servicios cargados</p>
+                          <p class="mt-1 text-sm text-on-surface-variant">Cuando el negocio configure sus servicios apareceran aqui.</p>
+                        </div>
+                      }
+                    }
+                  </div>
+                }
+
+                @if (step() === 2) {
+                  <div class="flex flex-col gap-5 px-5 py-5">
+                    <div class="rounded-2xl border border-[#d8e2ff] bg-[#eff5ff] p-4">
+                      <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">Paso 2</p>
+                      <h2 class="mt-2 font-display text-2xl font-semibold text-on-surface">Selecciona el horario</h2>
+                      <p class="mt-1 text-sm text-on-surface-variant">Escoge el horario disponible que mejor te funcione.</p>
+                    </div>
+
+                    <div class="flex items-center justify-between rounded-2xl border border-outline-variant bg-white px-4 py-3">
+                      <div class="flex items-center gap-3">
+                        <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary-fixed text-primary">
+                          <span class="material-icons-round text-[1.1rem]">spa</span>
+                        </div>
+                        <div>
+                          <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">Servicio</p>
+                          <p class="font-display font-semibold text-on-surface">{{ selectedService() }}</p>
+                        </div>
+                      </div>
+                      <button class="btn-tertiary btn-sm" (click)="goToStep(1)">Cambiar</button>
+                    </div>
+
+                    @if (loading()) {
+                      <div class="grid grid-cols-3 gap-2">
+                        @for (i of [1,2,3,4,5,6,7,8,9]; track i) {
+                          <div class="skeleton h-12 rounded-xl"></div>
+                        }
+                      </div>
+                    }
+
+                    @if (error() && !loading()) {
+                      <div class="rounded-2xl bg-error-container p-5">
+                        <div class="flex items-start gap-3 text-[#93000a]">
+                          <span class="material-icons-round mt-0.5">warning</span>
+                          <div>
+                            <p class="font-semibold">No se pudo cargar la disponibilidad</p>
+                            <p class="mt-1 text-sm">{{ error() }}</p>
+                            <p class="mt-1 text-sm">Verifica que la hoja del negocio este publicada.</p>
+                            <button class="btn-secondary btn-sm mt-4" (click)="startPolling()">Reintentar</button>
+                          </div>
+                        </div>
+                      </div>
+                    }
+
+                    @if (!loading() && !error()) {
+                      <div>
+                        <p class="section-label">Horarios disponibles</p>
+                        <div class="grid grid-cols-3 gap-2">
+                          @for (row of reservations(); track row._rowIndex) {
+                            <button
+                              [class]="slotClass(row)"
+                              [disabled]="isTaken(row)"
+                              (click)="selectSlot(row)">
+                              {{ row.franja }}
+                            </button>
+                          }
+
+                          @if (!reservations().length) {
+                            <p class="col-span-3 rounded-2xl bg-surface-low px-4 py-6 text-center text-sm text-outline">
+                              No hay franjas disponibles por ahora.
+                            </p>
+                          }
+                        </div>
+                      </div>
+
+                      @if (selectedSlot()) {
+                        <div class="rounded-2xl border border-primary/15 bg-[#eff5ff] p-4">
+                          <p class="section-label">Seleccion actual</p>
+                          <div class="flex items-center gap-3">
+                            <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary text-white">
+                              <span class="material-icons-round text-[1.1rem]">schedule</span>
+                            </div>
+                            <div>
+                              <p class="font-display text-lg font-semibold text-on-surface">{{ selectedSlot()!.franja }}</p>
+                              <p class="text-sm text-on-surface-variant">Listo para continuar con tus datos</p>
+                            </div>
+                          </div>
+                          @if (selectedSlot()!.notas) {
+                            <p class="mt-3 text-sm text-on-surface-variant">{{ selectedSlot()!.notas }}</p>
+                          }
+                        </div>
+                      }
+                    }
+                  </div>
+                }
+
+                @if (step() === 3) {
+                  <div class="flex flex-col gap-5 px-5 py-5">
+                    <div class="rounded-2xl border border-[#d8e2ff] bg-[#eff5ff] p-4">
+                      <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">Paso 3</p>
+                      <h2 class="mt-2 font-display text-2xl font-semibold text-on-surface">Completa tus datos</h2>
+                      <p class="mt-1 text-sm text-on-surface-variant">Dejanos tus datos para confirmar la solicitud contigo.</p>
+                    </div>
+
+                    <div class="grid gap-3 sm:grid-cols-2">
+                      <div class="rounded-2xl border border-outline-variant bg-white p-4">
+                        <div class="flex items-start justify-between gap-3">
+                          <div>
+                            <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">Servicio</p>
+                            <p class="mt-1 font-display text-lg font-semibold text-on-surface">{{ selectedService() }}</p>
+                          </div>
+                          <button class="btn-tertiary btn-sm" (click)="goToStep(1)">Editar</button>
+                        </div>
+                      </div>
+
+                      <div class="rounded-2xl border border-outline-variant bg-white p-4">
+                        <div class="flex items-start justify-between gap-3">
+                          <div>
+                            <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">Horario</p>
+                            <p class="mt-1 font-display text-lg font-semibold text-on-surface">{{ selectedSlot()?.franja }}</p>
+                          </div>
+                          <button class="btn-tertiary btn-sm" (click)="goToStep(2)">Editar</button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <form [formGroup]="bookingForm" class="flex flex-col gap-4" (ngSubmit)="submit()">
+                      <div>
+                        <label class="form-label" for="cliente">Nombre completo</label>
+                        <input id="cliente" type="text" class="form-input"
+                               formControlName="cliente" placeholder="Ej. Ana Garcia"
+                               autocomplete="name" />
+                        @if (fieldInvalid('cliente')) {
+                          <p class="mt-1 text-xs text-error">El nombre es obligatorio</p>
+                        }
+                      </div>
+
+                      <div>
+                        <label class="form-label" for="telefono">Telefono</label>
+                        <input id="telefono" type="tel" class="form-input"
+                               formControlName="telefono" placeholder="Ej. 300 123 4567"
+                               autocomplete="tel" />
+                        @if (fieldInvalid('telefono')) {
+                          <p class="mt-1 text-xs text-error">Telefono invalido. Usa entre 7 y 15 digitos.</p>
+                        }
+                      </div>
+
+                      <div>
+                        <label class="form-label" for="notas">Indicaciones adicionales</label>
+                        <textarea id="notas" class="form-textarea" formControlName="notas"
+                                  placeholder="Escribe aqui cualquier detalle importante"></textarea>
+                      </div>
+
+                      <div class="rounded-2xl border border-primary/15 bg-primary-fixed px-4 py-3 text-sm text-primary">
+                        Revisa tus datos y envia la solicitud. El negocio la recibira para confirmarla.
+                      </div>
+                    </form>
+                  </div>
+                }
+
+                @if (step() === 4) {
+                  <div class="flex flex-col gap-5 px-5 py-5">
+                    <div class="rounded-[1.75rem] bg-[linear-gradient(135deg,#005bbf_0%,#1a73e8_100%)] p-6 text-center text-white">
+                      <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white/20">
+                        <span class="material-icons-round text-3xl">check_circle</span>
+                      </div>
+                      <h2 class="mt-4 font-display text-2xl font-semibold">Solicitud enviada</h2>
+                      <p class="mt-2 text-sm text-white/85">Tu solicitud fue enviada y quedo pendiente de confirmacion.</p>
+                    </div>
+
+                    <div class="rounded-2xl border border-outline-variant bg-white p-5">
+                      <p class="section-label">Resumen final</p>
+                      <div class="mt-2 flex flex-col gap-4 text-sm">
+                        <div class="flex items-center justify-between gap-4">
+                          <span class="text-on-surface-variant">Servicio</span>
+                          <span class="service-tag">{{ confirmed()?.servicio }}</span>
+                        </div>
+                        <div class="h-px bg-outline-variant/30"></div>
+                        <div class="flex items-center justify-between gap-4">
+                          <span class="text-on-surface-variant">Horario</span>
+                          <span class="font-semibold text-on-surface">{{ confirmed()?.franja }}</span>
+                        </div>
+                        <div class="h-px bg-outline-variant/30"></div>
+                        <div class="flex items-center justify-between gap-4">
+                          <span class="text-on-surface-variant">Cliente</span>
+                          <span class="font-semibold text-on-surface">{{ confirmed()?.cliente }}</span>
+                        </div>
+                        <div class="h-px bg-outline-variant/30"></div>
+                        <div class="flex items-center justify-between gap-4">
+                          <span class="text-on-surface-variant">Telefono</span>
+                          <span class="font-semibold text-on-surface">{{ confirmed()?.telefono }}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="rounded-2xl border border-primary/15 bg-primary-fixed px-4 py-4 text-sm text-primary">
+                      Si hace falta ajustar la hora o confirmar un detalle, el negocio te contactara al numero registrado.
+                    </div>
+
+                    <button class="btn-secondary" (click)="resetFlow()">
+                      <span class="material-icons-round text-base">add</span>
+                      Hacer otra reserva
+                    </button>
+                  </div>
+                }
+
+                @if (step() < 4) {
+                  <div class="border-t border-outline-variant/20 bg-white px-5 py-4">
+                    <button class="btn-primary" [disabled]="!canProceed() || submitting()"
+                            (click)="handleNext()">
+                      @if (submitting()) {
+                        <span class="material-icons-round animate-spin text-base">refresh</span>
+                        Enviando...
+                      } @else {
+                        <span>{{ nextLabel() }}</span>
+                        <span class="material-icons-round text-base">arrow_forward</span>
+                      }
+                    </button>
+                  </div>
+                }
+              </div>
             </div>
-          } @else {
-            <div class="flex flex-col items-center justify-center gap-4 py-12 text-center">
-              <span class="material-icons-round text-[3.5rem] text-outline-variant">category</span>
-              <h3 class="font-display font-semibold text-xl">Sin servicios configurados</h3>
-              <p class="text-sm text-on-surface-variant max-w-[240px]">El administrador aún no ha cargado los servicios.</p>
-            </div>
-          }
-        }
+          </div>
+        </section>
       </div>
-    }
-
-    <!-- ══ STEP 3: Datos del cliente ════════════════════════════════ -->
-    @if (step() === 3) {
-      <div class="flex-1 flex flex-col gap-6 px-6 py-5 pb-28">
-
-        <div>
-          <p class="section-label">Paso 3 de 3</p>
-          <h2 class="font-display font-semibold text-[1.375rem]">Tus datos</h2>
-          <p class="text-sm text-on-surface-variant mt-1">Completa la información para confirmar.</p>
-        </div>
-
-        <!-- Resumen -->
-        <div class="card-flat flex flex-col gap-3">
-          <div class="flex justify-between items-center">
-            <p class="section-label mb-0">Resumen</p>
-            <button class="btn-tertiary btn-sm" (click)="goToStep(1)">Cambiar</button>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="material-icons-round text-primary text-base">schedule</span>
-            <span class="text-sm">{{ selectedSlot()?.franja }}</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="material-icons-round text-primary text-base">spa</span>
-            <span class="service-tag">{{ selectedService() }}</span>
-          </div>
-        </div>
-
-        <!-- Form -->
-        <form [formGroup]="bookingForm" class="flex flex-col gap-4" (ngSubmit)="submit()">
-          <div>
-            <label class="form-label" for="cliente">Nombre completo</label>
-            <input id="cliente" type="text" class="form-input"
-                   formControlName="cliente" placeholder="Ej. Ana García"
-                   autocomplete="name" />
-            @if (fieldInvalid('cliente')) {
-              <p class="text-xs text-error mt-1">El nombre es obligatorio</p>
-            }
-          </div>
-          <div>
-            <label class="form-label" for="telefono">Teléfono</label>
-            <input id="telefono" type="tel" class="form-input"
-                   formControlName="telefono" placeholder="Ej. 600 123 456"
-                   autocomplete="tel" />
-            @if (fieldInvalid('telefono')) {
-              <p class="text-xs text-error mt-1">Teléfono inválido (7–15 dígitos)</p>
-            }
-          </div>
-          <div>
-            <label class="form-label" for="notas">
-              Notas <span class="opacity-50 font-normal normal-case">(opcional)</span>
-            </label>
-            <textarea id="notas" class="form-textarea" formControlName="notas"
-                      placeholder="Algo que debamos saber…"></textarea>
-          </div>
-        </form>
-      </div>
-    }
-
-    <!-- ══ STEP 4: Confirmación ══════════════════════════════════════ -->
-    @if (step() === 4) {
-      <div class="flex-1 flex flex-col gap-6 px-6 py-5">
-
-        <!-- Hero card -->
-        <div class="rounded-xl p-8 text-center text-white"
-             style="background:linear-gradient(135deg,#005bbf,#1a73e8)">
-          <div class="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
-               style="background:rgba(255,255,255,.2)">
-            <span class="material-icons-round text-3xl">check_circle</span>
-          </div>
-          <h2 class="font-display font-semibold text-2xl mb-1">¡Reserva enviada!</h2>
-          <p class="text-sm opacity-90">Te contactaremos para confirmar.</p>
-        </div>
-
-        <!-- Detalles -->
-        <div class="card flex flex-col gap-4">
-          <p class="section-label">Detalles</p>
-          <div class="flex justify-between text-sm">
-            <span class="text-on-surface-variant">Franja</span>
-            <span class="font-semibold">{{ confirmed()?.franja }}</span>
-          </div>
-          <div class="h-px bg-outline-variant opacity-20"></div>
-          <div class="flex justify-between text-sm items-center">
-            <span class="text-on-surface-variant">Servicio</span>
-            <span class="service-tag">{{ confirmed()?.servicio }}</span>
-          </div>
-          <div class="h-px bg-outline-variant opacity-20"></div>
-          <div class="flex justify-between text-sm">
-            <span class="text-on-surface-variant">Nombre</span>
-            <span class="font-semibold">{{ confirmed()?.cliente }}</span>
-          </div>
-          <div class="h-px bg-outline-variant opacity-20"></div>
-          <div class="flex justify-between text-sm">
-            <span class="text-on-surface-variant">Teléfono</span>
-            <span class="font-semibold">{{ confirmed()?.telefono }}</span>
-          </div>
-        </div>
-
-        <!-- Info + Nueva reserva -->
-        <div class="bg-primary-fixed rounded-xl p-4 flex gap-3 items-start text-sm text-primary">
-          <span class="material-icons-round text-base mt-0.5">info</span>
-          <p>La reserva está <strong>pendiente de confirmación</strong>. Te avisaremos pronto.</p>
-        </div>
-
-        <button class="btn-secondary gap-2" (click)="resetFlow()">
-          <span class="material-icons-round text-base">add</span>
-          Nueva reserva
-        </button>
-      </div>
-    }
-
-    <!-- STICKY FOOTER CTA -->
-    @if (step() < 4) {
-      <div class="fixed bottom-0 left-1/2 -translate-x-1/2 max-w-[430px] w-full
-                  px-6 pb-6 pt-4 bg-surface/80 backdrop-blur-xl z-10">
-        <button class="btn-primary" [disabled]="!canProceed() || submitting()"
-                (click)="handleNext()">
-          @if (submitting()) {
-            <span class="material-icons-round text-base animate-spin">refresh</span>
-            Enviando…
-          } @else {
-            <span>{{ nextLabel() }}</span>
-            <span class="material-icons-round text-base">arrow_forward</span>
-          }
-        </button>
-      </div>
-    }
-
+    </div>
   </div>
   `
 })
@@ -349,6 +428,29 @@ export class BookingComponent implements OnInit, OnDestroy {
   readonly selectedSlot    = signal<Reservation | null>(null);
   readonly selectedService = signal<string | null>(null);
   readonly confirmed    = signal<ConfirmedBooking | null>(null);
+  readonly bookingSteps = [
+    { value: 1, label: 'Servicio' },
+    { value: 2, label: 'Horario' },
+    { value: 3, label: 'Datos' },
+    { value: 4, label: 'Listo' },
+  ] as const;
+  readonly instructionItems = [
+    {
+      order: '01',
+      title: 'Elige que quieres reservar',
+      description: 'Selecciona el servicio y activa el siguiente paso del formulario.',
+    },
+    {
+      order: '02',
+      title: 'Escoge el mejor horario',
+      description: 'Revisa la disponibilidad y elige la franja que mejor se ajuste a tu dia.',
+    },
+    {
+      order: '03',
+      title: 'Confirma en un momento',
+      description: 'Deja tus datos, revisa el resumen y envia la reserva al instante.',
+    },
+  ] as const;
 
   readonly bookingForm = this.fb.group({
     cliente:  ['', [Validators.required, Validators.minLength(2)]],
@@ -357,15 +459,15 @@ export class BookingComponent implements OnInit, OnDestroy {
   });
 
   readonly canProceed = computed(() => {
-    if (this.step() === 1) return !!this.selectedSlot();
-    if (this.step() === 2) return !!this.selectedService();
+    if (this.step() === 1) return !!this.selectedService();
+    if (this.step() === 2) return !!this.selectedSlot();
     if (this.step() === 3) return this.bookingForm.valid;
     return false;
   });
 
   readonly nextLabel = computed(() => {
-    if (this.step() === 1) return this.selectedSlot() ? 'Elegir servicio' : 'Selecciona un horario';
-    if (this.step() === 2) return this.selectedService() ? 'Completar datos' : 'Selecciona un servicio';
+    if (this.step() === 1) return this.selectedService() ? 'Continuar al horario' : 'Selecciona un servicio';
+    if (this.step() === 2) return this.selectedSlot() ? 'Continuar con tus datos' : 'Selecciona un horario';
     if (this.step() === 3) return 'Confirmar reserva';
     return '';
   });
@@ -377,6 +479,7 @@ export class BookingComponent implements OnInit, OnDestroy {
       const found = list.find(b => b.id === this.businessId);
       if (found) this.business.set(found);
     });
+    this.loadServices();
     this.startPolling();
   }
 
@@ -422,28 +525,19 @@ export class BookingComponent implements OnInit, OnDestroy {
     this.selectedService.set(svc);
   }
 
-  dotClass(n: number): string {
-    const s = this.step();
-    if (n < s)  return 'w-2 h-2 bg-primary';
-    if (n === s) return 'w-2.5 h-2.5 border-2 border-primary bg-transparent';
-    return 'w-2 h-2 bg-outline-variant';
-  }
-
   goToStep(s: Step): void { this.step.set(s); }
 
   goBack(): void {
     const s = this.step();
-    if (s === 2) { this.loadServices(); this.goToStep(1 as Step); }
-    else if (s > 1) this.goToStep((s - 1) as Step);
+    if (s > 1) this.goToStep((s - 1) as Step);
     else this.router.navigate(['/']);
   }
 
   handleNext(): void {
     const s = this.step();
-    if (s === 1 && this.selectedSlot()) {
-      this.loadServices();
+    if (s === 1 && this.selectedService()) {
       this.goToStep(2);
-    } else if (s === 2 && this.selectedService()) {
+    } else if (s === 2 && this.selectedSlot()) {
       this.goToStep(3);
     } else if (s === 3) {
       this.submit();
@@ -498,6 +592,7 @@ export class BookingComponent implements OnInit, OnDestroy {
     this.confirmed.set(null);
     this.bookingForm.reset();
     this.pollSub?.unsubscribe();
+    this.loadServices();
     this.startPolling();
     this.goToStep(1);
   }

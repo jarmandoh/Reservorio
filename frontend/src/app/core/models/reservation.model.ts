@@ -32,8 +32,6 @@ export interface NewBusinessPayload {
   logo?:         string;
   phone?:        string;
   tags?:         string[] | string;
-  sheetId:       string;
-  appsScriptUrl: string;
   pin:           string;
 }
 
@@ -59,6 +57,11 @@ export interface UpdatePayload {
   rowIndex:       number;
   disponibilidad: string;
   notas?:         string;
+}
+
+export interface UxTip {
+  title:       string;
+  description: string;
 }
 
 export type DispStatus = 'Disponible' | 'Pendiente' | 'Reservado' | 'Confirmado';

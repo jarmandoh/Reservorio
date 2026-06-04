@@ -278,10 +278,10 @@ type AdminTab = 'reservas' | 'servicios' | 'ajustes' | 'negocios';
     @if (tab() === 'negocios') {
       <div class="flex-1 p-4 sm:p-6 flex flex-col gap-5 max-w-4xl mx-auto w-full">
 
-        <div class="flex items-center justify-between">
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 class="font-display font-semibold text-[1.375rem]">Negocios</h2>
-            <p class="text-sm text-on-surface-variant mt-1">Gestiona los negocios de la plataforma.</p>
+            <p class="text-sm text-on-surface-variant mt-1">Gestiona el listado, el estado y los datos principales de cada negocio.</p>
           </div>
           <button class="btn-primary btn-sm gap-1.5" (click)="openBizModal(null)" [disabled]="!adminToken()">
             <span class="material-icons-round text-base">add</span>
@@ -289,14 +289,36 @@ type AdminTab = 'reservas' | 'servicios' | 'ajustes' | 'negocios';
           </button>
         </div>
 
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto]">
+          <div class="relative">
+            <span class="material-icons-round absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[1.1rem] pointer-events-none">search</span>
+            <input type="search" class="form-input pl-10 w-full"
+                   placeholder="Buscar negocio, categoría o ubicación…"
+                   [value]="searchQuery()"
+                   (input)="searchQuery.set(getInputValue($event))" />
+          </div>
+          <select class="form-select w-full sm:w-64"
+                  [value]="filterStatus()"
+                  (change)="filterStatus.set(getInputValue($event))">
+            <option value="">Todos los estados</option>
+            <option value="activo">Activo</option>
+            <option value="inactivo">Inactivo</option>
+          </select>
+        </div>
+
         @if (!adminToken()) {
-          <div class="flex gap-3 p-4 rounded-xl text-sm"
+          <div class="flex flex-col gap-3 p-4 rounded-xl text-sm"
                style="background:#fff8e1;color:#7c4f00;border:1px solid #f5d87c">
             <span class="material-icons-round text-base mt-0.5">warning</span>
-            <div>
-              <p class="font-semibold">Token de administrador no disponible</p>
-              <p class="mt-0.5 opacity-80">Asegúrate de que <code>ADMIN_PIN</code> en el servidor coincida con tu PIN local (por defecto: 1234).</p>
+            <div class="flex-1">
+              <p class="font-semibold">No se obtuvo el token de administrador</p>
+              <p class="mt-0.5 opacity-80">
+                {{ adminError() ?? 'Verifica que el PIN local coincida con ADMIN_PIN en el servidor.' }}
+              </p>
             </div>
+            <button class="btn-secondary btn-sm" (click)="initAdminToken()">
+              Reintentar
+            </button>
           </div>
         }
 
@@ -307,19 +329,22 @@ type AdminTab = 'reservas' | 'servicios' | 'ajustes' | 'negocios';
         }
 
         @if (!businessesLoading()) {
-          @if (!businesses().length) {
+          @if (!filteredBusinesses().length) {
             <div class="flex flex-col items-center justify-center gap-4 py-16 text-center">
-              <span class="material-icons-round text-[3.5rem] text-outline-variant">store</span>
-              <h3 class="font-display font-semibold text-xl">Sin negocios aún</h3>
-              <p class="text-sm text-on-surface-variant">Agrega el primero con el botón "Nuevo".</p>
+              <span class="material-icons-round text-[3.5rem] text-outline-variant">search_off</span>
+              <h3 class="font-display font-semibold text-xl">Sin resultados</h3>
+              <p class="text-sm text-on-surface-variant">Ajusta los filtros o borra la búsqueda para ver negocios.</p>
             </div>
           } @else {
             <div class="flex flex-col gap-3">
-              @for (biz of businesses(); track biz.id) {
+              @for (biz of filteredBusinesses(); track biz.id) {
                 <div class="card flex items-center gap-4">
-                  <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 text-white"
-                       [style.background]="biz.gradient">
-                    <span class="material-icons-round text-xl">{{ biz.icon }}</span>
+                  <div class="w-12 h-12 rounded-xl overflow-hidden flex items-center justify-center flex-shrink-0 bg-surface-muted">
+                    @if (biz.logo) {
+                      <img src="{{ biz.logo }}" alt="Logo de {{ biz.name }}" class="w-full h-full object-cover" />
+                    } @else {
+                      <span class="material-icons-round text-xl text-outline">store</span>
+                    }
                   </div>
                   <div class="flex-1 min-w-0">
                     <div class="flex items-center gap-2 flex-wrap">
@@ -335,25 +360,33 @@ type AdminTab = 'reservas' | 'servicios' | 'ajustes' | 'negocios';
                     </p>
                   </div>
                   <div class="flex items-center gap-2 flex-shrink-0">
-                    <a [href]="'/business/' + biz.id + '/admin'" target="_blank"
-                       class="w-9 h-9 flex items-center justify-center rounded-lg text-white"
-                       style="background:linear-gradient(135deg,#005bbf,#1a73e8)">
-                      <span class="material-icons-round text-base">open_in_new</span>
-                    </a>
                     <button class="w-9 h-9 flex items-center justify-center rounded-lg transition"
                             style="background:#d8e2ff;color:#005bbf"
-                            (click)="openBizModal(biz)" [disabled]="!adminToken()">
+                            (click)="openBizModal(biz)" [disabled]="!adminToken()"
+                            aria-label="Editar {{ biz.name }}">
                       <span class="material-icons-round text-base">edit</span>
                     </button>
                     <button class="w-9 h-9 flex items-center justify-center rounded-lg transition disabled:opacity-40"
                             [style.background]="biz.active ? '#fff0ef' : '#e8f5e9'"
                             [style.color]="biz.active ? '#93000a' : '#2e7d32'"
                             (click)="toggleBusiness(biz.id)"
-                            [disabled]="togglingBusiness() === biz.id || !adminToken()">
+                            [disabled]="togglingBusiness() === biz.id || !adminToken()"
+                            [attr.aria-label]="biz.active ? 'Desactivar negocio' : 'Activar negocio'">
                       @if (togglingBusiness() === biz.id) {
                         <span class="material-icons-round text-base animate-spin">refresh</span>
                       } @else {
                         <span class="material-icons-round text-base">{{ biz.active ? 'visibility_off' : 'visibility' }}</span>
+                      }
+                    </button>
+                    <button class="w-9 h-9 flex items-center justify-center rounded-lg transition disabled:opacity-40"
+                            style="background:#f8d7da;color:#842029"
+                            (click)="deleteBusiness(biz.id)"
+                            [disabled]="deletingBusiness() === biz.id || !adminToken()"
+                            aria-label="Eliminar {{ biz.name }}">
+                      @if (deletingBusiness() === biz.id) {
+                        <span class="material-icons-round text-base animate-spin">refresh</span>
+                      } @else {
+                        <span class="material-icons-round text-base">delete_outline</span>
                       }
                     </button>
                   </div>
@@ -464,8 +497,9 @@ type AdminTab = 'reservas' | 'servicios' | 'ajustes' | 'negocios';
               </div>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label class="form-label">Ícono Material</label>
-                  <input type="text" class="form-input" formControlName="icon" placeholder="store" />
+                  <label class="form-label">Logo (URL)</label>
+                  <input type="url" class="form-input" formControlName="logo"
+                         placeholder="https://..." />
                 </div>
                 <div>
                   <label class="form-label">Tags (coma separados)</label>
@@ -477,18 +511,6 @@ type AdminTab = 'reservas' | 'servicios' | 'ajustes' | 'negocios';
                 <label class="form-label">Gradiente CSS</label>
                 <input type="text" class="form-input" formControlName="gradient"
                        placeholder="linear-gradient(135deg,#005bbf,#1a73e8)" />
-              </div>
-              <div>
-                <label class="form-label">Google Sheet ID *</label>
-                <input type="text" class="form-input" formControlName="sheetId" />
-                <p class="text-xs text-on-surface-variant mt-1">
-                  URL: docs.google.com/spreadsheets/d/<strong>ID</strong>/edit
-                </p>
-              </div>
-              <div>
-                <label class="form-label">Apps Script URL *</label>
-                <input type="text" class="form-input" formControlName="appsScriptUrl"
-                       placeholder="https://script.google.com/macros/s/…" />
               </div>
               <div>
                 <label class="form-label">
@@ -588,13 +610,10 @@ export class AdminComponent implements OnInit {
   readonly sheetId = '1cxZR6YYFkXJy8AKGM-1AakGk9hw6AR9vTv2RHm4yUNc';
 
   readonly tabs = [
-    { id: 'reservas'  as AdminTab, label: 'Reservas',  icon: 'event_note' },
-    { id: 'servicios' as AdminTab, label: 'Servicios', icon: 'spa'        },
-    { id: 'negocios'  as AdminTab, label: 'Negocios',  icon: 'store'      },
-    { id: 'ajustes'   as AdminTab, label: 'Ajustes',   icon: 'settings'   },
+    { id: 'negocios'  as AdminTab, label: 'Negocios', icon: 'store' },
   ];
 
-  readonly tab            = signal<AdminTab>('reservas');
+  readonly tab            = signal<AdminTab>('negocios');
   readonly loading        = signal(false);
   readonly servicesLoading = signal(false);
   readonly addingService   = signal(false);
@@ -611,9 +630,11 @@ export class AdminComponent implements OnInit {
 
   // ── Negocios state ──────────────────────────────────────────────────────
   readonly adminToken        = signal<string | null>(null);
+  readonly adminError        = signal<string | null>(null);
   readonly businesses        = signal<Business[]>([]);
   readonly businessesLoading = signal(false);
   readonly togglingBusiness  = signal<string | null>(null);
+  readonly deletingBusiness = signal<string | null>(null);
   readonly showBizModal      = signal(false);
   readonly editingBusiness   = signal<Business | null>(null);
   readonly savingBusiness    = signal(false);
@@ -634,11 +655,10 @@ export class AdminComponent implements OnInit {
     location:      [''],
     schedule:      [''],
     phone:         [''],
+    logo:          [''],
     tags:          [''],
     icon:          ['store'],
     gradient:      ['linear-gradient(135deg,#005bbf,#1a73e8)'],
-    sheetId:       ['', Validators.required],
-    appsScriptUrl: ['', Validators.required],
     pin:           [''],
   });
 
@@ -669,13 +689,25 @@ export class AdminComponent implements OnInit {
     return rows;
   });
 
+  readonly filteredBusinesses = computed(() => {
+    let list = this.businesses();
+    const q = this.searchQuery().toLowerCase();
+    const f = this.filterStatus().toLowerCase();
+    if (q) list = list.filter(b =>
+      b.name.toLowerCase().includes(q) ||
+      b.category.toLowerCase().includes(q) ||
+      (b.location ?? '').toLowerCase().includes(q)
+    );
+    if (f) list = list.filter(b => (b.active ? 'activo' : 'inactivo').includes(f));
+    return list;
+  });
+
   ngOnInit(): void {
-    this.loadReservations();
-    this.loadServices();
     this.initAdminToken();
   }
 
   initAdminToken(): void {
+    this.adminError.set(null);
     const cached = this.auth.getAdminToken();
     if (cached) { this.adminToken.set(cached); this.loadBusinesses(cached); return; }
     this.api.loginAdmin(this.auth.storedPin).subscribe({
@@ -686,13 +718,17 @@ export class AdminComponent implements OnInit {
           this.loadBusinesses(res.data.token);
         }
       },
-      error: () => { /* admin token not available — negocios tab will show warning */ },
+      error: err => {
+        this.adminError.set('No se pudo obtener el token de administrador. Verifica el PIN del servidor y vuelve a intentar.');
+        this.adminToken.set(null);
+      },
     });
   }
 
   loadBusinesses(token?: string): void {
     const t = token ?? this.adminToken();
     if (!t) return;
+    this.adminError.set(null);
     this.businessesLoading.set(true);
     this.api.getAllBusinesses(t).subscribe({
       next:  list => { this.businesses.set(list); this.businessesLoading.set(false); },
@@ -706,9 +742,8 @@ export class AdminComponent implements OnInit {
       this.businessForm.patchValue({
         name: biz.name, category: biz.category, description: biz.description,
         location: biz.location, schedule: biz.schedule ?? '',
-        phone: biz.phone ?? '', tags: biz.tags?.join(', ') ?? '',
+        phone: biz.phone ?? '', logo: biz.logo ?? '', tags: biz.tags?.join(', ') ?? '',
         icon: biz.icon, gradient: biz.gradient,
-        sheetId: biz.sheetId ?? '', appsScriptUrl: biz.appsScriptUrl ?? '',
         pin: '',
       });
       this.businessForm.get('pin')?.clearValidators();
@@ -734,8 +769,7 @@ export class AdminComponent implements OnInit {
       const updates: Partial<NewBusinessPayload> & { pin?: string } = {
         name: v.name!, category: v.category!, description: v.description ?? '',
         location: v.location ?? '', schedule: v.schedule ?? '', phone: v.phone ?? '',
-        tags: tagsArr, icon: v.icon!, gradient: v.gradient!,
-        sheetId: v.sheetId!, appsScriptUrl: v.appsScriptUrl!,
+        logo: v.logo ?? '', tags: tagsArr, icon: v.icon!, gradient: v.gradient!,
       };
       if (v.pin) updates.pin = v.pin;
       this.api.updateBusiness(this.editingBusiness()!.id, updates, token).subscribe({
@@ -751,8 +785,8 @@ export class AdminComponent implements OnInit {
       const payload: NewBusinessPayload = {
         name: v.name!, category: v.category!, description: v.description ?? '',
         location: v.location ?? '', schedule: v.schedule ?? '', phone: v.phone ?? '',
-        tags: tagsArr, icon: v.icon!, gradient: v.gradient!,
-        sheetId: v.sheetId!, appsScriptUrl: v.appsScriptUrl!, pin: v.pin!,
+        logo: v.logo ?? '', tags: tagsArr, icon: v.icon!, gradient: v.gradient!,
+        pin: v.pin!,
       };
       this.api.createBusiness(payload, token).subscribe({
         next: () => {
@@ -782,6 +816,24 @@ export class AdminComponent implements OnInit {
     });
   }
 
+  deleteBusiness(id: string): void {
+    const token = this.adminToken();
+    if (!token) return;
+    if (!window.confirm('¿Eliminar este negocio? Esta acción no se puede deshacer.')) return;
+    this.deletingBusiness.set(id);
+    this.api.deleteBusiness(id, token).subscribe({
+      next: () => {
+        this.toast.success('Negocio eliminado');
+        this.deletingBusiness.set(null);
+        this.loadBusinesses();
+      },
+      error: err => {
+        this.toast.error(err.message);
+        this.deletingBusiness.set(null);
+      },
+    });
+  }
+
   loadReservations(): void {
     this.loading.set(true);
     this.error.set(null);
@@ -800,8 +852,11 @@ export class AdminComponent implements OnInit {
   }
 
   refresh(): void {
-    this.loadReservations();
-    this.loadServices();
+    if (!this.adminToken()) {
+      this.initAdminToken();
+      return;
+    }
+    this.loadBusinesses();
   }
 
   isFreeSlot(row: Reservation): boolean {
