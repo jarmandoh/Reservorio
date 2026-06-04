@@ -180,7 +180,7 @@ const CATEGORIES = ['Todos', 'Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci
       <!-- Business cards -->
       @if (!loading()) {
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          @for (biz of filtered(); track biz.id) {
+          @for (biz of businesses; track biz.id) {
             <div role="button" tabindex="0"
               class="g-card text-left bg-surface-lowest rounded-2xl shadow-card overflow-hidden
                      transition-all hover:-translate-y-0.5 hover:shadow-soft active:scale-[.98]
@@ -315,9 +315,12 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
 
   ngOnInit(): void {
     this.sub = this.api.getBusinesses().pipe(
+      
       catchError(() => of(FALLBACK_BUSINESSES))
     ).subscribe(list => {
-      this.businesses = list.length ? list : FALLBACK_BUSINESSES;
+      console.log('Fetched businesses:', list)
+      this.businesses = list.length ? list : [...FALLBACK_BUSINESSES];
+      
       this.loading.set(false);
       setTimeout(() => this.animateCards(), 50);
     });

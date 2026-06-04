@@ -25,7 +25,8 @@ CREATE TABLE IF NOT EXISTS services (
   business_id TEXT NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
   nombre      TEXT NOT NULL,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
-  UNIQUE (business_id, nombre)
+  UNIQUE (business_id, nombre),
+  active      BOOLEAN NOT NULL DEFAULT true
 );
 
 CREATE TABLE IF NOT EXISTS reservations (
@@ -50,3 +51,36 @@ ALTER TABLE businesses ADD COLUMN IF NOT EXISTS google_access_token  TEXT;  -- c
 ALTER TABLE businesses ADD COLUMN IF NOT EXISTS google_refresh_token TEXT;  -- cifrado AES-256-GCM
 ALTER TABLE businesses ADD COLUMN IF NOT EXISTS google_token_expiry  TIMESTAMPTZ;
 ALTER TABLE businesses ADD COLUMN IF NOT EXISTS google_sheet_id      TEXT;
+
+
+CREATE TABLE IF NOT EXISTS categories (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE
+);
+
+CREATE TABLE IF NOT EXISTS business_categories (
+  business_id TEXT NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  category_id INT NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
+  PRIMARY KEY (business_id, category_id)
+);
+
+CREATE TABLE IF NOT EXISTS schedules (
+  id SERIAL PRIMARY KEY,
+  business_id TEXT NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  day_of_week INT NOT NULL CHECK (day_of_week >= 0 AND day_of_week <= 6),
+  open_time TIME NOT NULL,
+  close_time TIME NOT NULL,
+  UNIQUE (business_id, day_of_week)
+);
+
+CREATE TABLE IF NOT EXISTS tags (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE
+);
+
+CREATE TABLE IF NOT EXISTS business_tags (
+  business_id TEXT NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  tag_id INT NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+  PRIMARY KEY (business_id, tag_id)
+);
+

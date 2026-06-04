@@ -77,8 +77,8 @@ import { Business }    from '../../core/models/reservation.model';
         </form>
       }
 
-      <a routerLink="/"
-         class="flex items-center justify-center gap-1.5 text-sm text-on-surface-variant hover:text-primary transition">
+      <a routerLink="/" (click)="goHome()"
+         class="flex items-center justify-center z-20 cursor-pointer gap-1.5 text-sm text-on-surface-variant hover:text-primary transition">
         <span class="material-icons-round text-base">arrow_back</span>
         Volver al inicio
       </a>
@@ -139,5 +139,9 @@ export class BusinessLoginComponent implements OnInit {
         this.form.get('pin')?.reset();
       },
     });
+  }
+
+  goHome(): void {
+    this.router.navigate(['/']);
   }
 }

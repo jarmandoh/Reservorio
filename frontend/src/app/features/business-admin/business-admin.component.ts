@@ -151,9 +151,8 @@ type BizTab = 'reservas' | 'servicios' | 'perfil' | 'google';
         <h2 class="font-display font-semibold text-[1.375rem]">Servicios</h2>
 
         <!-- Add service form -->
-        <form [formGroup]="serviceForm" (ngSubmit)="addService()"
-              class="card flex flex-col sm:flex-row gap-3">
-          <div class="flex-1">
+        <form [formGroup]="serviceForm" (ngSubmit)="addService()" class="card flex flex-col gap-3">
+          <div class="flex-1 w-full">
             <input type="text" class="form-input w-full" formControlName="nombre"
                    placeholder="Nombre del servicio…" />
             @if (fieldInvalid('nombre')) {
