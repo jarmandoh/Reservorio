@@ -97,7 +97,7 @@ const CATEGORIES = ['Todos', 'Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci
         <div class="flex items-center gap-6 mt-6 text-sm opacity-75">
           <div class="g-stat flex items-center gap-1.5">
             <span class="material-icons-round text-base">store</span>
-            <span>{{ businesses.length }} negocio{{ businesses.length !== 1 ? 's' : '' }}</span>
+            <span>{{ displayedBusinesses().length }} negocio{{ displayedBusinesses().length !== 1 ? 's' : '' }}</span>
           </div>
           <div class="g-stat flex items-center gap-1.5">
             <span class="material-icons-round text-base">schedule</span>
@@ -145,7 +145,13 @@ const CATEGORIES = ['Todos', 'Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci
             }
           </h2>
           <p class="text-sm text-on-surface-variant mt-0.5">
-            {{ filtered().length }} resultado{{ filtered().length !== 1 ? 's' : '' }}
+            @if (filtered().length) {
+              {{ filtered().length }} resultado{{ filtered().length !== 1 ? 's' : '' }}
+            } @else if (searchQuery || selectedCategory !== 'Todos') {
+              No se encontraron resultados exactos. Se muestran todos los negocios disponibles.
+            } @else {
+              {{ displayedBusinesses().length }} resultado{{ displayedBusinesses().length !== 1 ? 's' : '' }}
+            }
           </p>
         </div>
         <button class="btn-tertiary btn-sm gap-1.5" (click)="resetFilters()">
@@ -164,23 +170,22 @@ const CATEGORIES = ['Todos', 'Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci
       }
 
       <!-- Empty state -->
-      @if (!loading() && !filtered().length) {
+      @if (!loading() && !businesses.length) {
         <div class="flex flex-col items-center justify-center gap-4 py-20 text-center">
           <div class="w-20 h-20 rounded-full bg-surface-low flex items-center justify-center">
             <span class="material-icons-round text-4xl text-outline">search_off</span>
           </div>
           <h3 class="font-display font-semibold text-xl">Sin resultados</h3>
           <p class="text-sm text-on-surface-variant max-w-xs">
-            Intenta con otro término o cambia la categoría.
+            No se encontraron negocios disponibles. Intenta más tarde.
           </p>
-          <button class="btn-secondary btn-sm" (click)="resetFilters()">Limpiar filtros</button>
         </div>
       }
 
       <!-- Business cards -->
       @if (!loading()) {
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          @for (biz of businesses; track biz.id) {
+          @for (biz of displayedBusinesses(); track biz.id) {
             <div role="button" tabindex="0"
               class="g-card text-left bg-surface-lowest rounded-2xl shadow-card overflow-hidden
                      transition-all hover:-translate-y-0.5 hover:shadow-soft active:scale-[.98]
@@ -296,7 +301,7 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   readonly loading    = signal(true);
   readonly bizLoading = signal(false);
 
-  readonly filtered = computed(() => {
+  filtered(): Business[] {
     const q = this.searchQuery.toLowerCase();
     return this.businesses.filter(biz => {
       const matchCat = this.selectedCategory === 'Todos' || biz.category === this.selectedCategory;
@@ -307,11 +312,20 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
         biz.category.toLowerCase().includes(q);
       return matchCat && matchQ;
     });
-  });
+  }
 
-  readonly totalAvailable = computed(() =>
-    this.businesses.reduce((sum, b) => sum + b.available, 0)
-  );
+  noSearchResults(): boolean {
+    const hasActiveFilter = !!this.searchQuery || this.selectedCategory !== 'Todos';
+    return hasActiveFilter && !this.filtered().length;
+  }
+
+  displayedBusinesses(): Business[] {
+    return this.noSearchResults() ? this.businesses : this.filtered();
+  }
+
+  totalAvailable(): number {
+    return this.displayedBusinesses().reduce((sum, b) => sum + b.available, 0);
+  }
 
   ngOnInit(): void {
     this.sub = this.api.getBusinesses().pipe(
