@@ -13,11 +13,18 @@ router.post(
   '/admin',
   body('pin').trim().notEmpty().withMessage('pin requerido'),
   handleValidation,
-  (req, res) => {
+  async (req, res) => {
     const pin = String(req.body.pin);
-    if (pin !== ADMIN_PIN) return res.status(401).json({ ok: false, message: 'PIN incorrecto' });
-    const token = sign({ role: 'admin' });
-    res.json({ ok: true, data: { token } });
+    try {
+      const validPin = await bcrypt.compare(pin, ADMIN_PIN);
+      if (!validPin) {
+        return res.status(401).json({ ok: false, message: 'PIN incorrecto' });
+      }
+      const token = sign({ role: 'admin'}, '2h' );
+      res.json({ ok: true, data: { token } });
+    } catch (error) {
+      return res.status(500).json({ ok: false, message: 'Server error' });
+    }
   }
 );
 
