@@ -9,7 +9,8 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { interval, Subscription, switchMap, startWith, catchError, of } from 'rxjs';
 import { ApiService }   from '../../core/services/api.service';
 import { ToastService } from '../../core/services/toast.service';
-import { Reservation, Business }  from '../../core/models/reservation.model';
+import { Reservation }  from '../../core/models/reservation.model';
+import { Business }     from '../../core/models/businesses.model';
 
 type Step = 1 | 2 | 3 | 4;
 

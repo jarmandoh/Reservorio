@@ -7,7 +7,7 @@ import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { catchError, of } from 'rxjs';
 import { ApiService } from '../../core/services/api.service';
-import { Business } from '../../core/models/reservation.model';
+import { Business } from '../../core/models/businesses.model';
 import gsap from 'gsap';
 
 // Fallback estático mientras no haya datos en la API

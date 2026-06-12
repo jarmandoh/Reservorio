@@ -6,13 +6,12 @@ import { environment } from '../../../environments/environment';
 import {
   ApiResponse,
   BookingPayload,
-  Business,
   GoogleStatus,
-  NewBusinessPayload,
   Reservation,
   UpdatePayload,
   UxTip,
 } from '../models/reservation.model';
+import { Business, NewBusinessPayload } from '../models/businesses.model';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {

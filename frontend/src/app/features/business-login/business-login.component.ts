@@ -5,7 +5,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { catchError, of } from 'rxjs';
 import { ApiService }  from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
-import { Business }    from '../../core/models/reservation.model';
+import { Business }    from '../../core/models/businesses.model';
 
 @Component({
     selector: 'app-business-login',

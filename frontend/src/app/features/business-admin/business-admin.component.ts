@@ -11,7 +11,8 @@ import { ApiService }   from '../../core/services/api.service';
 import { AuthService }  from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { BadgeComponent } from '../../shared/components/badge/badge.component';
-import { Business, GoogleStatus, Reservation } from '../../core/models/reservation.model';
+import { GoogleStatus, Reservation } from '../../core/models/reservation.model';
+import { Business } from '../../core/models/businesses.model';
 
 type BizTab = 'reservas' | 'servicios' | 'perfil' | 'google';
 
