@@ -12,7 +12,7 @@ import gsap from 'gsap';
 
 // Fallback estático mientras no haya datos en la API
 const FALLBACK_BUSINESSES: Business[] = [
-  {
+  /* {
     id: 'spaperros',
     name: 'Spaperros',
     category: 'Salud & Bienestar',
@@ -27,7 +27,7 @@ const FALLBACK_BUSINESSES: Business[] = [
     gradient: 'linear-gradient(135deg,#005bbf,#1a73e8)',
     icon: 'event_available',
     active: true,
-  },
+  }, */
 ];
 
 const CATEGORIES = ['Todos', 'Salud & Bienestar', 'Belleza', 'Fitness', 'Educación', 'Restaurantes'];

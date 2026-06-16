@@ -84,3 +84,85 @@ CREATE TABLE IF NOT EXISTS business_tags (
   PRIMARY KEY (business_id, tag_id)
 );
 
+CREATE TABLE IF NOT EXISTS ratings (
+  id SERIAL PRIMARY KEY,
+  business_id TEXT NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  rating INT NOT NULL CHECK (rating >= 1 AND rating <= 5),
+  review TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_ratings_business ON ratings(business_id);
+
+
+
+
+--datos inicales para categorías y etiquetas--
+INSERT INTO categories (name) VALUES
+('Abarrotes'),
+('Agencia de Viajes'),
+('Bar'),
+('Barbería'),
+('Café'),
+('Centro de Convenciones'),
+('Centro de Yoga'),
+('Cine'),
+('Clínica Médica'),
+('Clínica Veterinaria'),
+('Discoteca'),
+('Estudio de Arte'),
+('Farmacia'),
+('Floristería'),
+('Galería de Arte'),
+('Gimnasio'),
+('Heladería'),
+('Joyería'),
+('Librería'),
+('Museo'),
+('Panadería'),
+('Parque de Atracciones'),
+('Peluquería'),
+('Peluquería'),
+('Productos agropecuarios'),
+('Restaurante'),
+('Salón de Belleza'),
+('Servicios de consultoría empresarial'),
+('Servicios de diseño gráfico'),
+('Servicios de educación'),
+('Servicios de entretenimiento'),
+('Servicios de eventos'),
+('Servicios de fotografía'),
+('Servicios de limpieza'),
+('Servicios de mantenimiento'),
+('Servicios de marketing digital'),
+('Servicios de recursos humanos'),
+('Servicios de salud mental'),
+('Servicios de tecnología'),
+('Servicios de traducción e interpretación'),
+('Servicios de transporte'),
+('Servicios de desarrollo web y software'),
+('Servicios legales'),
+('Spa'),
+('Taller de Reparación'),
+('Tienda de Bicicletas'),
+('Tienda de Cosméticos'),
+('Tienda de Decoración'),
+('Tienda de Deportes'),
+('Tienda de Electrónica'),
+('Tienda de Electrónica de Consumo'),
+('Tienda de Instrumentos Musicales'),
+('Tienda de Juguetes'),
+('Tienda de Mascotas'),
+('Tienda de Muebles'),
+('Tienda de Productos Naturales'),
+('Tienda de Regalos'),
+('Tienda de Ropa'),
+('Tienda de Ropa Deportiva'),
+('Zapatería');
+
+INSERT INTO tags (name) VALUES
+('Vegano'),
+('Sin Gluten'),
+('Descuento'),
+('Nuevo'),
+('Popular');

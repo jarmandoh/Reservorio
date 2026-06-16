@@ -29,7 +29,6 @@ interface ConfirmedBooking {
   <div class="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(26,115,232,0.26),_transparent_32%),linear-gradient(180deg,#040814_0%,#091324_52%,#0c1628_100%)] text-white">
     <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
       <div class="grid gap-8 lg:min-h-[calc(100vh-5rem)] lg:grid-cols-[minmax(0,1fr)_430px] lg:items-center lg:gap-12">
-
         <section class="flex flex-col justify-center gap-8 lg:pr-6">
           <div class="space-y-4">
             <p class="text-[11px] font-semibold uppercase tracking-[0.35em] text-[#8fb5ff]">Reserva sin esperas</p>
@@ -478,6 +477,8 @@ export class BookingComponent implements OnInit, OnDestroy {
     // Load business info
     this.api.getBusinesses().pipe(catchError(() => of([]))).subscribe(list => {
       const found = list.find(b => b.id === this.businessId);
+      if(!found) location.replace('/'); // Redirect if business not found
+      console.log('Found business:', found);
       if (found) this.business.set(found);
     });
     this.loadServices();

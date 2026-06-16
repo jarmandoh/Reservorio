@@ -8,8 +8,7 @@ import {
   BookingPayload,
   GoogleStatus,
   Reservation,
-  UpdatePayload,
-  UxTip,
+  UpdatePayload
 } from '../models/reservation.model';
 import { Business, NewBusinessPayload } from '../models/businesses.model';
 
@@ -75,18 +74,11 @@ export class ApiService {
   }
 
   // ── Multi-business (public) ───────────────────────────────────────────
-
   getBusinesses(): Observable<Business[]> {
     return this.http
       .get<ApiResponse<Business[]>>(`${this.base}/businesses`)
       .pipe(map(r => r.data ?? []), catchError(this.handleError));
-  }
-
-  getUxTips(): Observable<UxTip[]> {
-    return this.http
-      .get<ApiResponse<UxTip[]>>(`${this.base}/ux-tips`)
-      .pipe(map(r => r.data ?? []), catchError(this.handleError));
-  }
+  };
 
   // ── Multi-business (admin) ────────────────────────────────────────────
 
