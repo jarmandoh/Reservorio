@@ -10,6 +10,7 @@ import {
   Reservation,
   UpdatePayload
 } from '../models/reservation.model';
+import { Categoria } from '../models/categorias.model';
 import { Business, NewBusinessPayload } from '../models/businesses.model';
 
 @Injectable({ providedIn: 'root' })
@@ -195,4 +196,11 @@ export class ApiService {
       `HTTP ${err.status}`;
     return throwError(() => new Error(msg));
   }
+
+  getCategories(): Observable<Categoria[]> {
+    return this.http
+      .get<ApiResponse<Categoria[]>>(`${this.base}/categories/all`)
+      .pipe(map(r => r.data ?? []), catchError(this.handleError));
+  }
+
 }

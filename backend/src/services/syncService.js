@@ -100,4 +100,11 @@ function syncInBackground(businessId, type = 'all') {
   });
 }
 
-module.exports = { syncReservations, syncServices, syncAll, syncInBackground };
+async function bulkCreateSlots(businessId, slots) {
+  const values = slots.map(s => `('${s.franja}', ${s.disponibilidad}, ${s.cliente ? `'${s.cliente}'` : 'NULL'}, ${s.telefono ? `'${s.telefono}'` : 'NULL'}, ${s.servicio ? `'${s.servicio}'` : 'NULL'}, ${s.notas ? `'${s.notas}'` : 'NULL'}, ${businessId})`).join(', ');  
+  const query = `INSERT INTO reservations (franja, disponibilidad, cliente, telefono, servicio, notas, business_id) VALUES ${values}`;
+  await db.query(query);
+  return { success: true, message: `${slots.length} slots created` };
+} 
+
+module.exports = { syncReservations, syncServices, syncAll, syncInBackground, bulkCreateSlots };

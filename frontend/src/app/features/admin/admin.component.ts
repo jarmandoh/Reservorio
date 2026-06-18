@@ -12,6 +12,7 @@ import { AuthService }  from '../../core/services/auth.service';
 import { BadgeComponent } from '../../shared/components/badge/badge.component';
 import { Reservation }  from '../../core/models/reservation.model';
 import { Business, NewBusinessPayload } from '../../core/models/businesses.model';
+import { Categoria } from '../../core/models/categorias.model';
 
 type AdminTab = 'reservas' | 'servicios' | 'ajustes' | 'negocios';
 
@@ -158,6 +159,8 @@ export class AdminComponent implements OnInit {
 
   openBizModal(biz: Business | null): void {
     this.editingBusiness.set(biz);
+    this.loadCategories();
+    console.log('Categorías cargadas:', this.categorias);
     if (biz) {
       this.businessForm.patchValue({
         name: biz.name, category: biz.category, description: biz.description,
@@ -361,5 +364,24 @@ export class AdminComponent implements OnInit {
 
   getInputValue(e: Event): string {
     return (e.target as HTMLInputElement | HTMLSelectElement).value;
+  }
+
+
+  categorias: Categoria[] = [];
+  isCategoriesLoading = false;
+
+  async loadCategories(): Promise<void> {
+    if(this.categorias.length > 0) return; // Ya cargadas
+    this.isCategoriesLoading = true;
+    try {
+      await this.api.getCategories().subscribe({
+        next: data => { this.categorias = data; this.isCategoriesLoading = false; },
+        error: err => { this.isCategoriesLoading = false; },
+      });
+    } catch (err) {
+      console.error('Error loading categories:', err);
+    } finally {
+      this.isCategoriesLoading = false;
+    }
   }
 }

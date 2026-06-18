@@ -1,0 +1,24 @@
+<div class="max-w-md mx-auto p-6 bg-white rounded-lg shadow-md">
+  <h2 class="text-xl font-bold mb-4">Generador Masivo de Slots</h2>
+  <form [formGroup]="form" (submit)="$event.preventDefault(); onGenerate()">
+    <div class="mb-4">
+      <label class="block mb-1">Nombre</label>
+      <input type="text" formControlName="name" class="w-full border rounded p-2">
+    </div>
+    <div class="mb-4">
+      <label class="block mb-1">Hora de inicio</label>
+      <input type="time" formControlName="startTime" class="w-full border rounded p-2">
+    </div>
+    <div class="mb-4">
+      <label class="block mb-1">Duración (minutos)</label>
+      <input type="number" formControlName="duration" class="w-full border rounded p-2">
+    </div>
+    <div class="mb-4">
+      <label class="block mb-1">Cantidad</label>
+      <input type="number" min="1" formControlName="quantity" class="w-full border rounded p-2">
+    </div>
+    <button type="submit" class="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600">
+      Generar Slots
+    </button>
+  </form>
+</div>

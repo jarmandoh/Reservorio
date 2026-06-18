@@ -1,0 +1,94 @@
+<!-- ══ MODAL: Negocio ══════════════════════════════════════════ -->
+    @if (showBizModal()) {
+      <div class="fixed inset-0 z-40 flex items-end sm:items-center justify-center p-4 sm:p-6
+                  bg-black/40 backdrop-blur-sm animate-fade-in"
+           (click)="closeBizModal()">
+        <div class="w-full max-w-lg bg-surface-lowest rounded-t-2xl sm:rounded-2xl flex flex-col
+                    shadow-soft max-h-[92dvh] animate-sheet-up"
+             (click)="$event.stopPropagation()">
+
+          <div class="flex items-center justify-between p-5 border-b border-outline-variant/20 flex-shrink-0">
+            <h3 class="font-display font-semibold text-lg">
+              {{ editingBusiness() ? 'Editar negocio' : 'Nuevo negocio' }}
+            </h3>
+            <button class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-surface-container"
+                    (click)="closeBizModal()">
+              <span class="material-icons-round text-on-surface-variant">close</span>
+            </button>
+          </div>
+
+          <div class="overflow-y-auto flex-1 p-5">
+            <form [formGroup]="businessForm" class="flex flex-col gap-4">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label class="form-label">Nombre *</label>
+                  <input type="text" class="form-input" formControlName="name" />
+                </div>
+                <div>
+                  <label class="form-label">Categoría *</label>
+                  <input type="text" class="form-input" formControlName="category"
+                         placeholder="Ej. Salud & Bienestar" />
+                </div>
+              </div>
+              <div>
+                <label class="form-label">Descripción</label>
+                <textarea class="form-textarea" formControlName="description" rows="2"></textarea>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label class="form-label">Ubicación</label>
+                  <input type="text" class="form-input" formControlName="location" />
+                </div>
+                <div>
+                  <label class="form-label">Teléfono</label>
+                  <input type="tel" class="form-input" formControlName="phone" />
+                </div>
+              </div>
+              <div>
+                <label class="form-label">Horario</label>
+                <input type="text" class="form-input" formControlName="schedule"
+                       placeholder="Ej. Lun-Vie 9:00–18:00" />
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label class="form-label">Logo (URL)</label>
+                  <input type="url" class="form-input" formControlName="logo"
+                         placeholder="https://..." />
+                </div>
+                <div>
+                  <label class="form-label">Tags (coma separados)</label>
+                  <input type="text" class="form-input" formControlName="tags"
+                         placeholder="Consultas, Online" />
+                </div>
+              </div>
+              <div>
+                <label class="form-label">Gradiente CSS</label>
+                <input type="text" class="form-input" formControlName="gradient"
+                       placeholder="linear-gradient(135deg,#005bbf,#1a73e8)" />
+              </div>
+              <div>
+                <label class="form-label">
+                  {{ editingBusiness() ? 'Nuevo PIN (vacío = sin cambio)' : 'PIN de acceso *' }}
+                </label>
+                <input type="password" class="form-input" formControlName="pin"
+                       inputmode="numeric" placeholder="••••" />
+              </div>
+            </form>
+          </div>
+
+          <div class="p-5 border-t border-outline-variant/20 flex gap-3 flex-shrink-0">
+            <button class="btn-secondary flex-1" (click)="closeBizModal()">Cancelar</button>
+            <button class="btn-primary flex-1"
+                    [disabled]="businessForm.invalid || savingBusiness()"
+                    (click)="saveBusiness()">
+              @if (savingBusiness()) {
+                <span class="material-icons-round text-base animate-spin">refresh</span>
+                Guardando…
+              } @else {
+                Guardar
+              }
+            </button>
+          </div>
+        </div>
+      </div>
+    }

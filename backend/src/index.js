@@ -9,12 +9,15 @@ const cors           = require('cors');
 const helmet         = require('helmet');
 const rateLimit      = require('express-rate-limit');
 const db             = require('./db');
-const reservations   = require('./routes/reservations.routes');
-const services       = require('./routes/services.routes');
-const businesses     = require('./routes/businesses.routes');
-const auth           = require('./routes/auth.routes');
-const googleOAuth    = require('./routes/google.routes');
-const uxRoutes       = require('./routes/ux.routes');
+
+
+const reservations      = require('./routes/reservations.routes');
+const services          = require('./routes/services.routes');
+const businesses        = require('./routes/businesses.routes');
+const auth              = require('./routes/auth.routes');
+const googleOAuth       = require('./routes/google.routes');
+const uxRoutes          = require('./routes/ux.routes');
+const categoriesRoutes  = require('./routes/categories.routes');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
 
 const app  = express();
@@ -64,6 +67,7 @@ app.use('/api/services',     services);
 app.use('/api/businesses',   businesses);
 app.use('/api/auth',         auth);
 app.use('/api/google',       googleOAuth);
+app.use('/api/categories',   categoriesRoutes);
 app.use('/api/ux-tips',      uxRoutes);
 
 // ── Health check ─────────────────────────────────────────────────────────────
