@@ -18,6 +18,7 @@ const auth              = require('./routes/auth.routes');
 const googleOAuth       = require('./routes/google.routes');
 const uxRoutes          = require('./routes/ux.routes');
 const categoriesRoutes  = require('./routes/categories.routes');
+const tagsRoutes        = require('./routes/tags.routes');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
 
 const app  = express();
@@ -29,7 +30,7 @@ app.use(helmet({
 }));
 
 // ── CORS ────────────────────────────────────────────────────────────────────
-const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:4200')
+const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:4200' || 'http://localhost:3000')
   .split(',').map(o => o.trim());
 
 app.use(cors({
@@ -68,6 +69,7 @@ app.use('/api/businesses',   businesses);
 app.use('/api/auth',         auth);
 app.use('/api/google',       googleOAuth);
 app.use('/api/categories',   categoriesRoutes);
+app.use('/api/tags',         tagsRoutes);
 app.use('/api/ux-tips',      uxRoutes);
 
 // ── Health check ─────────────────────────────────────────────────────────────

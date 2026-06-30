@@ -10,9 +10,8 @@ const router    = express.Router();
 
 // ── GET /api/categories/all ────────────────────────────────────────────────
 router.get(
-  '/categories/all',
+  '/all',
   async (req, res) => {
-    console.log('GET ------ /api/categories');
     // const { businessId, franja, cliente, telefono, servicio, notas } = req.body ?? {};
     try {
       const { rows } = await db.query('SELECT * FROM categories');

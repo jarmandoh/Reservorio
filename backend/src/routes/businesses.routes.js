@@ -119,7 +119,11 @@ router.post('/:id/auth', async (req, res) => {
 
 // POST /api/businesses  -> crear negocio (solo admin)
 router.post('/', requireAdmin, businessCreateValidators, async (req, res) => {
-  const { name, category, description, location, rating, reviews, tags, gradient, icon, schedule, logo, phone, pin } = req.body ?? {};
+  const {
+    name, category, description, location, rating, reviews, tags,
+    gradient, icon, schedule, logo, phone,
+    facebook, instagram, tiktok, whatsapp, linkedin, pin
+  } = req.body ?? {};
   const id = clean(name).toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 16) + '_' + Date.now().toString(36);
   const pinHash = await bcrypt.hash(String(pin), 10);
   const tagsStr = Array.isArray(tags) ? tags.join(',') : clean(tags ?? '');
@@ -128,8 +132,10 @@ router.post('/', requireAdmin, businessCreateValidators, async (req, res) => {
     await db.query(
       `INSERT INTO businesses
          (id, name, category, description, location, rating, reviews,
-          tags, gradient, icon, schedule, logo, phone, active, pin_hash)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
+          tags, gradient, icon, schedule, logo, phone,
+          facebook, instagram, tiktok, whatsapp, linkedin,
+          active, pin_hash)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)`,
       [
         id,
         clean(name), clean(category), clean(description ?? ''), clean(location ?? ''),
@@ -137,6 +143,7 @@ router.post('/', requireAdmin, businessCreateValidators, async (req, res) => {
         tagsStr,
         clean(gradient ?? 'linear-gradient(135deg,#005bbf,#1a73e8)'),
         clean(icon ?? 'store'), clean(schedule ?? ''), clean(logo ?? ''), clean(phone ?? ''),
+        clean(facebook ?? ''), clean(instagram ?? ''), clean(tiktok ?? ''), clean(whatsapp ?? ''), clean(linkedin ?? ''),
         true, pinHash,
       ]
     );
@@ -154,7 +161,7 @@ router.put('/:id', requireBusinessAuth, businessUpdateValidators, async (req, re
   const vals = [];
   let idx = 1;
 
-  const strFields = ['name', 'category', 'description', 'location', 'gradient', 'icon', 'schedule', 'logo', 'phone'];
+  const strFields = ['name', 'category', 'description', 'location', 'gradient', 'icon', 'schedule', 'logo', 'phone', 'facebook', 'instagram', 'tiktok', 'whatsapp', 'linkedin'];
   for (const k of strFields) {
     if (req.body?.[k] !== undefined) {
       sets.push(`${k} = $${idx++}`);

@@ -16,6 +16,11 @@ export interface Business {
   schedule?:      string;
   logo?:          string;
   phone?:         string;
+  facebook?:      string;
+  instagram?:     string;
+  tiktok?:        string;
+  whatsapp?:      string;
+  linkedin?:      string;
   active?:        boolean;
   sheetId?:       string;
   appsScriptUrl?: string;
@@ -31,6 +36,11 @@ export interface NewBusinessPayload {
   schedule?:     string;
   logo?:         string;
   phone?:        string;
+  facebook?:     string;
+  instagram?:    string;
+  tiktok?:       string;
+  whatsapp?:     string;
+  linkedin?:     string;
   tags?:         string[] | string;
   pin:           string;
 }

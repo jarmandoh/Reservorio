@@ -203,4 +203,10 @@ export class ApiService {
       .pipe(map(r => r.data ?? []), catchError(this.handleError));
   }
 
+  getTags(): Observable<string[]> {
+    return this.http
+      .get<ApiResponse<{ id: number; name: string }[]>>(`${this.base}/tags/all`)
+      .pipe(map(r => (r.data ?? []).map(tag => tag.name)), catchError(this.handleError));
+  }
+
 }

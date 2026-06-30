@@ -1,5 +1,5 @@
 import {
-  Component, OnInit, signal, computed, inject
+  Component, OnInit, signal, computed, effect, inject
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
@@ -13,6 +13,8 @@ import { BadgeComponent } from '../../shared/components/badge/badge.component';
 import { Reservation }  from '../../core/models/reservation.model';
 import { Business, NewBusinessPayload } from '../../core/models/businesses.model';
 import { Categoria } from '../../core/models/categorias.model';
+
+
 
 type AdminTab = 'reservas' | 'servicios' | 'ajustes' | 'negocios';
 
@@ -60,6 +62,49 @@ export class AdminComponent implements OnInit {
   readonly editingBusiness   = signal<Business | null>(null);
   readonly savingBusiness    = signal(false);
 
+  readonly tagsOptions = signal<string[]>([]);
+  readonly tagQuery = signal('');
+  readonly matchingTagSuggestions = computed(() => {
+    const query = this.tagQuery().trim().toLowerCase();
+    if (!query) return [];
+    return this.tagsOptions().filter(tag => tag.toLowerCase().includes(query)).slice(0, 6);
+  });
+
+  readonly presetGradients = [
+    { name: 'Cielo pastel', from: '#a4d8ff', to: '#f7f8ff' },
+    { name: 'Amanecer', from: '#ffd3b6', to: '#ff9a9e' },
+    { name: 'Lavanda', from: '#d8b4ff', to: '#f3e8ff' },
+    { name: 'Menta suave', from: '#b5f5d6', to: '#d3f1ff' },
+    { name: 'Durazno', from: '#ffccbc', to: '#ffe0b2' },
+  ];
+
+  readonly daysOfWeek = [
+    { id: 'Lun', label: 'Lun' },
+    { id: 'Mar', label: 'Mar' },
+    { id: 'Mie', label: 'Mié' },
+    { id: 'Jue', label: 'Jue' },
+    { id: 'Vie', label: 'Vie' },
+    { id: 'Sab', label: 'Sáb' },
+    { id: 'Dom', label: 'Dom' },
+  ];
+  readonly selectedDays = signal<string[]>([]);
+  readonly openTime = signal('09:00');
+  readonly closeTime = signal('18:00');
+  readonly schedulePreview = computed(() => {
+    const days = this.selectedDays();
+    if (!days.length) return this.businessForm.get('schedule')?.value ?? '';
+    return `${days.join(', ')} ${this.openTime()}–${this.closeTime()}`;
+  });
+
+  readonly gradientFrom = signal('#005bbf');
+  readonly gradientTo = signal('#1a73e8');
+  readonly gradientPreview = computed(() => `linear-gradient(135deg, ${this.gradientFrom()}, ${this.gradientTo()})`);
+  readonly logoPreview = computed(() => this.businessForm.get('logo')?.value ?? '');
+  readonly locationMapUrl = computed(() => {
+    const location = this.businessForm.get('location')?.value?.trim() ?? '';
+    return location ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}` : '';
+  });
+
   readonly serviceForm = this.fb.group({
     nombre: ['', [Validators.required, Validators.minLength(2)]],
   });
@@ -78,6 +123,11 @@ export class AdminComponent implements OnInit {
     phone:         [''],
     logo:          [''],
     tags:          [''],
+    facebook:      [''],
+    instagram:     [''],
+    tiktok:        [''],
+    whatsapp:      [''],
+    linkedin:      [''],
     icon:          ['store'],
     gradient:      ['linear-gradient(135deg,#005bbf,#1a73e8)'],
     pin:           [''],
@@ -125,6 +175,11 @@ export class AdminComponent implements OnInit {
 
   ngOnInit(): void {
     this.initAdminToken();
+    this.loadTags();
+    effect(() => {
+      const value = this.schedulePreview();
+      this.businessForm.get('schedule')?.setValue(value);
+    });
   }
 
   initAdminToken(): void {
@@ -157,21 +212,77 @@ export class AdminComponent implements OnInit {
     });
   }
 
+  loadTags(): void {
+    this.api.getTags().subscribe({
+      next: tags => this.tagsOptions.set(tags),
+      error: err => console.warn('No se pudieron cargar tags:', err.message),
+    });
+  }
+
+  extractGradientColor(gradient: string, index: 0 | 1): string | null {
+    const regex = /linear-gradient\([^,]+,\s*(#[0-9a-fA-F]{3,6})\s*,\s*(#[0-9a-fA-F]{3,6})\s*\)/;
+    const match = String(gradient).match(regex);
+    if (!match) return null;
+    return index === 0 ? match[1] : match[2];
+  }
+
+  applyPresetGradient(from: string, to: string): void {
+    this.gradientFrom.set(from);
+    this.gradientTo.set(to);
+    const value = `linear-gradient(135deg, ${from}, ${to})`;
+    this.businessForm.get('gradient')?.setValue(value);
+  }
+
+  updateGradientValue(): void {
+    const value = `linear-gradient(135deg, ${this.gradientFrom()}, ${this.gradientTo()})`;
+    this.businessForm.get('gradient')?.setValue(value);
+  }
+
+  toggleScheduleDay(day: string): void {
+    const current = this.selectedDays();
+    if (current.includes(day)) {
+      this.selectedDays.set(current.filter(d => d !== day));
+    } else {
+      this.selectedDays.set([...current, day]);
+    }
+  }
+
+  onLogoChange(): void {
+    this.businessForm.get('logo')?.updateValueAndValidity();
+  }
+
+  updateTagsFromSuggestion(tag: string): void {
+    const current = (this.businessForm.get('tags')?.value ?? '').split(',').map((t: string) => t.trim()).filter(Boolean);
+    if (!current.includes(tag)) current.push(tag);
+    this.businessForm.get('tags')?.setValue(current.join(', '));
+    this.tagQuery.set('');
+  }
+
   openBizModal(biz: Business | null): void {
     this.editingBusiness.set(biz);
     this.loadCategories();
+    this.loadTags();
     console.log('Categorías cargadas:', this.categorias);
     if (biz) {
       this.businessForm.patchValue({
         name: biz.name, category: biz.category, description: biz.description,
         location: biz.location, schedule: biz.schedule ?? '',
         phone: biz.phone ?? '', logo: biz.logo ?? '', tags: biz.tags?.join(', ') ?? '',
+        facebook: biz.facebook ?? '', instagram: biz.instagram ?? '', tiktok: biz.tiktok ?? '',
+        whatsapp: biz.whatsapp ?? '', linkedin: biz.linkedin ?? '',
         icon: biz.icon, gradient: biz.gradient,
         pin: '',
       });
+      this.gradientFrom.set(this.extractGradientColor(biz.gradient, 0) ?? '#005bbf');
+      this.gradientTo.set(this.extractGradientColor(biz.gradient, 1) ?? '#1a73e8');
       this.businessForm.get('pin')?.clearValidators();
     } else {
-      this.businessForm.reset({ icon: 'store', gradient: 'linear-gradient(135deg,#005bbf,#1a73e8)' });
+      this.businessForm.reset({
+        icon: 'store', gradient: 'linear-gradient(135deg,#005bbf,#1a73e8)',
+        facebook: '', instagram: '', tiktok: '', whatsapp: '', linkedin: '',
+      });
+      this.gradientFrom.set('#005bbf');
+      this.gradientTo.set('#1a73e8');
       this.businessForm.get('pin')?.setValidators([Validators.required, Validators.minLength(4)]);
     }
     this.businessForm.get('pin')?.updateValueAndValidity();
@@ -188,12 +299,26 @@ export class AdminComponent implements OnInit {
     const tagsArr = (v.tags ?? '').split(',').map((t: string) => t.trim()).filter(Boolean);
     this.savingBusiness.set(true);
 
+    const scheduleValue = this.schedulePreview() || v.schedule || '';
+    const gradientValue = this.businessForm.get('gradient')?.value || this.gradientPreview();
+
     if (this.editingBusiness()) {
-      const updates: Partial<NewBusinessPayload> & { pin?: string } = {
-        name: v.name!, category: v.category!, description: v.description ?? '',
-        location: v.location ?? '', schedule: v.schedule ?? '', phone: v.phone ?? '',
-        logo: v.logo ?? '', tags: tagsArr, icon: v.icon!, gradient: v.gradient!,
-      };
+      const updates: Partial<NewBusinessPayload> & { pin?: string } = {};
+      updates.name = v.name!;
+      updates.category = v.category!;
+      updates.description = v.description ?? '';
+      updates.location = v.location ?? '';
+      updates.schedule = scheduleValue;
+      updates.phone = v.phone ?? '';
+      updates.logo = v.logo ?? '';
+      updates.tags = tagsArr;
+      updates.icon = v.icon!;
+      updates.gradient = gradientValue;
+      updates.facebook = v.facebook ?? '';
+      updates.instagram = v.instagram ?? '';
+      updates.tiktok = v.tiktok ?? '';
+      updates.whatsapp = v.whatsapp ?? '';
+      updates.linkedin = v.linkedin ?? '';
       if (v.pin) updates.pin = v.pin;
       this.api.updateBusiness(this.editingBusiness()!.id, updates, token).subscribe({
         next: () => {
@@ -207,8 +332,10 @@ export class AdminComponent implements OnInit {
     } else {
       const payload: NewBusinessPayload = {
         name: v.name!, category: v.category!, description: v.description ?? '',
-        location: v.location ?? '', schedule: v.schedule ?? '', phone: v.phone ?? '',
-        logo: v.logo ?? '', tags: tagsArr, icon: v.icon!, gradient: v.gradient!,
+        location: v.location ?? '', schedule: scheduleValue, phone: v.phone ?? '',
+        logo: v.logo ?? '', tags: tagsArr, icon: v.icon!, gradient: gradientValue,
+        facebook: v.facebook ?? '', instagram: v.instagram ?? '', tiktok: v.tiktok ?? '',
+        whatsapp: v.whatsapp ?? '', linkedin: v.linkedin ?? '',
         pin: v.pin!,
       };
       this.api.createBusiness(payload, token).subscribe({
@@ -374,7 +501,9 @@ export class AdminComponent implements OnInit {
     if(this.categorias.length > 0) return; // Ya cargadas
     this.isCategoriesLoading = true;
     try {
+      console.log('Cargando categorías...'),
       await this.api.getCategories().subscribe({
+        
         next: data => { this.categorias = data; this.isCategoriesLoading = false; },
         error: err => { this.isCategoriesLoading = false; },
       });

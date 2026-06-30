@@ -427,8 +427,7 @@
     <!-- ══ MODAL: Negocio ══════════════════════════════════════════ -->
     @if (showBizModal()) {
       <div class="fixed inset-0 z-40 flex items-end sm:items-center justify-center p-4 sm:p-6
-                  bg-black/40 backdrop-blur-sm animate-fade-in"
-           (click)="closeBizModal()">
+                  bg-black/40 backdrop-blur-sm animate-fade-in">
         <div class="w-full max-w-lg bg-surface-lowest rounded-t-2xl sm:rounded-2xl flex flex-col
                     shadow-soft max-h-[92dvh] animate-sheet-up"
              (click)="$event.stopPropagation()">
@@ -452,8 +451,18 @@
                 </div>
                 <div>
                   <label class="form-label">Categoría *</label>
-                  <input type="text" class="form-input" formControlName="category"
-                         placeholder="Ej. Salud & Bienestar" />
+                  <select class="form-select" formControlName="category" autocomplete="">
+                    <option value="" disabled>Selecciona una categoría</option>
+                    @if (isCategoriesLoading) {
+                      <option disabled>Cargando categorías...</option>
+                    } @else {
+                      @for (cat of categorias; track cat.id) {
+                        <option value="{{ cat.name }}">{{ cat.name }}</option>
+                      }
+                    }
+                  </select>
+                  <!-- <input type="text" class="form-input" formControlName="category"
+                         placeholder="Ej. Salud & Bienestar" /> -->
                 </div>
               </div>
               <div>
@@ -462,35 +471,133 @@
               </div>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label class="form-label">Ubicación</label>
+                  <label class="form-label">Dirección</label>
                   <input type="text" class="form-input" formControlName="location" />
+                  @if (locationMapUrl()) {
+                    <a class="text-sm text-primary mt-2 inline-block hover:underline"
+                       href="{{ locationMapUrl() }}" target="_blank" rel="noreferrer noopener">
+                      Ver en el mapa
+                    </a>
+                  }
                 </div>
                 <div>
                   <label class="form-label">Teléfono</label>
                   <input type="tel" class="form-input" formControlName="phone" />
                 </div>
               </div>
-              <div>
+              <div class="grid grid-cols-1 gap-3">
                 <label class="form-label">Horario</label>
-                <input type="text" class="form-input" formControlName="schedule"
-                       placeholder="Ej. Lun-Vie 9:00–18:00" />
+                <div class="grid grid-cols-7 gap-2">
+                  @for (day of daysOfWeek; track day.id) {
+                    <button type="button" class="rounded-full px-3 py-2 text-xs font-semibold transition"
+                            [class.bg-primary]="selectedDays().includes(day.id)"
+                            [class.text-white]="selectedDays().includes(day.id)"
+                            [class.bg-surface-container]="!selectedDays().includes(day.id)"
+                            [class.text-on-surface]="!selectedDays().includes(day.id)"
+                            (click)="toggleScheduleDay(day.id)">
+                      {{ day.label }}
+                    </button>
+                  }
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="form-label">Apertura</label>
+                    <input type="time" class="form-input" [value]="openTime()"
+                           (input)="openTime.set(getInputValue($event))" />
+                  </div>
+                  <div>
+                    <label class="form-label">Cierre</label>
+                    <input type="time" class="form-input" [value]="closeTime()"
+                           (input)="closeTime.set(getInputValue($event))" />
+                  </div>
+                </div>
+                <p class="text-sm text-on-surface-variant">Horario generado: <span class="font-semibold">{{ schedulePreview() || 'No definido' }}</span></p>
+                <input type="hidden" formControlName="schedule" />
               </div>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label class="form-label">Logo (URL)</label>
                   <input type="url" class="form-input" formControlName="logo"
-                         placeholder="https://..." />
+                         placeholder="https://..." (input)="onLogoChange()" />
+                </div>
+                <div class="flex flex-col gap-2">
+                  <label class="form-label">Vista previa del logo</label>
+                  @if (logoPreview()) {
+                    <div class="rounded-xl overflow-hidden border border-outline-variant/20 w-full h-28 bg-surface-muted">
+                      <img src="{{ logoPreview() }}" alt="Vista previa del logo" class="w-full h-full object-contain" />
+                    </div>
+                  } @else {
+                    <div class="rounded-xl border border-outline-variant/20 w-full h-28 bg-surface-muted flex items-center justify-center text-on-surface-variant">
+                      URL de logo vacía
+                    </div>
+                  }
+                </div>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label class="form-label">Facebook</label>
+                  <input type="url" class="form-input" formControlName="facebook" placeholder="https://facebook.com/..." />
                 </div>
                 <div>
-                  <label class="form-label">Tags (coma separados)</label>
-                  <input type="text" class="form-input" formControlName="tags"
-                         placeholder="Consultas, Online" />
+                  <label class="form-label">Instagram</label>
+                  <input type="url" class="form-input" formControlName="instagram" placeholder="https://instagram.com/..." />
+                </div>
+                <div>
+                  <label class="form-label">TikTok</label>
+                  <input type="url" class="form-input" formControlName="tiktok" placeholder="https://tiktok.com/@..." />
+                </div>
+                <div>
+                  <label class="form-label">WhatsApp</label>
+                  <input type="text" class="form-input" formControlName="whatsapp" placeholder="+5493412345678" />
+                </div>
+                <div>
+                  <label class="form-label">LinkedIn</label>
+                  <input type="url" class="form-input" formControlName="linkedin" placeholder="https://linkedin.com/..." />
                 </div>
               </div>
               <div>
-                <label class="form-label">Gradiente CSS</label>
-                <input type="text" class="form-input" formControlName="gradient"
-                       placeholder="linear-gradient(135deg,#005bbf,#1a73e8)" />
+                <label class="form-label">Tags</label>
+                <input type="text" class="form-input" formControlName="tags"
+                       placeholder="Consultas, Online"
+                       (input)="tagQuery.set(getInputValue($event))" />
+                @if (matchingTagSuggestions().length) {
+                  <div class="border border-outline-variant/20 rounded-xl bg-surface-low p-2 mt-2 grid gap-2">
+                    @for (tag of matchingTagSuggestions(); track tag) {
+                      <button type="button" class="text-sm text-on-surface hover:text-primary text-left"
+                              (click)="updateTagsFromSuggestion(tag)">
+                        {{ tag }}
+                      </button>
+                    }
+                  </div>
+                }
+              </div>
+              <div>
+                <label class="form-label">Gradiente</label>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label class="form-label text-xs">Color 1</label>
+                    <input type="color" class="w-full h-12 rounded-xl border border-outline-variant/20"
+                           [value]="gradientFrom()"
+                           (input)="gradientFrom.set(getInputValue($event)); updateGradientValue()" />
+                  </div>
+                  <div>
+                    <label class="form-label text-xs">Color 2</label>
+                    <input type="color" class="w-full h-12 rounded-xl border border-outline-variant/20"
+                           [value]="gradientTo()"
+                           (input)="gradientTo.set(getInputValue($event)); updateGradientValue()" />
+                  </div>
+                </div>
+                <div class="flex flex-wrap gap-2 mt-3">
+                  @for (preset of presetGradients; track preset.name) {
+                    <button type="button" class="rounded-full px-3 py-2 text-xs font-semibold border border-outline-variant/20"
+                            (click)="applyPresetGradient(preset.from, preset.to)">
+                      {{ preset.name }}
+                    </button>
+                  }
+                </div>
+                <div class="mt-3 rounded-xl h-16 border border-outline-variant/20"
+                     [style.background]="gradientPreview()"></div>
+                <input type="hidden" formControlName="gradient" />
               </div>
               <div>
                 <label class="form-label">
@@ -522,8 +629,7 @@
     <!-- ══ MODAL: Cambiar estado ════════════════════════════════════ -->
     @if (modalRow()) {
       <div class="fixed inset-0 z-30 flex items-end sm:items-center justify-center p-4 sm:p-6
-                  bg-black/40 backdrop-blur-sm animate-fade-in"
-           (click)="closeModal()">
+                  bg-black/40 backdrop-blur-sm animate-fade-in">
         <div class="w-full max-w-md bg-surface-lowest rounded-t-2xl sm:rounded-2xl p-6
                     flex flex-col gap-5 shadow-soft animate-sheet-up"
              (click)="$event.stopPropagation()">

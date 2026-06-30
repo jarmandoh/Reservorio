@@ -15,6 +15,11 @@ CREATE TABLE IF NOT EXISTS businesses (
   schedule    TEXT NOT NULL DEFAULT '',
   logo        TEXT NOT NULL DEFAULT '',
   phone       TEXT NOT NULL DEFAULT '',
+  facebook    TEXT NOT NULL DEFAULT '',
+  instagram   TEXT NOT NULL DEFAULT '',
+  tiktok      TEXT NOT NULL DEFAULT '',
+  whatsapp    TEXT NOT NULL DEFAULT '',
+  linkedin    TEXT NOT NULL DEFAULT '',
   active      BOOLEAN NOT NULL DEFAULT true,
   pin_hash    TEXT NOT NULL,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -51,7 +56,11 @@ ALTER TABLE businesses ADD COLUMN IF NOT EXISTS google_access_token  TEXT;  -- c
 ALTER TABLE businesses ADD COLUMN IF NOT EXISTS google_refresh_token TEXT;  -- cifrado AES-256-GCM
 ALTER TABLE businesses ADD COLUMN IF NOT EXISTS google_token_expiry  TIMESTAMPTZ;
 ALTER TABLE businesses ADD COLUMN IF NOT EXISTS google_sheet_id      TEXT;
-
+ALTER TABLE businesses ADD COLUMN IF NOT EXISTS facebook           TEXT;
+ALTER TABLE businesses ADD COLUMN IF NOT EXISTS instagram          TEXT;
+ALTER TABLE businesses ADD COLUMN IF NOT EXISTS tiktok             TEXT;
+ALTER TABLE businesses ADD COLUMN IF NOT EXISTS whatsapp           TEXT;
+ALTER TABLE businesses ADD COLUMN IF NOT EXISTS linkedin           TEXT;
 
 CREATE TABLE IF NOT EXISTS categories (
   id SERIAL PRIMARY KEY,
