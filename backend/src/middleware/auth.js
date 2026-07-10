@@ -50,20 +50,6 @@ function requireAdminOrOwner(req, res, next) {
   });
 }
 
-function canAccessBusiness(req, res) {
-  const payload = req.authPayload;
-  if (!payload) {
-    res.status(401).json({ ok: false, message: 'Token requerido' });
-    return false;
-  }
-
-  if (payload.role === 'admin') return true;
-  if (payload.role === 'business-admin' && payload.businessId === req.params.id) return true;
-
-  res.status(403).json({ ok: false, message: 'Sin acceso a este negocio' });
-  return false;
-}
-
 function canAccessBusinessId(req, res, businessId) {
   const payload = req.authPayload;
   if (!payload) {
@@ -124,6 +110,8 @@ async function requireBusinessAuth(req, res, next) {
 module.exports = {
   requireAuth,
   requireAdmin,
+  requireOwnerAuth,
+  requireAdminOrOwner,
   requireBusinessAuth,
   canAccessBusiness,
   canAccessBusinessId,
