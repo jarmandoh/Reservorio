@@ -538,10 +538,15 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.bizId = this.route.snapshot.params['businessId'] ?? '';
-    this.token = this.auth.getBusinessToken(this.bizId) ?? '';
+    this.token = this.auth.getBusinessToken(this.bizId) ?? this.auth.getOwnerToken() ?? '';
 
+    const isOwnerRoute = this.route.snapshot.url.some(seg => seg.path === 'owner');
     if (!this.token) {
-      this.router.navigate(['/business', this.bizId, 'login']);
+      if (isOwnerRoute) {
+        this.router.navigate(['/owner/login']);
+      } else {
+        this.router.navigate(['/business', this.bizId, 'login']);
+      }
       return;
     }
 
@@ -569,9 +574,8 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
   }
 
   loadBusiness(): void {
-    this.api.getBusinesses().subscribe(list => {
-      const found = list.find(b => b.id === this.bizId);
-      if (found) {
+    this.api.getBusinessById(this.bizId, this.token).subscribe({
+      next: found => {
         this.business.set(found);
         this.profileForm.patchValue({
           name:        found.name,
@@ -581,7 +585,10 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
           schedule:    found.schedule ?? '',
           phone:       found.phone    ?? '',
         });
-      }
+      },
+      error: () => {
+        this.toast.error('No se pudo cargar el negocio.');
+      },
     });
   }
 

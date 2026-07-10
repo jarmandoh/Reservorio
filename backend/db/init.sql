@@ -25,6 +25,20 @@ CREATE TABLE IF NOT EXISTS businesses (
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS owners (
+  id            TEXT PRIMARY KEY,
+  name          TEXT NOT NULL,
+  email         TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS business_owners (
+  business_id TEXT NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  owner_id    TEXT NOT NULL REFERENCES owners(id) ON DELETE CASCADE,
+  PRIMARY KEY (business_id, owner_id)
+);
+
 CREATE TABLE IF NOT EXISTS services (
   id          SERIAL PRIMARY KEY,
   business_id TEXT NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,

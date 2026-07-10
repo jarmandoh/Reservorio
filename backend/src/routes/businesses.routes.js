@@ -5,7 +5,7 @@ const bcrypt = require('bcryptjs');
 const { body, param } = require('express-validator');
 const { sign } = require('../middleware/jwt');
 const { clean } = require('../middleware/sanitize');
-const { requireAdmin, requireBusinessAuth } = require('../middleware/auth');
+const { requireAdmin, requireAdminOrOwner, requireOwnerAuth, requireBusinessAuth } = require('../middleware/auth');
 const { handleValidation } = require('../middleware/validation');
 const db = require('../db');
 const { syncInBackground } = require('../services/syncService');
@@ -78,10 +78,40 @@ const serviceNameParamValidator = [
   handleValidation,
 ];
 
-// GET /api/businesses  -> activos, publico
-router.get('/', async (_req, res) => {
+// GET /api/businesses  -> activos, publico, con filtros de busqueda y etiquetas
+router.get('/', async (req, res) => {
+  const { q, category, tags, location, interest } = req.query;
+  const values = [];
+  const filters = ['active = true'];
+
+  if (category) {
+    values.push(`%${clean(String(category))}%`);
+    filters.push(`category ILIKE $${values.length}`);
+  }
+
+  if (location) {
+    values.push(`%${clean(String(location))}%`);
+    filters.push(`location ILIKE $${values.length}`);
+  }
+
+  const search = String(q ?? '').trim();
+  if (search) {
+    values.push(`%${clean(search)}%`);
+    filters.push(`(name ILIKE $${values.length} OR description ILIKE $${values.length} OR location ILIKE $${values.length} OR category ILIKE $${values.length} OR tags ILIKE $${values.length})`);
+  }
+
+  const tagInput = String(tags ?? interest ?? '').trim();
+  if (tagInput) {
+    const tagList = tagInput.split(',').map((t) => t.trim()).filter(Boolean);
+    for (const tag of tagList) {
+      values.push(`%${clean(tag)}%`);
+      filters.push(`tags ILIKE $${values.length}`);
+    }
+  }
+
   try {
-    const { rows } = await db.query('SELECT * FROM businesses WHERE active = true ORDER BY name');
+    const query = `SELECT * FROM businesses WHERE ${filters.join(' AND ')} ORDER BY name`;
+    const { rows } = await db.query(query, values);
     res.json({ ok: true, data: rows.map(safeBiz) });
   } catch (e) {
     res.status(500).json({ ok: false, message: e.message });
@@ -92,6 +122,23 @@ router.get('/', async (_req, res) => {
 router.get('/all', requireAdmin, async (_req, res) => {
   try {
     const { rows } = await db.query('SELECT * FROM businesses ORDER BY name');
+    res.json({ ok: true, data: rows.map(safeBiz) });
+  } catch (e) {
+    res.status(500).json({ ok: false, message: e.message });
+  }
+});
+
+// GET /api/businesses/owner -> negocios del dueño autenticado
+router.get('/owner', requireOwnerAuth, async (req, res) => {
+  try {
+    const ownerId = req.authPayload.ownerId;
+    const { rows } = await db.query(
+      `SELECT b.* FROM businesses b
+         JOIN business_owners bo ON bo.business_id = b.id
+         WHERE bo.owner_id = $1
+         ORDER BY b.name`,
+      [ownerId]
+    );
     res.json({ ok: true, data: rows.map(safeBiz) });
   } catch (e) {
     res.status(500).json({ ok: false, message: e.message });
@@ -117,13 +164,14 @@ router.post('/:id/auth', async (req, res) => {
   }
 });
 
-// POST /api/businesses  -> crear negocio (solo admin)
-router.post('/', requireAdmin, businessCreateValidators, async (req, res) => {
+// POST /api/businesses  -> crear negocio (admin o dueño)
+router.post('/', requireAdminOrOwner, businessCreateValidators, async (req, res) => {
   const {
     name, category, description, location, rating, reviews, tags,
     gradient, icon, schedule, logo, phone,
     facebook, instagram, tiktok, whatsapp, linkedin, pin
   } = req.body ?? {};
+  const ownerId = req.authPayload?.role === 'owner' ? req.authPayload.ownerId : null;
   const id = clean(name).toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 16) + '_' + Date.now().toString(36);
   const pinHash = await bcrypt.hash(String(pin), 10);
   const tagsStr = Array.isArray(tags) ? tags.join(',') : clean(tags ?? '');
@@ -147,6 +195,10 @@ router.post('/', requireAdmin, businessCreateValidators, async (req, res) => {
         true, pinHash,
       ]
     );
+
+    if (ownerId) {
+      await db.query('INSERT INTO business_owners (business_id, owner_id) VALUES ($1, $2)', [id, ownerId]);
+    }
 
     const { rows } = await db.query('SELECT * FROM businesses WHERE id = $1', [id]);
     res.status(201).json({ ok: true, data: safeBiz(rows[0]) });
@@ -215,6 +267,17 @@ router.delete('/:id', requireAdmin, async (req, res) => {
 });
 
 // ── Per-business reservations ─────────────────────────────────────────────
+
+// GET /api/businesses/:id
+router.get('/:id', requireBusinessAuth, async (req, res) => {
+  try {
+    const { rows } = await db.query('SELECT * FROM businesses WHERE id = $1', [req.params.id]);
+    if (!rows.length) return res.status(404).json({ ok: false, message: 'Negocio no encontrado' });
+    res.json({ ok: true, data: safeBiz(rows[0]) });
+  } catch (e) {
+    res.status(500).json({ ok: false, message: e.message });
+  }
+});
 
 // GET /api/businesses/:id/reservations
 router.get('/:id/reservations', requireBusinessAuth, async (req, res) => {

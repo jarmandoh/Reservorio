@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
@@ -11,7 +11,15 @@ import {
   UpdatePayload
 } from '../models/reservation.model';
 import { Categoria } from '../models/categorias.model';
-import { Business, NewBusinessPayload } from '../models/businesses.model';
+import { Business, NewBusinessPayload, Owner, OwnerAuthPayload } from '../models/businesses.model';
+
+export interface BusinessQuery {
+  q?: string;
+  category?: string;
+  tags?: string;
+  location?: string;
+  interest?: string;
+}
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -74,12 +82,45 @@ export class ApiService {
       .pipe(catchError(this.handleError));
   }
 
-  // ── Multi-business (public) ───────────────────────────────────────────
-  getBusinesses(): Observable<Business[]> {
+  loginOwner(email: string, password: string): Observable<ApiResponse<{ token: string }>> {
     return this.http
-      .get<ApiResponse<Business[]>>(`${this.base}/businesses`)
+      .post<ApiResponse<{ token: string }>>(`${this.base}/auth/owner/login`, { email, password })
+      .pipe(catchError(this.handleError));
+  }
+
+  registerOwner(payload: OwnerAuthPayload): Observable<ApiResponse<{ token: string }>> {
+    return this.http
+      .post<ApiResponse<{ token: string }>>(`${this.base}/auth/owner/register`, payload)
+      .pipe(catchError(this.handleError));
+  }
+
+  // ── Multi-business (public) ───────────────────────────────────────────
+  getBusinesses(params?: BusinessQuery): Observable<Business[]> {
+    let httpParams = new HttpParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value != null && value !== '') {
+          httpParams = httpParams.set(key, String(value));
+        }
+      });
+    }
+
+    return this.http
+      .get<ApiResponse<Business[]>>(`${this.base}/businesses`, { params: httpParams })
       .pipe(map(r => r.data ?? []), catchError(this.handleError));
   };
+
+  getOwnerBusinesses(token: string): Observable<Business[]> {
+    return this.http
+      .get<ApiResponse<Business[]>>(`${this.base}/businesses/owner`, this.authHeader(token))
+      .pipe(map(r => r.data ?? []), catchError(this.handleError));
+  }
+
+  getBusinessById(businessId: string, token: string): Observable<Business> {
+    return this.http
+      .get<ApiResponse<Business>>(`${this.base}/businesses/${businessId}`, this.authHeader(token))
+      .pipe(map(r => r.data!), catchError(this.handleError));
+  }
 
   // ── Multi-business (admin) ────────────────────────────────────────────
 

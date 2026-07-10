@@ -6,84 +6,54 @@ import { catchError, of } from 'rxjs';
 import { ApiService }  from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
 import { Business }    from '../../core/models/businesses.model';
+import { PinAuthCardComponent } from '../../shared/components/pin-auth-card/pin-auth-card.component';
 
 @Component({
     selector: 'app-business-login',
-    imports: [CommonModule, ReactiveFormsModule],
+    imports: [CommonModule, ReactiveFormsModule, PinAuthCardComponent],
     template: `
-  <div class="min-h-dvh bg-surface flex flex-col items-center justify-center p-6">
-
-    <div class="w-full max-w-sm flex flex-col gap-6">
-
-      <!-- Logo / Icon -->
+  <app-pin-auth-card
+    [formGroup]="form"
+    [loading]="loading()"
+    [isSubmitDisabled]="form.invalid || loading()"
+    [errorMessage]="notFound() ? 'Negocio no encontrado. Verifica el enlace.' : loginError()"
+    submitLabel="Entrar"
+    loadingLabel="Verificando…"
+    backLabel="Volver al inicio"
+    (submit)="submit()"
+    (backAction)="goHome()"
+  >
+    <div header class="flex flex-col items-center gap-3 text-center">
       @if (business()) {
-        <div class="flex flex-col items-center gap-3 text-center">
-          <div class="w-16 h-16 rounded-2xl flex items-center justify-center text-white shadow-soft"
-               [style.background]="business()!.gradient">
-            <span class="material-icons-round text-3xl">{{ business()!.icon }}</span>
-          </div>
-          <div>
-            <h1 class="font-display font-bold text-xl">{{ business()!.name }}</h1>
-            <p class="text-sm text-on-surface-variant mt-0.5">Panel de administración</p>
-          </div>
+        <div class="w-16 h-16 rounded-2xl flex items-center justify-center text-white shadow-soft"
+             [style.background]="business()!.gradient">
+          <span class="material-icons-round text-3xl">{{ business()!.icon }}</span>
+        </div>
+        <div>
+          <h1 class="font-display font-bold text-xl">{{ business()!.name }}</h1>
+          <p class="text-sm text-on-surface-variant mt-0.5">Panel de administración</p>
         </div>
       } @else {
-        <div class="flex flex-col items-center gap-3 text-center">
-          <div class="w-16 h-16 rounded-2xl bg-surface-container flex items-center justify-center">
-            <span class="material-icons-round text-3xl text-on-surface-variant">store</span>
-          </div>
-          <div>
-            <h1 class="font-display font-bold text-xl">Acceso de negocio</h1>
-            <p class="text-sm text-on-surface-variant mt-0.5">Introduce tu PIN para continuar</p>
-          </div>
+        <div class="w-16 h-16 rounded-2xl bg-surface-container flex items-center justify-center">
+          <span class="material-icons-round text-3xl text-on-surface-variant">store</span>
+        </div>
+        <div>
+          <h1 class="font-display font-bold text-xl">Acceso de negocio</h1>
+          <p class="text-sm text-on-surface-variant mt-0.5">Introduce tu PIN para continuar</p>
         </div>
       }
-
-      <!-- Error -->
-      @if (notFound()) {
-        <div class="flex gap-3 p-4 rounded-xl text-sm"
-             style="background:#fff0ef;color:#93000a;border:1px solid #f9aead">
-          <span class="material-icons-round text-base mt-0.5">error_outline</span>
-          <p>Negocio no encontrado. Verifica el enlace.</p>
-        </div>
-      }
-
-      <!-- Form -->
-      @if (!notFound()) {
-        <form [formGroup]="form" (ngSubmit)="submit()" class="card flex flex-col gap-4">
-
-          <div>
-            <label class="form-label" for="pin">PIN de acceso</label>
-            <input id="pin" type="password" class="form-input text-center tracking-[0.4em] text-lg"
-                   inputmode="numeric" maxlength="8"
-                   formControlName="pin" placeholder="••••"
-                   autocomplete="current-password" />
-          </div>
-
-          @if (loginError()) {
-            <p class="text-xs text-error text-center -mt-2">{{ loginError() }}</p>
-          }
-
-          <button type="submit"
-                  class="btn-primary w-full"
-                  [disabled]="form.invalid || loading()">
-            @if (loading()) {
-              <span class="material-icons-round text-base animate-spin">refresh</span>
-              Verificando…
-            } @else {
-              Entrar
-            }
-          </button>
-        </form>
-      }
-
-      <a routerLink="/" (click)="goHome()"
-         class="flex items-center justify-center z-20 cursor-pointer gap-1.5 text-sm text-on-surface-variant hover:text-primary transition">
-        <span class="material-icons-round text-base">arrow_back</span>
-        Volver al inicio
-      </a>
     </div>
-  </div>
+
+    @if (!notFound()) {
+      <div>
+        <label class="form-label" for="pin">PIN de acceso</label>
+        <input id="pin" type="password" class="form-input text-center tracking-[0.4em] text-lg"
+               inputmode="numeric" maxlength="8"
+               formControlName="pin" placeholder="••••"
+               autocomplete="current-password" />
+      </div>
+    }
+  </app-pin-auth-card>
   `
 })
 export class BusinessLoginComponent implements OnInit {

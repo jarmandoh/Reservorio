@@ -1,6 +1,7 @@
 'use strict';
 
 const { verify } = require('./jwt');
+const db = require('../db');
 
 function getBearerToken(req) {
   const header = String(req.headers.authorization || '');
@@ -26,6 +27,24 @@ function requireAdmin(req, res, next) {
   requireAuth(req, res, () => {
     if (req.authPayload.role !== 'admin') {
       return res.status(403).json({ ok: false, message: 'Requiere rol admin' });
+    }
+    next();
+  });
+}
+
+function requireOwnerAuth(req, res, next) {
+  requireAuth(req, res, () => {
+    if (req.authPayload.role !== 'owner') {
+      return res.status(403).json({ ok: false, message: 'Requiere rol owner' });
+    }
+    next();
+  });
+}
+
+function requireAdminOrOwner(req, res, next) {
+  requireAuth(req, res, () => {
+    if (req.authPayload.role !== 'admin' && req.authPayload.role !== 'owner') {
+      return res.status(403).json({ ok: false, message: 'Requiere rol admin u owner' });
     }
     next();
   });
@@ -59,11 +78,47 @@ function canAccessBusinessId(req, res, businessId) {
   return false;
 }
 
-function requireBusinessAuth(req, res, next) {
-  requireAuth(req, res, () => {
-    if (!canAccessBusiness(req, res)) return;
-    next();
-  });
+async function canAccessBusiness(req, res) {
+  const payload = req.authPayload;
+  if (!payload) {
+    res.status(401).json({ ok: false, message: 'Token requerido' });
+    return false;
+  }
+
+  if (payload.role === 'admin') return true;
+  if (payload.role === 'business-admin' && payload.businessId === req.params.id) return true;
+
+  if (payload.role === 'owner') {
+    try {
+      const { rows } = await db.query(
+        'SELECT 1 FROM business_owners WHERE business_id = $1 AND owner_id = $2',
+        [req.params.id, payload.ownerId]
+      );
+      if (rows.length) return true;
+    } catch (e) {
+      res.status(500).json({ ok: false, message: e.message });
+      return false;
+    }
+  }
+
+  res.status(403).json({ ok: false, message: 'Sin acceso a este negocio' });
+  return false;
+}
+
+async function requireBusinessAuth(req, res, next) {
+  const token = getBearerToken(req);
+  if (!token) {
+    return res.status(401).json({ ok: false, message: 'Token requerido' });
+  }
+
+  try {
+    req.authPayload = verify(token);
+  } catch (err) {
+    return res.status(401).json({ ok: false, message: 'Token invalido o expirado' });
+  }
+
+  if (!(await canAccessBusiness(req, res))) return;
+  next();
 }
 
 module.exports = {

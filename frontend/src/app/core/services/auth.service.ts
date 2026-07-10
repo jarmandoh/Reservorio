@@ -1,14 +1,16 @@
 import { Injectable, signal, computed } from '@angular/core';
 
-const SESSION_KEY  = 'reservorio_unlocked';
-const PIN_KEY      = 'reservorio_admin_pin';
-const ADMIN_JWT    = 'reservorio_admin_jwt';
-const DEFAULT_PIN  = '1234';
+const SESSION_KEY   = 'reservorio_unlocked';
+const PIN_KEY       = 'reservorio_admin_pin';
+const ADMIN_JWT     = 'reservorio_admin_jwt';
+const OWNER_JWT     = 'reservorio_owner_jwt';
+const DEFAULT_PIN   = '1234';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private _unlocked = signal(sessionStorage.getItem(SESSION_KEY) === '1');
   readonly isUnlocked = computed(() => this._unlocked());
+  readonly isOwnerUnlocked = computed(() => !!this.getOwnerToken());
 
   get storedPin(): string {
     return localStorage.getItem(PIN_KEY) ?? DEFAULT_PIN;
@@ -51,6 +53,23 @@ export class AuthService {
     sessionStorage.removeItem(ADMIN_JWT);
   }
 
+  getOwnerToken(): string | null {
+    const token = sessionStorage.getItem(OWNER_JWT);
+    return this.isTokenValid(token) ? token : null;
+  }
+
+  setOwnerToken(token: string): void {
+    sessionStorage.setItem(OWNER_JWT, token);
+  }
+
+  clearOwnerToken(): void {
+    sessionStorage.removeItem(OWNER_JWT);
+  }
+
+  getOwnerPayload(): { ownerId?: string; role?: string; [key: string]: unknown } | null {
+    return this.decodeToken(this.getOwnerToken());
+  }
+
   // ── Business JWT ──────────────────────────────────────────────────────
 
   getBusinessToken(businessId: string): string | null {
@@ -72,12 +91,21 @@ export class AuthService {
 
   // ── JWT helper ────────────────────────────────────────────────────────
 
+  private decodeToken(token: string | null): { [key: string]: unknown } | null {
+    if (!token) return null;
+    try {
+      const [, payload] = token.split('.');
+      return JSON.parse(atob(payload));
+    } catch {
+      return null;
+    }
+  }
+
   private isTokenValid(token: string | null): boolean {
     if (!token) return false;
     try {
-      const [, payload] = token.split('.');
-      const data = JSON.parse(atob(payload));
-      return typeof data.exp === 'number' && data.exp * 1000 > Date.now();
+      const payload = this.decodeToken(token);
+      return typeof payload?.['exp'] === 'number' && payload['exp'] * 1000 > Date.now();
     } catch { return false; }
   }
 }

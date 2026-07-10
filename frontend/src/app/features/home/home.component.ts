@@ -79,18 +79,33 @@ const CATEGORIES = ['Todos', 'Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci
         </div>
 
         <!-- Search bar -->
-        <div class="g-search relative max-w-lg">
-          <span class="material-icons-round absolute left-4 top-1/2 -translate-y-1/2
-                       text-primary text-[1.25rem] pointer-events-none">search</span>
-          <input
-            type="search"
-            class="w-full bg-white text-on-surface rounded-2xl pl-12 pr-5 py-4
-                   text-base shadow-soft placeholder:text-outline focus:outline-none
-                   focus:ring-2 focus:ring-primary/40 transition"
-            placeholder="Busca por nombre, servicio o categoría…"
-            [(ngModel)]="searchQuery"
-            (ngModelChange)="onSearch()"
-          />
+        <div class="grid gap-3 sm:grid-cols-[1fr_220px] max-w-3xl">
+          <div class="relative">
+            <span class="material-icons-round absolute left-4 top-1/2 -translate-y-1/2
+                         text-primary text-[1.25rem] pointer-events-none">search</span>
+            <input
+              type="search"
+              class="w-full bg-white text-on-surface rounded-2xl pl-12 pr-5 py-4
+                     text-base shadow-soft placeholder:text-outline focus:outline-none
+                     focus:ring-2 focus:ring-primary/40 transition"
+              placeholder="Busca por nombre, servicio o categoría…"
+              [(ngModel)]="searchQuery"
+              (ngModelChange)="onSearch()"
+            />
+          </div>
+          <div class="relative">
+            <span class="material-icons-round absolute left-4 top-1/2 -translate-y-1/2
+                         text-primary text-[1.25rem] pointer-events-none">place</span>
+            <input
+              type="text"
+              class="w-full bg-white text-on-surface rounded-2xl pl-12 pr-5 py-4
+                     text-base shadow-soft placeholder:text-outline focus:outline-none
+                     focus:ring-2 focus:ring-primary/40 transition"
+              placeholder="Filtra por ciudad o zona…"
+              [(ngModel)]="locationQuery"
+              (ngModelChange)="onSearch()"
+            />
+          </div>
         </div>
 
         <!-- Stats bar -->
@@ -297,6 +312,7 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   businesses: Business[] = [];
   categories = CATEGORIES;
   searchQuery      = '';
+  locationQuery    = '';
   selectedCategory = 'Todos';
   readonly loading    = signal(true);
   readonly bizLoading = signal(false);
@@ -328,13 +344,22 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   ngOnInit(): void {
-    this.sub = this.api.getBusinesses().pipe(
-      
+    this.loadBusinesses();
+  }
+
+  loadBusinesses(): void {
+    this.bizLoading.set(true);
+    const query = {
+      q: this.searchQuery,
+      category: this.selectedCategory !== 'Todos' ? this.selectedCategory : undefined,
+      location: this.locationQuery,
+    };
+
+    this.sub = this.api.getBusinesses(query).pipe(
       catchError(() => of(FALLBACK_BUSINESSES))
     ).subscribe(list => {
-      console.log('Fetched businesses:', list)
       this.businesses = list.length ? list : [...FALLBACK_BUSINESSES];
-      
+      this.bizLoading.set(false);
       this.loading.set(false);
       setTimeout(() => this.animateCards(), 50);
     });
@@ -393,6 +418,7 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   resetFilters(): void {
     this.searchQuery = '';
     this.selectedCategory = 'Todos';
+    this.loadBusinesses();
   }
 
   goToBooking(biz: Business): void {

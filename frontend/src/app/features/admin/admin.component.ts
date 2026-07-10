@@ -175,11 +175,8 @@ export class AdminComponent implements OnInit {
 
   ngOnInit(): void {
     this.initAdminToken();
-    this.loadTags();
-    effect(() => {
-      const value = this.schedulePreview();
-      this.businessForm.get('schedule')?.setValue(value);
-    });
+    // this.loadTags(); cargar tags cuando se abra el modal
+    
   }
 
   initAdminToken(): void {
