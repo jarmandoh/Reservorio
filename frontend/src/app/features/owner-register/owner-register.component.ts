@@ -2,7 +2,6 @@ import { Component, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
 import { AuthCardComponent } from '../../shared/components/auth-card/auth-card.component';
 
@@ -41,7 +40,6 @@ import { AuthCardComponent } from '../../shared/components/auth-card/auth-card.c
 })
 export class OwnerRegisterComponent {
   private fb = inject(FormBuilder);
-  private api = inject(ApiService);
   private auth = inject(AuthService);
   private router = inject(Router);
 
@@ -61,15 +59,14 @@ export class OwnerRegisterComponent {
 
     const { name, email, password } = this.form.value;
     const payload = { name: name ?? '', email: email ?? '', password: password ?? '' };
-    this.api.registerOwner(payload).subscribe({
-      next: result => {
-        if (result.data?.token) {
-          this.auth.setOwnerToken(result.data.token);
-          this.router.navigate(['/owner/dashboard']);
-        }
+    this.auth.registerOwner(payload).subscribe({
+      next: () => {
+        this.loading.set(false);
+        this.router.navigate(['/owner/dashboard']);
       },
       error: err => {
-        this.error.set(err.message || 'No se pudo crear la cuenta.');
+        const message = err instanceof Error ? err.message : 'No se pudo crear la cuenta.';
+        this.error.set(message);
         this.loading.set(false);
       },
     });

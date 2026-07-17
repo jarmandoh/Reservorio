@@ -2,8 +2,8 @@ import { Component, signal, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
+import { BusinessService } from '../../core/services/business.service';
 import { Business } from '../../core/models/businesses.model';
 import { BusinessFormComponent } from '../../shared/components/business-form/business-form.component';
 
@@ -87,7 +87,7 @@ import { BusinessFormComponent } from '../../shared/components/business-form/bus
   `,
 })
 export class OwnerDashboardComponent implements OnInit {
-  private api = inject(ApiService);
+  private businessService = inject(BusinessService);
   private auth = inject(AuthService);
   private router = inject(Router);
   private fb = inject(FormBuilder);
@@ -120,7 +120,7 @@ export class OwnerDashboardComponent implements OnInit {
       this.router.navigate(['/owner/login']);
       return;
     }
-    this.api.getOwnerBusinesses(token).subscribe({
+    this.businessService.getOwnerBusinesses(token).subscribe({
       next: list => { this.businesses.set(list); this.loading.set(false); },
       error: () => { this.businesses.set([]); this.loading.set(false); },
     });
@@ -193,7 +193,7 @@ export class OwnerDashboardComponent implements OnInit {
     this.saving.set(true);
 
     if (this.editingBusiness()) {
-      this.api.updateBusiness(this.editingBusiness()!.id, payload, token).subscribe({
+      this.businessService.updateBusiness(this.editingBusiness()!.id, payload, token).subscribe({
         next: () => {
           this.saving.set(false);
           this.closeModal();
@@ -205,7 +205,7 @@ export class OwnerDashboardComponent implements OnInit {
         },
       });
     } else {
-      this.api.createBusiness(payload, token).subscribe({
+      this.businessService.createBusiness(payload, token).subscribe({
         next: () => {
           this.saving.set(false);
           this.closeModal();
@@ -222,7 +222,7 @@ export class OwnerDashboardComponent implements OnInit {
   refreshBusinesses(): void {
     const token = this.auth.getOwnerToken();
     if (!token) return;
-    this.api.getOwnerBusinesses(token).subscribe({ next: list => this.businesses.set(list) });
+    this.businessService.getOwnerBusinesses(token).subscribe({ next: list => this.businesses.set(list) });
   }
 
   openBusiness(biz: Business): void {

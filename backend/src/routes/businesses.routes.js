@@ -1,38 +1,13 @@
 ﻿'use strict';
 
 const express = require('express');
-const bcrypt = require('bcryptjs');
 const { body, param } = require('express-validator');
-const { sign } = require('../middleware/jwt');
 const { clean } = require('../middleware/sanitize');
 const { requireAdmin, requireAdminOrOwner, requireOwnerAuth, requireBusinessAuth } = require('../middleware/auth');
 const { handleValidation } = require('../middleware/validation');
-const db = require('../db');
-const { syncInBackground } = require('../services/syncService');
+const businessesService = require('../services/businesses.service');
 
 const router = express.Router();
-
-function safeBiz(b) {
-  return {
-    id:          b.id,
-    name:        b.name,
-    category:    b.category,
-    description: b.description,
-    location:    b.location,
-    rating:      Number(b.rating),
-    reviews:     b.reviews,
-    tags:        b.tags ? b.tags.split(',').map((t) => t.trim()).filter(Boolean) : [],
-    gradient:    b.gradient,
-    icon:        b.icon,
-    schedule:    b.schedule,
-    logo:        b.logo,
-    phone:       b.phone,
-    active:      b.active,
-    available:   0,
-    total:       0,
-    routePath:   `/booking/${b.id}`,
-  };
-}
 
 const businessCreateValidators = [
   body('name').trim().notEmpty().withMessage('name requerido'),
@@ -80,39 +55,9 @@ const serviceNameParamValidator = [
 
 // GET /api/businesses  -> activos, publico, con filtros de busqueda y etiquetas
 router.get('/', async (req, res) => {
-  const { q, category, tags, location, interest } = req.query;
-  const values = [];
-  const filters = ['active = true'];
-
-  if (category) {
-    values.push(`%${clean(String(category))}%`);
-    filters.push(`category ILIKE $${values.length}`);
-  }
-
-  if (location) {
-    values.push(`%${clean(String(location))}%`);
-    filters.push(`location ILIKE $${values.length}`);
-  }
-
-  const search = String(q ?? '').trim();
-  if (search) {
-    values.push(`%${clean(search)}%`);
-    filters.push(`(name ILIKE $${values.length} OR description ILIKE $${values.length} OR location ILIKE $${values.length} OR category ILIKE $${values.length} OR tags ILIKE $${values.length})`);
-  }
-
-  const tagInput = String(tags ?? interest ?? '').trim();
-  if (tagInput) {
-    const tagList = tagInput.split(',').map((t) => t.trim()).filter(Boolean);
-    for (const tag of tagList) {
-      values.push(`%${clean(tag)}%`);
-      filters.push(`tags ILIKE $${values.length}`);
-    }
-  }
-
   try {
-    const query = `SELECT * FROM businesses WHERE ${filters.join(' AND ')} ORDER BY name`;
-    const { rows } = await db.query(query, values);
-    res.json({ ok: true, data: rows.map(safeBiz) });
+    const result = await businessesService.listBusinesses(req.query);
+    res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (e) {
     res.status(500).json({ ok: false, message: e.message });
   }
@@ -121,8 +66,8 @@ router.get('/', async (req, res) => {
 // GET /api/businesses/all  -> todos (solo admin)
 router.get('/all', requireAdmin, async (_req, res) => {
   try {
-    const { rows } = await db.query('SELECT * FROM businesses ORDER BY name');
-    res.json({ ok: true, data: rows.map(safeBiz) });
+    const result = await businessesService.listAllBusinesses();
+    res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (e) {
     res.status(500).json({ ok: false, message: e.message });
   }
@@ -131,15 +76,8 @@ router.get('/all', requireAdmin, async (_req, res) => {
 // GET /api/businesses/owner -> negocios del dueño autenticado
 router.get('/owner', requireOwnerAuth, async (req, res) => {
   try {
-    const ownerId = req.authPayload.ownerId;
-    const { rows } = await db.query(
-      `SELECT b.* FROM businesses b
-         JOIN business_owners bo ON bo.business_id = b.id
-         WHERE bo.owner_id = $1
-         ORDER BY b.name`,
-      [ownerId]
-    );
-    res.json({ ok: true, data: rows.map(safeBiz) });
+    const result = await businessesService.listOwnerBusinesses(req.authPayload.ownerId);
+    res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (e) {
     res.status(500).json({ ok: false, message: e.message });
   }
@@ -151,14 +89,8 @@ router.post('/:id/auth', async (req, res) => {
   if (!pin) return res.status(400).json({ ok: false, message: 'pin requerido' });
 
   try {
-    const { rows } = await db.query('SELECT * FROM businesses WHERE id = $1', [req.params.id]);
-    if (!rows.length) return res.status(404).json({ ok: false, message: 'Negocio no encontrado' });
-    const biz = rows[0];
-    if (!biz.pin_hash) return res.status(503).json({ ok: false, message: 'PIN no configurado para este negocio' });
-    const valid = await bcrypt.compare(pin, biz.pin_hash);
-    if (!valid) return res.status(401).json({ ok: false, message: 'PIN incorrecto' });
-    const token = sign({ businessId: biz.id, role: 'business-admin' });
-    res.json({ ok: true, data: { token, business: safeBiz(biz) } });
+    const result = await businessesService.authenticateBusiness(req.params.id, pin);
+    return res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (e) {
     res.status(500).json({ ok: false, message: e.message });
   }
@@ -166,42 +98,10 @@ router.post('/:id/auth', async (req, res) => {
 
 // POST /api/businesses  -> crear negocio (admin o dueño)
 router.post('/', requireAdminOrOwner, businessCreateValidators, async (req, res) => {
-  const {
-    name, category, description, location, rating, reviews, tags,
-    gradient, icon, schedule, logo, phone,
-    facebook, instagram, tiktok, whatsapp, linkedin, pin
-  } = req.body ?? {};
   const ownerId = req.authPayload?.role === 'owner' ? req.authPayload.ownerId : null;
-  const id = clean(name).toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 16) + '_' + Date.now().toString(36);
-  const pinHash = await bcrypt.hash(String(pin), 10);
-  const tagsStr = Array.isArray(tags) ? tags.join(',') : clean(tags ?? '');
-
   try {
-    await db.query(
-      `INSERT INTO businesses
-         (id, name, category, description, location, rating, reviews,
-          tags, gradient, icon, schedule, logo, phone,
-          facebook, instagram, tiktok, whatsapp, linkedin,
-          active, pin_hash)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)`,
-      [
-        id,
-        clean(name), clean(category), clean(description ?? ''), clean(location ?? ''),
-        Number(rating ?? 5.0), Number(reviews ?? 0),
-        tagsStr,
-        clean(gradient ?? 'linear-gradient(135deg,#005bbf,#1a73e8)'),
-        clean(icon ?? 'store'), clean(schedule ?? ''), clean(logo ?? ''), clean(phone ?? ''),
-        clean(facebook ?? ''), clean(instagram ?? ''), clean(tiktok ?? ''), clean(whatsapp ?? ''), clean(linkedin ?? ''),
-        true, pinHash,
-      ]
-    );
-
-    if (ownerId) {
-      await db.query('INSERT INTO business_owners (business_id, owner_id) VALUES ($1, $2)', [id, ownerId]);
-    }
-
-    const { rows } = await db.query('SELECT * FROM businesses WHERE id = $1', [id]);
-    res.status(201).json({ ok: true, data: safeBiz(rows[0]) });
+    const result = await businessesService.createBusiness(req.body, ownerId);
+    res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (e) {
     res.status(500).json({ ok: false, message: e.message });
   }
@@ -209,36 +109,9 @@ router.post('/', requireAdminOrOwner, businessCreateValidators, async (req, res)
 
 // PUT /api/businesses/:id  -> actualizar (admin o propio business-admin)
 router.put('/:id', requireBusinessAuth, businessUpdateValidators, async (req, res) => {
-  const sets = [];
-  const vals = [];
-  let idx = 1;
-
-  const strFields = ['name', 'category', 'description', 'location', 'gradient', 'icon', 'schedule', 'logo', 'phone', 'facebook', 'instagram', 'tiktok', 'whatsapp', 'linkedin'];
-  for (const k of strFields) {
-    if (req.body?.[k] !== undefined) {
-      sets.push(`${k} = $${idx++}`);
-      vals.push(clean(req.body[k]));
-    }
-  }
-
-  if (req.body?.rating !== undefined) { sets.push(`rating = $${idx++}`); vals.push(Number(req.body.rating)); }
-  if (req.body?.reviews !== undefined) { sets.push(`reviews = $${idx++}`); vals.push(Number(req.body.reviews)); }
-  if (req.body?.tags !== undefined) {
-    const t = Array.isArray(req.body.tags) ? req.body.tags.join(',') : clean(req.body.tags);
-    sets.push(`tags = $${idx++}`); vals.push(t);
-  }
-  if (req.body?.pin !== undefined) {
-    sets.push(`pin_hash = $${idx++}`);
-    vals.push(await bcrypt.hash(String(req.body.pin), 10));
-  }
-
-  if (!sets.length) return res.status(400).json({ ok: false, message: 'Sin campos para actualizar' });
-  vals.push(req.params.id);
-
   try {
-    const result = await db.query(`UPDATE businesses SET ${sets.join(', ')} WHERE id = $${idx} RETURNING *`, vals);
-    if (!result.rows.length) return res.status(404).json({ ok: false, message: 'Negocio no encontrado' });
-    res.json({ ok: true, data: safeBiz(result.rows[0]) });
+    const result = await businessesService.updateBusiness(req.params.id, req.body);
+    res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (e) {
     res.status(500).json({ ok: false, message: e.message });
   }
@@ -247,9 +120,8 @@ router.put('/:id', requireBusinessAuth, businessUpdateValidators, async (req, re
 // PATCH /api/businesses/:id/toggle  -> activar/desactivar (solo admin)
 router.patch('/:id/toggle', requireAdmin, async (req, res) => {
   try {
-    const result = await db.query('UPDATE businesses SET active = NOT active WHERE id = $1 RETURNING *', [req.params.id]);
-    if (!result.rows.length) return res.status(404).json({ ok: false, message: 'Negocio no encontrado' });
-    res.json({ ok: true, data: safeBiz(result.rows[0]) });
+    const result = await businessesService.toggleBusiness(req.params.id);
+    res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (e) {
     res.status(500).json({ ok: false, message: e.message });
   }
@@ -258,9 +130,8 @@ router.patch('/:id/toggle', requireAdmin, async (req, res) => {
 // DELETE /api/businesses/:id  -> eliminar negocio (solo admin)
 router.delete('/:id', requireAdmin, async (req, res) => {
   try {
-    const result = await db.query('DELETE FROM businesses WHERE id = $1 RETURNING *', [req.params.id]);
-    if (!result.rows.length) return res.status(404).json({ ok: false, message: 'Negocio no encontrado' });
-    res.json({ ok: true, data: safeBiz(result.rows[0]) });
+    const result = await businessesService.deleteBusiness(req.params.id);
+    res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (e) {
     res.status(500).json({ ok: false, message: e.message });
   }
@@ -271,9 +142,8 @@ router.delete('/:id', requireAdmin, async (req, res) => {
 // GET /api/businesses/:id
 router.get('/:id', requireBusinessAuth, async (req, res) => {
   try {
-    const { rows } = await db.query('SELECT * FROM businesses WHERE id = $1', [req.params.id]);
-    if (!rows.length) return res.status(404).json({ ok: false, message: 'Negocio no encontrado' });
-    res.json({ ok: true, data: safeBiz(rows[0]) });
+    const result = await businessesService.getBusinessById(req.params.id);
+    res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (e) {
     res.status(500).json({ ok: false, message: e.message });
   }
@@ -282,8 +152,8 @@ router.get('/:id', requireBusinessAuth, async (req, res) => {
 // GET /api/businesses/:id/reservations
 router.get('/:id/reservations', requireBusinessAuth, async (req, res) => {
   try {
-    const { rows } = await db.query('SELECT * FROM reservations WHERE business_id = $1 ORDER BY franja', [req.params.id]);
-    res.json({ ok: true, data: rows });
+    const result = await businessesService.listReservations(req.params.id);
+    res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (e) {
     res.status(500).json({ ok: false, message: e.message });
   }
@@ -291,19 +161,9 @@ router.get('/:id/reservations', requireBusinessAuth, async (req, res) => {
 
 // POST /api/businesses/:id/reservations
 router.post(`/:id/reservations`, reservationValidators, async (req, res) => {
-  const { franja, cliente, telefono, servicio, notas } = req.body ?? {};
-
   try {
-    const { rows: bizRows } = await db.query('SELECT id FROM businesses WHERE id = $1 AND active = true', [req.params.id]);
-    if (!bizRows.length) return res.status(404).json({ ok: false, message: 'Negocio no encontrado' });
-
-    const { rows: taken } = await db.query(`SELECT id FROM reservations WHERE business_id = $1 AND franja = $2 AND disponibilidad != 'Disponible'`, [req.params.id, clean(franja)]);
-    if (taken.length) return res.status(409).json({ ok: false, message: 'Franja no disponible' });
-
-    const { rows } = await db.query(`INSERT INTO reservations (business_id, franja, disponibilidad, cliente, telefono, servicio, notas)
-       VALUES ($1,$2,'Reservado',$3,$4,$5,$6) RETURNING *`, [req.params.id, clean(franja), clean(cliente), clean(telefono), clean(servicio ?? ''), clean(notas ?? '')]);
-    syncInBackground(req.params.id, 'reservations');
-    res.status(201).json({ ok: true, data: rows[0] });
+    const result = await businessesService.createReservation(req.params.id, req.body);
+    res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (e) {
     res.status(500).json({ ok: false, message: e.message });
   }
@@ -313,11 +173,8 @@ router.post(`/:id/reservations`, reservationValidators, async (req, res) => {
 router.put('/:id/reservations/:row', requireBusinessAuth, reservationUpdateValidators, async (req, res) => {
   const reservaId = parseInt(req.params.row, 10);
   try {
-    const result = await db.query(`UPDATE reservations SET disponibilidad = $1, notas = $2, updated_at = now()
-       WHERE id = $3 AND business_id = $4 RETURNING *`, [clean(req.body.disponibilidad), clean(req.body?.notas ?? ''), reservaId, req.params.id]);
-    if (!result.rows.length) return res.status(404).json({ ok: false, message: 'Reserva no encontrada' });
-    syncInBackground(req.params.id, 'reservations');
-    res.json({ ok: true, data: result.rows[0] });
+    const result = await businessesService.updateReservation(req.params.id, reservaId, req.body);
+    res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (e) {
     res.status(500).json({ ok: false, message: e.message });
   }
@@ -328,8 +185,8 @@ router.put('/:id/reservations/:row', requireBusinessAuth, reservationUpdateValid
 // GET /api/businesses/:id/services
 router.get('/:id/services', async (req, res) => {
   try {
-    const { rows } = await db.query('SELECT nombre FROM services WHERE business_id = $1 ORDER BY nombre', [req.params.id]);
-    res.json({ ok: true, data: rows.map((r) => r.nombre) });
+    const result = await businessesService.listServices(req.params.id);
+    res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (e) {
     res.status(500).json({ ok: false, message: e.message });
   }
@@ -337,11 +194,9 @@ router.get('/:id/services', async (req, res) => {
 
 // POST /api/businesses/:id/services
 router.post('/:id/services', requireBusinessAuth, serviceValidators, async (req, res) => {
-  const nombre = clean(req.body?.nombre ?? '');
   try {
-    await db.query('INSERT INTO services (business_id, nombre) VALUES ($1, $2)', [req.params.id, nombre]);
-    syncInBackground(req.params.id, 'services');
-    res.status(201).json({ ok: true, data: { nombre } });
+    const result = await businessesService.addService(req.params.id, req.body?.nombre);
+    res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (e) {
     if (e.code === '23505') return res.status(409).json({ ok: false, message: 'Servicio ya existe' });
     res.status(500).json({ ok: false, message: e.message });
@@ -350,12 +205,9 @@ router.post('/:id/services', requireBusinessAuth, serviceValidators, async (req,
 
 // DELETE /api/businesses/:id/services/:nombre
 router.delete('/:id/services/:nombre', requireBusinessAuth, serviceNameParamValidator, async (req, res) => {
-  const nombre = clean(decodeURIComponent(req.params.nombre ?? ''));
   try {
-    const result = await db.query('DELETE FROM services WHERE business_id = $1 AND nombre = $2', [req.params.id, nombre]);
-    if (!result.rowCount) return res.status(404).json({ ok: false, message: 'Servicio no encontrado' });
-    syncInBackground(req.params.id, 'services');
-    res.json({ ok: true });
+    const result = await businessesService.removeService(req.params.id, req.params.nombre);
+    res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (e) {
     res.status(500).json({ ok: false, message: e.message });
   }

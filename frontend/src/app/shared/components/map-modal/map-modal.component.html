@@ -1,0 +1,23 @@
+<dialog #mapDialog class="map-dialog">
+      <div class="dialog-header">
+        <h3>Selecciona un punto en el mapa</h3>
+        <button class="close-btn" (click)="close()">✕</button>
+      </div>
+      
+      <div class="dialog-body">
+        <!-- Contenedor del mapa de Leaflet -->
+        <div #mapContainer class="map-container"></div>
+      </div>
+
+      <div class="dialog-footer">
+        @if (selectedCoords()) {
+          <span class="coords-info">
+            Lat: <strong>{{ selectedCoords()?.lat?.toFixed(5) }}</strong>, 
+            Lng: <strong>{{ selectedCoords()?.lng?.toFixed(5) }}</strong>
+          </span>
+          <button class="btn-confirm" (click)="confirmSelection()">Confirmar Selección</button>
+        } @else {
+          <span class="coords-info placeholder">Haz clic en el mapa para marcar un punto</span>
+        }
+      </div>
+    </dialog>

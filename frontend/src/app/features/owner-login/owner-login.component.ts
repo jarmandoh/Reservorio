@@ -2,7 +2,6 @@ import { Component, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
 import { AuthCardComponent } from '../../shared/components/auth-card/auth-card.component';
 
@@ -37,7 +36,6 @@ import { AuthCardComponent } from '../../shared/components/auth-card/auth-card.c
 })
 export class OwnerLoginComponent {
   private fb = inject(FormBuilder);
-  private api = inject(ApiService);
   private auth = inject(AuthService);
   private router = inject(Router);
 
@@ -55,15 +53,14 @@ export class OwnerLoginComponent {
     this.error.set(null);
 
     const { email, password } = this.form.value;
-    this.api.loginOwner(email!, password!).subscribe({
-      next: result => {
-        if (result.data?.token) {
-          this.auth.setOwnerToken(result.data.token);
-          this.router.navigate(['/owner/dashboard']);
-        }
+    this.auth.loginOwner(email!, password!).subscribe({
+      next: () => {
+        this.loading.set(false);
+        this.router.navigate(['/owner/dashboard']);
       },
       error: err => {
-        this.error.set(err.message || 'Credenciales inválidas.');
+        const message = err instanceof Error ? err.message : 'Credenciales inválidas.';
+        this.error.set(message);
         this.loading.set(false);
       },
     });

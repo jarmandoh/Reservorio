@@ -7,6 +7,8 @@ import {
 } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ApiService }   from '../../core/services/api.service';
+import { AdminService } from '../../core/services/admin.service';
+import { BusinessService } from '../../core/services/business.service';
 import { ToastService } from '../../core/services/toast.service';
 import { AuthService }  from '../../core/services/auth.service';
 import { BadgeComponent } from '../../shared/components/badge/badge.component';
@@ -25,6 +27,8 @@ type AdminTab = 'reservas' | 'servicios' | 'ajustes' | 'negocios';
 })
 export class AdminComponent implements OnInit {
   private api   = inject(ApiService);
+  private adminService = inject(AdminService);
+  private businessService = inject(BusinessService);
   private toast = inject(ToastService);
   private auth  = inject(AuthService);
   private router = inject(Router);
@@ -183,15 +187,14 @@ export class AdminComponent implements OnInit {
     this.adminError.set(null);
     const cached = this.auth.getAdminToken();
     if (cached) { this.adminToken.set(cached); this.loadBusinesses(cached); return; }
-    this.api.loginAdmin(this.auth.storedPin).subscribe({
+    this.auth.loginAdmin(this.auth.storedPin).subscribe({
       next: res => {
         if (res.data?.token) {
-          this.auth.setAdminToken(res.data.token);
-          this.adminToken.set(res.data.token);
+          this.adminToken.set(this.auth.getAdminToken());
           this.loadBusinesses(res.data.token);
         }
       },
-      error: err => {
+      error: () => {
         this.adminError.set('No se pudo obtener el token de administrador. Verifica el PIN del servidor y vuelve a intentar.');
         this.adminToken.set(null);
       },
@@ -203,14 +206,14 @@ export class AdminComponent implements OnInit {
     if (!t) return;
     this.adminError.set(null);
     this.businessesLoading.set(true);
-    this.api.getAllBusinesses(t).subscribe({
+    this.businessService.getAllBusinesses(t).subscribe({
       next:  list => { this.businesses.set(list); this.businessesLoading.set(false); },
       error: ()   => { this.businessesLoading.set(false); },
     });
   }
 
   loadTags(): void {
-    this.api.getTags().subscribe({
+    this.adminService.getTags().subscribe({
       next: tags => this.tagsOptions.set(tags),
       error: err => console.warn('No se pudieron cargar tags:', err.message),
     });
@@ -317,7 +320,7 @@ export class AdminComponent implements OnInit {
       updates.whatsapp = v.whatsapp ?? '';
       updates.linkedin = v.linkedin ?? '';
       if (v.pin) updates.pin = v.pin;
-      this.api.updateBusiness(this.editingBusiness()!.id, updates, token).subscribe({
+      this.businessService.updateBusiness(this.editingBusiness()!.id, updates, token).subscribe({
         next: () => {
           this.toast.success('Negocio actualizado');
           this.savingBusiness.set(false);
@@ -335,7 +338,7 @@ export class AdminComponent implements OnInit {
         whatsapp: v.whatsapp ?? '', linkedin: v.linkedin ?? '',
         pin: v.pin!,
       };
-      this.api.createBusiness(payload, token).subscribe({
+      this.businessService.createBusiness(payload, token).subscribe({
         next: () => {
           this.toast.success('Negocio creado');
           this.savingBusiness.set(false);
@@ -351,7 +354,7 @@ export class AdminComponent implements OnInit {
     const token = this.adminToken();
     if (!token) return;
     this.togglingBusiness.set(id);
-    this.api.toggleBusiness(id, token).subscribe({
+    this.businessService.toggleBusiness(id, token).subscribe({
       next: () => {
         this.togglingBusiness.set(null);
         this.loadBusinesses();
@@ -368,7 +371,7 @@ export class AdminComponent implements OnInit {
     if (!token) return;
     if (!window.confirm('¿Eliminar este negocio? Esta acción no se puede deshacer.')) return;
     this.deletingBusiness.set(id);
-    this.api.deleteBusiness(id, token).subscribe({
+    this.businessService.deleteBusiness(id, token).subscribe({
       next: () => {
         this.toast.success('Negocio eliminado');
         this.deletingBusiness.set(null);
@@ -384,7 +387,7 @@ export class AdminComponent implements OnInit {
   loadReservations(): void {
     this.loading.set(true);
     this.error.set(null);
-    this.api.getReservations().subscribe({
+    this.adminService.getReservations().subscribe({
       next:  data => { this.reservations.set(data); this.loading.set(false); },
       error: err  => { this.error.set(err.message); this.loading.set(false); },
     });
@@ -392,7 +395,7 @@ export class AdminComponent implements OnInit {
 
   loadServices(): void {
     this.servicesLoading.set(true);
-    this.api.getServices().subscribe({
+    this.adminService.getServices().subscribe({
       next:  data => { this.services.set(data); this.servicesLoading.set(false); },
       error: ()   => { this.servicesLoading.set(false); },
     });
@@ -422,7 +425,7 @@ export class AdminComponent implements OnInit {
     const row = this.modalRow();
     if (!row) return;
     this.updating.set(row._rowIndex);
-    this.api.updateReservation({ rowIndex: row._rowIndex, disponibilidad: this.newStatus() }).subscribe({
+    this.adminService.updateReservation({ rowIndex: row._rowIndex, disponibilidad: this.newStatus() }).subscribe({
       next: () => {
         this.toast.success('Estado actualizado');
         this.updating.set(null);
@@ -440,7 +443,7 @@ export class AdminComponent implements OnInit {
     if (this.serviceForm.invalid) return;
     const nombre = this.serviceForm.value.nombre!.trim();
     this.addingService.set(true);
-    this.api.createService(nombre).subscribe({
+    this.adminService.createService(nombre).subscribe({
       next: () => {
         this.toast.success(`Servicio "${nombre}" agregado`);
         this.serviceForm.reset();
@@ -456,7 +459,7 @@ export class AdminComponent implements OnInit {
 
   deleteService(nombre: string): void {
     this.deletingService.set(nombre);
-    this.api.deleteService(nombre).subscribe({
+    this.adminService.deleteService(nombre).subscribe({
       next: () => {
         this.toast.success(`Servicio "${nombre}" eliminado`);
         this.deletingService.set(null);
@@ -499,10 +502,9 @@ export class AdminComponent implements OnInit {
     this.isCategoriesLoading = true;
     try {
       console.log('Cargando categorías...'),
-      await this.api.getCategories().subscribe({
-        
+      await this.adminService.getCategories().subscribe({
         next: data => { this.categorias = data; this.isCategoriesLoading = false; },
-        error: err => { this.isCategoriesLoading = false; },
+        error: () => { this.isCategoriesLoading = false; },
       });
     } catch (err) {
       console.error('Error loading categories:', err);

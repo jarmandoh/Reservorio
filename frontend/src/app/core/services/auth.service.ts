@@ -1,4 +1,11 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, signal, computed, inject } from '@angular/core';
+import { Observable, throwError } from 'rxjs';
+import { catchError, tap } from 'rxjs/operators';
+import { ApiResponse } from '../models/reservation.model';
+import { Business, OwnerAuthPayload } from '../models/businesses.model';
+import { SessionStore } from '../state/session.store';
+import { ApiService } from './api.service';
+import { StorageService } from './storage.service';
 
 const SESSION_KEY   = 'reservorio_unlocked';
 const PIN_KEY       = 'reservorio_admin_pin';
@@ -8,62 +15,126 @@ const DEFAULT_PIN   = '1234';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private _unlocked = signal(sessionStorage.getItem(SESSION_KEY) === '1');
+  private readonly api = inject(ApiService);
+  private readonly sessionStore = inject(SessionStore);
+  private readonly storage = inject(StorageService);
+  private _unlocked = signal(this.storage.getItem(SESSION_KEY) === '1');
   readonly isUnlocked = computed(() => this._unlocked());
   readonly isOwnerUnlocked = computed(() => !!this.getOwnerToken());
 
   get storedPin(): string {
-    return localStorage.getItem(PIN_KEY) ?? DEFAULT_PIN;
+    return this.storage.getItem(PIN_KEY, 'local') ?? DEFAULT_PIN;
   }
 
   login(pin: string): boolean {
     if (pin === this.storedPin) {
-      sessionStorage.setItem(SESSION_KEY, '1');
+      this.storage.setItem(SESSION_KEY, '1');
       this._unlocked.set(true);
+      this.sessionStore.setAdminAuthenticated(true);
+      this.sessionStore.setAuthenticated(true);
       return true;
     }
     return false;
   }
 
   logout(): void {
-    sessionStorage.removeItem(SESSION_KEY);
-    sessionStorage.removeItem(ADMIN_JWT);
+    this.storage.removeItem(SESSION_KEY);
+    this.storage.removeItem(ADMIN_JWT);
     this._unlocked.set(false);
+    this.sessionStore.reset();
   }
 
   changePin(current: string, next: string): boolean {
     if (current !== this.storedPin)  return false;
     if (!/^\d{4}$/.test(next))        return false;
-    localStorage.setItem(PIN_KEY, next);
+    this.storage.setItem(PIN_KEY, next, 'local');
     return true;
+  }
+
+  // ── Auth flows ───────────────────────────────────────────────────────
+
+  loginAdmin(pin: string): Observable<ApiResponse<{ token: string }>> {
+    return this.api.loginAdmin(pin).pipe(
+      tap(res => {
+        if (res.data?.token) this.setAdminToken(res.data.token);
+      }),
+      catchError(err => {
+        this.clearAdminToken();
+        return throwError(() => err);
+      })
+    );
+  }
+
+  loginBusiness(businessId: string, pin: string): Observable<ApiResponse<{ token: string; business: Business }>> {
+    return this.api.loginBusiness(businessId, pin).pipe(
+      tap(res => {
+        if (res.data?.token) this.setBusinessToken(businessId, res.data.token);
+      }),
+      catchError(err => {
+        this.clearBusinessToken(businessId);
+        return throwError(() => err);
+      })
+    );
+  }
+
+  loginOwner(email: string, password: string): Observable<ApiResponse<{ token: string }>> {
+    return this.api.loginOwner(email, password).pipe(
+      tap(res => {
+        if (res.data?.token) this.setOwnerToken(res.data.token);
+      }),
+      catchError(err => {
+        this.clearOwnerToken();
+        return throwError(() => err);
+      })
+    );
+  }
+
+  registerOwner(payload: OwnerAuthPayload): Observable<ApiResponse<{ token: string }>> {
+    return this.api.registerOwner(payload).pipe(
+      tap(res => {
+        if (res.data?.token) this.setOwnerToken(res.data.token);
+      }),
+      catchError(err => {
+        this.clearOwnerToken();
+        return throwError(() => err);
+      })
+    );
   }
 
   // ── Admin JWT ─────────────────────────────────────────────────────────
 
   getAdminToken(): string | null {
-    const token = sessionStorage.getItem(ADMIN_JWT);
+    const token = this.storage.getItem(ADMIN_JWT);
     return this.isTokenValid(token) ? token : null;
   }
 
   setAdminToken(token: string): void {
-    sessionStorage.setItem(ADMIN_JWT, token);
+    this.storage.setItem(ADMIN_JWT, token);
+    this.sessionStore.setAdminAuthenticated(true);
+    this.sessionStore.setAuthenticated(true);
   }
 
   clearAdminToken(): void {
-    sessionStorage.removeItem(ADMIN_JWT);
+    this.storage.removeItem(ADMIN_JWT);
+    this.sessionStore.setAdminAuthenticated(false);
+    this.sessionStore.setAuthenticated(false);
   }
 
   getOwnerToken(): string | null {
-    const token = sessionStorage.getItem(OWNER_JWT);
+    const token = this.storage.getItem(OWNER_JWT);
     return this.isTokenValid(token) ? token : null;
   }
 
   setOwnerToken(token: string): void {
-    sessionStorage.setItem(OWNER_JWT, token);
+    this.storage.setItem(OWNER_JWT, token);
+    this.sessionStore.setOwnerAuthenticated(true);
+    this.sessionStore.setAuthenticated(true);
   }
 
   clearOwnerToken(): void {
-    sessionStorage.removeItem(OWNER_JWT);
+    this.storage.removeItem(OWNER_JWT);
+    this.sessionStore.setOwnerAuthenticated(false);
+    this.sessionStore.setAuthenticated(false);
   }
 
   getOwnerPayload(): { ownerId?: string; role?: string; [key: string]: unknown } | null {
@@ -73,16 +144,17 @@ export class AuthService {
   // ── Business JWT ──────────────────────────────────────────────────────
 
   getBusinessToken(businessId: string): string | null {
-    const token = sessionStorage.getItem(`biz_jwt_${businessId}`);
+    const token = this.storage.getItem(`biz_jwt_${businessId}`);
     return this.isTokenValid(token) ? token : null;
   }
 
   setBusinessToken(businessId: string, token: string): void {
-    sessionStorage.setItem(`biz_jwt_${businessId}`, token);
+    this.storage.setItem(`biz_jwt_${businessId}`, token);
+    this.sessionStore.setAuthenticated(true);
   }
 
   clearBusinessToken(businessId: string): void {
-    sessionStorage.removeItem(`biz_jwt_${businessId}`);
+    this.storage.removeItem(`biz_jwt_${businessId}`);
   }
 
   isBusinessUnlocked(businessId: string): boolean {

@@ -96,15 +96,14 @@ export class BusinessLoginComponent implements OnInit {
     this.loading.set(true);
     this.loginError.set(null);
 
-    this.api.loginBusiness(id, pin).subscribe({
-      next: res => {
-        if (res.data?.token) {
-          this.auth.setBusinessToken(id, res.data.token);
-          this.router.navigate(['/business', id, 'admin']);
-        }
+    this.auth.loginBusiness(id, pin).subscribe({
+      next: () => {
+        this.loading.set(false);
+        this.router.navigate(['/business', id, 'admin']);
       },
       error: err => {
-        this.loginError.set(err?.error?.message ?? 'PIN incorrecto. Inténtalo de nuevo.');
+        const message = err instanceof Error ? err.message : 'PIN incorrecto. Inténtalo de nuevo.';
+        this.loginError.set(message);
         this.loading.set(false);
         this.form.get('pin')?.reset();
       },
