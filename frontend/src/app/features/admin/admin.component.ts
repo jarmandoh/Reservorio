@@ -1,5 +1,6 @@
 import {
-  Component, OnInit, signal, computed, effect, inject
+  Component, OnInit, signal, computed, effect, inject,
+  viewChild
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
@@ -15,6 +16,7 @@ import { BadgeComponent } from '../../shared/components/badge/badge.component';
 import { Reservation }  from '../../core/models/reservation.model';
 import { Business, NewBusinessPayload } from '../../core/models/businesses.model';
 import { Categoria } from '../../core/models/categorias.model';
+import { MapModalComponent, MapCoordinates } from '../../shared/components/map-modal/map-modal.component';
 
 
 
@@ -22,7 +24,7 @@ type AdminTab = 'reservas' | 'servicios' | 'ajustes' | 'negocios';
 
 @Component({
     selector: 'app-admin',
-    imports: [CommonModule, ReactiveFormsModule, BadgeComponent],
+    imports: [CommonModule, ReactiveFormsModule, BadgeComponent, MapModalComponent],
     templateUrl: './admin.component.html',
 })
 export class AdminComponent implements OnInit {
@@ -35,6 +37,9 @@ export class AdminComponent implements OnInit {
   private fb    = inject(FormBuilder);
 
   readonly sheetId = '1cxZR6YYFkXJy8AKGM-1AakGk9hw6AR9vTv2RHm4yUNc';
+
+  readonly mapModal = viewChild.required<MapModalComponent>('mapModal');
+  location = signal<MapCoordinates | null>(null);
 
   readonly tabs = [
     { id: 'negocios'  as AdminTab, label: 'Negocios', icon: 'store' },
@@ -417,6 +422,26 @@ export class AdminComponent implements OnInit {
   openModal(row: Reservation): void {
     this.newStatus.set(row.disponibilidad.toLowerCase());
     this.modalRow.set(row);
+  }
+
+
+  
+
+
+  abrirmodalMapa(): void {
+    const currentCoords = this.location() ?? undefined;
+    console.log("clicando ando");
+
+    this.mapModal.open(currentCoords);
+    /* this.mapModal.coordinatesSelected.subscribe((coords) => {
+      console.log('Coordenadas seleccionadas:', coords);
+      // Aquí puedes actualizar el formulario o hacer lo que necesites con las coordenadas
+      this.businessForm.get('location')?.setValue(`${coords.lat}, ${coords.lng}`);
+    }); */
+  }
+  onCoordinatesSelected(coords: MapCoordinates) {
+    this.location.set(coords);
+    console.log('Coordenadas recibidas del modal:', coords);
   }
 
   closeModal(): void { this.modalRow.set(null); }

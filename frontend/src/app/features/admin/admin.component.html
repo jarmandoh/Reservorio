@@ -441,7 +441,7 @@
               <span class="material-icons-round text-on-surface-variant">close</span>
             </button>
           </div>
-
+          <button (click)="abrirmodalMapa()">Ubicar negocio</button>
           <div class="overflow-y-auto flex-1 p-5">
             <form [formGroup]="businessForm" class="flex flex-col gap-4">
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -683,4 +683,7 @@
       </div>
     }
 
+    <app-map-modal 
+        #mapModal 
+        (coordinatesSelected)="onCoordinatesSelected($event)" />
   </div>

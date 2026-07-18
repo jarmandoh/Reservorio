@@ -28,7 +28,7 @@ export class MapModalComponent {
   private marker!: L.Marker;
 
   // Abre el modal y levanta el mapa
-  open(initialCoords?: MapCoordinates) {
+  public open(initialCoords?: MapCoordinates) {
     this.dialogEl()?.nativeElement.showModal();
     
     // Un pequeño delay asegura que el contenedor del diálogo se renderice 
