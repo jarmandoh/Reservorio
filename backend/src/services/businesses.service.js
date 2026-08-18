@@ -6,7 +6,7 @@ const { clean } = require('../middleware/sanitize');
 const db = require('../db');
 const { syncInBackground } = require('./syncService');
 
-function safeBiz(b) {
+function safenegocio(b) {
   return {
     id: b.id,
     name: b.name,
@@ -60,12 +60,12 @@ async function listBusinesses(filters = {}) {
 
   const query = `SELECT * FROM businesses WHERE ${clauses.join(' AND ')} ORDER BY name`;
   const { rows } = await db.query(query, values);
-  return { ok: true, status: 200, data: rows.map(safeBiz) };
+  return { ok: true, status: 200, data: rows.map(safenegocio) };
 }
 
 async function listAllBusinesses() {
   const { rows } = await db.query('SELECT * FROM businesses ORDER BY name');
-  return { ok: true, status: 200, data: rows.map(safeBiz) };
+  return { ok: true, status: 200, data: rows.map(safenegocio) };
 }
 
 async function listOwnerBusinesses(ownerId) {
@@ -76,7 +76,7 @@ async function listOwnerBusinesses(ownerId) {
        ORDER BY b.name`,
     [ownerId]
   );
-  return { ok: true, status: 200, data: rows.map(safeBiz) };
+  return { ok: true, status: 200, data: rows.map(safenegocio) };
 }
 
 async function authenticateBusiness(businessId, pin) {
@@ -85,18 +85,18 @@ async function authenticateBusiness(businessId, pin) {
     return { ok: false, status: 404, message: 'Negocio no encontrado' };
   }
 
-  const biz = rows[0];
-  if (!biz.pin_hash) {
+  const negocio = rows[0];
+  if (!negocio.pin_hash) {
     return { ok: false, status: 503, message: 'PIN no configurado para este negocio' };
   }
 
-  const valid = await bcrypt.compare(String(pin), biz.pin_hash);
+  const valid = await bcrypt.compare(String(pin), negocio.pin_hash);
   if (!valid) {
     return { ok: false, status: 401, message: 'PIN incorrecto' };
   }
 
-  const token = sign({ businessId: biz.id, role: 'business-admin' });
-  return { ok: true, status: 200, data: { token, business: safeBiz(biz) } };
+  const token = sign({ businessId: negocio.id, role: 'business-admin' });
+  return { ok: true, status: 200, data: { token, business: safenegocio(negocio) } };
 }
 
 async function createBusiness(payload, ownerId = null) {
@@ -134,7 +134,7 @@ async function createBusiness(payload, ownerId = null) {
   }
 
   const { rows } = await db.query('SELECT * FROM businesses WHERE id = $1', [id]);
-  return { ok: true, status: 201, data: safeBiz(rows[0]) };
+  return { ok: true, status: 201, data: safenegocio(rows[0]) };
 }
 
 async function getBusinessById(businessId) {
@@ -142,7 +142,7 @@ async function getBusinessById(businessId) {
   if (!rows.length) {
     return { ok: false, status: 404, message: 'Negocio no encontrado' };
   }
-  return { ok: true, status: 200, data: safeBiz(rows[0]) };
+  return { ok: true, status: 200, data: safenegocio(rows[0]) };
 }
 
 async function updateBusiness(businessId, payload) {
@@ -189,7 +189,7 @@ async function updateBusiness(businessId, payload) {
     return { ok: false, status: 404, message: 'Negocio no encontrado' };
   }
 
-  return { ok: true, status: 200, data: safeBiz(result.rows[0]) };
+  return { ok: true, status: 200, data: safenegocio(result.rows[0]) };
 }
 
 async function toggleBusiness(businessId) {
@@ -197,7 +197,7 @@ async function toggleBusiness(businessId) {
   if (!result.rows.length) {
     return { ok: false, status: 404, message: 'Negocio no encontrado' };
   }
-  return { ok: true, status: 200, data: safeBiz(result.rows[0]) };
+  return { ok: true, status: 200, data: safenegocio(result.rows[0]) };
 }
 
 async function deleteBusiness(businessId) {
@@ -205,7 +205,7 @@ async function deleteBusiness(businessId) {
   if (!result.rows.length) {
     return { ok: false, status: 404, message: 'Negocio no encontrado' };
   }
-  return { ok: true, status: 200, data: safeBiz(result.rows[0]) };
+  return { ok: true, status: 200, data: safenegocio(result.rows[0]) };
 }
 
 async function listReservations(businessId) {
@@ -215,8 +215,8 @@ async function listReservations(businessId) {
 
 async function createReservation(businessId, payload) {
   const { franja, cliente, telefono, servicio, notas } = payload ?? {};
-  const { rows: bizRows } = await db.query('SELECT id FROM businesses WHERE id = $1 AND active = true', [businessId]);
-  if (!bizRows.length) {
+  const { rows: negocioRows } = await db.query('SELECT id FROM businesses WHERE id = $1 AND active = true', [businessId]);
+  if (!negocioRows.length) {
     return { ok: false, status: 404, message: 'Negocio no encontrado' };
   }
 
@@ -264,7 +264,7 @@ async function removeService(businessId, nombre) {
 }
 
 module.exports = {
-  safeBiz,
+  safenegocio,
   listBusinesses,
   listAllBusinesses,
   listOwnerBusinesses,

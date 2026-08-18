@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
-import { BusinessService } from '../../core/services/business.service';
+import { OwnerBusinessService } from '../../core/services/owner-business.service';
 import { Business } from '../../core/models/businesses.model';
 import { BusinessFormComponent } from '../../shared/components/business-form/business-form.component';
 
@@ -44,15 +44,15 @@ import { BusinessFormComponent } from '../../shared/components/business-form/bus
           </div>
         } @else {
           <div class="grid gap-4">
-            @for (biz of businesses(); track biz.id) {
+            @for (negocio of businesses(); track negocio.id) {
               <div class="card p-5 sm:flex sm:items-center sm:justify-between gap-4">
                 <div>
-                  <h3 class="font-semibold text-lg">{{ biz.name }}</h3>
-                  <p class="text-sm text-on-surface-variant">{{ biz.category }} · {{ biz.location }}</p>
+                  <h3 class="font-semibold text-lg">{{ negocio.name }}</h3>
+                  <p class="text-sm text-on-surface-variant">{{ negocio.category }} · {{ negocio.location }}</p>
                 </div>
                 <div class="flex gap-2">
-                  <button class="btn-secondary" (click)="openBusiness(biz)">Ver reservas</button>
-                  <button class="btn-tertiary" (click)="editBusiness(biz)">Editar</button>
+                  <button class="btn-secondary" (click)="openBusiness(negocio)">Ver reservas</button>
+                  <button class="btn-tertiary" (click)="editBusiness(negocio)">Editar</button>
                 </div>
               </div>
             }
@@ -87,10 +87,10 @@ import { BusinessFormComponent } from '../../shared/components/business-form/bus
   `,
 })
 export class OwnerDashboardComponent implements OnInit {
-  private businessService = inject(BusinessService);
-  private auth = inject(AuthService);
-  private router = inject(Router);
-  private fb = inject(FormBuilder);
+  private readonly ownerBusinessService = inject(OwnerBusinessService);
+  private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
+  private readonly fb = inject(FormBuilder);
 
   readonly businesses = signal<Business[]>([]);
   readonly loading = signal(true);
@@ -115,14 +115,20 @@ export class OwnerDashboardComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    const token = this.auth.getOwnerToken();
-    if (!token) {
+    if (!this.auth.getOwnerToken()) {
       this.router.navigate(['/owner/login']);
       return;
     }
-    this.businessService.getOwnerBusinesses(token).subscribe({
-      next: list => { this.businesses.set(list); this.loading.set(false); },
-      error: () => { this.businesses.set([]); this.loading.set(false); },
+
+    this.ownerBusinessService.loadBusinesses().subscribe({
+      next: list => {
+        this.businesses.set(list);
+        this.loading.set(false);
+      },
+      error: () => {
+        this.businesses.set([]);
+        this.loading.set(false);
+      },
     });
   }
 
@@ -134,32 +140,15 @@ export class OwnerDashboardComponent implements OnInit {
   openCreateModal(): void {
     this.editingBusiness.set(null);
     this.showModal.set(true);
-    this.businessForm.reset({
-      name: '', category: '', description: '', location: '', phone: '', logo: '', tags: '',
-      facebook: '', instagram: '', tiktok: '', whatsapp: '', linkedin: '', pin: '',
-    });
+    this.businessForm.reset(this.ownerBusinessService.createDefaults());
     this.businessForm.get('pin')?.setValidators([Validators.required, Validators.minLength(4)]);
     this.businessForm.get('pin')?.updateValueAndValidity();
   }
 
-  editBusiness(biz: Business): void {
-    this.editingBusiness.set(biz);
+  editBusiness(negocio: Business): void {
+    this.editingBusiness.set(negocio);
     this.showModal.set(true);
-    this.businessForm.reset({
-      name: biz.name,
-      category: biz.category,
-      description: biz.description,
-      location: biz.location,
-      phone: biz.phone ?? '',
-      logo: biz.logo ?? '',
-      tags: biz.tags?.join(', ') ?? '',
-      facebook: biz.facebook ?? '',
-      instagram: biz.instagram ?? '',
-      tiktok: biz.tiktok ?? '',
-      whatsapp: biz.whatsapp ?? '',
-      linkedin: biz.linkedin ?? '',
-      pin: '',
-    });
+    this.businessForm.reset(this.ownerBusinessService.editDefaults(negocio));
     this.businessForm.get('pin')?.clearValidators();
     this.businessForm.get('pin')?.updateValueAndValidity();
   }
@@ -170,62 +159,31 @@ export class OwnerDashboardComponent implements OnInit {
 
   saveBusiness(): void {
     if (this.businessForm.invalid) return;
-    const token = this.auth.getOwnerToken();
-    if (!token) return;
-    const values = this.businessForm.value;
-    const tagsArr = (values.tags ?? '').split(',').map((tag: string) => tag.trim()).filter(Boolean);
-    const payload = {
-      name: values.name!,
-      category: values.category!,
-      description: values.description ?? '',
-      location: values.location ?? '',
-      phone: values.phone ?? '',
-      logo: values.logo ?? '',
-      tags: tagsArr,
-      facebook: values.facebook ?? '',
-      instagram: values.instagram ?? '',
-      tiktok: values.tiktok ?? '',
-      whatsapp: values.whatsapp ?? '',
-      linkedin: values.linkedin ?? '',
-      pin: values.pin!,
-    };
 
+    const values = this.businessForm.getRawValue();
     this.saving.set(true);
 
-    if (this.editingBusiness()) {
-      this.businessService.updateBusiness(this.editingBusiness()!.id, payload, token).subscribe({
-        next: () => {
-          this.saving.set(false);
-          this.closeModal();
-          this.refreshBusinesses();
-        },
-        error: err => {
-          console.error(err);
-          this.saving.set(false);
-        },
-      });
-    } else {
-      this.businessService.createBusiness(payload, token).subscribe({
-        next: () => {
-          this.saving.set(false);
-          this.closeModal();
-          this.refreshBusinesses();
-        },
-        error: err => {
-          console.error(err);
-          this.saving.set(false);
-        },
-      });
-    }
+    this.ownerBusinessService.saveBusiness(values, this.editingBusiness()).subscribe({
+      next: () => {
+        this.saving.set(false);
+        this.closeModal();
+        this.refreshBusinesses();
+      },
+      error: err => {
+        console.error(err);
+        this.saving.set(false);
+      },
+    });
   }
 
   refreshBusinesses(): void {
-    const token = this.auth.getOwnerToken();
-    if (!token) return;
-    this.businessService.getOwnerBusinesses(token).subscribe({ next: list => this.businesses.set(list) });
+    this.ownerBusinessService.loadBusinesses().subscribe({
+      next: list => this.businesses.set(list),
+      error: () => this.businesses.set([]),
+    });
   }
 
-  openBusiness(biz: Business): void {
-    this.router.navigate(['/business', biz.id, 'admin']);
+  openBusiness(negocio: Business): void {
+    this.router.navigate(['/business', negocio.id, 'admin']);
   }
 }

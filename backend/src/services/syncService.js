@@ -9,15 +9,15 @@ const gsheets    = require('./googleSheets');
  * Sobreescribe la hoja "Reservas" completa (cabecera + datos).
  */
 async function syncReservations(businessId) {
-  const { rows: biz } = await db.query(
+  const { rows: negocio } = await db.query(
     'SELECT google_sheet_id, google_access_token FROM businesses WHERE id = $1',
     [businessId]
   );
-  if (!biz.length || !biz[0].google_sheet_id || !biz[0].google_access_token) return;
+  if (!negocio.length || !negocio[0].google_sheet_id || !negocio[0].google_access_token) return;
 
   const auth   = await gsheets.getAuthClient(businessId);
   const sheets = google.sheets({ version: 'v4', auth });
-  const sheetId = biz[0].google_sheet_id;
+  const sheetId = negocio[0].google_sheet_id;
 
   const { rows } = await db.query(
     'SELECT franja, disponibilidad, cliente, telefono, servicio, notas FROM reservations WHERE business_id = $1 ORDER BY franja',
@@ -46,15 +46,15 @@ async function syncReservations(businessId) {
  * Sincroniza TODOS los servicios de un negocio: PG → Google Sheets.
  */
 async function syncServices(businessId) {
-  const { rows: biz } = await db.query(
+  const { rows: negocio } = await db.query(
     'SELECT google_sheet_id, google_access_token FROM businesses WHERE id = $1',
     [businessId]
   );
-  if (!biz.length || !biz[0].google_sheet_id || !biz[0].google_access_token) return;
+  if (!negocio.length || !negocio[0].google_sheet_id || !negocio[0].google_access_token) return;
 
   const auth   = await gsheets.getAuthClient(businessId);
   const sheets = google.sheets({ version: 'v4', auth });
-  const sheetId = biz[0].google_sheet_id;
+  const sheetId = negocio[0].google_sheet_id;
 
   const { rows } = await db.query(
     'SELECT nombre FROM services WHERE business_id = $1 ORDER BY nombre',

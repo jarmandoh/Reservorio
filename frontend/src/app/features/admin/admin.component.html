@@ -263,7 +263,7 @@
             <h2 class="font-display font-semibold text-[1.375rem]">Negocios</h2>
             <p class="text-sm text-on-surface-variant mt-1">Gestiona el listado, el estado y los datos principales de cada negocio.</p>
           </div>
-          <button class="btn-primary btn-sm gap-1.5" (click)="openBizModal(null)" [disabled]="!adminToken()">
+          <button class="btn-primary btn-sm gap-1.5" (click)="opennegocioModal(null)" [disabled]="!adminToken()">
             <span class="material-icons-round text-base">add</span>
             Nuevo
           </button>
@@ -317,53 +317,53 @@
             </div>
           } @else {
             <div class="flex flex-col gap-3">
-              @for (biz of filteredBusinesses(); track biz.id) {
+              @for (negocio of filteredBusinesses(); track negocio.id) {
                 <div class="card flex items-center gap-4">
                   <div class="w-12 h-12 rounded-xl overflow-hidden flex items-center justify-center flex-shrink-0 bg-surface-muted">
-                    @if (biz.logo) {
-                      <img src="{{ biz.logo }}" alt="Logo de {{ biz.name }}" class="w-full h-full object-cover" />
+                    @if (negocio.logo) {
+                      <img src="{{ negocio.logo }}" alt="Logo de {{ negocio.name }}" class="w-full h-full object-cover" />
                     } @else {
                       <span class="material-icons-round text-xl text-outline">store</span>
                     }
                   </div>
                   <div class="flex-1 min-w-0">
                     <div class="flex items-center gap-2 flex-wrap">
-                      <h3 class="font-display font-bold text-base truncate">{{ biz.name }}</h3>
+                      <h3 class="font-display font-bold text-base truncate">{{ negocio.name }}</h3>
                       <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold"
-                            [style.background]="biz.active ? '#e6f4ea' : '#f5f5f5'"
-                            [style.color]="biz.active ? '#1e7e34' : '#727785'">
-                        {{ biz.active ? 'Activo' : 'Inactivo' }}
+                            [style.background]="negocio.active ? '#e6f4ea' : '#f5f5f5'"
+                            [style.color]="negocio.active ? '#1e7e34' : '#727785'">
+                        {{ negocio.active ? 'Activo' : 'Inactivo' }}
                       </span>
                     </div>
                     <p class="text-xs text-on-surface-variant truncate mt-0.5">
-                      {{ biz.category }} · {{ biz.location || 'Sin ubicación' }}
+                      {{ negocio.category }} · {{ negocio.location || 'Sin ubicación' }}
                     </p>
                   </div>
                   <div class="flex items-center gap-2 flex-shrink-0">
                     <button class="w-9 h-9 flex items-center justify-center rounded-lg transition"
                             style="background:#d8e2ff;color:#005bbf"
-                            (click)="openBizModal(biz)" [disabled]="!adminToken()"
-                            aria-label="Editar {{ biz.name }}">
+                            (click)="opennegocioModal(negocio)" [disabled]="!adminToken()"
+                            aria-label="Editar {{ negocio.name }}">
                       <span class="material-icons-round text-base">edit</span>
                     </button>
                     <button class="w-9 h-9 flex items-center justify-center rounded-lg transition disabled:opacity-40"
-                            [style.background]="biz.active ? '#fff0ef' : '#e8f5e9'"
-                            [style.color]="biz.active ? '#93000a' : '#2e7d32'"
-                            (click)="toggleBusiness(biz.id)"
-                            [disabled]="togglingBusiness() === biz.id || !adminToken()"
-                            [attr.aria-label]="biz.active ? 'Desactivar negocio' : 'Activar negocio'">
-                      @if (togglingBusiness() === biz.id) {
+                            [style.background]="negocio.active ? '#fff0ef' : '#e8f5e9'"
+                            [style.color]="negocio.active ? '#93000a' : '#2e7d32'"
+                            (click)="toggleBusiness(negocio.id)"
+                            [disabled]="togglingBusiness() === negocio.id || !adminToken()"
+                            [attr.aria-label]="negocio.active ? 'Desactivar negocio' : 'Activar negocio'">
+                      @if (togglingBusiness() === negocio.id) {
                         <span class="material-icons-round text-base animate-spin">refresh</span>
                       } @else {
-                        <span class="material-icons-round text-base">{{ biz.active ? 'visibility_off' : 'visibility' }}</span>
+                        <span class="material-icons-round text-base">{{ negocio.active ? 'visibility_off' : 'visibility' }}</span>
                       }
                     </button>
                     <button class="w-9 h-9 flex items-center justify-center rounded-lg transition disabled:opacity-40"
                             style="background:#f8d7da;color:#842029"
-                            (click)="deleteBusiness(biz.id)"
-                            [disabled]="deletingBusiness() === biz.id || !adminToken()"
-                            aria-label="Eliminar {{ biz.name }}">
-                      @if (deletingBusiness() === biz.id) {
+                            (click)="deleteBusiness(negocio.id)"
+                            [disabled]="deletingBusiness() === negocio.id || !adminToken()"
+                            aria-label="Eliminar {{ negocio.name }}">
+                      @if (deletingBusiness() === negocio.id) {
                         <span class="material-icons-round text-base animate-spin">refresh</span>
                       } @else {
                         <span class="material-icons-round text-base">delete_outline</span>
@@ -425,7 +425,7 @@
     }
 
     <!-- ══ MODAL: Negocio ══════════════════════════════════════════ -->
-    @if (showBizModal()) {
+    @if (shownegocioModal()) {
       <div class="fixed inset-0 z-40 flex items-end sm:items-center justify-center p-4 sm:p-6
                   bg-black/40 backdrop-blur-sm animate-fade-in">
         <div class="w-full max-w-lg bg-surface-lowest rounded-t-2xl sm:rounded-2xl flex flex-col
@@ -437,7 +437,7 @@
               {{ editingBusiness() ? 'Editar negocio' : 'Nuevo negocio' }}
             </h3>
             <button class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-surface-container"
-                    (click)="closeBizModal()">
+                    (click)="closenegocioModal()">
               <span class="material-icons-round text-on-surface-variant">close</span>
             </button>
           </div>
@@ -610,7 +610,7 @@
           </div>
 
           <div class="p-5 border-t border-outline-variant/20 flex gap-3 flex-shrink-0">
-            <button class="btn-secondary flex-1" (click)="closeBizModal()">Cancelar</button>
+            <button class="btn-secondary flex-1" (click)="closenegocioModal()">Cancelar</button>
             <button class="btn-primary flex-1"
                     [disabled]="businessForm.invalid || savingBusiness()"
                     (click)="saveBusiness()">

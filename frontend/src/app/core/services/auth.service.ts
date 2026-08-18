@@ -144,17 +144,17 @@ export class AuthService {
   // ── Business JWT ──────────────────────────────────────────────────────
 
   getBusinessToken(businessId: string): string | null {
-    const token = this.storage.getItem(`biz_jwt_${businessId}`);
+    const token = this.storage.getItem(`negocio_jwt_${businessId}`);
     return this.isTokenValid(token) ? token : null;
   }
 
   setBusinessToken(businessId: string, token: string): void {
-    this.storage.setItem(`biz_jwt_${businessId}`, token);
+    this.storage.setItem(`negocio_jwt_${businessId}`, token);
     this.sessionStore.setAuthenticated(true);
   }
 
   clearBusinessToken(businessId: string): void {
-    this.storage.removeItem(`biz_jwt_${businessId}`);
+    this.storage.removeItem(`negocio_jwt_${businessId}`);
   }
 
   isBusinessUnlocked(businessId: string): boolean {

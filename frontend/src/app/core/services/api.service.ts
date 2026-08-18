@@ -156,77 +156,77 @@ export class ApiService {
 
   // ── Per-business operations ───────────────────────────────────────────
 
-  getBusinessReservations(bizId: string): Observable<Reservation[]> {
+  getBusinessReservations(negocioId: string): Observable<Reservation[]> {
     return this.http
-      .get<ApiResponse<Reservation[]>>(`${this.base}/businesses/${bizId}/reservations`)
+      .get<ApiResponse<Reservation[]>>(`${this.base}/businesses/${negocioId}/reservations`)
       .pipe(map(r => r.data ?? []), catchError(this.handleError));
   }
 
-  createBusinessReservation(bizId: string, payload: BookingPayload): Observable<ApiResponse> {
+  createBusinessReservation(negocioId: string, payload: BookingPayload): Observable<ApiResponse> {
     return this.http
-      .post<ApiResponse>(`${this.base}/businesses/${bizId}/reservations`, payload)
+      .post<ApiResponse>(`${this.base}/businesses/${negocioId}/reservations`, payload)
       .pipe(catchError(this.handleError));
   }
 
-  updateBusinessReservation(bizId: string, payload: UpdatePayload, token: string): Observable<ApiResponse> {
+  updateBusinessReservation(negocioId: string, payload: UpdatePayload, token: string): Observable<ApiResponse> {
     return this.http
-      .put<ApiResponse>(`${this.base}/businesses/${bizId}/reservations/${payload.rowIndex}`, payload, this.authHeader(token))
+      .put<ApiResponse>(`${this.base}/businesses/${negocioId}/reservations/${payload.rowIndex}`, payload, this.authHeader(token))
       .pipe(catchError(this.handleError));
   }
 
-  getBusinessServices(bizId: string): Observable<string[]> {
+  getBusinessServices(negocioId: string): Observable<string[]> {
     return this.http
-      .get<ApiResponse<string[]>>(`${this.base}/businesses/${bizId}/services`)
+      .get<ApiResponse<string[]>>(`${this.base}/businesses/${negocioId}/services`)
       .pipe(map(r => r.data ?? []), catchError(this.handleError));
   }
 
-  createBusinessService(bizId: string, nombre: string, token: string): Observable<ApiResponse> {
+  createBusinessService(negocioId: string, nombre: string, token: string): Observable<ApiResponse> {
     return this.http
-      .post<ApiResponse>(`${this.base}/businesses/${bizId}/services`, { nombre }, this.authHeader(token))
+      .post<ApiResponse>(`${this.base}/businesses/${negocioId}/services`, { nombre }, this.authHeader(token))
       .pipe(catchError(this.handleError));
   }
 
-  deleteBusinessService(bizId: string, nombre: string, token: string): Observable<ApiResponse> {
+  deleteBusinessService(negocioId: string, nombre: string, token: string): Observable<ApiResponse> {
     return this.http
-      .delete<ApiResponse>(`${this.base}/businesses/${bizId}/services/${encodeURIComponent(nombre)}`, this.authHeader(token))
+      .delete<ApiResponse>(`${this.base}/businesses/${negocioId}/services/${encodeURIComponent(nombre)}`, this.authHeader(token))
       .pipe(catchError(this.handleError));
   }
 
   // ── Google OAuth ──────────────────────────────────────────────────────
 
-  getGoogleAuthUrl(bizId: string, token: string): Observable<string> {
+  getGoogleAuthUrl(negocioId: string, token: string): Observable<string> {
     return this.http
-      .get<ApiResponse<never> & { url: string }>(`${this.base}/google/start/${bizId}`, this.authHeader(token))
+      .get<ApiResponse<never> & { url: string }>(`${this.base}/google/start/${negocioId}`, this.authHeader(token))
       .pipe(map(r => r.url), catchError(this.handleError));
   }
 
-  getGoogleStatus(bizId: string, token: string): Observable<GoogleStatus> {
+  getGoogleStatus(negocioId: string, token: string): Observable<GoogleStatus> {
     return this.http
-      .get<ApiResponse<GoogleStatus>>(`${this.base}/google/status/${bizId}`, this.authHeader(token))
+      .get<ApiResponse<GoogleStatus>>(`${this.base}/google/status/${negocioId}`, this.authHeader(token))
       .pipe(map(r => r.data!), catchError(this.handleError));
   }
 
-  disconnectGoogle(bizId: string, token: string): Observable<ApiResponse> {
+  disconnectGoogle(negocioId: string, token: string): Observable<ApiResponse> {
     return this.http
-      .post<ApiResponse>(`${this.base}/google/disconnect/${bizId}`, {}, this.authHeader(token))
+      .post<ApiResponse>(`${this.base}/google/disconnect/${negocioId}`, {}, this.authHeader(token))
       .pipe(catchError(this.handleError));
   }
 
-  createGoogleSheet(bizId: string, token: string): Observable<ApiResponse & { sheetId?: string }> {
+  createGoogleSheet(negocioId: string, token: string): Observable<ApiResponse & { sheetId?: string }> {
     return this.http
-      .post<ApiResponse & { sheetId?: string }>(`${this.base}/google/create-sheet/${bizId}`, {}, this.authHeader(token))
+      .post<ApiResponse & { sheetId?: string }>(`${this.base}/google/create-sheet/${negocioId}`, {}, this.authHeader(token))
       .pipe(catchError(this.handleError));
   }
 
-  linkGoogleSheet(bizId: string, sheetId: string, token: string): Observable<ApiResponse> {
+  linkGoogleSheet(negocioId: string, sheetId: string, token: string): Observable<ApiResponse> {
     return this.http
-      .post<ApiResponse>(`${this.base}/google/link-sheet/${bizId}`, { sheetId }, this.authHeader(token))
+      .post<ApiResponse>(`${this.base}/google/link-sheet/${negocioId}`, { sheetId }, this.authHeader(token))
       .pipe(catchError(this.handleError));
   }
 
-  syncGoogleSheet(bizId: string, token: string): Observable<ApiResponse> {
+  syncGoogleSheet(negocioId: string, token: string): Observable<ApiResponse> {
     return this.http
-      .post<ApiResponse>(`${this.base}/google/sync/${bizId}`, {}, this.authHeader(token))
+      .post<ApiResponse>(`${this.base}/google/sync/${negocioId}`, {}, this.authHeader(token))
       .pipe(catchError(this.handleError));
   }
 

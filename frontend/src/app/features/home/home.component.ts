@@ -200,28 +200,28 @@ const CATEGORIES = ['Todos', 'Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci
       <!-- Business cards -->
       @if (!loading()) {
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          @for (biz of displayedBusinesses(); track biz.id) {
+          @for (negocio of displayedBusinesses(); track negocio.id) {
             <div role="button" tabindex="0"
               class="g-card text-left bg-surface-lowest rounded-2xl shadow-card overflow-hidden
                      transition-all hover:-translate-y-0.5 hover:shadow-soft active:scale-[.98]
                      focus:outline-none focus:ring-2 focus:ring-primary/30 cursor-pointer"
-              (click)="goToBooking(biz)"
-              (keydown.enter)="goToBooking(biz)"
-              (keydown.space)="goToBooking(biz)">
+              (click)="goToBooking(negocio)"
+              (keydown.enter)="goToBooking(negocio)"
+              (keydown.space)="goToBooking(negocio)">
 
               <!-- Card header gradient -->
-              <div class="relative h-28 flex items-end p-5" [style.background]="biz.gradient">
+              <div class="relative h-28 flex items-end p-5" [style.background]="negocio.gradient">
                 <div class="absolute top-4 right-4 w-10 h-10 rounded-xl flex items-center justify-center"
                      style="background:rgba(255,255,255,.2)">
-                  <span class="material-icons-round text-white text-xl">{{ biz.icon }}</span>
+                  <span class="material-icons-round text-white text-xl">{{ negocio.icon }}</span>
                 </div>
                 <!-- Available badge -->
                 <div class="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold"
                      style="background:rgba(255,255,255,.2);backdrop-filter:blur(8px);color:#fff">
                   <span class="w-1.5 h-1.5 rounded-full"
-                        [style.background]="biz.available > 0 ? '#4ade80' : '#f87171'"></span>
-                  @if (biz.available > 0) {
-                    {{ biz.available }} disponible{{ biz.available !== 1 ? 's' : '' }}
+                        [style.background]="negocio.available > 0 ? '#4ade80' : '#f87171'"></span>
+                  @if (negocio.available > 0) {
+                    {{ negocio.available }} disponible{{ negocio.available !== 1 ? 's' : '' }}
                   } @else {
                     Ver disponibilidad
                   }
@@ -232,39 +232,39 @@ const CATEGORIES = ['Todos', 'Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci
               <div class="p-5 flex flex-col gap-3">
                 <div class="flex items-start justify-between gap-2">
                   <div>
-                    <h3 class="font-display font-bold text-lg leading-tight">{{ biz.name }}</h3>
+                    <h3 class="font-display font-bold text-lg leading-tight">{{ negocio.name }}</h3>
                     <div class="flex items-center gap-1.5 mt-0.5">
                       <span class="material-icons-round text-outline text-sm">location_on</span>
-                      <span class="text-xs text-on-surface-variant">{{ biz.location }}</span>
+                      <span class="text-xs text-on-surface-variant">{{ negocio.location }}</span>
                     </div>
                   </div>
                   <!-- Rating -->
                   <div class="flex items-center gap-1 flex-shrink-0">
                     <span class="material-icons-round text-[#f59e0b] text-sm">star</span>
-                    <span class="text-sm font-semibold">{{ biz.rating }}</span>
-                    <span class="text-xs text-outline">({{ biz.reviews }})</span>
+                    <span class="text-sm font-semibold">{{ negocio.rating }}</span>
+                    <span class="text-xs text-outline">({{ negocio.reviews }})</span>
                   </div>
                 </div>
 
                 <p class="text-sm text-on-surface-variant leading-relaxed line-clamp-2">
-                  {{ biz.description }}
+                  {{ negocio.description }}
                 </p>
 
                 <!-- Tags -->
                 <div class="flex flex-wrap gap-1.5">
-                  @for (tag of biz.tags; track tag) {
+                  @for (tag of negocio.tags; track tag) {
                     <span class="service-tag">{{ tag }}</span>
                   }
                 </div>
 
                 <!-- CTA -->
                 <div class="flex flex-col gap-3 pt-1 sm:flex-row sm:items-center sm:justify-between">
-                  <span class="text-xs text-outline">{{ biz.category }}</span>
+                  <span class="text-xs text-outline">{{ negocio.category }}</span>
                   <div class="flex flex-wrap items-center gap-2">
                     <button type="button"
                             class="btn-secondary btn-sm"
                             title="Ir al dashboard de negocio"
-                            (click)="$event.stopPropagation(); goBusinessLogin(biz)">
+                            (click)="$event.stopPropagation(); goBusinessLogin(negocio)">
                       Panel negocio
                     </button>
                     <div class="flex items-center gap-1 text-primary text-sm font-semibold">
@@ -315,17 +315,17 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   locationQuery    = '';
   selectedCategory = 'Todos';
   readonly loading    = signal(true);
-  readonly bizLoading = signal(false);
+  readonly negocioLoading = signal(false);
 
   filtered(): Business[] {
     const q = this.searchQuery.toLowerCase();
-    return this.businesses.filter(biz => {
-      const matchCat = this.selectedCategory === 'Todos' || biz.category === this.selectedCategory;
+    return this.businesses.filter(negocio => {
+      const matchCat = this.selectedCategory === 'Todos' || negocio.category === this.selectedCategory;
       const matchQ   = !q ||
-        biz.name.toLowerCase().includes(q) ||
-        biz.description.toLowerCase().includes(q) ||
-        biz.tags.some(t => t.toLowerCase().includes(q)) ||
-        biz.category.toLowerCase().includes(q);
+        negocio.name.toLowerCase().includes(q) ||
+        negocio.description.toLowerCase().includes(q) ||
+        negocio.tags.some(t => t.toLowerCase().includes(q)) ||
+        negocio.category.toLowerCase().includes(q);
       return matchCat && matchQ;
     });
   }
@@ -348,7 +348,7 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   loadBusinesses(): void {
-    this.bizLoading.set(true);
+    this.negocioLoading.set(true);
     const query = {
       q: this.searchQuery,
       category: this.selectedCategory !== 'Todos' ? this.selectedCategory : undefined,
@@ -359,7 +359,7 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
       catchError(() => of(FALLBACK_BUSINESSES))
     ).subscribe(list => {
       this.businesses = list.length ? list : [...FALLBACK_BUSINESSES];
-      this.bizLoading.set(false);
+      this.negocioLoading.set(false);
       this.loading.set(false);
       setTimeout(() => this.animateCards(), 50);
     });
@@ -421,12 +421,12 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
     this.loadBusinesses();
   }
 
-  goToBooking(biz: Business): void {
-    this.router.navigate(['/booking', biz.id]);
+  goToBooking(negocio: Business): void {
+    this.router.navigate(['/booking', negocio.id]);
   }
 
-  goBusinessLogin(biz: Business): void {
-    this.router.navigate(['/business', biz.id, 'login']);
+  goBusinessLogin(negocio: Business): void {
+    this.router.navigate(['/business', negocio.id, 'login']);
   }
 
   goAdmin(): void {

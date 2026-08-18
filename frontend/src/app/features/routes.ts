@@ -28,6 +28,7 @@ export const featureRoutes: Routes = [
     path: 'owner/dashboard',
     loadComponent: () => import('./owner-dashboard/owner-dashboard.component').then(m => m.OwnerDashboardComponent),
     canActivate: [ownerGuard],
+    canMatch: [ownerGuard],
   },
   {
     path: 'admin',

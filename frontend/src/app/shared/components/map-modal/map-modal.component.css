@@ -29,6 +29,7 @@
       padding: 0;
     }
     .map-container {
+      overflow: auto;
       height: 400px;
       width: 100%;
     }

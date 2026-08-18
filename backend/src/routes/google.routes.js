@@ -134,14 +134,14 @@ router.get('/status/:businessId', requireAnyAuth, async (req, res) => {
     );
     if (!rows.length) return res.status(404).json({ ok: false, message: 'Negocio no encontrado.' });
 
-    const biz = rows[0];
+    const negocio = rows[0];
     res.json({
       ok: true,
       data: {
-        linked:     !!biz.google_email,
-        email:      biz.google_email || null,
-        sheetId:    biz.google_sheet_id || null,
-        tokenExpiry: biz.google_token_expiry || null,
+        linked:     !!negocio.google_email,
+        email:      negocio.google_email || null,
+        sheetId:    negocio.google_sheet_id || null,
+        tokenExpiry: negocio.google_token_expiry || null,
       },
     });
   } catch (e) { 

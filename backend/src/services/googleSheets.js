@@ -94,22 +94,22 @@ async function getAuthClient(businessId) {
     [businessId]
   );
   if (!rows.length) throw new Error('Negocio no encontrado.');
-  const biz = rows[0];
-  if (!biz.google_access_token) throw new Error('Google no vinculado a este negocio.');
+  const negocio = rows[0];
+  if (!negocio.google_access_token) throw new Error('Google no vinculado a este negocio.');
 
-  const accessToken  = decrypt(biz.google_access_token);
-  const refreshToken = biz.google_refresh_token ? decrypt(biz.google_refresh_token) : null;
+  const accessToken  = decrypt(negocio.google_access_token);
+  const refreshToken = negocio.google_refresh_token ? decrypt(negocio.google_refresh_token) : null;
 
   const client = createOAuth2Client();
   client.setCredentials({
     access_token:  accessToken,
     refresh_token: refreshToken,
-    expiry_date:   biz.google_token_expiry ? new Date(biz.google_token_expiry).getTime() : null,
+    expiry_date:   negocio.google_token_expiry ? new Date(negocio.google_token_expiry).getTime() : null,
   });
 
   // Auto-refresh si expiró
   const now = Date.now();
-  const expiry = biz.google_token_expiry ? new Date(biz.google_token_expiry).getTime() : 0;
+  const expiry = negocio.google_token_expiry ? new Date(negocio.google_token_expiry).getTime() : 0;
   if (expiry && expiry < now + 60_000 && refreshToken) {
     const { credentials } = await client.refreshAccessToken();
     await saveTokens(businessId, credentials, null);

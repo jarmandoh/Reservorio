@@ -30,7 +30,7 @@ describe('Businesses routes', () => {
 
   test('GET /api/businesses/all allows admin access', async () => {
     const token = sign({ role: 'admin' });
-    db.query.mockResolvedValueOnce({ rows: [{ id: 'biz1', name: 'Test', category: 'Test', rating: 4.5, reviews: 10, tags: '', gradient: '', icon: '', schedule: '', logo: '', phone: '', active: true }] });
+    db.query.mockResolvedValueOnce({ rows: [{ id: 'negocio1', name: 'Test', category: 'Test', rating: 4.5, reviews: 10, tags: '', gradient: '', icon: '', schedule: '', logo: '', phone: '', active: true }] });
 
     const response = await request(app)
       .get('/api/businesses/all')
@@ -39,21 +39,21 @@ describe('Businesses routes', () => {
     expect(response.status).toBe(200);
     expect(response.body.ok).toBe(true);
     expect(Array.isArray(response.body.data)).toBe(true);
-    expect(response.body.data[0].id).toBe('biz1');
+    expect(response.body.data[0].id).toBe('negocio1');
   });
 
   test('POST /api/businesses/:id/services allows business-admin access', async () => {
-    const token = sign({ role: 'business-admin', businessId: 'biz1' });
+    const token = sign({ role: 'business-admin', businessId: 'negocio1' });
     db.query.mockResolvedValueOnce({});
 
     const response = await request(app)
-      .post('/api/businesses/biz1/services')
+      .post('/api/businesses/negocio1/services')
       .set('Authorization', `Bearer ${token}`)
       .send({ nombre: 'Corte de cabello' });
 
     expect(response.status).toBe(201);
     expect(response.body.ok).toBe(true);
     expect(response.body.data.nombre).toBe('Corte de cabello');
-    expect(db.query).toHaveBeenCalledWith('INSERT INTO services (business_id, nombre) VALUES ($1, $2)', ['biz1', 'Corte de cabello']);
+    expect(db.query).toHaveBeenCalledWith('INSERT INTO services (business_id, nombre) VALUES ($1, $2)', ['negocio1', 'Corte de cabello']);
   });
 });

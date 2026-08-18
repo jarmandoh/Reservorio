@@ -7,9 +7,7 @@ import {
   ReactiveFormsModule, FormBuilder, Validators, AbstractControl
 } from '@angular/forms';
 import { Router } from '@angular/router';
-import { ApiService }   from '../../core/services/api.service';
 import { AdminService } from '../../core/services/admin.service';
-import { BusinessService } from '../../core/services/business.service';
 import { ToastService } from '../../core/services/toast.service';
 import { AuthService }  from '../../core/services/auth.service';
 import { BadgeComponent } from '../../shared/components/badge/badge.component';
@@ -28,9 +26,7 @@ type AdminTab = 'reservas' | 'servicios' | 'ajustes' | 'negocios';
     templateUrl: './admin.component.html',
 })
 export class AdminComponent implements OnInit {
-  private api   = inject(ApiService);
   private adminService = inject(AdminService);
-  private businessService = inject(BusinessService);
   private toast = inject(ToastService);
   private auth  = inject(AuthService);
   private router = inject(Router);
@@ -67,7 +63,7 @@ export class AdminComponent implements OnInit {
   readonly businessesLoading = signal(false);
   readonly togglingBusiness  = signal<string | null>(null);
   readonly deletingBusiness = signal<string | null>(null);
-  readonly showBizModal      = signal(false);
+  readonly shownegocioModal      = signal(false);
   readonly editingBusiness   = signal<Business | null>(null);
   readonly savingBusiness    = signal(false);
 
@@ -191,13 +187,16 @@ export class AdminComponent implements OnInit {
   initAdminToken(): void {
     this.adminError.set(null);
     const cached = this.auth.getAdminToken();
-    if (cached) { this.adminToken.set(cached); this.loadBusinesses(cached); return; }
-    this.auth.loginAdmin(this.auth.storedPin).subscribe({
-      next: res => {
-        if (res.data?.token) {
-          this.adminToken.set(this.auth.getAdminToken());
-          this.loadBusinesses(res.data.token);
-        }
+    if (cached) {
+      this.adminToken.set(cached);
+      this.loadBusinesses(cached);
+      return;
+    }
+
+    this.adminService.ensureAdminToken().subscribe({
+      next: token => {
+        this.adminToken.set(token);
+        this.loadBusinesses(token);
       },
       error: () => {
         this.adminError.set('No se pudo obtener el token de administrador. Verifica el PIN del servidor y vuelve a intentar.');
@@ -211,7 +210,7 @@ export class AdminComponent implements OnInit {
     if (!t) return;
     this.adminError.set(null);
     this.businessesLoading.set(true);
-    this.businessService.getAllBusinesses(t).subscribe({
+    this.adminService.getAllBusinesses(t).subscribe({
       next:  list => { this.businesses.set(list); this.businessesLoading.set(false); },
       error: ()   => { this.businessesLoading.set(false); },
     });
@@ -263,23 +262,23 @@ export class AdminComponent implements OnInit {
     this.tagQuery.set('');
   }
 
-  openBizModal(biz: Business | null): void {
-    this.editingBusiness.set(biz);
+  opennegocioModal(negocio: Business | null): void {
+    this.editingBusiness.set(negocio);
     this.loadCategories();
     this.loadTags();
     console.log('Categorías cargadas:', this.categorias);
-    if (biz) {
+    if (negocio) {
       this.businessForm.patchValue({
-        name: biz.name, category: biz.category, description: biz.description,
-        location: biz.location, schedule: biz.schedule ?? '',
-        phone: biz.phone ?? '', logo: biz.logo ?? '', tags: biz.tags?.join(', ') ?? '',
-        facebook: biz.facebook ?? '', instagram: biz.instagram ?? '', tiktok: biz.tiktok ?? '',
-        whatsapp: biz.whatsapp ?? '', linkedin: biz.linkedin ?? '',
-        icon: biz.icon, gradient: biz.gradient,
+        name: negocio.name, category: negocio.category, description: negocio.description,
+        location: negocio.location, schedule: negocio.schedule ?? '',
+        phone: negocio.phone ?? '', logo: negocio.logo ?? '', tags: negocio.tags?.join(', ') ?? '',
+        facebook: negocio.facebook ?? '', instagram: negocio.instagram ?? '', tiktok: negocio.tiktok ?? '',
+        whatsapp: negocio.whatsapp ?? '', linkedin: negocio.linkedin ?? '',
+        icon: negocio.icon, gradient: negocio.gradient,
         pin: '',
       });
-      this.gradientFrom.set(this.extractGradientColor(biz.gradient, 0) ?? '#005bbf');
-      this.gradientTo.set(this.extractGradientColor(biz.gradient, 1) ?? '#1a73e8');
+      this.gradientFrom.set(this.extractGradientColor(negocio.gradient, 0) ?? '#005bbf');
+      this.gradientTo.set(this.extractGradientColor(negocio.gradient, 1) ?? '#1a73e8');
       this.businessForm.get('pin')?.clearValidators();
     } else {
       this.businessForm.reset({
@@ -291,10 +290,10 @@ export class AdminComponent implements OnInit {
       this.businessForm.get('pin')?.setValidators([Validators.required, Validators.minLength(4)]);
     }
     this.businessForm.get('pin')?.updateValueAndValidity();
-    this.showBizModal.set(true);
+    this.shownegocioModal.set(true);
   }
 
-  closeBizModal(): void { this.showBizModal.set(false); }
+  closenegocioModal(): void { this.shownegocioModal.set(false); }
 
   saveBusiness(): void {
     if (this.businessForm.invalid) return;
@@ -325,11 +324,11 @@ export class AdminComponent implements OnInit {
       updates.whatsapp = v.whatsapp ?? '';
       updates.linkedin = v.linkedin ?? '';
       if (v.pin) updates.pin = v.pin;
-      this.businessService.updateBusiness(this.editingBusiness()!.id, updates, token).subscribe({
+      this.adminService.updateBusiness(this.editingBusiness()!.id, updates, token).subscribe({
         next: () => {
           this.toast.success('Negocio actualizado');
           this.savingBusiness.set(false);
-          this.closeBizModal();
+          this.closenegocioModal();
           this.loadBusinesses();
         },
         error: err => { this.toast.error(err.message); this.savingBusiness.set(false); },
@@ -343,11 +342,11 @@ export class AdminComponent implements OnInit {
         whatsapp: v.whatsapp ?? '', linkedin: v.linkedin ?? '',
         pin: v.pin!,
       };
-      this.businessService.createBusiness(payload, token).subscribe({
+      this.adminService.createBusiness(payload, token).subscribe({
         next: () => {
           this.toast.success('Negocio creado');
           this.savingBusiness.set(false);
-          this.closeBizModal();
+          this.closenegocioModal();
           this.loadBusinesses();
         },
         error: err => { this.toast.error(err.message); this.savingBusiness.set(false); },
@@ -359,7 +358,7 @@ export class AdminComponent implements OnInit {
     const token = this.adminToken();
     if (!token) return;
     this.togglingBusiness.set(id);
-    this.businessService.toggleBusiness(id, token).subscribe({
+    this.adminService.toggleBusiness(id, token).subscribe({
       next: () => {
         this.togglingBusiness.set(null);
         this.loadBusinesses();
@@ -376,7 +375,7 @@ export class AdminComponent implements OnInit {
     if (!token) return;
     if (!window.confirm('¿Eliminar este negocio? Esta acción no se puede deshacer.')) return;
     this.deletingBusiness.set(id);
-    this.businessService.deleteBusiness(id, token).subscribe({
+    this.adminService.deleteBusiness(id, token).subscribe({
       next: () => {
         this.toast.success('Negocio eliminado');
         this.deletingBusiness.set(null);
@@ -430,9 +429,16 @@ export class AdminComponent implements OnInit {
 
   abrirmodalMapa(): void {
     const currentCoords = this.location() ?? undefined;
-    console.log("clicando ando");
+    const mapModalInstance = this.mapModal();
 
-    this.mapModal.open(currentCoords);
+    if(mapModalInstance) {
+      mapModalInstance.open(currentCoords);
+    } else {
+      console.error('No se pudo abrir el modal de mapa: instancia no encontrada.');
+    }
+
+
+
     /* this.mapModal.coordinatesSelected.subscribe((coords) => {
       console.log('Coordenadas seleccionadas:', coords);
       // Aquí puedes actualizar el formulario o hacer lo que necesites con las coordenadas
@@ -526,7 +532,7 @@ export class AdminComponent implements OnInit {
     if(this.categorias.length > 0) return; // Ya cargadas
     this.isCategoriesLoading = true;
     try {
-      console.log('Cargando categorías...'),
+      console.log('Cargando categorías...');
       await this.adminService.getCategories().subscribe({
         next: data => { this.categorias = data; this.isCategoriesLoading = false; },
         error: () => { this.isCategoriesLoading = false; },

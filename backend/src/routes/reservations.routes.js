@@ -41,11 +41,11 @@ router.use((_req, res, next) => {
 // ── GET /api/reservations?businessId=xxx ──────────────────────────────────
 // Ruta legacy — requiere businessId como query param.
 router.get('/', requireAuth, reservationListValidators, async (req, res) => {
-  const bizId = req.query.businessId;
+  const negocioId = req.query.businessId;
   try {
     const { rows } = await db.query(
       'SELECT * FROM reservations WHERE business_id = $1 ORDER BY franja',
-      [bizId]
+      [negocioId]
     );
     res.json({ ok: true, data: rows });
   } catch (err) {

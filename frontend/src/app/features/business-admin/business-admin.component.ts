@@ -7,14 +7,14 @@ import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { interval, Subscription, switchMap, startWith } from 'rxjs';
 
-import { ApiService }   from '../../core/services/api.service';
 import { AuthService }  from '../../core/services/auth.service';
+import { BusinessAdminService } from '../../core/services/business-admin.service';
 import { ToastService } from '../../core/services/toast.service';
 import { BadgeComponent } from '../../shared/components/badge/badge.component';
 import { GoogleStatus, Reservation } from '../../core/models/reservation.model';
 import { Business } from '../../core/models/businesses.model';
 
-type BizTab = 'reservas' | 'servicios' | 'perfil' | 'google';
+type negocioTab = 'reservas' | 'servicios' | 'perfil' | 'google';
 
 @Component({
     selector: 'app-business-admin',
@@ -442,19 +442,19 @@ type BizTab = 'reservas' | 'servicios' | 'perfil' | 'google';
 export class BusinessAdminComponent implements OnInit, OnDestroy {
   private route  = inject(ActivatedRoute);
   private router = inject(Router);
-  private api    = inject(ApiService);
   private auth   = inject(AuthService);
   private toast  = inject(ToastService);
   private fb     = inject(FormBuilder);
+  private businessAdminService = inject(BusinessAdminService);
 
-  readonly tabs: { id: BizTab; label: string; icon: string }[] = [
+  readonly tabs: { id: negocioTab; label: string; icon: string }[] = [
     { id: 'reservas',  label: 'Reservas',  icon: 'event_note' },
     { id: 'servicios', label: 'Servicios', icon: 'spa'        },
     { id: 'perfil',    label: 'Perfil',    icon: 'storefront' },
     { id: 'google',    label: 'Sheets',    icon: 'table_chart' },
   ];
 
-  readonly tab          = signal<BizTab>('reservas');
+  readonly tab          = signal<negocioTab>('reservas');
   readonly business     = signal<Business | null>(null);
   readonly reservations = signal<Reservation[]>([]);
   readonly services     = signal<string[]>([]);
@@ -478,7 +478,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
   readonly creatingSheet  = signal(false);
   readonly disconnecting  = signal(false);
 
-  private bizId   = '';
+  private negocioId   = '';
   private token   = '';
   private pollSub?: Subscription;
 
@@ -537,15 +537,15 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
   });
 
   ngOnInit(): void {
-    this.bizId = this.route.snapshot.params['businessId'] ?? '';
-    this.token = this.auth.getBusinessToken(this.bizId) ?? this.auth.getOwnerToken() ?? '';
+    this.negocioId = this.route.snapshot.params['businessId'] ?? '';
+    this.token = this.businessAdminService.resolveToken(this.negocioId) ?? '';
 
     const isOwnerRoute = this.route.snapshot.url.some(seg => seg.path === 'owner');
     if (!this.token) {
       if (isOwnerRoute) {
         this.router.navigate(['/owner/login']);
       } else {
-        this.router.navigate(['/business', this.bizId, 'login']);
+        this.router.navigate(['/business', this.negocioId, 'login']);
       }
       return;
     }
@@ -554,7 +554,6 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
     this.startPolling();
     this.loadServices();
 
-    // Check if returning from Google OAuth callback
     const googleParam = this.route.snapshot.queryParams['google'];
     if (googleParam === 'linked') {
       this.toast.success('Cuenta Google vinculada correctamente');
@@ -567,14 +566,14 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
     this.pollSub?.unsubscribe();
   }
 
-  setTab(t: BizTab): void {
+  setTab(t: negocioTab): void {
     this.tab.set(t);
     if (t === 'servicios') this.loadServices();
     if (t === 'google')    this.loadGoogleStatus();
   }
 
   loadBusiness(): void {
-    this.api.getBusinessById(this.bizId, this.token).subscribe({
+    this.businessAdminService.loadBusiness(this.negocioId, this.token).subscribe({
       next: found => {
         this.business.set(found);
         this.profileForm.patchValue({
@@ -597,7 +596,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
       startWith(0),
       switchMap(() => {
         this.resLoading.set(true);
-        return this.api.getBusinessReservations(this.bizId);
+        return this.businessAdminService.loadReservations(this.negocioId);
       }),
     ).subscribe({
       next:  data => { this.reservations.set(data); this.resLoading.set(false); },
@@ -607,7 +606,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
 
   loadReservations(): void {
     this.resLoading.set(true);
-    this.api.getBusinessReservations(this.bizId).subscribe({
+    this.businessAdminService.loadReservations(this.negocioId).subscribe({
       next:  data => { this.reservations.set(data); this.resLoading.set(false); },
       error: ()   => { this.resLoading.set(false); },
     });
@@ -615,7 +614,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
 
   loadServices(): void {
     this.svcLoading.set(true);
-    this.api.getBusinessServices(this.bizId).subscribe({
+    this.businessAdminService.loadServices(this.negocioId).subscribe({
       next:  data => { this.services.set(data); this.svcLoading.set(false); },
       error: ()   => { this.svcLoading.set(false); },
     });
@@ -625,7 +624,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
     if (this.serviceForm.invalid) return;
     const nombre = this.serviceForm.value.nombre!;
     this.addingSvc.set(true);
-    this.api.createBusinessService(this.bizId, nombre, this.token).subscribe({
+    this.businessAdminService.addService(this.negocioId, nombre, this.token).subscribe({
       next: () => {
         this.toast.success('Servicio agregado');
         this.serviceForm.reset();
@@ -638,7 +637,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
 
   deleteService(nombre: string): void {
     this.deletingSvc.set(nombre);
-    this.api.deleteBusinessService(this.bizId, nombre, this.token).subscribe({
+    this.businessAdminService.removeService(this.negocioId, nombre, this.token).subscribe({
       next: () => {
         this.toast.success('Servicio eliminado');
         this.deletingSvc.set(null);
@@ -651,11 +650,16 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
   saveProfile(): void {
     if (this.profileForm.invalid) return;
     const v = this.profileForm.value;
+    const profileValues = {
+      name: v.name ?? null,
+      category: v.category ?? null,
+      description: v.description ?? null,
+      location: v.location ?? null,
+      schedule: v.schedule ?? null,
+      phone: v.phone ?? null,
+    };
     this.savingProfile.set(true);
-    this.api.updateBusiness(this.bizId, {
-      name: v.name!, category: v.category!, description: v.description ?? '',
-      location: v.location ?? '', schedule: v.schedule ?? '', phone: v.phone ?? '',
-    }, this.token).subscribe({
+    this.businessAdminService.saveProfile(this.negocioId, profileValues, this.token).subscribe({
       next: () => { this.toast.success('Perfil actualizado'); this.savingProfile.set(false); },
       error: err => { this.toast.error(err?.error?.message ?? 'Error al guardar'); this.savingProfile.set(false); },
     });
@@ -665,11 +669,11 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
     if (this.pinForm.invalid || this.pinMismatch()) return;
     const pin = this.pinForm.value.pin!;
     this.savingPin.set(true);
-    this.api.updateBusiness(this.bizId, { pin } as any, this.token).subscribe({
+    this.businessAdminService.updatePin(this.negocioId, pin, this.token).subscribe({
       next: () => {
         this.toast.success('PIN actualizado. Inicia sesión de nuevo.');
-        this.auth.clearBusinessToken(this.bizId);
-        this.router.navigate(['/business', this.bizId, 'login']);
+        this.auth.clearBusinessToken(this.negocioId);
+        this.router.navigate(['/business', this.negocioId, 'login']);
       },
       error: err => { this.toast.error(err?.error?.message ?? 'Error al cambiar PIN'); this.savingPin.set(false); },
     });
@@ -686,7 +690,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
     const r = this.modalRes();
     if (!r) return;
     this.savingRes.set(true);
-    this.api.updateBusinessReservation(this.bizId, {
+    this.businessAdminService.updateReservationStatus(this.negocioId, {
       rowIndex:       r._rowIndex,
       disponibilidad: this.newResStatus(),
       notas:          r.notas ?? '',
@@ -705,14 +709,14 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
 
   loadGoogleStatus(): void {
     this.googleLoading.set(true);
-    this.api.getGoogleStatus(this.bizId, this.token).subscribe({
+    this.businessAdminService.getGoogleStatus(this.negocioId, this.token).subscribe({
       next:  data => { this.googleStatus.set(data); this.googleLoading.set(false); },
       error: ()   => { this.googleLoading.set(false); },
     });
   }
 
   startGoogleAuth(): void {
-    this.api.getGoogleAuthUrl(this.bizId, this.token).subscribe({
+    this.businessAdminService.getGoogleAuthUrl(this.negocioId, this.token).subscribe({
       next:  url => { window.location.href = url; },
       error: err => { this.toast.error(err?.message ?? 'Error al iniciar vinculación'); },
     });
@@ -720,7 +724,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
 
   syncSheets(): void {
     this.syncing.set(true);
-    this.api.syncGoogleSheet(this.bizId, this.token).subscribe({
+    this.businessAdminService.syncGoogleSheet(this.negocioId, this.token).subscribe({
       next:  () => { this.toast.success('Sincronización completada'); this.syncing.set(false); },
       error: err => { this.toast.error(err?.message ?? 'Error al sincronizar'); this.syncing.set(false); },
     });
@@ -728,7 +732,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
 
   createSheet(): void {
     this.creatingSheet.set(true);
-    this.api.createGoogleSheet(this.bizId, this.token).subscribe({
+    this.businessAdminService.createGoogleSheet(this.negocioId, this.token).subscribe({
       next:  () => {
         this.toast.success('Spreadsheet creada');
         this.creatingSheet.set(false);
@@ -741,7 +745,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
   linkSheet(): void {
     const sheetId = this.linkSheetId().trim();
     if (!sheetId) return;
-    this.api.linkGoogleSheet(this.bizId, sheetId, this.token).subscribe({
+    this.businessAdminService.linkGoogleSheet(this.negocioId, sheetId, this.token).subscribe({
       next:  () => {
         this.toast.success('Spreadsheet vinculada');
         this.linkSheetId.set('');
@@ -754,7 +758,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
   disconnectGoogle(): void {
     if (!confirm('¿Desvincular tu cuenta Google? Se dejará de sincronizar.')) return;
     this.disconnecting.set(true);
-    this.api.disconnectGoogle(this.bizId, this.token).subscribe({
+    this.businessAdminService.disconnectGoogle(this.negocioId, this.token).subscribe({
       next:  () => {
         this.toast.success('Cuenta Google desvinculada');
         this.googleStatus.set(null);
@@ -765,8 +769,8 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
   }
 
   logout(): void {
-    this.auth.clearBusinessToken(this.bizId);
-    this.router.navigate(['/business', this.bizId, 'login']);
+    this.auth.clearBusinessToken(this.negocioId);
+    this.router.navigate(['/business', this.negocioId, 'login']);
   }
 
   getVal(e: Event): string {

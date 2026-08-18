@@ -36,11 +36,11 @@ router.use((_req, res, next) => {
 
 // GET /api/services?businessId=xxx
 router.get('/', serviceQueryValidators, async (req, res) => {
-  const bizId = req.query.businessId;
+  const negocioId = req.query.businessId;
   try {
     const { rows } = await db.query(
       'SELECT nombre FROM services WHERE business_id = $1 ORDER BY nombre',
-      [bizId]
+      [negocioId]
     );
     res.json({ ok: true, data: rows.map((r) => r.nombre) });
   } catch (err) {
