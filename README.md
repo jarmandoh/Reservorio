@@ -6,11 +6,12 @@ Sistema de reservas multi-negocio. Permite a clientes consultar disponibilidad y
 
 | Capa | Tecnología |
 |---|---|
-| Frontend | Angular 21 + Tailwind CSS, servido con Nginx |
-| Backend | Node.js + Express |
-| Base de datos | PostgreSQL |
+| Frontend | Angular 22 + Tailwind CSS, servido con Nginx |
+| Backend | Node.js 22 + Express |
+| Base de datos | PostgreSQL 16 |
 | Infraestructura | Docker + Docker Compose |
 | Autenticación | JWT (jsonwebtoken) + bcrypt |
+| Gestor de paquetes | pnpm 9 |
 
 ---
 
@@ -19,7 +20,9 @@ Sistema de reservas multi-negocio. Permite a clientes consultar disponibilidad y
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) (incluye Docker Compose)
 - Git
 
-Para desarrollo local sin Docker se necesita adicionalmente Node.js 20+ y una instancia de PostgreSQL.
+Para desarrollo local sin Docker se necesita adicionalmente Node.js 22.22.3 y una instancia de PostgreSQL.
+
+Se recomienda usar `nvm` o `fnm` para fijar la versión con los archivos `.nvmrc` y `.node-version` del repositorio.
 
 ---
 
@@ -32,7 +35,24 @@ git clone <url-del-repositorio>
 cd Reservorio
 ```
 
-### 2. Crear el archivo de variables de entorno
+### 2. Instalar dependencias del entorno local
+
+```bash
+corepack enable
+pnpm install
+```
+
+En cada proyecto:
+
+```bash
+cd backend
+pnpm install
+
+cd ../frontend
+pnpm install
+```
+
+### 3. Crear el archivo de variables de entorno
 
 ```bash
 cp backend/.env.example backend/.env
@@ -40,10 +60,10 @@ cp backend/.env.example backend/.env
 
 Edita `backend/.env` y configura los valores descritos en la siguiente sección.
 
-### 3. Levantar los servicios
+### 4. Levantar los servicios
 
 ```bash
-docker-compose up --build
+docker compose up --build
 ```
 
 La primera vez Docker descargará las imágenes, instalará dependencias y ejecutará el schema SQL automáticamente. Al terminar:
@@ -57,13 +77,13 @@ La primera vez Docker descargará las imágenes, instalará dependencias y ejecu
 Para detener todos los servicios:
 
 ```bash
-docker-compose down
+docker compose down
 ```
 
 Para detener y **eliminar los datos** (volumen de la base de datos):
 
 ```bash
-docker-compose down -v
+docker compose down -v
 ```
 
 ---
@@ -88,32 +108,60 @@ El backend lee su configuración desde `backend/.env`. Crea ese archivo basándo
 
 ```
 Reservorio/
-├── docker-compose.yml        # Orquesta los tres servicios: db, backend, frontend
+├── .nvmrc
+├── .node-version
+├── .npmrc
+├── .pnpmrc
+├── docker-compose.yml
 ├── backend/
+│   ├── .env.example
 │   ├── Dockerfile
 │   ├── package.json
+│   ├── pnpm-lock.yaml
 │   ├── db/
-│   │   └── init.sql          # Schema inicial: tablas businesses, services, reservations
+│   │   └── init.sql
 │   └── src/
-│       ├── index.js           # Punto de entrada de Express
-│       ├── db.js              # Pool de conexión a PostgreSQL
+│       ├── index.js
+│       ├── db.js
 │       ├── middleware/
-│       │   ├── jwt.js         # Firma y verificación de tokens
-│       │   └── sanitize.js    # Validación y limpieza de entradas
-│       └── routes/
-│           ├── auth.routes.js          # POST /api/auth/admin
-│           ├── businesses.routes.js    # CRUD de negocios + sus reservas/servicios
-│           ├── reservations.routes.js  # Rutas legacy /api/reservations
-│           └── services.routes.js      # Rutas legacy /api/services
+│       │   ├── auth.js
+│       │   ├── errorHandler.js
+│       │   ├── jwt.js
+│       │   ├── sanitize.js
+│       │   └── validation.js
+│       ├── routes/
+│       │   ├── auth.routes.js
+│       │   ├── businesses.routes.js
+│       │   ├── categories.routes.js
+│       │   ├── google.routes.js
+│       │   ├── reservations.routes.js
+│       │   ├── services.routes.js
+│       │   ├── tags.routes.js
+│       │   └── ux.routes.js
+│       ├── services/
+│       │   ├── auth.service.js
+│       │   ├── businesses.service.js
+│       │   ├── googleSheets.js
+│       │   └── syncService.js
+│       └── utils/
+│           └── crypto.js
 ├── frontend/
 │   ├── Dockerfile
 │   ├── nginx.conf
+│   ├── package.json
+│   ├── pnpm-lock.yaml
+│   ├── angular.json
 │   └── src/
-│       └── app/
-│           ├── core/           # Guards, modelos, servicios compartidos
-│           ├── features/       # Páginas: home, booking, admin, business-admin, login
-│           └── shared/         # Componentes reutilizables (badge, toast)
-└── legacy/                     # Versión HTML/JS original (referencia histórica)
+│       ├── index.html
+│       ├── main.ts
+│       ├── styles.css
+│       ├── app/
+│       ├── assets/
+│       └── environments/
+└── docs/
+    ├── API.md
+    ├── DEVELOPERS.md
+    └── GUIA-ADMIN.md
 ```
 
 ---
@@ -154,6 +202,17 @@ pnpm start
 
 La aplicación Angular arrancará en `http://localhost:4200` con proxy hacia `http://localhost:3000/api`.
 
+### Arranque con scripts del repositorio
+
+```bash
+chmod +x scripts/dev.sh scripts/prod.sh
+./scripts/dev.sh
+```
+
+```bash
+./scripts/prod.sh
+```
+
 ---
 
 ## Seguridad
@@ -173,3 +232,4 @@ La aplicación Angular arrancará en `http://localhost:4200` con proxy hacia `ht
 | [docs/API.md](docs/API.md) | Referencia completa de todos los endpoints REST |
 | [docs/DEVELOPERS.md](docs/DEVELOPERS.md) | Arquitectura interna, convenciones de código y mejoras pendientes |
 | [docs/GUIA-ADMIN.md](docs/GUIA-ADMIN.md) | Guía de uso del panel para administradores de negocio |
+| [SECURITY_CHECKLIST.md](SECURITY_CHECKLIST.md) | Revisión de seguridad y despliegue antes de producción |

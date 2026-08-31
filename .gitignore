@@ -5,6 +5,7 @@ node_modules/
 .env
 .env.*
 !.env.example
+!.env.production.example
 backend/.env.example
 
 # Build outputs
@@ -12,8 +13,12 @@ dist/
 build/
 .angular/
 
-#alucinaciones
-*.md
+# Temporary or local artifacts only
+_temp/
+tmp/
+temp/
+mejoras.md
+temp.md
 tmp_pgdata
 tmp_pgdata/*
 playwright-report/

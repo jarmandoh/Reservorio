@@ -28,7 +28,11 @@ services:
     env_file: ./backend/.env
     environment:
       PORT: 3000
+      NODE_ENV: production
       DATABASE_URL: postgres://reservorio:reservorio_pass@db:5432/reservorio
+      JWT_SECRET: ${JWT_SECRET:-cambia_este_valor_por_una_clave_larga_y_segura}
+      ADMIN_PIN: ${ADMIN_PIN:-1234}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:4200,http://localhost:80}
       # Google OAuth (configurar en .env o aquí)
       # GOOGLE_CLIENT_ID: ""
       # GOOGLE_CLIENT_SECRET: ""
@@ -53,6 +57,8 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: reservorio-frontend
+    environment:
+      API_URL: ${API_URL:-/api}
     ports:
       - "80:80"
     depends_on:

@@ -30,7 +30,7 @@ app.use(helmet({
 }));
 
 // ── CORS ────────────────────────────────────────────────────────────────────
-const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:4200' || 'http://localhost:3000')
+const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:4200,http://localhost:3000')
   .split(',').map(o => o.trim());
 
 app.use(cors({
@@ -73,7 +73,27 @@ app.use('/api/tags',         tagsRoutes);
 app.use('/api/ux-tips',      uxRoutes);
 
 // ── Health check ─────────────────────────────────────────────────────────────
-app.get('/health', (_req, res) => res.json({ ok: true, service: 'reservorio-api' }));
+app.get('/health', async (_req, res) => {
+  try {
+    await db.query('SELECT 1');
+    return res.status(200).json({
+      ok: true,
+      service: 'reservorio-api',
+      status: 'ok',
+      database: 'connected',
+      uptime: process.uptime(),
+    });
+  } catch (error) {
+    return res.status(503).json({
+      ok: false,
+      service: 'reservorio-api',
+      status: 'degraded',
+      database: 'disconnected',
+      uptime: process.uptime(),
+      message: 'Database unavailable',
+    });
+  }
+});
 
 // ── 404 ───────────────────────────────────────────────────────────────────────
 app.use(notFound);
@@ -81,25 +101,34 @@ app.use(notFound);
 // ── Global error handler ──────────────────────────────────────────────────────
 app.use(errorHandler);
 
-// ── Start ─────────────────────────────────────────────────────────────────────
-app.listen(PORT, async () => {
-  console.log(`[reservorio-api] corriendo en http://localhost:${PORT}`);
-  if (!process.env.DATABASE_URL) console.warn('[WARN] DATABASE_URL no configurado en .env');
-  if (!process.env.ADMIN_PIN)    console.warn('[WARN] ADMIN_PIN no configurado — usando "1234" por defecto');
-  if (!process.env.JWT_SECRET)   console.warn('[WARN] JWT_SECRET no configurado — usando secreto inseguro');
+function startServer() {
+  const server = app.listen(PORT, async () => {
+    console.log(`[reservorio-api] corriendo en http://localhost:${PORT}`);
+    if (!process.env.DATABASE_URL) console.warn('[WARN] DATABASE_URL no configurado en .env');
+    if (!process.env.ADMIN_PIN)    console.warn('[WARN] ADMIN_PIN no configurado — usando "1234" por defecto');
+    if (!process.env.JWT_SECRET)   console.warn('[WARN] JWT_SECRET no configurado — usando secreto inseguro');
 
-  // Google OAuth warnings
-  if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
-    console.warn('[WARN] GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET no configurados — OAuth deshabilitado');
-  }
-  if (process.env.GOOGLE_CLIENT_ID && (!process.env.GOOGLE_TOKENS_KEY || process.env.GOOGLE_TOKENS_KEY.length !== 64)) {
-    console.warn('[WARN] GOOGLE_TOKENS_KEY ausente o inválida (requiere 64 chars hex) — cifrado de tokens fallará');
-  }
+    // Google OAuth warnings
+    if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+      console.warn('[WARN] GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET no configurados — OAuth deshabilitado');
+    }
+    if (process.env.GOOGLE_CLIENT_ID && (!process.env.GOOGLE_TOKENS_KEY || process.env.GOOGLE_TOKENS_KEY.length !== 64)) {
+      console.warn('[WARN] GOOGLE_TOKENS_KEY ausente o inválida (requiere 64 chars hex) — cifrado de tokens fallará');
+    }
 
-  try {
-    await db.query('SELECT 1');
-    console.log('[DB] Conexion a PostgreSQL establecida');
-  } catch (e) {
-    console.error('[DB] No se pudo conectar a PostgreSQL:', e.message);
-  }
-});
+    try {
+      await db.query('SELECT 1');
+      console.log('[DB] Conexion a PostgreSQL establecida');
+    } catch (e) {
+      console.error('[DB] No se pudo conectar a PostgreSQL:', e.message);
+    }
+  });
+
+  return server;
+}
+
+if (require.main === module) {
+  startServer();
+}
+
+module.exports = { app, startServer };
