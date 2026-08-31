@@ -2,11 +2,11 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 
-COPY package*.json ./
-RUN npm install
+COPY package.json pnpm-lock.yaml ./
+RUN corepack enable && pnpm install --frozen-lockfile
 
 COPY . .
-RUN npx ng build --configuration production
+RUN pnpm exec ng build --configuration production
 
 # ── Stage 2: Serve with nginx ──────────────────────────────────────
 FROM nginx:alpine AS runner

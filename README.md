@@ -138,8 +138,8 @@ psql -U reservorio -d reservorio -f backend/db/init.sql
 
 ```bash
 cd backend
-npm install
-npm run dev
+pnpm install
+pnpm run dev
 ```
 
 El servidor arrancará en `http://localhost:3000` con recarga automática (nodemon).
@@ -148,8 +148,8 @@ El servidor arrancará en `http://localhost:3000` con recarga automática (nodem
 
 ```bash
 cd frontend
-npm install
-npm start
+pnpm install
+pnpm start
 ```
 
 La aplicación Angular arrancará en `http://localhost:4200` con proxy hacia `http://localhost:3000/api`.

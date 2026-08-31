@@ -12,6 +12,7 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
+  "packageManager": "pnpm@9.15.0",
   "type": "commonjs",
   "dependencies": {
     "bcrypt": "^6.0.0",

@@ -317,7 +317,7 @@ Las siguientes mejoras están identificadas pero aún no implementadas, ordenada
 
 - [ ] **Gestión de franjas horarias desde el panel** — Actualmente las franjas con estado `Disponible` deben crearse manualmente en la BD. Agregar un CRUD de franjas desde `BusinessAdminComponent` que permita generar horarios recurrentes (p. ej., cada 1 hora de 8:00 a 22:00).
 - [ ] **Paginación en listados** — Los endpoints de reservaciones devuelven todos los registros sin límite. Agregar paginación (`LIMIT` / `OFFSET`) en `GET /api/businesses/:id/reservations` y en el frontend.
-- [ ] **Imagen de producción sin `devDependencies`** — El `Dockerfile` del backend usa `npm ci --omit=dev`, lo cual es correcto, pero no hay stage de build separado. Agregar un multi-stage build para reducir el tamaño de la imagen.
+- [ ] **Imagen de producción sin `devDependencies`** — El `Dockerfile` del backend usa `pnpm install --prod --frozen-lockfile`, lo cual es correcto, pero no hay stage de build separado. Agregar un multi-stage build para reducir el tamaño de la imagen.
 - [ ] **Logging estructurado** — Reemplazar los `console.error` y `console.warn` del backend por una biblioteca de logging estructurado (p. ej., [pino](https://github.com/pinojs/pino)) para mejorar la observabilidad en producción.
 - [ ] **Health check con estado de la BD** — El endpoint `/health` solo verifica que Express responde. Incluir una query liviana a PostgreSQL (`SELECT 1`) para confirmar que la BD está accesible.
 - [ ] **Soft-delete en reservaciones** — Actualmente no hay forma de eliminar una reservación; solo se cambia su estado. Agregar una columna `deleted_at` y filtrarla en las consultas de lectura.
