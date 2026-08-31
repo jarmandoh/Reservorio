@@ -43,6 +43,10 @@ export class BusinessAdminService {
     return this.api.createPayment(payload);
   }
 
+  createCheckoutSession(payload: PaymentRequest & { successUrl?: string; cancelUrl?: string }): Observable<ApiResponse<{ sessionId: string; checkoutUrl: string; paymentId?: string }>> {
+    return this.api.createCheckoutSession(payload);
+  }
+
   loadServices(negocioId: string): Observable<string[]> {
     return this.api.getBusinessServices(negocioId);
   }

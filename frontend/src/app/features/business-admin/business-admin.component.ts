@@ -143,7 +143,12 @@ type negocioTab = 'reservas' | 'servicios' | 'perfil' | 'google';
                       <p class="font-medium">{{ booking.serviceId || 'Servicio' }}</p>
                       <p class="text-xs text-on-surface-variant">{{ booking.date }} · {{ booking.slot }}</p>
                     </div>
-                    <span class="badge badge-secondary">{{ booking.status }}</span>
+                    <div class="flex flex-col items-end gap-1.5">
+                      <span class="badge" [ngClass]="bookingPaymentStateClass(booking.id)">
+                        {{ bookingPaymentStateLabel(booking.id) }}
+                      </span>
+                      <span class="badge badge-secondary">{{ booking.status }}</span>
+                    </div>
                   </div>
                 </div>
               }
@@ -585,6 +590,30 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
     this.providerBookings().find(b => b.status !== 'cancelled' && b.status !== 'completed') ?? this.providerBookings()[0] ?? null
   );
 
+  readonly bookingPaymentMap = computed(() => new Map(
+    this.payments().map(payment => [payment.bookingId, payment] as const)
+  ));
+
+  bookingPaymentStatus(bookingId: string): Payment | null {
+    return this.bookingPaymentMap().get(bookingId) ?? null;
+  }
+
+  bookingPaymentStateLabel(bookingId: string): string {
+    const payment = this.bookingPaymentStatus(bookingId);
+    if (!payment) return 'Sin pago';
+    if (payment.status === 'paid') return 'Pagado';
+    if (payment.status === 'pending') return 'Pendiente';
+    return 'Fallido';
+  }
+
+  bookingPaymentStateClass(bookingId: string): string {
+    const payment = this.bookingPaymentStatus(bookingId);
+    if (payment?.status === 'paid') return 'badge-success';
+    if (payment?.status === 'pending') return 'badge-info';
+    if (payment?.status === 'failed') return 'badge-error';
+    return 'badge-secondary';
+  }
+
   readonly paymentAmount = computed(() => {
     const booking = this.checkoutBooking();
     const paid = this.payments().find(p => p.bookingId === booking?.id)?.amount ?? 89;
@@ -644,6 +673,12 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
       this.tab.set('google');
       this.loadGoogleStatus();
     }
+
+    const paymentStatus = this.route.snapshot.queryParamMap.get('paymentStatus');
+    const bookingId = this.route.snapshot.queryParamMap.get('bookingId');
+    if (paymentStatus && bookingId) {
+      this.applyPaymentStatusFromRoute(bookingId, paymentStatus);
+    }
   }
 
   ngOnDestroy(): void {
@@ -700,9 +735,45 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
     });
 
     this.businessAdminService.loadPayments().subscribe({
-      next: data => this.payments.set(data),
+      next: data => {
+        this.payments.set(data);
+        const routeBookingId = this.route.snapshot.queryParamMap.get('bookingId');
+        const routeStatus = this.route.snapshot.queryParamMap.get('paymentStatus');
+        if (routeBookingId && routeStatus) {
+          this.applyPaymentStatusFromRoute(routeBookingId, routeStatus);
+        }
+      },
       error: () => this.payments.set([]),
     });
+  }
+
+  private applyPaymentStatusFromRoute(bookingId: string, paymentStatus: string): void {
+    const normalized = paymentStatus.toLowerCase();
+    if (!['paid', 'pending', 'failed'].includes(normalized)) return;
+
+    const current = this.payments();
+    const idx = current.findIndex(item => item.bookingId === bookingId);
+    const nextItem: Payment = {
+      id: `route-${bookingId}-${Date.now()}`,
+      bookingId,
+      providerId: this.negocioId,
+      customerId: this.route.snapshot.queryParamMap.get('customerId') ?? '',
+      amount: this.paymentAmount(),
+      currency: 'EUR',
+      method: 'card',
+      status: normalized as 'paid' | 'pending' | 'failed',
+      createdAt: new Date().toISOString(),
+    };
+
+    if (idx >= 0) {
+      this.payments.set(current.map((item, index) => index === idx ? { ...item, ...nextItem } : item));
+    } else {
+      this.payments.set([nextItem, ...current]);
+    }
+
+    if (normalized === 'paid') {
+      this.toast.success('Pago confirmado y estado actualizado');
+    }
   }
 
   prepareCheckout(): void {
@@ -710,7 +781,10 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
     if (!booking) return;
 
     this.checkouting.set(true);
-    this.businessAdminService.createPayment({
+    const successUrl = `${window.location.origin}/payment/success?bookingId=${encodeURIComponent(booking.id)}&providerId=${encodeURIComponent(booking.providerId)}&customerId=${encodeURIComponent(booking.customerId)}`;
+    const cancelUrl = `${window.location.origin}/payment/cancel?bookingId=${encodeURIComponent(booking.id)}&providerId=${encodeURIComponent(booking.providerId)}&customerId=${encodeURIComponent(booking.customerId)}`;
+
+    this.businessAdminService.createCheckoutSession({
       bookingId: booking.id,
       providerId: booking.providerId,
       customerId: booking.customerId,
@@ -718,11 +792,17 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
       currency: 'EUR',
       method: 'card',
       status: 'pending',
+      successUrl,
+      cancelUrl,
     }).subscribe({
       next: data => {
         const current = this.payments();
-        this.payments.set([...(data.data ? [data.data] : []), ...current]);
-        this.toast.success('Cobro preparado para la reserva');
+        const checkoutData = data.data;
+        if (checkoutData?.paymentId) {
+          this.payments.set([{ id: checkoutData.paymentId, bookingId: booking.id, providerId: booking.providerId, customerId: booking.customerId, amount: this.paymentAmount(), currency: 'EUR', method: 'card', status: 'pending', createdAt: new Date().toISOString() }, ...current]);
+        }
+        this.toast.success('Redirigiendo al pago seguro de Stripe');
+        if (checkoutData?.checkoutUrl) window.location.href = checkoutData.checkoutUrl;
         this.checkouting.set(false);
       },
       error: err => {

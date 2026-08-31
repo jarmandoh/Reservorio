@@ -236,6 +236,12 @@ export class ApiService {
       .pipe(catchError(this.handleError));
   }
 
+  createCheckoutSession(payload: PaymentRequest & { successUrl?: string; cancelUrl?: string }): Observable<ApiResponse<{ sessionId: string; checkoutUrl: string; paymentId?: string }>> {
+    return this.http
+      .post<ApiResponse<{ sessionId: string; checkoutUrl: string; paymentId?: string }>>(`${this.base}/payments/checkout`, payload)
+      .pipe(catchError(this.handleError));
+  }
+
   // ── Google OAuth ──────────────────────────────────────────────────────
 
   getGoogleAuthUrl(negocioId: string, token: string): Observable<string> {

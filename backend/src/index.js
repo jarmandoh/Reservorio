@@ -83,6 +83,7 @@ const limiter = rateLimit({
 app.use('/api/', limiter);
 
 // ── Body parsing ─────────────────────────────────────────────────────────────
+app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json({ limit: '10kb' }));
 
 // ── Request tracing + counters ──────────────────────────────────────────────

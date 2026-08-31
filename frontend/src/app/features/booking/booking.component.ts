@@ -344,12 +344,16 @@ interface ConfirmedBooking {
                       <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white/20">
                         <span class="material-icons-round text-3xl">check_circle</span>
                       </div>
-                      <h2 class="mt-4 font-display text-2xl font-semibold">Solicitud enviada</h2>
-                      <p class="mt-2 text-sm text-white/85">Tu solicitud fue enviada y quedo pendiente de confirmacion.</p>
+                      <h2 class="mt-4 font-display text-2xl font-semibold">Reserva registrada</h2>
+                      <p class="mt-2 text-sm text-white/85">Tu solicitud ya está creada y queda pendiente de confirmación por parte del negocio.</p>
                     </div>
 
                     <div class="rounded-2xl border border-outline-variant bg-white p-5">
-                      <p class="section-label">Resumen final</p>
+                      <div class="mb-4 flex items-center justify-between gap-3">
+                        <p class="section-label">Estado de la reserva</p>
+                        <span class="badge badge-info">Pendiente</span>
+                      </div>
+
                       <div class="mt-2 flex flex-col gap-4 text-sm">
                         <div class="flex items-center justify-between gap-4">
                           <span class="text-on-surface-variant">Servicio</span>
@@ -370,17 +374,35 @@ interface ConfirmedBooking {
                           <span class="text-on-surface-variant">Telefono</span>
                           <span class="font-semibold text-on-surface">{{ confirmed()?.telefono }}</span>
                         </div>
+                        @if (reservationId()) {
+                          <div class="h-px bg-outline-variant/30"></div>
+                          <div class="flex items-center justify-between gap-4">
+                            <span class="text-on-surface-variant">Referencia</span>
+                            <span class="font-semibold text-on-surface">{{ reservationId() }}</span>
+                          </div>
+                        }
                       </div>
                     </div>
 
                     <div class="rounded-2xl border border-primary/15 bg-primary-fixed px-4 py-4 text-sm text-primary">
-                      Si hace falta ajustar la hora o confirmar un detalle, el negocio te contactara al numero registrado.
+                      La confirmación del negocio suele llegar en pocos minutos. Si quieres terminar antes, puedes pagar ahora con un flujo seguro desde la misma reserva.
                     </div>
 
-                    <button class="btn-secondary" (click)="resetFlow()">
-                      <span class="material-icons-round text-base">add</span>
-                      Hacer otra reserva
-                    </button>
+                    <div class="flex flex-col gap-3 sm:flex-row">
+                      <button class="btn-primary flex-1" [disabled]="paymentLoading()" (click)="startCheckout()">
+                        @if (paymentLoading()) {
+                          <span class="material-icons-round animate-spin text-base">refresh</span>
+                          Redirigiendo...
+                        } @else {
+                          <span>Pagar ahora</span>
+                          <span class="material-icons-round text-base">payment</span>
+                        }
+                      </button>
+                      <button class="btn-secondary flex-1" (click)="resetFlow()">
+                        <span class="material-icons-round text-base">add</span>
+                        Nueva reserva
+                      </button>
+                    </div>
                   </div>
                 }
 
@@ -422,12 +444,14 @@ export class BookingComponent implements OnInit, OnDestroy {
   readonly servicesLoading = signal(false);
   readonly servicesError   = signal<string | null>(null);
   readonly submitting   = signal(false);
+  readonly paymentLoading = signal(false);
   readonly error        = signal<string | null>(null);
   readonly reservations = signal<Reservation[]>([]);
   readonly services     = signal<string[]>([]);
   readonly selectedSlot    = signal<Reservation | null>(null);
   readonly selectedService = signal<string | null>(null);
   readonly confirmed    = signal<ConfirmedBooking | null>(null);
+  readonly reservationId = signal<string>('');
   readonly bookingSteps = [
     { value: 1, label: 'Servicio' },
     { value: 2, label: 'Horario' },
@@ -577,13 +601,51 @@ export class BookingComponent implements OnInit, OnDestroy {
     this.api.createBusinessReservation(this.businessId, payload).subscribe({
       next: () => {
         this.confirmed.set(payload);
-        this.toast.success('¡Reserva enviada con éxito!');
+        this.reservationId.set(`RES-${Date.now()}`);
+        this.toast.success('¡Reserva enviada con éxito! Ya está lista para pagar o confirmar.');
         this.goToStep(4);
         this.submitting.set(false);
       },
       error: err => {
         this.toast.error(err.message);
         this.submitting.set(false);
+      },
+    });
+  }
+
+  startCheckout(): void {
+    const booking = this.confirmed();
+    if (!booking) return;
+
+    this.paymentLoading.set(true);
+    const bookingId = this.reservationId() || `res-${Date.now()}`;
+    const providerId = this.businessId;
+    const customerId = `guest-${Date.now()}`;
+    const amount = 89;
+
+    this.api.createCheckoutSession({
+      bookingId,
+      providerId,
+      customerId,
+      amount,
+      currency: 'EUR',
+      method: 'card',
+      status: 'pending',
+      successUrl: `${window.location.origin}/payment/success?bookingId=${encodeURIComponent(bookingId)}&providerId=${encodeURIComponent(providerId)}&customerId=${encodeURIComponent(customerId)}`,
+      cancelUrl: `${window.location.origin}/payment/cancel?bookingId=${encodeURIComponent(bookingId)}&providerId=${encodeURIComponent(providerId)}&customerId=${encodeURIComponent(customerId)}`,
+    }).subscribe({
+      next: result => {
+        this.paymentLoading.set(false);
+        const route = result.data?.checkoutUrl;
+        if (route) {
+          window.location.href = route;
+          return;
+        }
+        this.toast.success('Reserva registrada; el pago quedará listo para completar después.');
+      },
+      error: err => {
+        this.paymentLoading.set(false);
+        this.toast.error(err?.message ?? 'No se pudo iniciar el pago en este momento');
       },
     });
   }

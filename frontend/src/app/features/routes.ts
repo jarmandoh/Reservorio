@@ -49,5 +49,13 @@ export const featureRoutes: Routes = [
     loadComponent: () => import('./business-admin/business-admin.component').then(m => m.BusinessAdminComponent),
     canActivate: [ownerGuard],
   },
+  {
+    path: 'payment/success',
+    loadComponent: () => import('./payment-success/payment-success.component').then(m => m.PaymentSuccessComponent),
+  },
+  {
+    path: 'payment/cancel',
+    loadComponent: () => import('./payment-cancel/payment-cancel.component').then(m => m.PaymentCancelComponent),
+  },
   { path: '**', redirectTo: '' },
 ];

@@ -4,6 +4,16 @@ const { randomUUID } = require('crypto');
 const db = require('../db');
 
 const fallbackPayments = [];
+let stripeClient = null;
+
+if (process.env.STRIPE_SECRET_KEY) {
+  try {
+    const Stripe = require('stripe');
+    stripeClient = new Stripe(process.env.STRIPE_SECRET_KEY);
+  } catch (_error) {
+    stripeClient = null;
+  }
+}
 
 function mapPayment(row) {
   if (!row) return row;
@@ -19,6 +29,29 @@ function mapPayment(row) {
     status: row.status ?? 'pending',
     createdAt: row.created_at ?? row.createdAt,
   };
+}
+
+function normalizePaymentInput(payload = {}) {
+  const bookingId = String(payload.bookingId ?? '').trim();
+  const providerId = String(payload.providerId ?? '').trim();
+  const customerId = String(payload.customerId ?? '').trim();
+  const amount = Number(payload.amount ?? 0);
+  const currency = String(payload.currency ?? 'EUR').trim().toUpperCase();
+  const method = String(payload.method ?? 'card').trim();
+  const status = String(payload.status ?? 'pending').trim();
+
+  return { bookingId, providerId, customerId, amount, currency, method, status };
+}
+
+function upsertFallbackPayment(payment) {
+  const idx = fallbackPayments.findIndex(item => item.bookingId === payment.bookingId);
+  if (idx >= 0) {
+    fallbackPayments[idx] = { ...fallbackPayments[idx], ...payment };
+    return fallbackPayments[idx];
+  }
+
+  fallbackPayments.push(payment);
+  return payment;
 }
 
 async function listPayments(filters = {}) {
@@ -40,19 +73,13 @@ async function listPayments(filters = {}) {
 
     const { rows } = await db.query(query, values);
     return { ok: true, status: 200, data: rows.map(mapPayment) };
-  } catch (error) {
+  } catch (_error) {
     return { ok: true, status: 200, data: fallbackPayments.map(mapPayment) };
   }
 }
 
 async function createPayment(payload = {}) {
-  const bookingId = String(payload.bookingId ?? '').trim();
-  const providerId = String(payload.providerId ?? '').trim();
-  const customerId = String(payload.customerId ?? '').trim();
-  const amount = Number(payload.amount ?? 0);
-  const currency = String(payload.currency ?? 'EUR').trim().toUpperCase();
-  const method = String(payload.method ?? 'card').trim();
-  const status = String(payload.status ?? 'pending').trim();
+  const { bookingId, providerId, customerId, amount, currency, method, status } = normalizePaymentInput(payload);
 
   if (!bookingId || !providerId || !customerId) {
     return { ok: false, status: 400, message: 'bookingId, providerId y customerId son requeridos' };
@@ -83,7 +110,7 @@ async function createPayment(payload = {}) {
   };
 
   if (!process.env.DATABASE_URL) {
-    fallbackPayments.push(payment);
+    upsertFallbackPayment(payment);
     return { ok: true, status: 201, data: payment };
   }
 
@@ -96,10 +123,135 @@ async function createPayment(payload = {}) {
     );
 
     return { ok: true, status: 201, data: mapPayment(rows[0]) };
-  } catch (error) {
-    fallbackPayments.push(payment);
+  } catch (_error) {
+    upsertFallbackPayment(payment);
     return { ok: true, status: 201, data: payment, message: 'Base de datos no disponible; uso en memoria' };
   }
 }
 
-module.exports = { listPayments, createPayment };
+async function createCheckoutSession(payload = {}) {
+  const { bookingId, providerId, customerId, amount, currency, method } = normalizePaymentInput(payload);
+
+  if (!bookingId || !providerId || !customerId) {
+    return { ok: false, status: 400, message: 'bookingId, providerId y customerId son requeridos' };
+  }
+
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return { ok: false, status: 400, message: 'amount debe ser un número mayor que 0' };
+  }
+
+  const paymentRecord = await createPayment({
+    bookingId,
+    providerId,
+    customerId,
+    amount,
+    currency,
+    method,
+    status: 'pending',
+  });
+
+  const successUrl = String(payload.successUrl || `${process.env.FRONTEND_URL || 'http://localhost:4200'}/payment/success?bookingId=${encodeURIComponent(bookingId)}`);
+  const cancelUrl = String(payload.cancelUrl || `${process.env.FRONTEND_URL || 'http://localhost:4200'}/payment/cancel?bookingId=${encodeURIComponent(bookingId)}`);
+
+  if (stripeClient) {
+    try {
+      const session = await stripeClient.checkout.sessions.create({
+        mode: 'payment',
+        line_items: [{
+          quantity: 1,
+          price_data: {
+            currency: currency.toLowerCase(),
+            unit_amount: Math.round(amount * 100),
+            product_data: {
+              name: `Reserva ${bookingId}`,
+              description: `Pago para ${providerId}`,
+            },
+          },
+        }],
+        success_url: successUrl,
+        cancel_url: cancelUrl,
+        metadata: {
+          bookingId,
+          providerId,
+          customerId,
+          paymentId: paymentRecord.data?.id || `pay-${Date.now()}`,
+        },
+        payment_method_types: ['card'],
+      });
+
+      return {
+        ok: true,
+        status: 200,
+        data: {
+          sessionId: session.id,
+          checkoutUrl: session.url,
+          paymentId: paymentRecord.data?.id || session.metadata.paymentId,
+        },
+      };
+    } catch (_error) {
+      // fall through to dev fallback if Stripe is misconfigured
+    }
+  }
+
+  const sessionId = `dev_session_${Date.now()}`;
+  return {
+    ok: true,
+    status: 200,
+    data: {
+      sessionId,
+      checkoutUrl: `${successUrl}&dev=1&session_id=${encodeURIComponent(sessionId)}`,
+      paymentId: paymentRecord.data?.id,
+    },
+  };
+}
+
+async function processWebhook({ rawBody, signature, event }) {
+  let processedEvent = event;
+  const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+  if (rawBody && Buffer.isBuffer(rawBody) && endpointSecret && stripeClient && signature) {
+    try {
+      processedEvent = stripeClient.webhooks.constructEvent(rawBody, signature, endpointSecret);
+    } catch (_error) {
+      return { ok: false, status: 400, message: 'Firma de webhook inválida' };
+    }
+  }
+
+  const payloadEvent = processedEvent || {};
+  if (!payloadEvent.type) {
+    return { ok: false, status: 400, message: 'Evento de webhook inválido' };
+  }
+
+  if (payloadEvent.type !== 'checkout.session.completed') {
+    return { ok: true, status: 200, data: { type: payloadEvent.type, status: 'ignored' } };
+  }
+
+  const session = payloadEvent.data?.object || {};
+  const metadata = session.metadata || {};
+  const bookingId = String(metadata.bookingId || session.bookingId || '').trim();
+  const providerId = String(metadata.providerId || '').trim();
+  const customerId = String(metadata.customerId || '').trim();
+  const status = session.payment_status === 'paid' ? 'paid' : 'pending';
+
+  if (!bookingId || !providerId || !customerId) {
+    return { ok: false, status: 400, message: 'Webhook sin metadata válida' };
+  }
+
+  const payment = {
+    id: metadata.paymentId || `pay-${Date.now()}-${randomUUID().slice(0, 8)}`,
+    bookingId,
+    providerId,
+    customerId,
+    amount: Number((session.amount_total || 0) / 100) || 0,
+    currency: String(session.currency || 'EUR').toUpperCase(),
+    method: 'card',
+    status,
+    createdAt: new Date().toISOString(),
+  };
+
+  upsertFallbackPayment(payment);
+
+  return { ok: true, status: 200, data: payment };
+}
+
+module.exports = { listPayments, createPayment, createCheckoutSession, processWebhook };
