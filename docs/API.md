@@ -194,6 +194,118 @@ Inicia sesión como administrador de un negocio específico usando su PIN.
 
 ---
 
+## Clientes
+
+### `GET /api/customers`
+
+Lista clientes disponibles en la base del marketplace.
+
+**Autenticación requerida:** No
+
+**Respuesta exitosa `200`:**
+
+```json
+{
+  "ok": true,
+  "data": [
+    {
+      "id": "cliente1",
+      "name": "Ana García",
+      "email": "ana@example.com",
+      "phone": "+34123456789"
+    }
+  ]
+}
+```
+
+### `POST /api/customers`
+
+Crea un cliente del marketplace.
+
+**Autenticación requerida:** No
+
+**Cuerpo de la solicitud:**
+
+```json
+{
+  "name": "Ana García",
+  "email": "ana@example.com",
+  "phone": "+34123456789"
+}
+```
+
+**Respuesta exitosa `201`:**
+
+```json
+{
+  "ok": true,
+  "data": {
+    "id": "cliente-1712345678901",
+    "name": "Ana García",
+    "email": "ana@example.com",
+    "phone": "+34123456789"
+  }
+}
+```
+
+---
+
+## Reservas del marketplace
+
+### `GET /api/bookings`
+
+Lista reservas creadas por clientes.
+
+**Autenticación requerida:** No
+
+**Respuesta exitosa `200`:**
+
+```json
+{
+  "ok": true,
+  "data": []
+}
+```
+
+### `POST /api/bookings`
+
+Crea una solicitud de reserva para un proveedor y servicio concreto.
+
+**Autenticación requerida:** No
+
+**Cuerpo de la solicitud:**
+
+```json
+{
+  "providerId": "negocio1",
+  "customerId": "cliente1",
+  "serviceId": "servicio-1",
+  "date": "2026-09-10",
+  "slot": "10:00",
+  "notes": "Necesito atención urgente"
+}
+```
+
+**Respuesta exitosa `201`:**
+
+```json
+{
+  "ok": true,
+  "data": {
+    "id": "booking-1712345678901",
+    "providerId": "negocio1",
+    "customerId": "cliente1",
+    "serviceId": "servicio-1",
+    "date": "2026-09-10",
+    "slot": "10:00",
+    "status": "pending",
+    "notes": "Necesito atención urgente"
+  }
+}
+```
+
+---
+
 ### `POST /api/businesses`
 
 Crea un nuevo negocio.

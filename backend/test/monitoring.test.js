@@ -1,0 +1,29 @@
+'use strict';
+
+jest.mock('../src/db', () => ({
+  query: jest.fn().mockResolvedValue([{ '?column?': 1 }]),
+}));
+
+const request = require('supertest');
+const { app } = require('../src/index');
+
+describe('Monitoring endpoints', () => {
+  test('GET /health returns service status and database info', async () => {
+    const response = await request(app).get('/health');
+
+    expect(response.status).toBe(200);
+    expect(response.body.ok).toBe(true);
+    expect(response.body.service).toBe('reservorio-api');
+    expect(response.body.database).toBe('connected');
+  });
+
+  test('GET /metrics returns app metrics payload', async () => {
+    const response = await request(app).get('/metrics');
+
+    expect(response.status).toBe(200);
+    expect(response.body.ok).toBe(true);
+    expect(response.body.service).toBe('reservorio-api');
+    expect(response.body.uptime).toEqual(expect.any(Number));
+    expect(response.body.memory).toHaveProperty('rss');
+  });
+});

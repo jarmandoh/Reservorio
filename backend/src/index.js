@@ -14,15 +14,44 @@ const db             = require('./db');
 const reservations      = require('./routes/reservations.routes');
 const services          = require('./routes/services.routes');
 const businesses        = require('./routes/businesses.routes');
+const providers         = require('./routes/providers.routes');
 const auth              = require('./routes/auth.routes');
 const googleOAuth       = require('./routes/google.routes');
 const uxRoutes          = require('./routes/ux.routes');
 const categoriesRoutes  = require('./routes/categories.routes');
 const tagsRoutes        = require('./routes/tags.routes');
+const customersRoutes   = require('./routes/customers.routes');
+const bookingsRoutes    = require('./routes/bookings.routes');
+const paymentsRoutes    = require('./routes/payments.routes');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
+const appMetrics = {
+  startTime: Date.now(),
+  requests: 0,
+  errors: 0,
+};
+
+function validateRuntimeConfig() {
+  const env = process.env.NODE_ENV || 'development';
+
+  if (env === 'production') {
+    if (!process.env.DATABASE_URL || !process.env.DATABASE_URL.includes('postgres')) {
+      throw new Error('DATABASE_URL inválida o ausente en producción');
+    }
+
+    if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
+      throw new Error('JWT_SECRET debe tener al menos 32 caracteres en producción');
+    }
+
+    if (!process.env.CORS_ORIGINS || !process.env.CORS_ORIGINS.split(',').map(v => v.trim()).filter(Boolean).length) {
+      throw new Error('CORS_ORIGINS debe contener al menos un origen válido en producción');
+    }
+  }
+
+  return true;
+}
 
 // ── Security headers ────────────────────────────────────────────────────────
 app.use(helmet({
@@ -55,17 +84,24 @@ app.use('/api/', limiter);
 
 // ── Body parsing ─────────────────────────────────────────────────────────────
 app.use(express.json({ limit: '10kb' }));
-// ── Request tracing ─────────────────────────────────────────────────────────────────────
+
+// ── Request tracing + counters ──────────────────────────────────────────────
 app.use((req, res, next) => {
   req.requestId = req.headers['x-request-id'] || randomUUID();
   res.set('X-Request-Id', req.requestId);
+  appMetrics.requests += 1;
   console.log(`[${req.requestId}] ${req.method} ${req.originalUrl}`);
   next();
 });
+
 // ── Routes ───────────────────────────────────────────────────────────────────
 app.use('/api/reservations', reservations);
 app.use('/api/services',     services);
 app.use('/api/businesses',   businesses);
+app.use('/api/providers',    providers);
+app.use('/api/customers',    customersRoutes);
+app.use('/api/bookings',     bookingsRoutes);
+app.use('/api/payments',     paymentsRoutes);
 app.use('/api/auth',         auth);
 app.use('/api/google',       googleOAuth);
 app.use('/api/categories',   categoriesRoutes);
@@ -93,6 +129,32 @@ app.get('/health', async (_req, res) => {
       message: 'Database unavailable',
     });
   }
+});
+
+app.get('/metrics', (_req, res) => {
+  const memory = process.memoryUsage();
+
+  return res.status(200).json({
+    ok: true,
+    service: 'reservorio-api',
+    uptime: process.uptime(),
+    requests: appMetrics.requests,
+    errors: appMetrics.errors,
+    startedAt: new Date(appMetrics.startTime).toISOString(),
+    memory: {
+      rss: memory.rss,
+      heapTotal: memory.heapTotal,
+      heapUsed: memory.heapUsed,
+      external: memory.external,
+    },
+    nodeVersion: process.version,
+    platform: process.platform,
+  });
+});
+
+app.use((err, req, res, next) => {
+  appMetrics.errors += 1;
+  return errorHandler(err, req, res, next);
 });
 
 // ── 404 ───────────────────────────────────────────────────────────────────────
@@ -128,7 +190,8 @@ function startServer() {
 }
 
 if (require.main === module) {
+  validateRuntimeConfig();
   startServer();
 }
 
-module.exports = { app, startServer };
+module.exports = { app, startServer, validateRuntimeConfig };

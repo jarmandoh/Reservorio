@@ -61,8 +61,32 @@ CREATE TABLE IF NOT EXISTS reservations (
   updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS customers (
+  id          TEXT PRIMARY KEY,
+  name        TEXT NOT NULL,
+  email       TEXT NOT NULL UNIQUE,
+  phone       TEXT NOT NULL DEFAULT '',
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS bookings (
+  id            TEXT PRIMARY KEY,
+  provider_id   TEXT NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  customer_id   TEXT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+  service_id    TEXT NOT NULL,
+  booking_date  DATE NOT NULL,
+  slot          TEXT NOT NULL,
+  status        TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'cancelled', 'completed')),
+  notes         TEXT NOT NULL DEFAULT '',
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE INDEX IF NOT EXISTS idx_reservations_business ON reservations(business_id);
 CREATE INDEX IF NOT EXISTS idx_services_business ON services(business_id);
+CREATE INDEX IF NOT EXISTS idx_customers_email ON customers(email);
+CREATE INDEX IF NOT EXISTS idx_bookings_provider ON bookings(provider_id);
+CREATE INDEX IF NOT EXISTS idx_bookings_customer ON bookings(customer_id);
 
 -- ── Google OAuth columns ─────────────────────────────────────────────────────
 ALTER TABLE businesses ADD COLUMN IF NOT EXISTS google_email         TEXT;

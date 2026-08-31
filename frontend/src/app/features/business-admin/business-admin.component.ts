@@ -11,7 +11,7 @@ import { AuthService }  from '../../core/services/auth.service';
 import { BusinessAdminService } from '../../core/services/business-admin.service';
 import { ToastService } from '../../core/services/toast.service';
 import { BadgeComponent } from '../../shared/components/badge/badge.component';
-import { GoogleStatus, Reservation } from '../../core/models/reservation.model';
+import { BookingRecord, Customer, GoogleStatus, Payment, Reservation } from '../../core/models/reservation.model';
 import { Business } from '../../core/models/businesses.model';
 
 type negocioTab = 'reservas' | 'servicios' | 'perfil' | 'google';
@@ -87,6 +87,67 @@ type negocioTab = 'reservas' | 'servicios' | 'perfil' | 'google';
                 <p class="text-xs text-on-surface-variant mt-0.5">{{ s.label }}</p>
               </div>
             }
+          </div>
+        }
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          <div class="card p-4 flex flex-col gap-3">
+            <div class="flex items-center justify-between">
+              <p class="section-label">Clientes de marketplace</p>
+              <span class="badge badge-primary">{{ recentCustomers().length }}</span>
+            </div>
+            <div class="flex flex-col gap-2">
+              @for (customer of recentCustomers(); track customer.id) {
+                <div class="flex items-center justify-between rounded-xl bg-surface-low px-3 py-2">
+                  <div>
+                    <p class="font-medium">{{ customer.name ?? customer.email }}</p>
+                    <p class="text-xs text-on-surface-variant">{{ customer.email }}</p>
+                  </div>
+                  <span class="text-xs text-on-surface-variant">{{ customer.phone || 'Sin teléfono' }}</span>
+                </div>
+              }
+            </div>
+          </div>
+
+          <div class="card p-4 flex flex-col gap-3">
+            <div class="flex items-center justify-between">
+              <p class="section-label">Cobro preparado</p>
+              <span class="badge" [class.badge-success]="checkoutBooking()">{{ checkoutBooking() ? 'Listo' : 'Sin reserva' }}</span>
+            </div>
+            <p class="font-display text-3xl font-bold">{{ paymentAmount() }}€</p>
+            <p class="text-sm text-on-surface-variant">
+              {{ checkoutBooking() ? 'Preparado para ' + checkoutBooking()!.slot : 'Selecciona una reserva activa para preparar el pago.' }}
+            </p>
+            <button class="btn-primary btn-sm self-start" [disabled]="!checkoutBooking() || checkouting()" (click)="prepareCheckout()">
+              @if (checkouting()) {
+                <span class="material-icons-round text-base animate-spin">refresh</span>
+              } @else {
+                <span class="material-icons-round text-base">payment</span>
+              }
+              Preparar cobro
+            </button>
+          </div>
+        </div>
+
+        @if (providerBookings().length) {
+          <div class="card p-4 flex flex-col gap-3">
+            <div class="flex items-center justify-between">
+              <p class="section-label">Reservas del marketplace</p>
+              <span class="badge badge-info">{{ providerBookings().length }}</span>
+            </div>
+            <div class="flex flex-col gap-2">
+              @for (booking of providerBookings(); track booking.id) {
+                <div class="rounded-xl border border-outline-variant/15 bg-surface-low p-3">
+                  <div class="flex items-center justify-between gap-3">
+                    <div>
+                      <p class="font-medium">{{ booking.serviceId || 'Servicio' }}</p>
+                      <p class="text-xs text-on-surface-variant">{{ booking.date }} · {{ booking.slot }}</p>
+                    </div>
+                    <span class="badge badge-secondary">{{ booking.status }}</span>
+                  </div>
+                </div>
+              }
+            </div>
           </div>
         }
 
@@ -458,6 +519,10 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
   readonly business     = signal<Business | null>(null);
   readonly reservations = signal<Reservation[]>([]);
   readonly services     = signal<string[]>([]);
+  readonly customers    = signal<Customer[]>([]);
+  readonly marketplaceBookings = signal<BookingRecord[]>([]);
+  readonly payments     = signal<Payment[]>([]);
+  readonly checkouting = signal(false);
   readonly resLoading   = signal(false);
   readonly svcLoading   = signal(false);
   readonly addingSvc    = signal(false);
@@ -508,6 +573,24 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
     return rows;
   });
 
+  readonly providerBookings = computed(() =>
+    this.marketplaceBookings().filter(b => b.providerId === this.negocioId)
+  );
+
+  readonly recentCustomers = computed(() =>
+    this.customers().slice(0, 4)
+  );
+
+  readonly checkoutBooking = computed(() =>
+    this.providerBookings().find(b => b.status !== 'cancelled' && b.status !== 'completed') ?? this.providerBookings()[0] ?? null
+  );
+
+  readonly paymentAmount = computed(() => {
+    const booking = this.checkoutBooking();
+    const paid = this.payments().find(p => p.bookingId === booking?.id)?.amount ?? 89;
+    return paid || 89;
+  });
+
   readonly pinMismatch = computed(() => {
     const v = this.pinForm.value;
     return !!(v.pin && v.pinConfirm && v.pin !== v.pinConfirm);
@@ -551,6 +634,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
     }
 
     this.loadBusiness();
+    this.loadMarketplaceData();
     this.startPolling();
     this.loadServices();
 
@@ -601,6 +685,50 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
     ).subscribe({
       next:  data => { this.reservations.set(data); this.resLoading.set(false); },
       error: ()   => { this.resLoading.set(false); },
+    });
+  }
+
+  loadMarketplaceData(): void {
+    this.businessAdminService.loadMarketplaceBookings().subscribe({
+      next: data => this.marketplaceBookings.set(data),
+      error: () => this.marketplaceBookings.set([]),
+    });
+
+    this.businessAdminService.loadCustomers().subscribe({
+      next: data => this.customers.set(data),
+      error: () => this.customers.set([]),
+    });
+
+    this.businessAdminService.loadPayments().subscribe({
+      next: data => this.payments.set(data),
+      error: () => this.payments.set([]),
+    });
+  }
+
+  prepareCheckout(): void {
+    const booking = this.checkoutBooking();
+    if (!booking) return;
+
+    this.checkouting.set(true);
+    this.businessAdminService.createPayment({
+      bookingId: booking.id,
+      providerId: booking.providerId,
+      customerId: booking.customerId,
+      amount: this.paymentAmount(),
+      currency: 'EUR',
+      method: 'card',
+      status: 'pending',
+    }).subscribe({
+      next: data => {
+        const current = this.payments();
+        this.payments.set([...(data.data ? [data.data] : []), ...current]);
+        this.toast.success('Cobro preparado para la reserva');
+        this.checkouting.set(false);
+      },
+      error: err => {
+        this.toast.error(err?.message ?? 'No se pudo preparar el cobro');
+        this.checkouting.set(false);
+      },
     });
   }
 

@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, throwError } from 'rxjs';
-import { ApiResponse, Reservation, UpdatePayload } from '../models/reservation.model';
+import { ApiResponse, BookingRecord, Customer, Payment, PaymentRequest, Reservation, UpdatePayload } from '../models/reservation.model';
 import { Business } from '../models/businesses.model';
 import { AuthService } from './auth.service';
 import { ApiService } from './api.service';
@@ -25,6 +25,22 @@ export class BusinessAdminService {
 
   loadReservations(negocioId: string): Observable<Reservation[]> {
     return this.api.getBusinessReservations(negocioId);
+  }
+
+  loadMarketplaceBookings(): Observable<BookingRecord[]> {
+    return this.api.getBookings();
+  }
+
+  loadCustomers(): Observable<Customer[]> {
+    return this.api.getCustomers();
+  }
+
+  loadPayments(): Observable<Payment[]> {
+    return this.api.getPayments();
+  }
+
+  createPayment(payload: PaymentRequest): Observable<ApiResponse<Payment>> {
+    return this.api.createPayment(payload);
   }
 
   loadServices(negocioId: string): Observable<string[]> {

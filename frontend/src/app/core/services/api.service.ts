@@ -6,7 +6,13 @@ import { environment } from '../../../environments/environment';
 import {
   ApiResponse,
   BookingPayload,
+  BookingRecord,
+  BookingRequest,
+  Customer,
+  CustomerPayload,
   GoogleStatus,
+  Payment,
+  PaymentRequest,
   Reservation,
   UpdatePayload
 } from '../models/reservation.model';
@@ -189,6 +195,44 @@ export class ApiService {
   deleteBusinessService(negocioId: string, nombre: string, token: string): Observable<ApiResponse> {
     return this.http
       .delete<ApiResponse>(`${this.base}/businesses/${negocioId}/services/${encodeURIComponent(nombre)}`, this.authHeader(token))
+      .pipe(catchError(this.handleError));
+  }
+
+  // ── Marketplace real flow ─────────────────────────────────────────────
+
+  getCustomers(): Observable<Customer[]> {
+    return this.http
+      .get<ApiResponse<Customer[]>>(`${this.base}/customers`)
+      .pipe(map(r => r.data ?? []), catchError(this.handleError));
+  }
+
+  createCustomer(payload: CustomerPayload): Observable<ApiResponse<Customer>> {
+    return this.http
+      .post<ApiResponse<Customer>>(`${this.base}/customers`, payload)
+      .pipe(catchError(this.handleError));
+  }
+
+  getBookings(): Observable<BookingRecord[]> {
+    return this.http
+      .get<ApiResponse<BookingRecord[]>>(`${this.base}/bookings`)
+      .pipe(map(r => r.data ?? []), catchError(this.handleError));
+  }
+
+  createBooking(payload: BookingRequest): Observable<ApiResponse<BookingRecord>> {
+    return this.http
+      .post<ApiResponse<BookingRecord>>(`${this.base}/bookings`, payload)
+      .pipe(catchError(this.handleError));
+  }
+
+  getPayments(): Observable<Payment[]> {
+    return this.http
+      .get<ApiResponse<Payment[]>>(`${this.base}/payments`)
+      .pipe(map(r => r.data ?? []), catchError(this.handleError));
+  }
+
+  createPayment(payload: PaymentRequest): Observable<ApiResponse<Payment>> {
+    return this.http
+      .post<ApiResponse<Payment>>(`${this.base}/payments`, payload)
       .pipe(catchError(this.handleError));
   }
 
