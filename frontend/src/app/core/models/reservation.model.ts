@@ -102,3 +102,17 @@ export interface GoogleStatus {
   sheetId:     string | null;
   tokenExpiry: string | null;
 }
+
+export interface NotificationItem {
+  id: string;
+  businessId: string;
+  customerId?: string | null;
+  bookingId?: string | null;
+  type: string;
+  channel: string;
+  title: string;
+  message: string;
+  status: 'queued' | 'sent' | 'failed';
+  createdAt?: string;
+  sentAt?: string | null;
+}

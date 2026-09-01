@@ -23,6 +23,7 @@ const tagsRoutes        = require('./routes/tags.routes');
 const customersRoutes   = require('./routes/customers.routes');
 const bookingsRoutes    = require('./routes/bookings.routes');
 const paymentsRoutes    = require('./routes/payments.routes');
+const notificationsRoutes = require('./routes/notifications.routes');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
 
 const app  = express();
@@ -103,6 +104,7 @@ app.use('/api/providers',    providers);
 app.use('/api/customers',    customersRoutes);
 app.use('/api/bookings',     bookingsRoutes);
 app.use('/api/payments',     paymentsRoutes);
+app.use('/api/notifications', notificationsRoutes);
 app.use('/api/auth',         auth);
 app.use('/api/google',       googleOAuth);
 app.use('/api/categories',   categoriesRoutes);

@@ -39,6 +39,14 @@ export class BusinessAdminService {
     return this.api.getPayments();
   }
 
+  loadNotifications(businessId: string, bookingId?: string): Observable<any[]> {
+    return this.api.getNotifications(businessId, bookingId);
+  }
+
+  createNotification(payload: { businessId: string; customerId?: string; bookingId?: string; type?: string; channel?: string; title: string; message: string; status?: string }): Observable<ApiResponse<any>> {
+    return this.api.createNotification(payload);
+  }
+
   createPayment(payload: PaymentRequest): Observable<ApiResponse<Payment>> {
     return this.api.createPayment(payload);
   }

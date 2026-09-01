@@ -24,6 +24,16 @@ export interface Business {
   active?:        boolean;
   sheetId?:       string;
   appsScriptUrl?: string;
+  verified?:      boolean;
+  cancellationPolicy?: string;
+}
+
+export interface Review {
+  id: number;
+  businessId: string;
+  rating: number;
+  review: string;
+  createdAt: string;
 }
 
 export interface NewBusinessPayload {

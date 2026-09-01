@@ -150,33 +150,57 @@ interface ConfirmedBooking {
 
                     @if (!servicesLoading() && !servicesError()) {
                       @if (services().length) {
-                        <div class="flex flex-col gap-3">
-                          @for (svc of services(); track svc) {
-                            <button
-                              class="rounded-2xl border p-4 text-left transition"
-                              [class.border-primary]="selectedService() === svc"
-                              [class.bg-[#eff5ff]]="selectedService() === svc"
-                              [class.shadow-card]="selectedService() === svc"
-                              [class.border-outline-variant]="selectedService() !== svc"
-                              [class.bg-white]="selectedService() !== svc"
-                              (click)="selectService(svc)">
-                              <div class="flex items-center justify-between gap-3">
-                                <div class="flex items-center gap-3">
-                                  <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#005bbf,#1a73e8)] text-white">
-                                    <span class="material-icons-round text-[1.15rem]">content_cut</span>
+                        <div class="space-y-3">
+                          <div class="flex gap-2 overflow-x-auto pb-1">
+                            <button class="btn-tertiary btn-sm" [class.btn-primary]="serviceFilter() === 'all'" (click)="serviceFilter.set('all')">Todos</button>
+                            <button class="btn-tertiary btn-sm" [class.btn-primary]="serviceFilter() === 'popular'" (click)="serviceFilter.set('popular')">Populares</button>
+                            <button class="btn-tertiary btn-sm" [class.btn-primary]="serviceFilter() === 'quick'" (click)="serviceFilter.set('quick')">Rapidos</button>
+                            <button class="btn-tertiary btn-sm" [class.btn-primary]="serviceFilter() === 'premium'" (click)="serviceFilter.set('premium')">Premium</button>
+                          </div>
+
+                          <div class="flex flex-col gap-3">
+                            @for (svc of visibleServices(); track svc) {
+                              <button
+                                class="rounded-2xl border p-4 sm:p-4 text-left transition min-h-[72px] sm:min-h-[auto]"
+                                [class.border-primary]="selectedService() === svc"
+                                [class.bg-[#eff5ff]]="selectedService() === svc"
+                                [class.shadow-card]="selectedService() === svc"
+                                [class.border-outline-variant]="selectedService() !== svc"
+                                [class.bg-white]="selectedService() !== svc"
+                                (click)="selectService(svc)">
+                                <div class="flex items-center justify-between gap-3">
+                                  <div class="flex items-center gap-3">
+                                    <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#005bbf,#1a73e8)] text-white">
+                                      <span class="material-icons-round text-[1.15rem]">content_cut</span>
+                                    </div>
+                                    <div>
+                                      <p class="font-display text-base font-semibold text-on-surface">{{ svc }}</p>
+                                      <p class="text-xs text-on-surface-variant">{{ serviceMeta(svc).summary }}</p>
+                                    </div>
                                   </div>
-                                  <div>
-                                    <p class="font-display text-base font-semibold text-on-surface">{{ svc }}</p>
-                                    <p class="text-sm text-on-surface-variant">Disponible para agendar en linea</p>
-                                  </div>
+
+                                  @if (selectedService() === svc) {
+                                    <span class="material-icons-round text-primary">check_circle</span>
+                                  }
                                 </div>
 
-                                @if (selectedService() === svc) {
-                                  <span class="material-icons-round text-primary">check_circle</span>
-                                }
-                              </div>
-                            </button>
-                          }
+                                <div class="mt-4 grid grid-cols-3 gap-2 text-center text-xs">
+                                  <div class="rounded-xl bg-surface-container px-2 py-2">
+                                    <p class="text-on-surface-variant">Desde</p>
+                                    <p class="mt-1 font-display font-semibold text-on-surface">{{ serviceMeta(svc).price }}</p>
+                                  </div>
+                                  <div class="rounded-xl bg-surface-container px-2 py-2">
+                                    <p class="text-on-surface-variant">Duración</p>
+                                    <p class="mt-1 font-display font-semibold text-on-surface">{{ serviceMeta(svc).duration }}</p>
+                                  </div>
+                                  <div class="rounded-xl bg-surface-container px-2 py-2">
+                                    <p class="text-on-surface-variant">Estado</p>
+                                    <p class="mt-1 font-display font-semibold text-on-surface">{{ serviceMeta(svc).availability }}</p>
+                                  </div>
+                                </div>
+                              </button>
+                            }
+                          </div>
                         </div>
                       } @else {
                         <div class="rounded-2xl border border-dashed border-outline-variant bg-surface-low p-8 text-center">
@@ -235,12 +259,13 @@ interface ConfirmedBooking {
                     @if (!loading() && !error()) {
                       <div>
                         <p class="section-label">Horarios disponibles</p>
-                        <div class="grid grid-cols-3 gap-2">
+                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
                           @for (row of reservations(); track row._rowIndex) {
                             <button
                               [class]="slotClass(row)"
                               [disabled]="isTaken(row)"
-                              (click)="selectSlot(row)">
+                              (click)="selectSlot(row)"
+                              class="min-h-[56px] sm:min-h-[auto]">
                               {{ row.franja }}
                             </button>
                           }
@@ -304,35 +329,29 @@ interface ConfirmedBooking {
                       </div>
                     </div>
 
-                    <form [formGroup]="bookingForm" class="flex flex-col gap-4" (ngSubmit)="submit()">
+                    <form [formGroup]="bookingForm" class="flex flex-col gap-3" (ngSubmit)="submit()">
                       <div>
-                        <label class="form-label" for="cliente">Nombre completo</label>
-                        <input id="cliente" type="text" class="form-input"
-                               formControlName="cliente" placeholder="Ej. Ana Garcia"
+                        <label class="form-label" for="cliente">Tu nombre</label>
+                        <input id="cliente" type="text" class="form-input min-h-[48px]"
+                               formControlName="cliente" placeholder="Ana Garcia"
                                autocomplete="name" />
                         @if (fieldInvalid('cliente')) {
-                          <p class="mt-1 text-xs text-error">El nombre es obligatorio</p>
+                          <p class="mt-1 text-xs text-error">Requerido</p>
                         }
                       </div>
 
                       <div>
-                        <label class="form-label" for="telefono">Telefono</label>
-                        <input id="telefono" type="tel" class="form-input"
-                               formControlName="telefono" placeholder="Ej. 300 123 4567"
+                        <label class="form-label" for="telefono">Tu teléfono</label>
+                        <input id="telefono" type="tel" class="form-input min-h-[48px]"
+                               formControlName="telefono" placeholder="300 123 4567"
                                autocomplete="tel" />
                         @if (fieldInvalid('telefono')) {
-                          <p class="mt-1 text-xs text-error">Telefono invalido. Usa entre 7 y 15 digitos.</p>
+                          <p class="mt-1 text-xs text-error">7-15 dígitos</p>
                         }
                       </div>
 
-                      <div>
-                        <label class="form-label" for="notas">Indicaciones adicionales</label>
-                        <textarea id="notas" class="form-textarea" formControlName="notas"
-                                  placeholder="Escribe aqui cualquier detalle importante"></textarea>
-                      </div>
-
-                      <div class="rounded-2xl border border-primary/15 bg-primary-fixed px-4 py-3 text-sm text-primary">
-                        Revisa tus datos y envia la solicitud. El negocio la recibira para confirmarla.
+                      <div class="rounded-2xl border border-primary/15 bg-primary-fixed px-3 py-3 text-xs sm:text-sm text-primary">
+                        Completa y envía. El negocio confirmará en minutos.
                       </div>
                     </form>
                   </div>
@@ -388,19 +407,18 @@ interface ConfirmedBooking {
                       La confirmación del negocio suele llegar en pocos minutos. Si quieres terminar antes, puedes pagar ahora con un flujo seguro desde la misma reserva.
                     </div>
 
-                    <div class="flex flex-col gap-3 sm:flex-row">
-                      <button class="btn-primary flex-1" [disabled]="paymentLoading()" (click)="startCheckout()">
+                    <div class="flex flex-col gap-2 sm:gap-3 sm:flex-row">
+                      <button class="btn-primary flex-1 min-h-[56px] sm:min-h-[auto]" [disabled]="paymentLoading()" (click)="startCheckout()">
                         @if (paymentLoading()) {
                           <span class="material-icons-round animate-spin text-base">refresh</span>
-                          Redirigiendo...
                         } @else {
-                          <span>Pagar ahora</span>
+                          <span>Pagar</span>
                           <span class="material-icons-round text-base">payment</span>
                         }
                       </button>
-                      <button class="btn-secondary flex-1" (click)="resetFlow()">
+                      <button class="btn-secondary flex-1 min-h-[56px] sm:min-h-[auto]" (click)="resetFlow()">
                         <span class="material-icons-round text-base">add</span>
-                        Nueva reserva
+                        <span class="hidden sm:inline">Nueva reserva</span>
                       </button>
                     </div>
                   </div>
@@ -408,11 +426,11 @@ interface ConfirmedBooking {
 
                 @if (step() < 4) {
                   <div class="border-t border-outline-variant/20 bg-white px-5 py-4">
-                    <button class="btn-primary" [disabled]="!canProceed() || submitting()"
+                    <button class="btn-primary w-full min-h-[56px] sm:min-h-[auto] text-lg sm:text-base" [disabled]="!canProceed() || submitting()"
                             (click)="handleNext()">
                       @if (submitting()) {
                         <span class="material-icons-round animate-spin text-base">refresh</span>
-                        Enviando...
+                        <span class="hidden sm:inline">Enviando...</span>
                       } @else {
                         <span>{{ nextLabel() }}</span>
                         <span class="material-icons-round text-base">arrow_forward</span>
@@ -458,6 +476,7 @@ export class BookingComponent implements OnInit, OnDestroy {
     { value: 3, label: 'Datos' },
     { value: 4, label: 'Listo' },
   ] as const;
+  readonly serviceFilter = signal<'all' | 'popular' | 'quick' | 'premium'>('all');
   readonly instructionItems = [
     {
       order: '01',
@@ -552,6 +571,92 @@ export class BookingComponent implements OnInit, OnDestroy {
   }
 
   goToStep(s: Step): void { this.step.set(s); }
+
+  readonly visibleServices = computed(() => {
+    const list = this.services();
+    const currentFilter = this.serviceFilter();
+
+    if (currentFilter === 'all') return list;
+
+    return list.filter((service) => {
+      const meta = this.serviceMeta(service);
+
+      if (currentFilter === 'popular') return meta.tag === 'popular';
+      if (currentFilter === 'quick') return meta.durationMinutes <= 45;
+      if (currentFilter === 'premium') return meta.priceNumber >= 90;
+      return true;
+    });
+  });
+
+  serviceMeta(service: string): {
+    price: string;
+    duration: string;
+    availability: string;
+    summary: string;
+    tag: 'popular' | 'quick' | 'premium';
+    durationMinutes: number;
+    priceNumber: number;
+  } {
+    const lowercase = service.toLowerCase();
+
+    if (lowercase.includes('facial') || lowercase.includes('spa') || lowercase.includes('mani') || lowercase.includes('pedi')) {
+      return {
+        price: '39€',
+        duration: '45 min',
+        availability: 'Hoy',
+        summary: 'Tratamiento completo con cuidado personalizado.',
+        tag: 'popular',
+        durationMinutes: 45,
+        priceNumber: 39,
+      };
+    }
+
+    if (lowercase.includes('corte') || lowercase.includes('barba') || lowercase.includes('peinado')) {
+      return {
+        price: '28€',
+        duration: '30 min',
+        availability: '2 huecos',
+        summary: 'Tiempos rápidos para una cita eficiente.',
+        tag: 'quick',
+        durationMinutes: 30,
+        priceNumber: 28,
+      };
+    }
+
+    if (lowercase.includes('maquillaje') || lowercase.includes('celebr') || lowercase.includes('evento')) {
+      return {
+        price: '95€',
+        duration: '75 min',
+        availability: 'Agotado',
+        summary: 'Servicio premium para eventos y finishing touch.',
+        tag: 'premium',
+        durationMinutes: 75,
+        priceNumber: 95,
+      };
+    }
+
+    if (lowercase.includes('depil') || lowercase.includes('laser')) {
+      return {
+        price: '54€',
+        duration: '50 min',
+        availability: 'Hoy',
+        summary: 'Ideal para rutinas de mantenimiento y confort.',
+        tag: 'popular',
+        durationMinutes: 50,
+        priceNumber: 54,
+      };
+    }
+
+    return {
+      price: '49€',
+      duration: '60 min',
+      availability: 'Disponible',
+      summary: 'Servicio de consulta y atención personalizada.',
+      tag: 'popular',
+      durationMinutes: 60,
+      priceNumber: 49,
+    };
+  }
 
   goBack(): void {
     const s = this.step();

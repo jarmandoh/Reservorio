@@ -230,6 +230,23 @@ export class ApiService {
       .pipe(map(r => r.data ?? []), catchError(this.handleError));
   }
 
+  getNotifications(businessId: string, bookingId?: string): Observable<any[]> {
+    let httpParams = new HttpParams().set('businessId', businessId);
+    if (bookingId) {
+      httpParams = httpParams.set('bookingId', bookingId);
+    }
+
+    return this.http
+      .get<ApiResponse<any[]>>(`${this.base}/notifications`, { params: httpParams })
+      .pipe(map(r => r.data ?? []), catchError(this.handleError));
+  }
+
+  createNotification(payload: { businessId: string; customerId?: string; bookingId?: string; type?: string; channel?: string; title: string; message: string; status?: string }): Observable<ApiResponse<any>> {
+    return this.http
+      .post<ApiResponse<any>>(`${this.base}/notifications`, payload)
+      .pipe(catchError(this.handleError));
+  }
+
   createPayment(payload: PaymentRequest): Observable<ApiResponse<Payment>> {
     return this.http
       .post<ApiResponse<Payment>>(`${this.base}/payments`, payload)

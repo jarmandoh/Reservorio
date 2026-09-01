@@ -14,16 +14,24 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
         </div>
 
         <p class="text-xs font-medium uppercase tracking-[0.18em] text-success">Pago completado</p>
-        <h1 class="mt-3 font-display text-3xl font-bold">¡Todo listo!</h1>
+        <h1 class="mt-3 font-display text-3xl font-bold">¡Reserva confirmada!</h1>
 
         <p class="mt-3 text-sm text-on-surface-variant">
-          El pago de la reserva se ha confirmado correctamente. El proveedor puede ver el estado actualizado en su panel.
+          La reserva ya quedó creada y el pago ha sido confirmado. El proveedor puede ver el estado actualizado en su panel.
         </p>
 
         <div class="mt-6 rounded-2xl bg-surface-container p-4 text-left text-sm">
           <div class="flex items-center justify-between gap-3">
             <span class="text-on-surface-variant">Reserva</span>
             <strong>{{ bookingId || '—' }}</strong>
+          </div>
+          <div class="mt-3 flex items-center justify-between gap-3">
+            <span class="text-on-surface-variant">Estado</span>
+            <span class="badge badge-success">Pagada</span>
+          </div>
+          <div class="mt-3 flex items-center justify-between gap-3">
+            <span class="text-on-surface-variant">Siguiente paso</span>
+            <span class="font-medium text-on-surface">Confirmación del negocio</span>
           </div>
         </div>
 

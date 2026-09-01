@@ -11,7 +11,7 @@ import { AuthService }  from '../../core/services/auth.service';
 import { BusinessAdminService } from '../../core/services/business-admin.service';
 import { ToastService } from '../../core/services/toast.service';
 import { BadgeComponent } from '../../shared/components/badge/badge.component';
-import { BookingRecord, Customer, GoogleStatus, Payment, Reservation } from '../../core/models/reservation.model';
+import { BookingRecord, Customer, GoogleStatus, NotificationItem, Payment, Reservation } from '../../core/models/reservation.model';
 import { Business } from '../../core/models/businesses.model';
 
 type negocioTab = 'reservas' | 'servicios' | 'perfil' | 'google';
@@ -42,23 +42,23 @@ type negocioTab = 'reservas' | 'servicios' | 'perfil' | 'google';
             <div class="skeleton h-4 w-32 rounded"></div>
           </div>
         }
-        <button class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-surface-container
-                       text-on-surface-variant transition" (click)="logout()" title="Cerrar sesión">
-          <span class="material-icons-round">logout</span>
-        </button>
+            <button class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-surface-container
+                       text-on-surface-variant transition sm:w-10 sm:h-10" (click)="logout()" title="Cerrar sesión">
+              <span class="material-icons-round">logout</span>
+            </button>
       </div>
 
-      <!-- Tab bar -->
-      <div class="max-w-4xl mx-auto px-4 flex gap-1 overflow-x-auto pb-0.5">
+        <!-- Tab bar -->
+      <div class="max-w-4xl mx-auto px-4 flex gap-0.5 sm:gap-1 overflow-x-auto pb-0.5">
         @for (t of tabs; track t.id) {
-          <button class="flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium rounded-t-lg transition
-                         whitespace-nowrap border-b-2"
+          <button class="flex items-center gap-1.5 px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-medium rounded-t-lg transition
+                         whitespace-nowrap border-b-2 min-h-[44px] sm:min-h-[auto]"
                   [class]="tab() === t.id
                     ? 'text-primary border-primary bg-primary/5'
                     : 'text-on-surface-variant border-transparent hover:bg-surface-container'"
                   (click)="setTab(t.id)">
             <span class="material-icons-round text-base">{{ t.icon }}</span>
-            {{ t.label }}
+            <span class="hidden sm:inline">{{ t.label }}</span>
           </button>
         }
       </div>
@@ -73,7 +73,7 @@ type negocioTab = 'reservas' | 'servicios' | 'perfil' | 'google';
         <div class="flex items-center justify-between">
           <h2 class="font-display font-semibold text-[1.375rem]">Reservas</h2>
           <button class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-surface-container
-                         text-on-surface-variant transition" (click)="loadReservations()" title="Actualizar">
+                         text-on-surface-variant transition sm:w-10 sm:h-10 min-h-[44px] sm:min-h-[auto]" (click)="loadReservations()" title="Actualizar">
             <span class="material-icons-round text-lg" [class.animate-spin]="resLoading()">refresh</span>
           </button>
         </div>
@@ -118,13 +118,13 @@ type negocioTab = 'reservas' | 'servicios' | 'perfil' | 'google';
             <p class="text-sm text-on-surface-variant">
               {{ checkoutBooking() ? 'Preparado para ' + checkoutBooking()!.slot : 'Selecciona una reserva activa para preparar el pago.' }}
             </p>
-            <button class="btn-primary btn-sm self-start" [disabled]="!checkoutBooking() || checkouting()" (click)="prepareCheckout()">
+            <button class="btn-primary btn-sm self-start min-h-[44px] sm:min-h-[auto]" [disabled]="!checkoutBooking() || checkouting()" (click)="prepareCheckout()">
               @if (checkouting()) {
                 <span class="material-icons-round text-base animate-spin">refresh</span>
               } @else {
                 <span class="material-icons-round text-base">payment</span>
               }
-              Preparar cobro
+              <span class="hidden sm:inline">Preparar cobro</span>
             </button>
           </div>
         </div>
@@ -135,6 +135,26 @@ type negocioTab = 'reservas' | 'servicios' | 'perfil' | 'google';
               <p class="section-label">Reservas del marketplace</p>
               <span class="badge badge-info">{{ providerBookings().length }}</span>
             </div>
+
+            <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <div class="rounded-xl bg-surface-low px-3 py-2 text-center">
+                <p class="text-[10px] uppercase tracking-[0.18em] text-on-surface-variant">Pendientes</p>
+                <p class="mt-1 font-display text-xl font-bold text-warning">{{ pendingBookingsCount() }}</p>
+              </div>
+              <div class="rounded-xl bg-surface-low px-3 py-2 text-center">
+                <p class="text-[10px] uppercase tracking-[0.18em] text-on-surface-variant">Confirmadas</p>
+                <p class="mt-1 font-display text-xl font-bold text-success">{{ confirmedBookingsCount() }}</p>
+              </div>
+              <div class="rounded-xl bg-surface-low px-3 py-2 text-center">
+                <p class="text-[10px] uppercase tracking-[0.18em] text-on-surface-variant">Pagadas</p>
+                <p class="mt-1 font-display text-xl font-bold text-primary">{{ paidBookingsCount() }}</p>
+              </div>
+              <div class="rounded-xl bg-surface-low px-3 py-2 text-center">
+                <p class="text-[10px] uppercase tracking-[0.18em] text-on-surface-variant">Canceladas</p>
+                <p class="mt-1 font-display text-xl font-bold text-error">{{ cancelledBookingsCount() }}</p>
+              </div>
+            </div>
+
             <div class="flex flex-col gap-2">
               @for (booking of providerBookings(); track booking.id) {
                 <div class="rounded-xl border border-outline-variant/15 bg-surface-low p-3">
@@ -144,8 +164,8 @@ type negocioTab = 'reservas' | 'servicios' | 'perfil' | 'google';
                       <p class="text-xs text-on-surface-variant">{{ booking.date }} · {{ booking.slot }}</p>
                     </div>
                     <div class="flex flex-col items-end gap-1.5">
-                      <span class="badge" [ngClass]="bookingPaymentStateClass(booking.id)">
-                        {{ bookingPaymentStateLabel(booking.id) }}
+                      <span class="badge" [ngClass]="bookingOverallStateClass(booking.id)">
+                        {{ bookingOverallStateLabel(booking.id) }}
                       </span>
                       <span class="badge badge-secondary">{{ booking.status }}</span>
                     </div>
@@ -170,6 +190,33 @@ type negocioTab = 'reservas' | 'servicios' | 'perfil' | 'google';
         </div>
 
         <!-- Table -->
+        <div class="card p-4 flex flex-col gap-3">
+          <div class="flex items-center justify-between">
+            <p class="section-label">Notificaciones</p>
+            <span class="badge badge-primary">{{ notifications().length }}</span>
+          </div>
+          @if (!notifications().length) {
+            <p class="text-sm text-on-surface-variant">No hay avisos todavía para este negocio.</p>
+          } @else {
+            <div class="flex flex-col gap-2">
+              @for (notification of notifications(); track notification.id) {
+                <div class="rounded-xl bg-surface-low px-3 py-2">
+                  <div class="flex items-center justify-between gap-3">
+                    <p class="font-medium text-sm">{{ notification.title }}</p>
+                    <span class="badge" [class.badge-success]="notification.status === 'sent'" [class.badge-secondary]="notification.status !== 'sent'">
+                      {{ notification.status === 'sent' ? 'Enviado' : notification.status === 'failed' ? 'Fallido' : 'Pendiente' }}
+                    </span>
+                  </div>
+                  <p class="text-xs text-on-surface-variant mt-1">{{ notification.message }}</p>
+                  <p class="text-[10px] uppercase tracking-[0.16em] text-on-surface-variant mt-2">
+                    {{ notification.type }} · {{ notification.channel }}
+                  </p>
+                </div>
+              }
+            </div>
+          }
+        </div>
+
         @if (resLoading()) {
           <div class="flex flex-col gap-2">
             @for (i of [1,2,3,4,5]; track i) { <div class="skeleton h-14 rounded-xl"></div> }
@@ -226,14 +273,14 @@ type negocioTab = 'reservas' | 'servicios' | 'perfil' | 'google';
               <p class="mt-1 text-xs text-error">El nombre del servicio es obligatorio y debe tener al menos 2 caracteres.</p>
             }
           </div>
-          <button type="submit" class="btn-primary btn-sm whitespace-nowrap"
+          <button type="submit" class="btn-primary btn-sm whitespace-nowrap min-h-[44px] sm:min-h-[auto]"
                   [disabled]="serviceForm.invalid || addingSvc()">
             @if (addingSvc()) {
               <span class="material-icons-round text-base animate-spin">refresh</span>
             } @else {
               <span class="material-icons-round text-base">add</span>
             }
-            Agregar
+            <span class="hidden sm:inline">Agregar</span>
           </button>
         </form>
 
@@ -254,7 +301,7 @@ type negocioTab = 'reservas' | 'servicios' | 'perfil' | 'google';
                 <span class="material-icons-round text-primary text-base">spa</span>
                 <span class="flex-1 font-medium">{{ svc }}</span>
                 <button class="w-8 h-8 flex items-center justify-center rounded-full
-                               hover:bg-error/10 text-error transition"
+                               hover:bg-error/10 text-error transition min-h-[44px] sm:min-h-[auto] sm:w-8 sm:h-8"
                         [disabled]="deletingSvc() === svc"
                         (click)="deleteService(svc)">
                   @if (deletingSvc() === svc) {
@@ -306,11 +353,11 @@ type negocioTab = 'reservas' | 'servicios' | 'perfil' | 'google';
             <input type="text" class="form-input" formControlName="schedule"
                    placeholder="Ej. Lun-Vie 9:00–18:00" />
           </div>
-          <button type="submit" class="btn-primary self-end"
+          <button type="submit" class="btn-primary self-end min-h-[44px] sm:min-h-[auto]"
                   [disabled]="profileForm.invalid || savingProfile()">
             @if (savingProfile()) {
-              <span class="material-icons-round text-base animate-spin">refresh</span> Guardando…
-            } @else { Guardar cambios }
+              <span class="material-icons-round text-base animate-spin">refresh</span> <span class="hidden sm:inline">Guardando…</span>
+            } @else { Guardar }
           </button>
         </form>
 
@@ -330,7 +377,7 @@ type negocioTab = 'reservas' | 'servicios' | 'perfil' | 'google';
               <p class="text-xs text-error mt-1">Los PINs no coinciden.</p>
             }
           </div>
-          <button type="submit" class="btn-primary self-end btn-sm"
+          <button type="submit" class="btn-primary self-end btn-sm min-h-[44px] sm:min-h-[auto]"
                   [disabled]="pinForm.invalid || savingPin() || pinMismatch()">
             @if (savingPin()) {
               <span class="material-icons-round text-base animate-spin">refresh</span>
@@ -527,6 +574,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
   readonly customers    = signal<Customer[]>([]);
   readonly marketplaceBookings = signal<BookingRecord[]>([]);
   readonly payments     = signal<Payment[]>([]);
+  readonly notifications = signal<NotificationItem[]>([]);
   readonly checkouting = signal(false);
   readonly resLoading   = signal(false);
   readonly svcLoading   = signal(false);
@@ -590,6 +638,22 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
     this.providerBookings().find(b => b.status !== 'cancelled' && b.status !== 'completed') ?? this.providerBookings()[0] ?? null
   );
 
+  readonly pendingBookingsCount = computed(() =>
+    this.providerBookings().filter(b => b.status === 'pending').length
+  );
+
+  readonly confirmedBookingsCount = computed(() =>
+    this.providerBookings().filter(b => b.status === 'confirmed').length
+  );
+
+  readonly paidBookingsCount = computed(() =>
+    this.payments().filter(p => p.status === 'paid').length
+  );
+
+  readonly cancelledBookingsCount = computed(() =>
+    this.providerBookings().filter(b => b.status === 'cancelled').length
+  );
+
   readonly bookingPaymentMap = computed(() => new Map(
     this.payments().map(payment => [payment.bookingId, payment] as const)
   ));
@@ -611,6 +675,29 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
     if (payment?.status === 'paid') return 'badge-success';
     if (payment?.status === 'pending') return 'badge-info';
     if (payment?.status === 'failed') return 'badge-error';
+    return 'badge-secondary';
+  }
+
+  bookingOverallStateLabel(bookingId: string): string {
+    const booking = this.providerBookings().find(b => b.id === bookingId);
+    const payment = this.bookingPaymentStatus(bookingId);
+
+    if (booking?.status === 'cancelled') return 'Cancelada';
+    if (payment?.status === 'paid') return 'Pagada';
+    if (booking?.status === 'confirmed') return 'Confirmada';
+    if (payment?.status === 'pending') return 'Pendiente';
+    if (booking?.status === 'pending') return 'Pendiente';
+    return 'Sin pago';
+  }
+
+  bookingOverallStateClass(bookingId: string): string {
+    const booking = this.providerBookings().find(b => b.id === bookingId);
+    const payment = this.bookingPaymentStatus(bookingId);
+
+    if (booking?.status === 'cancelled') return 'badge-error';
+    if (payment?.status === 'paid') return 'badge-success';
+    if (booking?.status === 'confirmed') return 'badge-primary';
+    if (payment?.status === 'pending' || booking?.status === 'pending') return 'badge-info';
     return 'badge-secondary';
   }
 
@@ -664,6 +751,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
 
     this.loadBusiness();
     this.loadMarketplaceData();
+    this.loadNotifications();
     this.startPolling();
     this.loadServices();
 
@@ -727,6 +815,11 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
     this.businessAdminService.loadMarketplaceBookings().subscribe({
       next: data => this.marketplaceBookings.set(data),
       error: () => this.marketplaceBookings.set([]),
+    });
+
+    this.businessAdminService.loadNotifications(this.negocioId).subscribe({
+      next: data => this.notifications.set(data),
+      error: () => this.notifications.set([]),
     });
 
     this.businessAdminService.loadCustomers().subscribe({
@@ -809,6 +902,13 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
         this.toast.error(err?.message ?? 'No se pudo preparar el cobro');
         this.checkouting.set(false);
       },
+    });
+  }
+
+  loadNotifications(): void {
+    this.businessAdminService.loadNotifications(this.negocioId).subscribe({
+      next: data => this.notifications.set(data),
+      error: () => this.notifications.set([]),
     });
   }
 

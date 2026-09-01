@@ -82,7 +82,23 @@ CREATE TABLE IF NOT EXISTS bookings (
   updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS notifications (
+  id          TEXT PRIMARY KEY,
+  business_id TEXT NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  customer_id TEXT REFERENCES customers(id) ON DELETE SET NULL,
+  booking_id  TEXT REFERENCES bookings(id) ON DELETE SET NULL,
+  type        TEXT NOT NULL DEFAULT 'booking_created',
+  channel     TEXT NOT NULL DEFAULT 'in_app',
+  title       TEXT NOT NULL DEFAULT '',
+  message     TEXT NOT NULL DEFAULT '',
+  status      TEXT NOT NULL DEFAULT 'queued' CHECK (status IN ('queued', 'sent', 'failed')),
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  sent_at     TIMESTAMPTZ
+);
+
 CREATE INDEX IF NOT EXISTS idx_reservations_business ON reservations(business_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_business ON notifications(business_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_booking ON notifications(booking_id);
 CREATE INDEX IF NOT EXISTS idx_services_business ON services(business_id);
 CREATE INDEX IF NOT EXISTS idx_customers_email ON customers(email);
 CREATE INDEX IF NOT EXISTS idx_bookings_provider ON bookings(provider_id);
@@ -99,6 +115,8 @@ ALTER TABLE businesses ADD COLUMN IF NOT EXISTS instagram          TEXT;
 ALTER TABLE businesses ADD COLUMN IF NOT EXISTS tiktok             TEXT;
 ALTER TABLE businesses ADD COLUMN IF NOT EXISTS whatsapp           TEXT;
 ALTER TABLE businesses ADD COLUMN IF NOT EXISTS linkedin           TEXT;
+ALTER TABLE businesses ADD COLUMN IF NOT EXISTS verified           BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE businesses ADD COLUMN IF NOT EXISTS cancellation_policy TEXT NOT NULL DEFAULT 'Cancelar hasta 24 horas antes de tu cita.';
 
 CREATE TABLE IF NOT EXISTS categories (
   id SERIAL PRIMARY KEY,

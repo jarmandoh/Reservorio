@@ -14,16 +14,24 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
         </div>
 
         <p class="text-xs font-medium uppercase tracking-[0.18em] text-warning">Pago cancelado</p>
-        <h1 class="mt-3 font-display text-3xl font-bold">Se interrumpió el proceso</h1>
+        <h1 class="mt-3 font-display text-3xl font-bold">La reserva sigue creada</h1>
 
         <p class="mt-3 text-sm text-on-surface-variant">
-          No se ha cobrado ningún importe. Puedes volver a intentarlo cuando quieras o seguir gestionando la reserva desde el panel del proveedor.
+          El proceso de pago se interrumpió y no se ha cobrado ningún importe. La reserva sigue en estado pendiente y puedes intentarlo otra vez cuando quieras.
         </p>
 
         <div class="mt-6 rounded-2xl bg-surface-container p-4 text-left text-sm">
           <div class="flex items-center justify-between gap-3">
             <span class="text-on-surface-variant">Reserva</span>
             <strong>{{ bookingId || '—' }}</strong>
+          </div>
+          <div class="mt-3 flex items-center justify-between gap-3">
+            <span class="text-on-surface-variant">Estado</span>
+            <span class="badge badge-info">Pendiente</span>
+          </div>
+          <div class="mt-3 flex items-center justify-between gap-3">
+            <span class="text-on-surface-variant">Acción</span>
+            <span class="font-medium text-on-surface">Reintentar pago</span>
           </div>
         </div>
 

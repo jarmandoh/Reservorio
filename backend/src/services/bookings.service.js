@@ -2,6 +2,7 @@
 
 const { randomUUID } = require('crypto');
 const db = require('../db');
+const { createNotification } = require('./notifications.service');
 
 const fallbackBookings = [];
 
@@ -80,6 +81,17 @@ async function createBooking(payload = {}) {
        RETURNING *`,
       [id, providerId, customerId, serviceId, date, slot, 'pending', notes]
     );
+
+    await createNotification({
+      businessId: providerId,
+      customerId,
+      bookingId: id,
+      type: 'booking_created',
+      channel: 'in_app',
+      title: 'Nueva reserva',
+      message: `Nueva solicitud para ${serviceId} en ${date} · ${slot}.`,
+      status: 'queued',
+    });
 
     return { ok: true, status: 201, data: mapBooking(rows[0]) };
   } catch (error) {
