@@ -2,6 +2,7 @@ import {
   Component, OnInit, OnDestroy, signal, computed, inject
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import {
   ReactiveFormsModule, FormBuilder, Validators, AbstractControl
 } from '@angular/forms';
@@ -10,7 +11,7 @@ import { interval, Subscription, switchMap, startWith, catchError, of } from 'rx
 import { ApiService }   from '../../core/services/api.service';
 import { ToastService } from '../../core/services/toast.service';
 import { Reservation }  from '../../core/models/reservation.model';
-import { Business }     from '../../core/models/businesses.model';
+import { Business, Review, RatingStats }     from '../../core/models/businesses.model';
 
 type Step = 1 | 2 | 3 | 4;
 
@@ -24,7 +25,7 @@ interface ConfirmedBooking {
 
 @Component({
     selector: 'app-booking',
-    imports: [CommonModule, ReactiveFormsModule],
+    imports: [CommonModule, ReactiveFormsModule, FormsModule],
     template: `
   <div class="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(26,115,232,0.26),_transparent_32%),linear-gradient(180deg,#040814_0%,#091324_52%,#0c1628_100%)] text-white">
     <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
@@ -81,8 +82,29 @@ interface ConfirmedBooking {
                   }
 
                   <div class="min-w-0 flex-1">
-                    <p class="truncate text-sm font-semibold">{{ business()?.name ?? 'Reserva tu cita' }}</p>
-                    <p class="text-xs text-white/80">Reserva online</p>
+                    <div class="min-w-0 flex-1">
+                      <div class="flex items-center gap-2">
+                        <p class="truncate text-sm font-semibold">{{ business()?.name ?? 'Reserva tu cita' }}</p>
+                        @if (business()?.verified) {
+                          <span class="material-icons-round text-[0.9rem] text-[#4caf50] flex-shrink-0" title="Negocio verificado">verified</span>
+                        }
+                      </div>
+                      <div class="flex items-center gap-2 mt-0.5">
+                        <p class="text-xs text-white/80">Reserva online</p>
+                        @if (ratingStats()?.averageRating && ratingStats()!.averageRating > 0) {
+                          <div class="flex items-center gap-1 text-xs bg-white/10 px-2 py-0.5 rounded">
+                            @for (i of [1,2,3,4,5]; track i) {
+                              <span class="material-icons-round text-[0.75rem]"
+                                    [class.text-yellow-400]="i <= Math.round(ratingStats()!.averageRating)"
+                                    [class.text-white/30]="i > Math.round(ratingStats()!.averageRating)">
+                                {{ i <= Math.floor(ratingStats()!.averageRating) ? 'star' : i === Math.ceil(ratingStats()!.averageRating) ? 'star_half' : 'star_outline' }}
+                              </span>
+                            }
+                            <span class="text-white/80 ml-0.5">{{ (ratingStats()?.averageRating || 0).toFixed(1) }}</span>
+                          </div>
+                        }
+                      </div>
+                    </div>
                   </div>
 
                   @if (step() < 4) {
@@ -300,6 +322,27 @@ interface ConfirmedBooking {
                 }
 
                 @if (step() === 3) {
+                                      @if (business()?.cancellationPolicy) {
+                                        <div class="rounded-2xl border-l-4 border-l-[#ff9800] bg-[#fff3e0] p-4">
+                                          <div class="flex items-start gap-3">
+                                            <span class="material-icons-round text-[#f57c00] flex-shrink-0">info</span>
+                                            <div>
+                                              <p class="text-sm font-semibold text-[#e65100]">Política de Cancelación</p>
+                                              <p class="text-xs text-[#bf360c] mt-1">{{ business()!.cancellationPolicy }}</p>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      }
+
+                                      <div class="rounded-2xl border border-[#4caf50]/30 bg-[#e8f5e9] p-4">
+                                        <div class="flex items-start gap-3">
+                                          <span class="material-icons-round text-[#2e7d32] flex-shrink-0">security</span>
+                                          <div>
+                                            <p class="text-sm font-semibold text-[#1b5e20]">Pago 100% Seguro</p>
+                                            <p class="text-xs text-[#2e7d32] mt-1">Procesado con Stripe, encriptado y protegido por SSL</p>
+                                          </div>
+                                        </div>
+                                      </div>
                   <div class="flex flex-col gap-5 px-5 py-5">
                     <div class="rounded-2xl border border-[#d8e2ff] bg-[#eff5ff] p-4">
                       <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">Paso 3</p>
@@ -419,6 +462,62 @@ interface ConfirmedBooking {
                       <button class="btn-secondary flex-1 min-h-[56px] sm:min-h-[auto]" (click)="resetFlow()">
                         <span class="material-icons-round text-base">add</span>
                         <span class="hidden sm:inline">Nueva reserva</span>
+
+                                          <div class="mt-6 border-t border-outline-variant pt-6">
+                                            <h3 class="font-display text-lg font-semibold text-on-surface mb-4">Reseñas</h3>
+
+                                            @if (reviews().length > 0) {
+                                              <div class="flex flex-col gap-3 mb-5">
+                                                @for (review of reviews(); track review.id) {
+                                                  <div class="rounded-2xl border border-outline-variant/30 bg-white/50 p-4">
+                                                    <div class="flex items-start gap-2 mb-2">
+                                                      @for (i of [1,2,3,4,5]; track i) {
+                                                        <span class="material-icons-round text-[0.9rem]"
+                                                              [class.text-yellow-400]="i <= review.rating"
+                                                              [class.text-outline/30]="i > review.rating">star</span>
+                                                      }
+                                                    </div>
+                                                    @if (review.review) {
+                                                      <p class="text-sm text-on-surface">{{ review.review }}</p>
+                                                    }
+                                                    <p class="text-xs text-on-surface-variant mt-2">{{ review.createdAt | date:'short' }}</p>
+                                                  </div>
+                                                }
+                                              </div>
+                                            } @else {
+                                              <p class="text-sm text-on-surface-variant mb-4">No hay reseñas aún. ¡Sé el primero en compartir tu experiencia!</p>
+                                            }
+
+                                            <div class="rounded-2xl border border-[#d8e2ff] bg-[#eff5ff] p-4 mt-5">
+                                              <p class="text-sm font-semibold text-primary mb-3">Deja tu reseña</p>
+                                              <div class="flex gap-2 mb-4">
+                                                @for (i of [1,2,3,4,5]; track i) {
+                                                      <button class="p-2 rounded-lg transition hover:bg-white/50 cursor-pointer"
+                                                      type="button"
+                                                      (click)="reviewForm.patchValue({rating: i})"
+                                                      [class.bg-yellow-400/20]="i <= (reviewForm.get('rating')?.value || 0)">
+                                                    <span class="material-icons-round text-[1.5rem]"
+                                                      [class.text-yellow-400]="i <= (reviewForm.get('rating')?.value || 0)"
+                                                      [class.text-outline/30]="i > (reviewForm.get('rating')?.value || 0)">star</span>
+                                                  </button>
+                                                }
+                                              </div>
+                                              <textarea class="w-full rounded-lg border border-outline p-2 text-sm resize-none focus:outline-none focus:border-primary"
+                                                        formControlName="review"
+                                                        placeholder="Cuenta tu experiencia (opcional)"
+                                                        [attr.rows]="2"></textarea>
+                                              <button class="btn-primary w-full mt-3 min-h-[44px]" 
+                                                      type="button"
+                                                      [disabled]="(reviewForm.get('rating')?.value || 0) === 0 || submitting()"
+                                                      (click)="submitReview()">
+                                                @if (submitting()) {
+                                                  <span class="material-icons-round animate-spin text-base">refresh</span>
+                                                } @else {
+                                                  <span>Enviar reseña</span>
+                                                }
+                                              </button>
+                                            </div>
+                                          </div>
                       </button>
                     </div>
                   </div>
@@ -450,6 +549,7 @@ interface ConfirmedBooking {
 export class BookingComponent implements OnInit, OnDestroy {
   private api   = inject(ApiService);
   private toast = inject(ToastService);
+  readonly Math = Math;
   private fb    = inject(FormBuilder);
   private router = inject(Router);
   private route  = inject(ActivatedRoute);
@@ -465,6 +565,8 @@ export class BookingComponent implements OnInit, OnDestroy {
   readonly paymentLoading = signal(false);
   readonly error        = signal<string | null>(null);
   readonly reservations = signal<Reservation[]>([]);
+    readonly reviews      = signal<Review[]>([]);
+    readonly ratingStats  = signal<RatingStats | null>(null);
   readonly services     = signal<string[]>([]);
   readonly selectedSlot    = signal<Reservation | null>(null);
   readonly selectedService = signal<string | null>(null);
@@ -501,6 +603,11 @@ export class BookingComponent implements OnInit, OnDestroy {
     notas:    [''],
   });
 
+  readonly reviewForm = this.fb.group({
+    rating:  [0, [Validators.required, Validators.min(1), Validators.max(5)]],
+    review: ['', [Validators.maxLength(500)]],
+  });
+
   readonly canProceed = computed(() => {
     if (this.step() === 1) return !!this.selectedService();
     if (this.step() === 2) return !!this.selectedSlot();
@@ -521,11 +628,26 @@ export class BookingComponent implements OnInit, OnDestroy {
     this.api.getBusinesses().pipe(catchError(() => of([]))).subscribe(list => {
       const found = list.find(b => b.id === this.businessId);
       if(!found) location.replace('/'); // Redirect if business not found
-      console.log('Found business:', found);
       if (found) this.business.set(found);
     });
     this.loadServices();
+    this.loadReviews();
+    this.loadRatingStats();
     this.startPolling();
+  }
+
+  loadReviews(): void {
+    this.api.getReviews(this.businessId).subscribe({
+      next: data => this.reviews.set(data),
+      error: () => this.reviews.set([]),
+    });
+  }
+
+  loadRatingStats(): void {
+    this.api.getAverageRating(this.businessId).subscribe({
+      next: data => this.ratingStats.set(data),
+      error: () => this.ratingStats.set(null),
+    });
   }
 
   private readonly POLL_MS = 30_000;
@@ -762,7 +884,34 @@ export class BookingComponent implements OnInit, OnDestroy {
     this.bookingForm.reset();
     this.pollSub?.unsubscribe();
     this.loadServices();
+    this.loadReviews();
+    this.loadRatingStats();
     this.startPolling();
+    this.reviewForm.reset({ rating: 0, review: '' });
     this.goToStep(1);
   }
+
+  submitReview(): void {
+    const rating = this.reviewForm.get('rating')?.value || 0;
+    if (rating === 0) return;
+
+    this.submitting.set(true);
+    this.api.createReview(this.businessId, {
+      rating,
+      review: this.reviewForm.get('review')?.value?.trim() || undefined,
+    }).subscribe({
+      next: () => {
+        this.toast.success('¡Gracias por tu reseña!');
+        this.reviewForm.reset({ rating: 0, review: '' });
+        this.loadReviews();
+        this.loadRatingStats();
+        this.submitting.set(false);
+      },
+      error: err => {
+        this.toast.error(err?.message ?? 'Error al enviar reseña');
+        this.submitting.set(false);
+      },
+    });
+  }
+
 }

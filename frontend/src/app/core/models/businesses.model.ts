@@ -36,6 +36,12 @@ export interface Review {
   createdAt: string;
 }
 
+export interface RatingStats {
+  businessId: string;
+  averageRating: number;
+  reviewCount: number;
+}
+
 export interface NewBusinessPayload {
   name:          string;
   category:      string;

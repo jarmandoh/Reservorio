@@ -1,7 +1,8 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpHeaders, HttpParams } from '@angular/common/http';
-import { Observable, throwError } from 'rxjs';
+import { Observable, of, throwError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
+import { Review, RatingStats } from '../models/businesses.model';
 import { environment } from '../../../environments/environment';
 import {
   ApiResponse,
@@ -244,6 +245,24 @@ export class ApiService {
   createNotification(payload: { businessId: string; customerId?: string; bookingId?: string; type?: string; channel?: string; title: string; message: string; status?: string }): Observable<ApiResponse<any>> {
     return this.http
       .post<ApiResponse<any>>(`${this.base}/notifications`, payload)
+      .pipe(catchError(this.handleError));
+  }
+
+  getReviews(businessId: string): Observable<Review[]> {
+    return this.http
+      .get<ApiResponse<Review[]>>(`${this.base}/ratings/${businessId}`)
+      .pipe(map(r => r.data ?? []), catchError(this.handleError));
+  }
+
+  getAverageRating(businessId: string): Observable<RatingStats> {
+    return this.http
+      .get<ApiResponse<RatingStats>>(`${this.base}/ratings/${businessId}/average`)
+      .pipe(map(r => r.data ?? { businessId, averageRating: 0, reviewCount: 0 }), catchError(() => of({ businessId, averageRating: 0, reviewCount: 0 })));
+  }
+
+  createReview(businessId: string, payload: { rating: number; review?: string }): Observable<ApiResponse<Review>> {
+    return this.http
+      .post<ApiResponse<Review>>(`${this.base}/ratings/${businessId}`, payload)
       .pipe(catchError(this.handleError));
   }
 
