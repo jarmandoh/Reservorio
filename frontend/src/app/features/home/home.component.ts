@@ -238,12 +238,30 @@ const CATEGORIES = ['Todos', 'Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci
                       <span class="text-xs text-on-surface-variant">{{ negocio.location }}</span>
                     </div>
                   </div>
-                  <!-- Rating -->
                   <div class="flex items-center gap-1 flex-shrink-0">
                     <span class="material-icons-round text-[#f59e0b] text-sm">star</span>
                     <span class="text-sm font-semibold">{{ negocio.rating }}</span>
                     <span class="text-xs text-outline">({{ negocio.reviews }})</span>
                   </div>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2">
+                  @if (negocio.verified) {
+                    <span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-semibold text-emerald-700">
+                      <span class="material-icons-round text-[12px]">verified</span>
+                      Verificado
+                    </span>
+                  }
+                  <span class="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2 py-1 text-[10px] font-semibold text-sky-700">
+                    <span class="material-icons-round text-[12px]">security</span>
+                    Pago seguro
+                  </span>
+                  @if (negocio.cancellationPolicy) {
+                    <span class="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-1 text-[10px] font-semibold text-amber-700">
+                      <span class="material-icons-round text-[12px]">info</span>
+                      Cancelación clara
+                    </span>
+                  }
                 </div>
 
                 <p class="text-sm text-on-surface-variant leading-relaxed line-clamp-2">

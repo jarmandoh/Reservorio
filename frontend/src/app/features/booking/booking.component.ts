@@ -350,6 +350,29 @@ interface ConfirmedBooking {
                       <p class="mt-1 text-sm text-on-surface-variant">Dejanos tus datos para confirmar la solicitud contigo.</p>
                     </div>
 
+                    <div class="flex flex-wrap gap-2">
+                      @if (business()?.verified) {
+                        <span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-700">
+                          <span class="material-icons-round text-[12px]">verified</span>
+                          Negocio verificado
+                        </span>
+                      }
+                      <span class="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2.5 py-1 text-[10px] font-semibold text-sky-700">
+                        <span class="material-icons-round text-[12px]">security</span>
+                        Pago seguro
+                      </span>
+                      <span class="inline-flex items-center gap-1 rounded-full bg-violet-50 px-2.5 py-1 text-[10px] font-semibold text-violet-700">
+                        <span class="material-icons-round text-[12px]">star</span>
+                        {{ reviews().length || 0 }} reseña{{ reviews().length === 1 ? '' : 's' }}
+                      </span>
+                      @if (business()?.cancellationPolicy) {
+                        <span class="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-semibold text-amber-700">
+                          <span class="material-icons-round text-[12px]">info</span>
+                          Cancelación clara
+                        </span>
+                      }
+                    </div>
+
                     <div class="grid gap-3 sm:grid-cols-2">
                       <div class="rounded-2xl border border-outline-variant bg-white p-4">
                         <div class="flex items-start justify-between gap-3">
