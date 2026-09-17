@@ -90,6 +90,25 @@ type negocioTab = 'reservas' | 'servicios' | 'perfil' | 'google';
           </div>
         }
 
+        @if (businessAnalytics().cards.length) {
+          <div class="card p-4 flex flex-col gap-3">
+            <div class="flex items-center justify-between">
+              <p class="section-label">Analytics de negocio</p>
+              <span class="badge badge-primary">{{ businessAnalytics().cards.length }} métricas</span>
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              @for (metric of businessAnalytics().cards; track metric.label) {
+                <div class="rounded-xl bg-surface-low px-3 py-3 text-center">
+                  <p class="text-[10px] uppercase tracking-[0.18em] text-on-surface-variant">{{ metric.label }}</p>
+                  <p class="mt-2 font-display text-2xl font-bold" [class.text-success]="metric.tone === 'success'" [class.text-warning]="metric.tone === 'warning'" [class.text-primary]="metric.tone === 'primary'" [class.text-error]="metric.tone === 'error'">
+                    {{ metric.value }}
+                  </p>
+                </div>
+              }
+            </div>
+          </div>
+        }
+
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
           <div class="card p-4 flex flex-col gap-3">
             <div class="flex items-center justify-between">
@@ -128,6 +147,56 @@ type negocioTab = 'reservas' | 'servicios' | 'perfil' | 'google';
             </button>
           </div>
         </div>
+
+        @if (reservationGroups().statusGroups.some(item => item.value > 0) || providerBookings().length) {
+          <div class="card p-4 flex flex-col gap-4">
+            <div class="flex items-center justify-between">
+              <p class="section-label">Resumen operativo</p>
+              <span class="badge badge-info">{{ reservationGroups().statusGroups.reduce((sum, item) => sum + item.value, 0) }} total</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              @for (item of reservationGroups().statusGroups; track item.label) {
+                <div class="rounded-xl bg-surface-low px-3 py-3">
+                  <p class="text-[10px] uppercase tracking-[0.18em] text-on-surface-variant">{{ item.label }}</p>
+                  <p class="mt-2 font-display text-2xl font-bold text-on-surface">{{ item.value }}</p>
+                </div>
+              }
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div class="rounded-xl border border-outline-variant/20 bg-surface-low p-3">
+                <p class="text-[10px] uppercase tracking-[0.18em] text-on-surface-variant">Servicios con más demanda</p>
+                <div class="mt-3 flex flex-col gap-2">
+                  @for (item of reservationGroups().byService; track item.label) {
+                    <div class="flex items-center justify-between text-sm">
+                      <span class="text-on-surface-variant">{{ item.label }}</span>
+                      <span class="font-semibold text-on-surface">{{ item.value }}</span>
+                    </div>
+                  }
+                  @if (!reservationGroups().byService.length) {
+                    <p class="text-sm text-on-surface-variant">Sin datos todavía.</p>
+                  }
+                </div>
+              </div>
+
+              <div class="rounded-xl border border-outline-variant/20 bg-surface-low p-3">
+                <p class="text-[10px] uppercase tracking-[0.18em] text-on-surface-variant">Días con más actividad</p>
+                <div class="mt-3 flex flex-col gap-2">
+                  @for (item of reservationGroups().byDay; track item.label) {
+                    <div class="flex items-center justify-between text-sm">
+                      <span class="text-on-surface-variant">{{ item.label }}</span>
+                      <span class="font-semibold text-on-surface">{{ item.value }}</span>
+                    </div>
+                  }
+                  @if (!reservationGroups().byDay.length) {
+                    <p class="text-sm text-on-surface-variant">Aún no hay actividad programada.</p>
+                  }
+                </div>
+              </div>
+            </div>
+          </div>
+        }
 
         @if (providerBookings().length) {
           <div class="card p-4 flex flex-col gap-3">
@@ -177,16 +246,25 @@ type negocioTab = 'reservas' | 'servicios' | 'perfil' | 'google';
         }
 
         <!-- Filters -->
-        <div class="flex flex-col sm:flex-row gap-2">
-          <input type="search" class="form-input flex-1" placeholder="Buscar por cliente, servicio…"
-                 [value]="resSearch()" (input)="resSearch.set(getVal($event))" />
-          <select class="form-select sm:w-44" [value]="resFilter()" (change)="resFilter.set(getVal($event))">
-            <option value="">Todos los estados</option>
-            <option value="disp">Disponible</option>
-            <option value="pend">Pendiente</option>
-            <option value="reserv">Reservado</option>
-            <option value="confirm">Confirmado</option>
-          </select>
+        <div class="flex flex-col gap-3">
+          <div class="flex flex-wrap gap-2">
+            <button class="btn-tertiary btn-sm" [class.btn-primary]="resQuickFilter() === 'all'" (click)="resQuickFilter.set('all')">Todas</button>
+            <button class="btn-tertiary btn-sm" [class.btn-primary]="resQuickFilter() === 'pending'" (click)="resQuickFilter.set('pending')">Pendientes</button>
+            <button class="btn-tertiary btn-sm" [class.btn-primary]="resQuickFilter() === 'confirmed'" (click)="resQuickFilter.set('confirmed')">Confirmadas</button>
+            <button class="btn-tertiary btn-sm" [class.btn-primary]="resQuickFilter() === 'available'" (click)="resQuickFilter.set('available')">Disponibles</button>
+          </div>
+
+          <div class="flex flex-col sm:flex-row gap-2">
+            <input type="search" class="form-input flex-1" placeholder="Buscar por cliente, servicio…"
+                   [value]="resSearch()" (input)="resSearch.set(getVal($event))" />
+            <select class="form-select sm:w-44" [value]="resFilter()" (change)="resFilter.set(getVal($event))">
+              <option value="">Todos los estados</option>
+              <option value="disp">Disponible</option>
+              <option value="pend">Pendiente</option>
+              <option value="reserv">Reservado</option>
+              <option value="confirm">Confirmado</option>
+            </select>
+          </div>
         </div>
 
         <!-- Table -->
@@ -587,6 +665,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
   readonly savingRes    = signal(false);
   readonly resSearch    = signal('');
   readonly resFilter    = signal('');
+  readonly resQuickFilter = signal<'all' | 'pending' | 'confirmed' | 'available'>('all');
 
   // Google Sheets
   readonly googleStatus   = signal<GoogleStatus | null>(null);
@@ -618,12 +697,104 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
     let rows = this.reservations();
     const q  = this.resSearch().toLowerCase();
     const f  = this.resFilter().toLowerCase();
+    const quick = this.resQuickFilter();
+
+    if (quick === 'pending') rows = rows.filter(r => r.disponibilidad.toLowerCase().includes('pend') || r.disponibilidad.toLowerCase().includes('reserv'));
+    if (quick === 'confirmed') rows = rows.filter(r => r.disponibilidad.toLowerCase().includes('confirm'));
+    if (quick === 'available') rows = rows.filter(r => r.disponibilidad.toLowerCase().includes('disp'));
+
     if (q) rows = rows.filter(r =>
       r.cliente?.toLowerCase().includes(q) ||
       r.servicio?.toLowerCase().includes(q) ||
       r.franja?.toLowerCase().includes(q));
     if (f) rows = rows.filter(r => r.disponibilidad.toLowerCase().includes(f));
     return rows;
+  });
+
+  readonly reservationGroups = computed(() => {
+    const rows = this.reservations();
+    const statusGroups = [
+      { label: 'Pendientes', value: rows.filter(r => r.disponibilidad.toLowerCase().includes('pend') || r.disponibilidad.toLowerCase().includes('reserv')).length },
+      { label: 'Confirmadas', value: rows.filter(r => r.disponibilidad.toLowerCase().includes('confirm')).length },
+      { label: 'Disponibles', value: rows.filter(r => r.disponibilidad.toLowerCase().includes('disp')).length },
+    ];
+
+    const byService = Object.entries(
+      rows.reduce((acc, row) => {
+        const key = row.servicio || 'Sin servicio';
+        acc[key] = (acc[key] ?? 0) + 1;
+        return acc;
+      }, {} as Record<string, number>)
+    )
+      .map(([label, value]) => ({ label, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 3);
+
+    const byDay = Object.entries(
+      this.providerBookings().reduce((acc, booking) => {
+        acc[booking.date] = (acc[booking.date] ?? 0) + 1;
+        return acc;
+      }, {} as Record<string, number>)
+    )
+      .map(([label, value]) => ({ label, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 3);
+
+    return { statusGroups, byService, byDay };
+  });
+
+  readonly businessAnalytics = computed(() => {
+    const totalSlots = this.reservations().length;
+    const bookings = this.providerBookings();
+    const payments = this.payments();
+
+    const reservedSlots = this.reservations().filter(r =>
+      r.disponibilidad.toLowerCase().includes('pend') ||
+      r.disponibilidad.toLowerCase().includes('reserv') ||
+      r.disponibilidad.toLowerCase().includes('confirm')
+    ).length;
+
+    const confirmedSlots = this.reservations().filter(r => r.disponibilidad.toLowerCase().includes('confirm')).length;
+    const paidBookings = payments.filter(p => p.status === 'paid').length;
+    const pendingBookings = bookings.filter(b => b.status === 'pending').length;
+    const cancelledBookings = bookings.filter(b => b.status === 'cancelled').length;
+
+    const reservationRate = totalSlots ? Math.round((reservedSlots / totalSlots) * 100) : 0;
+    const confirmationRate = totalSlots ? Math.round((confirmedSlots / totalSlots) * 100) : 0;
+    const paymentRate = bookings.length ? Math.round((paidBookings / bookings.length) * 100) : 0;
+    const abandonmentRate = bookings.length ? Math.round(((pendingBookings + cancelledBookings) / bookings.length) * 100) : 0;
+
+    const byService = Object.entries(
+      this.reservations().reduce((acc, row) => {
+        const key = row.servicio || 'Sin servicio';
+        acc[key] = (acc[key] ?? 0) + 1;
+        return acc;
+      }, {} as Record<string, number>)
+    )
+      .map(([label, value]) => ({ label, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 3);
+
+    const bySlot = Object.entries(
+      bookings.reduce((acc, booking) => {
+        acc[booking.slot] = (acc[booking.slot] ?? 0) + 1;
+        return acc;
+      }, {} as Record<string, number>)
+    )
+      .map(([label, value]) => ({ label, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 3);
+
+    return {
+      cards: [
+        { label: 'Reserva', value: `${reservationRate}%`, tone: 'primary' },
+        { label: 'Confirmación', value: `${confirmationRate}%`, tone: 'success' },
+        { label: 'Pago', value: `${paymentRate}%`, tone: 'primary' },
+        { label: 'Abandono', value: `${abandonmentRate}%`, tone: 'warning' },
+      ],
+      byService,
+      bySlot,
+    };
   });
 
   readonly providerBookings = computed(() =>

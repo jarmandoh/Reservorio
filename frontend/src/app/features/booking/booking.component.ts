@@ -280,7 +280,13 @@ interface ConfirmedBooking {
 
                     @if (!loading() && !error()) {
                       <div>
-                        <p class="section-label">Horarios disponibles</p>
+                        <div class="mb-3 flex items-center justify-between gap-3 rounded-2xl border border-primary/10 bg-primary-fixed px-3 py-2">
+                          <div>
+                            <p class="section-label">Horarios disponibles</p>
+                            <p class="text-xs text-primary">Actualización en tiempo real · {{ availableSlotsCount() }} libres / {{ reservedSlotsCount() }} ocupadas</p>
+                          </div>
+                          <button class="btn-tertiary btn-sm" type="button" (click)="startPolling()">Actualizar</button>
+                        </div>
                         <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
                           @for (row of reservations(); track row._rowIndex) {
                             <button
@@ -288,7 +294,10 @@ interface ConfirmedBooking {
                               [disabled]="isTaken(row)"
                               (click)="selectSlot(row)"
                               class="min-h-[56px] sm:min-h-[auto]">
-                              {{ row.franja }}
+                              <span class="block">{{ row.franja }}</span>
+                              @if (isTaken(row)) {
+                                <span class="mt-1 block text-[10px] uppercase tracking-[0.12em] opacity-75">Ocupado</span>
+                              }
                             </button>
                           }
 
@@ -602,6 +611,8 @@ export class BookingComponent implements OnInit, OnDestroy {
     { value: 4, label: 'Listo' },
   ] as const;
   readonly serviceFilter = signal<'all' | 'popular' | 'quick' | 'premium'>('all');
+  readonly availableSlotsCount = computed(() => this.reservations().filter(row => !this.isTaken(row)).length);
+  readonly reservedSlotsCount = computed(() => this.reservations().filter(row => this.isTaken(row)).length);
   readonly instructionItems = [
     {
       order: '01',
@@ -673,7 +684,7 @@ export class BookingComponent implements OnInit, OnDestroy {
     });
   }
 
-  private readonly POLL_MS = 30_000;
+  private readonly POLL_MS = 15_000;
   private pollSub?: Subscription;
 
   startPolling(): void {
@@ -695,8 +706,8 @@ export class BookingComponent implements OnInit, OnDestroy {
   }
 
   isTaken(row: Reservation): boolean {
-    const d = row.disponibilidad.toLowerCase();
-    return d.includes('ocup') || d.includes('reserv') || d.includes('conf') || d.includes('pend');
+    const d = (row.disponibilidad ?? '').toLowerCase();
+    return d.includes('ocup') || d.includes('reserv') || d.includes('conf') || d.includes('pend') || d.includes('book') || d.includes('taken');
   }
 
   slotClass(row: Reservation): string {
@@ -850,6 +861,12 @@ export class BookingComponent implements OnInit, OnDestroy {
     this.submitting.set(true);
     this.api.createBusinessReservation(this.businessId, payload).subscribe({
       next: () => {
+        const selected = this.selectedSlot();
+        if (selected) {
+          this.reservations.set(
+            this.reservations().map(row => row._rowIndex === selected._rowIndex ? { ...row, disponibilidad: 'Reservado' } : row)
+          );
+        }
         this.confirmed.set(payload);
         this.reservationId.set(`RES-${Date.now()}`);
         this.toast.success('¡Reserva enviada con éxito! Ya está lista para pagar o confirmar.');
@@ -857,7 +874,8 @@ export class BookingComponent implements OnInit, OnDestroy {
         this.submitting.set(false);
       },
       error: err => {
-        this.toast.error(err.message);
+        this.toast.error(err?.message ?? 'La franja seleccionada ya no está disponible. Elige otra opción.');
+        this.startPolling();
         this.submitting.set(false);
       },
     });

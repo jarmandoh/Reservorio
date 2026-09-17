@@ -31,16 +31,18 @@ function mapPayment(row) {
   };
 }
 
+const allowedPaymentMethods = ['card', 'paypal', 'transfer', 'cash'];
+
 function normalizePaymentInput(payload = {}) {
   const bookingId = String(payload.bookingId ?? '').trim();
   const providerId = String(payload.providerId ?? '').trim();
   const customerId = String(payload.customerId ?? '').trim();
   const amount = Number(payload.amount ?? 0);
   const currency = String(payload.currency ?? 'EUR').trim().toUpperCase();
-  const method = String(payload.method ?? 'card').trim();
+  const method = String(payload.method ?? 'card').trim().toLowerCase();
   const status = String(payload.status ?? 'pending').trim();
 
-  return { bookingId, providerId, customerId, amount, currency, method, status };
+  return { bookingId, providerId, customerId, amount, currency, method: allowedPaymentMethods.includes(method) ? method : 'card', status };
 }
 
 function upsertFallbackPayment(payment) {
@@ -89,7 +91,7 @@ async function createPayment(payload = {}) {
     return { ok: false, status: 400, message: 'amount debe ser un número mayor que 0' };
   }
 
-  if (!['card', 'transfer', 'cash'].includes(method)) {
+  if (!allowedPaymentMethods.includes(method)) {
     return { ok: false, status: 400, message: 'method inválido' };
   }
 
@@ -153,6 +155,8 @@ async function createCheckoutSession(payload = {}) {
   const successUrl = String(payload.successUrl || `${process.env.FRONTEND_URL || 'http://localhost:4200'}/payment/success?bookingId=${encodeURIComponent(bookingId)}`);
   const cancelUrl = String(payload.cancelUrl || `${process.env.FRONTEND_URL || 'http://localhost:4200'}/payment/cancel?bookingId=${encodeURIComponent(bookingId)}`);
 
+  const paymentMethodTypes = method === 'paypal' ? ['paypal'] : ['card'];
+
   if (stripeClient) {
     try {
       const session = await stripeClient.checkout.sessions.create({
@@ -164,7 +168,7 @@ async function createCheckoutSession(payload = {}) {
             unit_amount: Math.round(amount * 100),
             product_data: {
               name: `Reserva ${bookingId}`,
-              description: `Pago para ${providerId}`,
+              description: `Pago para ${providerId} · ${method}`,
             },
           },
         }],
@@ -175,8 +179,9 @@ async function createCheckoutSession(payload = {}) {
           providerId,
           customerId,
           paymentId: paymentRecord.data?.id || `pay-${Date.now()}`,
+          method,
         },
-        payment_method_types: ['card'],
+        payment_method_types: paymentMethodTypes,
       });
 
       return {
@@ -231,6 +236,7 @@ async function processWebhook({ rawBody, signature, event }) {
   const bookingId = String(metadata.bookingId || session.bookingId || '').trim();
   const providerId = String(metadata.providerId || '').trim();
   const customerId = String(metadata.customerId || '').trim();
+  const method = String(metadata.method || 'card').trim().toLowerCase();
   const status = session.payment_status === 'paid' ? 'paid' : 'pending';
 
   if (!bookingId || !providerId || !customerId) {
@@ -244,7 +250,7 @@ async function processWebhook({ rawBody, signature, event }) {
     customerId,
     amount: Number((session.amount_total || 0) / 100) || 0,
     currency: String(session.currency || 'EUR').toUpperCase(),
-    method: 'card',
+    method: allowedPaymentMethods.includes(method) ? method : 'card',
     status,
     createdAt: new Date().toISOString(),
   };

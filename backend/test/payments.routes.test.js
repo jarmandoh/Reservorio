@@ -33,6 +33,22 @@ describe('Payments API', () => {
     expect(response.body.data.status).toBe('pending');
   });
 
+  test('POST /api/payments accepts alternative payment methods', async () => {
+    const response = await request(app).post('/api/payments').send({
+      bookingId: 'booking-paypal',
+      providerId: 'negocio_1',
+      customerId: 'cliente_1',
+      amount: 89,
+      currency: 'EUR',
+      method: 'paypal',
+      status: 'pending',
+    });
+
+    expect(response.status).toBe(201);
+    expect(response.body.ok).toBe(true);
+    expect(response.body.data.method).toBe('paypal');
+  });
+
   test('POST /api/payments/checkout creates a checkout intent in dev fallback mode', async () => {
     const response = await request(app)
       .post('/api/payments/checkout')

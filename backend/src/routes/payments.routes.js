@@ -7,13 +7,15 @@ const { listPayments, createPayment, createCheckoutSession, processWebhook } = r
 
 const router = express.Router();
 
+const allowedPaymentMethods = ['card', 'paypal', 'transfer', 'cash'];
+
 const paymentValidators = [
   body('bookingId').trim().notEmpty().withMessage('bookingId requerido'),
   body('providerId').trim().notEmpty().withMessage('providerId requerido'),
   body('customerId').trim().notEmpty().withMessage('customerId requerido'),
   body('amount').isFloat({ min: 0 }).withMessage('amount inválido'),
   body('currency').optional().trim().isLength({ min: 3, max: 3 }).withMessage('currency inválido'),
-  body('method').isIn(['card', 'transfer', 'cash']).withMessage('method inválido'),
+  body('method').isIn(allowedPaymentMethods).withMessage('method inválido'),
   body('status').optional().isIn(['pending', 'paid', 'failed']).withMessage('status inválido'),
   handleValidation,
 ];
@@ -24,7 +26,7 @@ const checkoutValidators = [
   body('customerId').trim().notEmpty().withMessage('customerId requerido'),
   body('amount').isFloat({ min: 0 }).withMessage('amount inválido'),
   body('currency').optional().trim().isLength({ min: 3, max: 3 }).withMessage('currency inválido'),
-  body('method').optional().isIn(['card', 'transfer', 'cash']).withMessage('method inválido'),
+  body('method').optional().isIn(allowedPaymentMethods).withMessage('method inválido'),
   body('successUrl').optional().isURL({ require_protocol: true, require_tld: false }).withMessage('successUrl inválida'),
   body('cancelUrl').optional().isURL({ require_protocol: true, require_tld: false }).withMessage('cancelUrl inválida'),
   handleValidation,

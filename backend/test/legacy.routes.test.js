@@ -45,6 +45,18 @@ describe('Legacy routes', () => {
     expect(db.query).toHaveBeenCalledTimes(2);
   });
 
+  test('POST /api/reservations rejects a duplicate occupied slot', async () => {
+    db.query.mockResolvedValueOnce({ rows: [{ id: 99 }] });
+
+    const response = await request(app)
+      .post('/api/reservations')
+      .send({ businessId: 'negocio1', franja: '09:00', cliente: 'Juan', telefono: '+1234567890', servicio: 'Corte', notas: '' });
+
+    expect(response.status).toBe(409);
+    expect(response.body.ok).toBe(false);
+    expect(response.body.message).toBe('Franja no disponible');
+  });
+
   test('PUT /api/reservations/:id allows admin update', async () => {
     const token = sign({ role: 'admin' });
     db.query
