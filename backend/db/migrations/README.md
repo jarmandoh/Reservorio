@@ -7,6 +7,8 @@ Este directorio contiene el esquema productivo del marketplace.
 1. Ejecutar el esquema base actual de la aplicación existente (`backend/db/init.sql`)
 2. Ejecutar esta migración para normalizar entidades reales:
    - `001_marketplace_schema.sql`
+3. Ejecutar el bloqueo de disponibilidad (anti doble-reserva):
+   - `002_availability_locks.sql`
 
 ## Ejecución manual
 

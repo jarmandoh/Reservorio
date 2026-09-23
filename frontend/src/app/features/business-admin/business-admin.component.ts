@@ -323,7 +323,18 @@ type negocioTab = 'reservas' | 'servicios' | 'perfil' | 'google';
                     <td class="px-4 py-3 hidden sm:table-cell">{{ r.cliente || '—' }}</td>
                     <td class="px-4 py-3 hidden md:table-cell text-on-surface-variant">{{ r.servicio || '—' }}</td>
                     <td class="px-4 py-3"><app-badge [status]="r.disponibilidad" /></td>
-                    <td class="px-4 py-3 text-right">
+                    <td class="px-4 py-3 text-right whitespace-nowrap">
+                      @if (r.disponibilidad.toLowerCase().includes('pend') || r.disponibilidad.toLowerCase().includes('reserv')) {
+                        <button class="btn-primary btn-sm mr-1" (click)="setResStatus(r, 'Confirmado')">Confirmar</button>
+                        <button class="btn-tertiary btn-sm mr-1" (click)="setResStatus(r, 'Cancelado')">Rechazar</button>
+                      }
+                      @if (r.telefono) {
+                        <a href="{{ contactHref(r) }}" target="_blank" rel="noopener" class="btn-tertiary btn-sm mr-1"
+                           [attr.title]="'Contactar a ' + (r.cliente || 'el cliente') + ' por WhatsApp'">
+                          <span class="material-icons-round text-base">chat</span>
+                          <span class="hidden lg:inline">Contactar</span>
+                        </a>
+                      }
                       <button class="text-primary hover:underline text-xs font-medium"
                               (click)="openResModal(r)">Editar</button>
                     </td>
@@ -1190,9 +1201,30 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
         this.savingRes.set(false);
         this.closeResModal();
         this.loadReservations();
+        this.loadNotifications();
       },
       error: err => { this.toast.error(err?.error?.message ?? 'Error'); this.savingRes.set(false); },
     });
+  }
+
+  setResStatus(r: Reservation, estado: 'Confirmado' | 'Cancelado'): void {
+    this.businessAdminService.updateReservationStatus(this.negocioId, {
+      rowIndex:       r._rowIndex,
+      disponibilidad: estado,
+      notas:          r.notas ?? '',
+    }, this.token).subscribe({
+      next: () => {
+        this.toast.success(estado === 'Confirmado' ? 'Reserva confirmada' : 'Reserva cancelada');
+        this.loadReservations();
+        this.loadNotifications();
+      },
+      error: err => { this.toast.error(err?.error?.message ?? 'Error al actualizar la reserva'); },
+    });
+  }
+
+  contactHref(r: Reservation): string {
+    const phone = String(r.telefono ?? '').replace(/\s+/g, '').replace(/^\+/, '');
+    return phone ? `https://wa.me/${phone}` : '';
   }
 
   // ── Google Sheets ──────────────────────────────────────────────

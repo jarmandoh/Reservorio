@@ -33,6 +33,7 @@ const appMetrics = {
   startTime: Date.now(),
   requests: 0,
   errors: 0,
+  statusCodes: {},
 };
 
 function validateRuntimeConfig() {
@@ -45,6 +46,11 @@ function validateRuntimeConfig() {
 
     if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
       throw new Error('JWT_SECRET debe tener al menos 32 caracteres en producción');
+    }
+
+    const adminPin = String(process.env.ADMIN_PIN ?? '');
+    if (!adminPin || adminPin === '1234' || adminPin.length < 6) {
+      throw new Error('ADMIN_PIN debe configurarse con una clave segura (≠ 1234, ≥ 6 caracteres) en producción');
     }
 
     if (!process.env.CORS_ORIGINS || !process.env.CORS_ORIGINS.split(',').map(v => v.trim()).filter(Boolean).length) {
@@ -88,12 +94,29 @@ app.use('/api/', limiter);
 app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json({ limit: '10kb' }));
 
-// ── Request tracing + counters ──────────────────────────────────────────────
+// ── Request tracing + counters + logging estructurado ───────────────────────
 app.use((req, res, next) => {
   req.requestId = req.headers['x-request-id'] || randomUUID();
   res.set('X-Request-Id', req.requestId);
   appMetrics.requests += 1;
-  console.log(`[${req.requestId}] ${req.method} ${req.originalUrl}`);
+  const startTime = process.hrtime.bigint();
+
+  res.on('finish', () => {
+    const durationMs = Number(process.hrtime.bigint() - startTime) / 1e6;
+    appMetrics.statusCodes[res.statusCode] = (appMetrics.statusCodes[res.statusCode] || 0) + 1;
+    if (res.statusCode >= 500) appMetrics.errors += 1;
+
+    console.log(JSON.stringify({
+      level: res.statusCode >= 500 ? 'error' : res.statusCode >= 400 ? 'warn' : 'info',
+      ts: new Date().toISOString(),
+      requestId: req.requestId,
+      method: req.method,
+      url: req.originalUrl,
+      status: res.statusCode,
+      durationMs: Math.round(durationMs * 10) / 10,
+    }));
+  });
+
   next();
 });
 
@@ -145,6 +168,7 @@ app.get('/metrics', (_req, res) => {
     uptime: process.uptime(),
     requests: appMetrics.requests,
     errors: appMetrics.errors,
+    statusCodes: appMetrics.statusCodes,
     startedAt: new Date(appMetrics.startTime).toISOString(),
     memory: {
       rss: memory.rss,
@@ -155,11 +179,6 @@ app.get('/metrics', (_req, res) => {
     nodeVersion: process.version,
     platform: process.platform,
   });
-});
-
-app.use((err, req, res, next) => {
-  appMetrics.errors += 1;
-  return errorHandler(err, req, res, next);
 });
 
 // ── 404 ───────────────────────────────────────────────────────────────────────

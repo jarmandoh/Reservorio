@@ -25,5 +25,7 @@ describe('Monitoring endpoints', () => {
     expect(response.body.service).toBe('reservorio-api');
     expect(response.body.uptime).toEqual(expect.any(Number));
     expect(response.body.memory).toHaveProperty('rss');
+    expect(response.body.statusCodes).toBeDefined();
+    expect(response.body.requests).toBeGreaterThanOrEqual(1);
   });
 });

@@ -11,8 +11,8 @@ function sign(payload, expiresIn = '8h') {
   return jwt.sign(payload, SECRET, { expiresIn });
 }
 
-function verify(token) {
-  return jwt.verify(token, SECRET);
+function verify(token, options = {}) {
+  return jwt.verify(token, SECRET, { algorithms: ['HS256'], ...options });
 }
 
 module.exports = { sign, verify };

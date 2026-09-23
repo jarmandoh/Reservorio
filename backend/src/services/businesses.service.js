@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const { sign } = require('../middleware/jwt');
 const { clean } = require('../middleware/sanitize');
 const { syncInBackground } = require('./syncService');
+const { createNotification } = require('./notifications.service');
 const businessRepository = require('../repositories/business.repository');
 const db = require('../db');
 
@@ -228,13 +229,32 @@ async function createReservation(businessId, payload) {
     return { ok: false, status: 404, message: 'Negocio no encontrado' };
   }
 
-  const { rows: taken } = await businessRepository.checkReservationSlotTaken(businessId, franja);
-  if (taken.length) {
+  let rows;
+  try {
+    const result = await businessRepository.createReservation(businessId, franja, cliente, telefono, servicio, notas);
+    rows = result.rows;
+  } catch (error) {
+    if (String(error.code) === '23505') {
+      return { ok: false, status: 409, message: 'Franja no disponible' };
+    }
+    throw error;
+  }
+
+  if (!rows.length) {
     return { ok: false, status: 409, message: 'Franja no disponible' };
   }
 
-  const { rows } = await businessRepository.createReservation(businessId, franja, cliente, telefono, servicio, notas);
   syncInBackground(businessId, 'reservations');
+
+  await createNotification({
+    businessId,
+    type: 'booking_created',
+    channel: 'in_app',
+    title: 'Nueva reserva',
+    message: `${cliente || 'Un cliente'} pidió la franja de las ${franja}.`,
+    status: 'queued',
+  });
+
   return { ok: true, status: 201, data: rows[0] };
 }
 
@@ -244,6 +264,21 @@ async function updateReservation(businessId, reservationId, payload) {
     return { ok: false, status: 404, message: 'Reserva no encontrada' };
   }
   syncInBackground(businessId, 'reservations');
+
+  const estado = String(payload.disponibilidad ?? '').trim().toLowerCase();
+  if (estado === 'confirmado' || estado === 'cancelado') {
+    await createNotification({
+      businessId,
+      type: estado === 'confirmado' ? 'booking_confirmed' : 'booking_cancelled',
+      channel: 'in_app',
+      title: estado === 'confirmado' ? 'Reserva confirmada' : 'Reserva cancelada',
+      message: estado === 'confirmado'
+        ? `La reserva de las ${result.rows[0].franja} fue confirmada.`
+        : `La reserva de las ${result.rows[0].franja} fue cancelada.`,
+      status: 'queued',
+    });
+  }
+
   return { ok: true, status: 200, data: result.rows[0] };
 }
 

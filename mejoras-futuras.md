@@ -22,11 +22,11 @@ Este documento recoge una lista de mejoras para implementar en fases posteriores
 - Añadir filtros por tipo de servicio, precio y horario.
 - Priorizar servicios recomendados según demanda.
 
-## 5. Añadir notificaciones automáticas
-- Confirmación por email.
-- Recordatorios del evento.
-- Notificaciones internas para proveedores.
-- Mensajes opcionales por WhatsApp o SMS.
+## 5. Añadir notificaciones automáticas ⚠️ (parcial)
+- ✅ Notificaciones internas para proveedores (panel + automáticas al crear reserva, confirmar/cancelar y al cobrar).
+- ✅ Recordatorios del evento (endpoint `/notifications/reminder`).
+- ⬜ Confirmación por email.
+- ⬜ Mensajes opcionales por WhatsApp o SMS.
 
 ## 6. Mejorar la experiencia móvil
 - Botones más grandes y cómodos para usar con una mano.
@@ -39,17 +39,17 @@ Este documento recoge una lista de mejoras para implementar en fases posteriores
 - Seguridad en pagos.
 - Políticas de cancelación o reembolso.
 
-## 8. Mejorar la gestión de disponibilidad real
-- Evitar reservas duplicadas.
+## 8. Mejorar la gestión de disponibilidad real ✅
+- Evitar reservas duplicadas (índices únicos parciales en `reservations` y `bookings` → 409 en doble reserva).
 - Actualizar disponibilidad en tiempo real.
 - Bloquear horarios ocupados automáticamente.
 
-## 9. Mejorar el panel del proveedor
+## 9. Mejorar el panel del proveedor ✅
 - Agrupar reservas por estado, día y servicio.
-- Permitir confirmar, rechazar o contactar al cliente.
+- Permitir confirmar, rechazar o contactar al cliente (acciones rápidas + WhatsApp).
 - Añadir filtros rápidos y dashboard de resumen.
 
-## 10. Añadir analytics y métricas de negocio
+## 10. Añadir analytics y métricas de negocio ✅
 - Tasa de reserva.
 - Tasa de pago.
 - Abandono por paso.
@@ -77,19 +77,19 @@ Este documento recoge una lista de mejoras para implementar en fases posteriores
 - Gestión de proveedores y servicios.
 - Moderación de contenido, reseñas y pagos.
 
-## 15. Mejorar la seguridad y cumplimiento
-- Auditar tokens, sesiones y permisos.
-- Revisar validaciones del backend.
-- Añadir logs estructurados y alertas.
-- Preparar requisitos para producción y cumplimiento legal.
+## 15. Mejorar la seguridad y cumplimiento ✅
+- Auditar tokens, sesiones y permisos (JWT fijado a HS256, rate limiting estricto en auth/PIN).
+- Revisar validaciones del backend (validators + sanitize + límite de body 10kb).
+- Añadir logs estructurados y alertas (JSON por request, /metrics con status codes, X-Request-Id).
+- Preparar requisitos para producción y cumplimiento legal (validación de config en arranque; GDPR pendiente).
 
 ## 16. Añadir sincronización local opcional
 - Permitir que ciertos datos queden accesibles sin conexión.
 - Sincronizar cuando haya conexión disponible.
 - Ideal para uso en áreas con red inestable.
 
-## 17. Mejorar la documentación técnica y de producto
-- Documentar endpoints REST.
+## 17. Mejorar la documentación técnica y de producto ✅
+- Documentar endpoints REST (backend/README.md + docs/API.md).
 - Documentar flujos clave de negocio.
 - Añadir guía de instalación y despliegue.
 - Definir convenciones de trabajo en equipo.
@@ -104,11 +104,11 @@ Este documento recoge una lista de mejoras para implementar en fases posteriores
 - Permitir que cada negocio tenga su propio catálogo y disponibilidad.
 - Tener una vista global del marketplace.
 
-## 20. Preparar despliegue y operaciones reales
-- Variables de entorno bien definidas.
-- Backups automatizados.
-- Monitoreo de errores y rendimiento.
-- Pipeline CI/CD para despliegue seguro.
+## 20. Preparar despliegue y operaciones reales ✅
+- Variables de entorno bien definidas (.env.example, .env.production.example).
+- Backups automatizados (scripts/backup.sh con pg_dump + retención + cron).
+- Monitoreo de errores y rendimiento (/health, /metrics, logs JSON con X-Request-Id).
+- Pipeline CI/CD para despliegue seguro (.github/workflows/ci.yml).
 
 ## Prioridad recomendada
 
@@ -119,16 +119,16 @@ Este documento recoge una lista de mejoras para implementar en fases posteriores
 - ✅ Trust signals
 
 ### Fase 2: Operación y negocio
-- Panel del proveedor
-- Notificaciones
-- Gestión de disponibilidad
-- Analytics
+- ✅ Panel del proveedor
+- ⚠️ Notificaciones (internas ✅; email/WhatsApp pendientes)
+- ✅ Gestión de disponibilidad
+- ✅ Analytics
 
 ### Fase 3: Escalabilidad y producción
-- Seguridad
-- Monitoreo
+- ✅ Seguridad
+- ✅ Monitoreo
 - ✅ Marketplace multi-proveedor
-- Despliegue y documentación
+- ✅ Despliegue y documentación
 
 ## Resumen
 

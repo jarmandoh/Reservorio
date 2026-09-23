@@ -22,7 +22,7 @@ La API está construida sobre Node.js 22 + Express y usa PostgreSQL para persist
 ```text
 backend/
 ├── src/
-│   ├── index.js              # arranque de la API
+│   ├── index.js              # arranque de la API (health, metrics, logging)
 │   ├── db.js                 # Pool de PostgreSQL
 │   ├── controllers/          # handlers HTTP
 │   ├── services/             # lógica de negocio
@@ -34,7 +34,10 @@ backend/
 │   ├── init.sql              # esquema base actual
 │   └── migrations/
 │       ├── README.md
-│       └── 001_marketplace_schema.sql
+│       ├── 001_marketplace_schema.sql
+│       └── 002_availability_locks.sql
+├── scripts/
+│   └── backup.sh             # copias de seguridad pg_dump
 ├── test/
 ├── package.json
 ├── Dockerfile
@@ -180,7 +183,33 @@ payments (
 ### Bookings
 
 - `GET /api/bookings`
-- `POST /api/bookings`
+- `POST /api/bookings` — crea reserva y notificación; devuelve **409** si la franja ya está tomada.
+
+### Payments
+
+- `POST /api/payments/checkout` — crea sesión de pago (Stripe).
+- `POST /api/payments/webhook` — recibe eventos de Stripe y emite notificación al confirmarse `paid`.
+- `GET /api/payments` / `POST /api/payments` — registro de pagos.
+
+### Notifications
+
+- `GET /api/notifications?businessId=...&bookingId=...`
+- `POST /api/notifications` — crear notificación interna.
+- `POST /api/notifications/reminder` — recordatorio de reserva.
+
+Las reservas generan notificaciones automáticas: al crear (`booking_created`), al confirmar/cancelar (`booking_confirmed` / `booking_cancelled`) y al cobrar (`payment_received`).
+
+### Ratings
+
+- `GET /api/ratings/:businessId`
+- `GET /api/ratings/:businessId/average`
+- `POST /api/ratings/:businessId`
+
+### Businesses (trust signals)
+
+- `PATCH /api/businesses/:id/verify` — marca un negocio como verificado (solo admin).
+- `PATCH /api/businesses/:id/toggle` — activa/desactiva (solo admin).
+- `PUT /api/businesses/:id` — `rating`/`reviews` solo los acepta el rol `admin` (evita trust signals falsas).
 
 ### Legacy compatibility
 
@@ -256,7 +285,37 @@ La migración recomendada está en:
 
 ---
 
-## 9. Validación
+## 9. Operación y monitoreo
+
+### Health y métricas
+
+- `GET /health` — estado del servicio y conexión a PostgreSQL.
+- `GET /metrics` — uptime, requests, errores de proceso, **desglose por status code**, uso de memoria y versión de Node.
+
+### Logging estructurado
+
+Cada request registra una línea JSON con `requestId`, método, URL, status y duración en ms. El mismo `requestId` se expone en la cabecera `X-Request-Id` para correlacionar fallos con las trazas.
+
+### Backups
+
+```bash
+DATABASE_URL="postgres://reservorio:reservorio_pass@localhost:5432/reservorio" \
+  ./scripts/backup.sh
+```
+
+Genera un dump `pg_dump` con marca de tiempo en `backend/backups/`, retiene 14 días por defecto y es programable con cron (instrucciones en el propio script).
+
+### Endurecimiento de seguridad
+
+- JWT solo acepta firmas **HS256** (`middleware/jwt.js`).
+- Rate limiting global: 60 peticiones / 15 min por IP en `/api/`.
+- Rate limiting estricto (10 / 15 min) en autenticación: `/api/auth/*` y `/api/businesses/:id/auth`.
+- En producción el arranque aborta si `JWT_SECRET` < 32 chars, `ADMIN_PIN` es el default o falta `CORS_ORIGINS`.
+- Anti doble reserva a nivel de base de datos: `002_availability_locks.sql`.
+
+---
+
+## 10. Validación
 
 Se valida con Jest y la API actual:
 
@@ -269,6 +328,6 @@ La suite actual queda verde con la capa productiva preparada.
 
 ---
 
-## 10. Recomendación final
+## 11. Recomendación final
 
 Para un despliegue real, conviene evolucionar al modelo de `providers`/`customers`/`bookings`/`payments` como fuente de verdad del marketplace, dejando las rutas legacy como compatibilidad temporal durante la migración del frontend y la lógica de negocio.

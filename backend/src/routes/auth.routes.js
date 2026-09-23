@@ -1,5 +1,6 @@
 'use strict';
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const { body } = require('express-validator');
 const { handleValidation } = require('../middleware/validation');
 const { requireAuth } = require('../middleware/auth');
@@ -7,9 +8,19 @@ const authService = require('../services/auth.service');
 
 const router = express.Router();
 
+// Límite estricto anti-fuerza bruta sobre autenticación (10 intentos / 15 min por IP)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { ok: false, message: 'Demasiados intentos de autenticación, inténtalo más tarde.' },
+});
+
 /** POST /api/auth/admin */
 router.post(
   '/admin',
+  authLimiter,
   body('pin').trim().notEmpty().withMessage('pin requerido'),
   handleValidation,
   async (req, res) => {
@@ -27,6 +38,7 @@ router.post(
 /** POST /api/auth/owner/register */
 router.post(
   '/owner/register',
+  authLimiter,
   body('name').trim().notEmpty().withMessage('name requerido'),
   body('email').trim().isEmail().withMessage('email inválido'),
   body('password').trim().isLength({ min: 6 }).withMessage('password requiere al menos 6 caracteres'),
@@ -49,6 +61,7 @@ router.post(
 /** POST /api/auth/owner/login */
 router.post(
   '/owner/login',
+  authLimiter,
   body('email').trim().isEmail().withMessage('email inválido'),
   body('password').trim().notEmpty().withMessage('password requerido'),
   handleValidation,

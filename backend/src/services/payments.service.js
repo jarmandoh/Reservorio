@@ -2,6 +2,7 @@
 
 const { randomUUID } = require('crypto');
 const db = require('../db');
+const { createNotification } = require('./notifications.service');
 
 const fallbackPayments = [];
 let stripeClient = null;
@@ -256,6 +257,19 @@ async function processWebhook({ rawBody, signature, event }) {
   };
 
   upsertFallbackPayment(payment);
+
+  if (status === 'paid') {
+    await createNotification({
+      businessId: providerId,
+      customerId,
+      bookingId,
+      type: 'payment_received',
+      channel: 'in_app',
+      title: 'Pago confirmado',
+      message: `Se recibió el pago (${payment.amount} ${payment.currency}) de la reserva.`,
+      status: 'queued',
+    });
+  }
 
   return { ok: true, status: 200, data: payment };
 }

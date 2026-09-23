@@ -113,13 +113,22 @@ Reservorio/
 ├── .npmrc
 ├── .pnpmrc
 ├── docker-compose.yml
+├── .env.production.example
+├── .github/
+│   └── workflows/ci.yml
 ├── backend/
 │   ├── .env.example
 │   ├── Dockerfile
 │   ├── package.json
 │   ├── pnpm-lock.yaml
+│   ├── scripts/
+│   │   └── backup.sh
 │   ├── db/
-│   │   └── init.sql
+│   │   ├── init.sql
+│   │   └── migrations/
+│   │       ├── README.md
+│   │       ├── 001_marketplace_schema.sql
+│   │       └── 002_availability_locks.sql
 │   └── src/
 │       ├── index.js
 │       ├── db.js
@@ -132,16 +141,25 @@ Reservorio/
 │       ├── routes/
 │       │   ├── auth.routes.js
 │       │   ├── businesses.routes.js
+│       │   ├── bookings.routes.js
 │       │   ├── categories.routes.js
+│       │   ├── customers.routes.js
 │       │   ├── google.routes.js
+│       │   ├── notifications.routes.js
+│       │   ├── payments.routes.js
+│       │   ├── providers.routes.js
+│       │   ├── ratings.routes.js
 │       │   ├── reservations.routes.js
 │       │   ├── services.routes.js
 │       │   ├── tags.routes.js
 │       │   └── ux.routes.js
 │       ├── services/
 │       │   ├── auth.service.js
+│       │   ├── bookings.service.js
 │       │   ├── businesses.service.js
 │       │   ├── googleSheets.js
+│       │   ├── notifications.service.js
+│       │   ├── payments.service.js
 │       │   └── syncService.js
 │       └── utils/
 │           └── crypto.js
@@ -218,10 +236,40 @@ chmod +x scripts/dev.sh scripts/prod.sh
 ## Seguridad
 
 - Todas las entradas del usuario pasan por `sanitize.js` antes de llegar a la base de datos. Las queries usan parámetros posicionales (`$1`, `$2`...) para prevenir inyección SQL.
-- Los tokens JWT expiran en 8 horas.
-- El backend aplica rate limiting: máximo 60 peticiones cada 15 minutos por IP en todas las rutas `/api/`.
+- Los tokens JWT expiran en 8 horas y solo aceptan firmas **HS256** (`jwt.js` fija `algorithms: ['HS256']`).
+- El backend aplica rate limiting: máximo **60 peticiones cada 15 minutos** por IP en todas las rutas `/api/`.
+- Los endpoints de autenticación (`/api/auth/admin`, `/api/auth/owner/login`, `/api/auth/owner/register`) y el login por PIN (`/api/businesses/:id/auth`) tienen un límite estricto de **10 intentos cada 15 minutos** por IP (anti fuerza bruta).
 - Las cabeceras de seguridad HTTP son gestionadas por `helmet`.
 - El PIN de cada negocio se almacena como hash bcrypt (cost factor 10), nunca en texto plano.
+- En producción el backend **aborta el arranque** si `JWT_SECRET` es débil, `ADMIN_PIN` es el default (`1234`) o no existe `CORS_ORIGINS`.
+
+---
+
+## Operación y monitoreo
+
+### Health check y métricas
+
+| Endpoint | Descripción |
+|---|---|
+| `GET /health` | Estado del servicio y conexión a PostgreSQL |
+| `GET /metrics` | Uptime, nº de requests, errores del proceso, **desglose por status code**, uso de memoria y versión de Node |
+
+Cada request emite un log **estructurado en JSON** (con `requestId`, método, URL, status y duración en ms). El `requestId` también se devuelve en la cabecera `X-Request-Id` para correlacionar errores.
+
+### Backups
+
+```bash
+DATABASE_URL="postgres://reservorio:reservorio_pass@localhost:5432/reservorio" \
+  ./backend/scripts/backup.sh
+```
+
+El script genera un dump de `pg_dump` con marca de tiempo en `backend/backups/`, conserva los últimos **14 días** por defecto y se puede programar con cron. Instrucciones completas dentro del propio script.
+
+### CI/CD
+
+El pipeline de GitHub Actions (`.github/workflows/ci.yml`) ejecuta en cada push/PR:
+- Tests del backend (`pnpm test`).
+- Build del frontend (`pnpm build`) y publica el artefacto `dist`.
 
 ---
 

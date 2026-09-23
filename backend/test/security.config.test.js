@@ -18,6 +18,7 @@ describe('Runtime security validation', () => {
     process.env.DATABASE_URL = 'postgres://user:pass@localhost:5432/reservorio';
     process.env.JWT_SECRET = 'a_very_long_and_secure_production_secret_123';
     process.env.CORS_ORIGINS = 'https://app.example.com';
+    process.env.ADMIN_PIN = 'clave-segura-9876';
 
     expect(() => validateRuntimeConfig()).not.toThrow();
   });
@@ -27,8 +28,19 @@ describe('Runtime security validation', () => {
     process.env.DATABASE_URL = 'postgres://user:pass@localhost:5432/reservorio';
     process.env.JWT_SECRET = 'short';
     process.env.CORS_ORIGINS = 'https://app.example.com';
+    process.env.ADMIN_PIN = 'clave-segura-9876';
 
     expect(() => validateRuntimeConfig()).toThrow(/JWT_SECRET/i);
+  });
+
+  test('throws when ADMIN_PIN is missing or weak in production', () => {
+    process.env.NODE_ENV = 'production';
+    process.env.DATABASE_URL = 'postgres://user:pass@localhost:5432/reservorio';
+    process.env.JWT_SECRET = 'a_very_long_and_secure_production_secret_123';
+    process.env.CORS_ORIGINS = 'https://app.example.com';
+    process.env.ADMIN_PIN = '1234';
+
+    expect(() => validateRuntimeConfig()).toThrow(/ADMIN_PIN/i);
   });
 
   test('throws when CORS origins are empty in production', () => {
@@ -36,6 +48,7 @@ describe('Runtime security validation', () => {
     process.env.DATABASE_URL = 'postgres://user:pass@localhost:5432/reservorio';
     process.env.JWT_SECRET = 'a_very_long_and_secure_production_secret_123';
     process.env.CORS_ORIGINS = '';
+    process.env.ADMIN_PIN = 'clave-segura-9876';
 
     expect(() => validateRuntimeConfig()).toThrow(/CORS_ORIGINS/i);
   });

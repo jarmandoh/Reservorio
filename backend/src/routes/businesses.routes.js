@@ -1,6 +1,7 @@
 ﻿'use strict';
 
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const { body, param } = require('express-validator');
 const { clean } = require('../middleware/sanitize');
 const { requireAdmin, requireAdminOrOwner, requireOwnerAuth, requireBusinessAuth } = require('../middleware/auth');
@@ -8,6 +9,15 @@ const { handleValidation } = require('../middleware/validation');
 const businessesService = require('../services/businesses.service');
 
 const router = express.Router();
+
+// Límite estricto anti-fuerza bruta sobre el login por PIN (10 intentos / 15 min por IP)
+const pinLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { ok: false, message: 'Demasiados intentos de PIN, inténtalo más tarde.' },
+});
 
 const businessCreateValidators = [
   body('name').trim().notEmpty().withMessage('name requerido'),
@@ -86,7 +96,7 @@ router.get('/owner', requireOwnerAuth, async (req, res) => {
 });
 
 // POST /api/businesses/:id/auth  -> login con PIN del negocio
-router.post('/:id/auth', async (req, res) => {
+router.post('/:id/auth', pinLimiter, async (req, res) => {
   const pin = String(req.body?.pin ?? '');
   if (!pin) return res.status(400).json({ ok: false, message: 'pin requerido' });
 

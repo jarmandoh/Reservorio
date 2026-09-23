@@ -75,12 +75,21 @@ async function createBooking(payload = {}) {
     }
 
     const id = randomUUID();
-    const { rows } = await db.query(
-      `INSERT INTO bookings (id, provider_id, customer_id, service_id, booking_date, slot, status, notes)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-       RETURNING *`,
-      [id, providerId, customerId, serviceId, date, slot, 'pending', notes]
-    );
+    let rows;
+    try {
+      const result = await db.query(
+        `INSERT INTO bookings (id, provider_id, customer_id, service_id, booking_date, slot, status, notes)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         RETURNING *`,
+        [id, providerId, customerId, serviceId, date, slot, 'pending', notes]
+      );
+      rows = result.rows;
+    } catch (error) {
+      if (String(error.code) === '23505') {
+        return { ok: false, status: 409, message: 'Horario no disponible, ya hay una reserva en esa franja' };
+      }
+      throw error;
+    }
 
     await createNotification({
       businessId: providerId,
