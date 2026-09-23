@@ -112,6 +112,10 @@ async function toggleBusiness(businessId) {
   return db.query('UPDATE businesses SET active = NOT active WHERE id = $1 RETURNING *', [businessId]);
 }
 
+async function setBusinessVerified(businessId, verified) {
+  return db.query('UPDATE businesses SET verified = $1 WHERE id = $2 RETURNING *', [verified, businessId]);
+}
+
 async function deleteBusiness(businessId) {
   return db.query('DELETE FROM businesses WHERE id = $1 RETURNING *', [businessId]);
 }
@@ -155,6 +159,7 @@ module.exports = {
   createBusiness,
   updateBusiness,
   toggleBusiness,
+  setBusinessVerified,
   deleteBusiness,
   listReservations,
   createReservation,

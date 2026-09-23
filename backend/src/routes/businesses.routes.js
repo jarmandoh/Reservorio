@@ -15,6 +15,7 @@ const businessCreateValidators = [
   body('pin').trim().notEmpty().withMessage('pin requerido'),
   body('rating').optional().isFloat({ min: 0, max: 5 }).withMessage('rating inválido'),
   body('reviews').optional().isInt({ min: 0 }).withMessage('reviews inválido'),
+  body('cancellationPolicy').optional().trim().isLength({ max: 500 }).withMessage('cancellationPolicy demasiado larga'),
   handleValidation,
 ];
 
@@ -23,6 +24,7 @@ const businessUpdateValidators = [
   body('rating').optional().isFloat({ min: 0, max: 5 }).withMessage('rating inválido'),
   body('reviews').optional().isInt({ min: 0 }).withMessage('reviews inválido'),
   body('pin').optional().trim().notEmpty().withMessage('pin requerido'),
+  body('cancellationPolicy').optional().trim().isLength({ max: 500 }).withMessage('cancellationPolicy demasiado larga'),
   handleValidation,
 ];
 
@@ -99,8 +101,13 @@ router.post('/:id/auth', async (req, res) => {
 // POST /api/businesses  -> crear negocio (admin o dueño)
 router.post('/', requireAdminOrOwner, businessCreateValidators, async (req, res) => {
   const ownerId = req.authPayload?.role === 'owner' ? req.authPayload.ownerId : null;
+  const body = { ...req.body };
+  if (req.authPayload?.role !== 'admin') {
+    delete body.rating;
+    delete body.reviews;
+  }
   try {
-    const result = await businessesService.createBusiness(req.body, ownerId);
+    const result = await businessesService.createBusiness(body, ownerId);
     res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (e) {
     res.status(500).json({ ok: false, message: e.message });
@@ -109,8 +116,13 @@ router.post('/', requireAdminOrOwner, businessCreateValidators, async (req, res)
 
 // PUT /api/businesses/:id  -> actualizar (admin o propio business-admin)
 router.put('/:id', requireBusinessAuth, businessUpdateValidators, async (req, res) => {
+  const body = { ...req.body };
+  if (req.authPayload?.role !== 'admin') {
+    delete body.rating;
+    delete body.reviews;
+  }
   try {
-    const result = await businessesService.updateBusiness(req.params.id, req.body);
+    const result = await businessesService.updateBusiness(req.params.id, body);
     res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (e) {
     res.status(500).json({ ok: false, message: e.message });
@@ -121,6 +133,16 @@ router.put('/:id', requireBusinessAuth, businessUpdateValidators, async (req, re
 router.patch('/:id/toggle', requireAdmin, async (req, res) => {
   try {
     const result = await businessesService.toggleBusiness(req.params.id);
+    res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
+  } catch (e) {
+    res.status(500).json({ ok: false, message: e.message });
+  }
+});
+
+// PATCH /api/businesses/:id/verify  -> marcar/desmarcar verificado (solo admin)
+router.patch('/:id/verify', requireAdmin, async (req, res) => {
+  try {
+    const result = await businessesService.setBusinessVerified(req.params.id, req.body?.verified);
     res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (e) {
     res.status(500).json({ ok: false, message: e.message });

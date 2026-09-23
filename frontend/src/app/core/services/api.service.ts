@@ -137,9 +137,9 @@ export class ApiService {
       .pipe(map(r => r.data ?? []), catchError(this.handleError));
   }
 
-  createBusiness(data: NewBusinessPayload, token: string): Observable<ApiResponse> {
+  createBusiness(data: NewBusinessPayload, token: string): Observable<ApiResponse<Business>> {
     return this.http
-      .post<ApiResponse>(`${this.base}/businesses`, data, this.authHeader(token))
+      .post<ApiResponse<Business>>(`${this.base}/businesses`, data, this.authHeader(token))
       .pipe(catchError(this.handleError));
   }
 
@@ -152,6 +152,12 @@ export class ApiService {
   toggleBusiness(id: string, token: string): Observable<ApiResponse> {
     return this.http
       .patch<ApiResponse>(`${this.base}/businesses/${id}/toggle`, {}, this.authHeader(token))
+      .pipe(catchError(this.handleError));
+  }
+
+  verifyBusiness(id: string, verified: boolean, token: string): Observable<ApiResponse> {
+    return this.http
+      .patch<ApiResponse>(`${this.base}/businesses/${id}/verify`, { verified }, this.authHeader(token))
       .pipe(catchError(this.handleError));
   }
 

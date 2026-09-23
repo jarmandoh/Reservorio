@@ -61,7 +61,7 @@ export class AdminService {
     return this.api.getAllBusinesses(token);
   }
 
-  createBusiness(payload: NewBusinessPayload, token: string): Observable<ApiResponse> {
+  createBusiness(payload: NewBusinessPayload, token: string): Observable<ApiResponse<Business>> {
     return this.api.createBusiness(payload, token);
   }
 
@@ -71,6 +71,10 @@ export class AdminService {
 
   toggleBusiness(id: string, token: string): Observable<ApiResponse> {
     return this.api.toggleBusiness(id, token);
+  }
+
+  verifyBusiness(id: string, verified: boolean, token: string): Observable<ApiResponse> {
+    return this.api.verifyBusiness(id, verified, token);
   }
 
   deleteBusiness(id: string, token: string): Observable<ApiResponse> {

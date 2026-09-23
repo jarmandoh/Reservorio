@@ -12,6 +12,7 @@ export interface BusinessAdminProfileValues {
   location: string | null;
   schedule: string | null;
   phone: string | null;
+  cancellationPolicy?: string | null;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -75,6 +76,7 @@ export class BusinessAdminService {
       location: String(values.location ?? '').trim(),
       schedule: String(values.schedule ?? '').trim(),
       phone: String(values.phone ?? '').trim(),
+      cancellationPolicy: String(values.cancellationPolicy ?? '').trim(),
     }, token);
   }
 

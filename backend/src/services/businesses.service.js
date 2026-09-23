@@ -5,6 +5,33 @@ const { sign } = require('../middleware/jwt');
 const { clean } = require('../middleware/sanitize');
 const { syncInBackground } = require('./syncService');
 const businessRepository = require('../repositories/business.repository');
+const db = require('../db');
+
+async function attachLiveRatings(rows) {
+  if (!rows || !rows.length) return rows;
+  const ids = rows.map((r) => String(r.id));
+  try {
+    const { rows: agg } = await db.query(
+      `SELECT business_id,
+              ROUND(AVG(rating)::numeric, 1) AS avg_rating,
+              COUNT(*) AS review_count
+         FROM ratings
+        WHERE business_id = ANY($1::text[])
+        GROUP BY business_id`,
+      [ids]
+    );
+    const byId = new Map(agg.map((a) => [String(a.business_id), a]));
+    return rows.map((row) => {
+      const live = byId.get(String(row.id));
+      if (live && Number(live.review_count) > 0) {
+        return { ...row, rating: Number(live.avg_rating), reviews: Number(live.review_count) };
+      }
+      return row;
+    });
+  } catch (_error) {
+    return rows;
+  }
+}
 
 function safenegocio(b) {
   return {
@@ -22,6 +49,8 @@ function safenegocio(b) {
     logo: b.logo,
     phone: b.phone,
     active: b.active,
+    verified: !!b.verified,
+    cancellationPolicy: b.cancellation_policy ?? '',
     available: 0,
     total: 0,
     routePath: `/booking/${b.id}`,
@@ -30,17 +59,20 @@ function safenegocio(b) {
 
 async function listBusinesses(filters = {}) {
   const { rows } = await businessRepository.listBusinesses(filters);
-  return { ok: true, status: 200, data: rows.map(safenegocio) };
+  const live = await attachLiveRatings(rows);
+  return { ok: true, status: 200, data: live.map(safenegocio) };
 }
 
 async function listAllBusinesses() {
   const { rows } = await businessRepository.listAllBusinesses();
-  return { ok: true, status: 200, data: rows.map(safenegocio) };
+  const live = await attachLiveRatings(rows);
+  return { ok: true, status: 200, data: live.map(safenegocio) };
 }
 
 async function listOwnerBusinesses(ownerId) {
   const { rows } = await businessRepository.listOwnerBusinesses(ownerId);
-  return { ok: true, status: 200, data: rows.map(safenegocio) };
+  const live = await attachLiveRatings(rows);
+  return { ok: true, status: 200, data: live.map(safenegocio) };
 }
 
 async function authenticateBusiness(businessId, pin) {
@@ -105,7 +137,8 @@ async function getBusinessById(businessId) {
   if (!rows.length) {
     return { ok: false, status: 404, message: 'Negocio no encontrado' };
   }
-  return { ok: true, status: 200, data: safenegocio(rows[0]) };
+  const live = await attachLiveRatings(rows);
+  return { ok: true, status: 200, data: safenegocio(live[0]) };
 }
 
 async function updateBusiness(businessId, payload) {
@@ -119,6 +152,11 @@ async function updateBusiness(businessId, payload) {
       sets.push(`${key} = $${idx++}`);
       vals.push(clean(payload[key]));
     }
+  }
+
+  if (payload?.cancellationPolicy !== undefined) {
+    sets.push(`cancellation_policy = $${idx++}`);
+    vals.push(clean(payload.cancellationPolicy));
   }
 
   if (payload?.rating !== undefined) {
@@ -156,6 +194,14 @@ async function updateBusiness(businessId, payload) {
 
 async function toggleBusiness(businessId) {
   const result = await businessRepository.toggleBusiness(businessId);
+  if (!result.rows.length) {
+    return { ok: false, status: 404, message: 'Negocio no encontrado' };
+  }
+  return { ok: true, status: 200, data: safenegocio(result.rows[0]) };
+}
+
+async function setBusinessVerified(businessId, verified) {
+  const result = await businessRepository.setBusinessVerified(businessId, !!verified);
   if (!result.rows.length) {
     return { ok: false, status: 404, message: 'Negocio no encontrado' };
   }
@@ -233,6 +279,7 @@ module.exports = {
   getBusinessById,
   updateBusiness,
   toggleBusiness,
+  setBusinessVerified,
   deleteBusiness,
   listReservations,
   createReservation,

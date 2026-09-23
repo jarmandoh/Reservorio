@@ -62,6 +62,7 @@ export class AdminComponent implements OnInit {
   readonly businesses        = signal<Business[]>([]);
   readonly businessesLoading = signal(false);
   readonly togglingBusiness  = signal<string | null>(null);
+  readonly verifyingBusiness = signal<string | null>(null);
   readonly deletingBusiness = signal<string | null>(null);
   readonly shownegocioModal      = signal(false);
   readonly editingBusiness   = signal<Business | null>(null);
@@ -135,6 +136,8 @@ export class AdminComponent implements OnInit {
     linkedin:      [''],
     icon:          ['store'],
     gradient:      ['linear-gradient(135deg,#005bbf,#1a73e8)'],
+    verified:      [false],
+    cancellationPolicy: [''],
     pin:           [''],
   });
 
@@ -275,6 +278,8 @@ export class AdminComponent implements OnInit {
         facebook: negocio.facebook ?? '', instagram: negocio.instagram ?? '', tiktok: negocio.tiktok ?? '',
         whatsapp: negocio.whatsapp ?? '', linkedin: negocio.linkedin ?? '',
         icon: negocio.icon, gradient: negocio.gradient,
+        verified: !!negocio.verified,
+        cancellationPolicy: negocio.cancellationPolicy ?? '',
         pin: '',
       });
       this.gradientFrom.set(this.extractGradientColor(negocio.gradient, 0) ?? '#005bbf');
@@ -284,6 +289,7 @@ export class AdminComponent implements OnInit {
       this.businessForm.reset({
         icon: 'store', gradient: 'linear-gradient(135deg,#005bbf,#1a73e8)',
         facebook: '', instagram: '', tiktok: '', whatsapp: '', linkedin: '',
+        verified: false, cancellationPolicy: '',
       });
       this.gradientFrom.set('#005bbf');
       this.gradientTo.set('#1a73e8');
@@ -323,6 +329,7 @@ export class AdminComponent implements OnInit {
       updates.tiktok = v.tiktok ?? '';
       updates.whatsapp = v.whatsapp ?? '';
       updates.linkedin = v.linkedin ?? '';
+      updates.cancellationPolicy = v.cancellationPolicy ?? '';
       if (v.pin) updates.pin = v.pin;
       this.adminService.updateBusiness(this.editingBusiness()!.id, updates, token).subscribe({
         next: () => {
@@ -330,6 +337,7 @@ export class AdminComponent implements OnInit {
           this.savingBusiness.set(false);
           this.closenegocioModal();
           this.loadBusinesses();
+          this.verifyAfterSave(this.editingBusiness()!.id, !!v.verified);
         },
         error: err => { this.toast.error(err.message); this.savingBusiness.set(false); },
       });
@@ -340,14 +348,17 @@ export class AdminComponent implements OnInit {
         logo: v.logo ?? '', tags: tagsArr, icon: v.icon!, gradient: gradientValue,
         facebook: v.facebook ?? '', instagram: v.instagram ?? '', tiktok: v.tiktok ?? '',
         whatsapp: v.whatsapp ?? '', linkedin: v.linkedin ?? '',
+        cancellationPolicy: v.cancellationPolicy ?? '',
         pin: v.pin!,
       };
       this.adminService.createBusiness(payload, token).subscribe({
-        next: () => {
+        next: (result) => {
           this.toast.success('Negocio creado');
           this.savingBusiness.set(false);
           this.closenegocioModal();
           this.loadBusinesses();
+          const newId = result?.data?.id;
+          if (newId) this.verifyAfterSave(newId, !!v.verified);
         },
         error: err => { this.toast.error(err.message); this.savingBusiness.set(false); },
       });
@@ -367,6 +378,33 @@ export class AdminComponent implements OnInit {
         this.toast.error(err.message);
         this.togglingBusiness.set(null);
       },
+    });
+  }
+
+  verifyBusiness(id: string): void {
+    const token = this.adminToken();
+    if (!token) return;
+    const target = this.businesses().find(b => b.id === id);
+    if (!target) return;
+    this.verifyingBusiness.set(id);
+    this.adminService.verifyBusiness(id, !target.verified, token).subscribe({
+      next: () => {
+        this.verifyingBusiness.set(null);
+        this.loadBusinesses();
+      },
+      error: err => {
+        this.toast.error(err.message);
+        this.verifyingBusiness.set(null);
+      },
+    });
+  }
+
+  private verifyAfterSave(id: string, verified: boolean): void {
+    const token = this.adminToken();
+    if (!token) return;
+    if (verified === this.businesses().find(b => b.id === id)?.verified) return;
+    this.adminService.verifyBusiness(id, verified, token).subscribe({
+      error: err => this.toast.error(err?.message ?? 'No se pudo actualizar la verificación'),
     });
   }
 

@@ -329,6 +329,13 @@
                   <div class="flex-1 min-w-0">
                     <div class="flex items-center gap-2 flex-wrap">
                       <h3 class="font-display font-bold text-base truncate">{{ negocio.name }}</h3>
+                      @if (negocio.verified) {
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold"
+                              style="background:#e6f4ea;color:#1e7e34">
+                          <span class="material-icons-round text-[12px]">verified</span>
+                          Verificado
+                        </span>
+                      }
                       <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold"
                             [style.background]="negocio.active ? '#e6f4ea' : '#f5f5f5'"
                             [style.color]="negocio.active ? '#1e7e34' : '#727785'">
@@ -356,6 +363,19 @@
                         <span class="material-icons-round text-base animate-spin">refresh</span>
                       } @else {
                         <span class="material-icons-round text-base">{{ negocio.active ? 'visibility_off' : 'visibility' }}</span>
+                      }
+                    </button>
+                    <button class="w-9 h-9 flex items-center justify-center rounded-lg transition disabled:opacity-40"
+                            [style.background]="negocio.verified ? '#e8f5e9' : '#f1f3f4'"
+                            [style.color]="negocio.verified ? '#2e7d32' : '#727785'"
+                            (click)="verifyBusiness(negocio.id)"
+                            [disabled]="verifyingBusiness() === negocio.id || !adminToken()"
+                            [attr.aria-label]="(negocio.verified ? 'Desmarcar como verificad' : 'Marcar como verificado') + ' ' + negocio.name"
+                            [attr.title]="negocio.verified ? 'Verificado: quitar marca' : 'Sin verificar: marcar como verificado'">
+                      @if (verifyingBusiness() === negocio.id) {
+                        <span class="material-icons-round text-base animate-spin">refresh</span>
+                      } @else {
+                        <span class="material-icons-round text-base">{{ negocio.verified ? 'verified' : 'verified_user' }}</span>
                       }
                     </button>
                     <button class="w-9 h-9 flex items-center justify-center rounded-lg transition disabled:opacity-40"

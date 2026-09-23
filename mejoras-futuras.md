@@ -2,22 +2,22 @@
 
 Este documento recoge una lista de mejoras para implementar en fases posteriores, priorizando crecimiento, UX, estabilidad y escalabilidad.
 
-## 1. Mejorar el flujo de reserva
+## 1. Mejorar el flujo de reserva ✅
 - Hacer el proceso más claro y guiado: servicio → horario → datos → pago → confirmación.
 - Reducir la fricción en cada paso.
 - Añadir mensajes de ayuda y validaciones más amigables.
 
-## 2. Mejorar la confirmación visual del estado
+## 2. Mejorar la confirmación visual del estado ✅
 - Mostrar estados como: Pendiente, Confirmado, Pagado, Cancelado, Rechazado.
 - Usar badges, iconos y colores distintivos por estado.
 - Mostrar la referencia de la reserva en cada pantalla relevante.
 
-## 3. Añadir pago con feedback claro
+## 3. Añadir pago con feedback claro ✅
 - Hacer visible la diferencia entre “reserva creada” y “pago completado”.
 - Mostrar mensaje antes, durante y después del pago.
 - Añadir pantalla de éxito y cancelación con resumen útil.
 
-## 4. Mejorar la comparación de servicios
+## 4. Mejorar la comparación de servicios ✅
 - Mostrar precio, duración, detalle, disponibilidad y requisitos.
 - Añadir filtros por tipo de servicio, precio y horario.
 - Priorizar servicios recomendados según demanda.
@@ -33,7 +33,7 @@ Este documento recoge una lista de mejoras para implementar en fases posteriores
 - Formularios más simples y menos campos innecesarios.
 - Menos scroll y menos elementos visuales pesados.
 
-## 7. Añadir trust signals para aumentar conversiones
+## 7. Añadir trust signals para aumentar conversiones ✅
 - Reseñas y calificaciones.
 - Verificación del negocio.
 - Seguridad en pagos.
@@ -56,7 +56,7 @@ Este documento recoge una lista de mejoras para implementar en fases posteriores
 - Servicios más demandados.
 - Horarios con mayor ocupación.
 
-## 11. Mejorar la escalabilidad de la arquitectura
+## 11. Mejorar la escalabilidad de la arquitectura ✅
 - Separar mejor servicios, repositorios y validaciones.
 - Preparar la app para crecimiento en número de negocios, reservas y usuarios.
 - Revisar caché, consultas y límites de base de datos.
@@ -70,7 +70,7 @@ Este documento recoge una lista de mejoras para implementar en fases posteriores
 ## 13. Añadir gestión de clientes y historial
 - Ver reservas pasadas.
 - Repetir servicios frecuentes.
-- Guardar preferencias y historial de contacto.
+- Guardar preferencias e historial de contacto.
 
 ## 14. Añadir panel administrativo avanzado
 - Estadísticas globales del marketplace.
@@ -99,7 +99,7 @@ Este documento recoge una lista de mejoras para implementar en fases posteriores
 - Dar una identidad más clara al negocio.
 - Mejorar la percepción de profesionalidad.
 
-## 19. Añadir soporte para marketplace multi-proveedor
+## 19. Añadir soporte para marketplace multi-proveedor ✅
 - Diferenciar claramente clientes y proveedores.
 - Permitir que cada negocio tenga su propio catálogo y disponibilidad.
 - Tener una vista global del marketplace.
@@ -113,10 +113,10 @@ Este documento recoge una lista de mejoras para implementar en fases posteriores
 ## Prioridad recomendada
 
 ### Fase 1: UX y conversión
-- Flujo de reserva
-- Confirmación visual
-- Pago con feedback claro
-- Trust signals
+- ✅ Flujo de reserva
+- ✅ Confirmación visual
+- ✅ Pago con feedback claro
+- ✅ Trust signals
 
 ### Fase 2: Operación y negocio
 - Panel del proveedor
@@ -127,8 +127,10 @@ Este documento recoge una lista de mejoras para implementar en fases posteriores
 ### Fase 3: Escalabilidad y producción
 - Seguridad
 - Monitoreo
-- Marketplace multi-proveedor
+- ✅ Marketplace multi-proveedor
 - Despliegue y documentación
 
 ## Resumen
+
 La prioridad más importante ahora mismo es mejorar la confianza del usuario desde que busca un servicio hasta que completa el pago y recibe la confirmación. Eso suele tener el mayor impacto directo en conversión y percepción de calidad.
+

@@ -431,6 +431,14 @@ type negocioTab = 'reservas' | 'servicios' | 'perfil' | 'google';
             <input type="text" class="form-input" formControlName="schedule"
                    placeholder="Ej. Lun-Vie 9:00–18:00" />
           </div>
+          <div>
+            <label class="form-label">Política de cancelación</label>
+            <textarea class="form-textarea" formControlName="cancellationPolicy" rows="2"
+                      placeholder="Ej. Cancelar hasta 24 horas antes de tu cita."></textarea>
+            <p class="text-xs text-on-surface-variant mt-1">
+              Se muestra a los clientes antes de reservar. Da claridad sobre cancelaciones y reembolsos.
+            </p>
+          </div>
           <button type="submit" class="btn-primary self-end min-h-[44px] sm:min-h-[auto]"
                   [disabled]="profileForm.invalid || savingProfile()">
             @if (savingProfile()) {
@@ -899,6 +907,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
     location:    [''],
     schedule:    [''],
     phone:       [''],
+    cancellationPolicy: [''],
   });
 
   readonly pinForm = this.fb.group({
@@ -961,6 +970,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
           location:    found.location,
           schedule:    found.schedule ?? '',
           phone:       found.phone    ?? '',
+          cancellationPolicy: found.cancellationPolicy ?? '',
         });
       },
       error: () => {
@@ -1136,6 +1146,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
       location: v.location ?? null,
       schedule: v.schedule ?? null,
       phone: v.phone ?? null,
+      cancellationPolicy: v.cancellationPolicy ?? null,
     };
     this.savingProfile.set(true);
     this.businessAdminService.saveProfile(this.negocioId, profileValues, this.token).subscribe({

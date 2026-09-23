@@ -56,4 +56,51 @@ describe('Businesses routes', () => {
     expect(response.body.data.nombre).toBe('Corte de cabello');
     expect(db.query).toHaveBeenCalledWith('INSERT INTO services (business_id, nombre) VALUES ($1, $2)', ['negocio1', 'Corte de cabello']);
   });
+
+  const baseRow = {
+    id: 'negocio1', name: 'Negocio', category: 'Belleza',
+    rating: 4.2, reviews: 3, tags: '', gradient: '', icon: '',
+    schedule: '', logo: '', phone: '', active: true,
+    verified: false, cancellation_policy: '',
+  };
+
+  test('PUT /api/businesses/:id strips rating/reviews for non-admin', async () => {
+    const token = sign({ role: 'business-admin', businessId: 'negocio1' });
+    db.query.mockResolvedValue({ rows: [baseRow] });
+
+    await request(app)
+      .put('/api/businesses/negocio1')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Negocio', rating: 5, reviews: 999 });
+
+    const updateCall = db.query.mock.calls.find(c => c[0] && String(c[0]).includes('UPDATE businesses'));
+    expect(updateCall).toBeDefined();
+    expect(String(updateCall[0])).not.toContain('rating');
+    expect(String(updateCall[0])).not.toContain('reviews');
+  });
+
+  test('PATCH /api/businesses/:id/verify denies non-admin', async () => {
+    const token = sign({ role: 'business-admin', businessId: 'negocio1' });
+
+    const response = await request(app)
+      .patch('/api/businesses/negocio1/verify')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ verified: true });
+
+    expect(response.status).toBe(403);
+  });
+
+  test('PATCH /api/businesses/:id/verify allows admin', async () => {
+    const token = sign({ role: 'admin' });
+    db.query.mockResolvedValue({ rows: [baseRow] });
+
+    const response = await request(app)
+      .patch('/api/businesses/negocio1/verify')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ verified: true });
+
+    expect(response.status).toBe(200);
+    expect(response.body.ok).toBe(true);
+    expect(db.query).toHaveBeenCalledWith('UPDATE businesses SET verified = $1 WHERE id = $2 RETURNING *', [true, 'negocio1']);
+  });
 });

@@ -59,6 +59,8 @@ export interface NewBusinessPayload {
   linkedin?:     string;
   tags?:         string[] | string;
   pin:           string;
+  verified?:     boolean;
+  cancellationPolicy?: string;
 }
 
 export interface Owner {
