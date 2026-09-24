@@ -81,6 +81,32 @@
                 </div>
               </div>
             </div>
+
+            @if (funnelSteps(); as funnel) {
+              <div class="card p-0 overflow-hidden">
+                <div class="px-5 py-4 border-b border-outline-variant/30">
+                  <h3 class="font-display font-semibold text-on-surface">Embudo de conversión</h3>
+                  <p class="text-xs text-on-surface-variant mt-0.5">Últimos {{ funnel.days }} días: de vista de negocio a reserva y a pago</p>
+                </div>
+                <div class="flex flex-col gap-4 p-5">
+                  @for (step of funnel.steps; track step.label) {
+                    <div>
+                      <div class="flex items-center justify-between gap-2 text-sm">
+                        <span class="text-on-surface-variant">{{ step.label }}</span>
+                        <span class="font-semibold text-on-surface">
+                          {{ step.value }}
+                          <span class="text-xs font-normal text-on-surface-variant">({{ step.pct }}%)</span>
+                        </span>
+                      </div>
+                      <div class="mt-2 h-2.5 rounded-full bg-surface-low overflow-hidden">
+                        <div class="h-full rounded-full bg-gradient-to-r from-primary to-success transition-all"
+                             [style.width.%]="step.pct"></div>
+                      </div>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
           }
         }
       </div>

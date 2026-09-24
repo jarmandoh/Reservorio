@@ -13,6 +13,7 @@ import {
   Customer,
   CustomerPayload,
   CustomerHistory,
+  CustomerExport,
   AdminStats,
   AdminReview,
   AdminServiceRecord,
@@ -254,7 +255,7 @@ export class ApiService {
       .pipe(catchError(this.handleError));
   }
 
-  createBusinessCheckout(negocioId: string, payload: BookingPayload & { email?: string }): Observable<ApiResponse<{ bookingId: string; customerId: string; reservationId: number }>> {
+  createBusinessCheckout(negocioId: string, payload: BookingPayload & { email?: string; dataConsent?: boolean }): Observable<ApiResponse<{ bookingId: string; customerId: string; reservationId: number }>> {
     return this.http
       .post<ApiResponse<{ bookingId: string; customerId: string; reservationId: number }>>(`${this.base}/businesses/${negocioId}/checkout`, payload)
       .pipe(catchError(this.handleError));
@@ -395,6 +396,28 @@ export class ApiService {
     return this.http
       .get<ApiResponse<CustomerHistory>>(`${this.base}/customers/${customerId}/history`, { params: httpParams, ...this.authHeader(token) })
       .pipe(map(r => r.data!));
+  }
+
+  // ── RGPD: export y borrado de datos del cliente ────────────────────────
+
+  exportCustomerData(customerId: string, token: string): Observable<CustomerExport> {
+    return this.http
+      .get<ApiResponse<CustomerExport>>(`${this.base}/customers/${customerId}/export`, this.authHeader(token))
+      .pipe(map(r => r.data!), catchError(this.handleError));
+  }
+
+  deleteCustomer(customerId: string, token: string): Observable<ApiResponse<{ id: string; anonymized: boolean }>> {
+    return this.http
+      .delete<ApiResponse<{ id: string; anonymized: boolean }>>(`${this.base}/customers/${customerId}`, this.authHeader(token))
+      .pipe(catchError(this.handleError));
+  }
+
+  // ── Analítica (embudo de conversión) ───────────────────────────────────
+
+  trackBusinessView(businessId: string): Observable<void> {
+    return this.http
+      .post<ApiResponse>(`${this.base}/analytics/view`, { businessId })
+      .pipe(map(() => undefined), catchError(() => of(undefined)));
   }
 
   // ── Admin panel (avanzado) ────────────────────────────────────────────

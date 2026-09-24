@@ -85,6 +85,20 @@ export class AdminComponent implements OnInit {
     ];
   });
 
+  readonly funnelSteps = computed<{ days: number; steps: { label: string; value: number; pct: number }[] } | null>(() => {
+    const f = this.adminStats()?.funnel;
+    if (!f) return null;
+    const views = Math.max(1, f.views);
+    return {
+      days: f.days,
+      steps: [
+        { label: 'Vistas de negocio', value: f.views, pct: 100 },
+        { label: 'Reservas', value: f.bookings, pct: Math.round((f.bookings / views) * 100) },
+        { label: 'Pagos completados', value: f.paid, pct: Math.round((f.paid / views) * 100) },
+      ],
+    };
+  });
+
   readonly paymentStats = computed(() => {
     const rows = this.payments();
     return {

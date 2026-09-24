@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /owner/
+Disallow: /admin
+Disallow: /business/
+Disallow: /customer/
+Disallow: /payment/
+
+Sitemap: https://TU-DOMINIO.EJEMPLO/sitemap.xml

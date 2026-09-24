@@ -281,8 +281,10 @@ Parámetros opcionales: `page` y `pageSize` (máx 200, default 25). Si se pasan,
 Público. Alta de cliente (se usa en el checkout):
 
 ```json
-{ "name": "Juan", "email": "juan@correo.com", "phone": "600111222" }
+{ "name": "Juan", "email": "juan@correo.com", "phone": "600111222", "dataConsent": true, "marketingConsent": false }
 ```
+
+`dataConsent` es obligatorio (`true`); sin consentimiento el backend responde `400`. `marketingConsent` es opcional. El checkout de una reserva también requiere que el negocio/proveedor aporte el consentimiento (`dataConsent`) del cliente en el cuerpo.
 
 ### `GET /api/customers/email/:email`
 
@@ -297,6 +299,18 @@ Requiere **customer**. Perfil del cliente logueado.
 Requiere **customer** (solo el propio `id`; otro id → `403`). Historial de reservas y pagos del cliente.
 
 Soporta paginación opcional con `page`/`pageSize`; cuando se usa, añade `meta: { total, page, pageSize }` a la respuesta `{ customer, bookings }`.
+
+### `GET /api/customers/:id/export`
+
+Requiere **customer** (solo el propio `id`; otro id → `403`). Exportación RGPD: devuelve una copia completa de los datos del cliente en `data`:
+
+```json
+{ "ok": true, "data": { "exportedAt": "...", "customer": {…}, "bookings": […], "payments": […], "notifications": […] } }
+```
+
+### `DELETE /api/customers/:id`
+
+Requiere **customer** (solo el propio `id`; otro id → `403`). Derecho al olvido: **anonimiza** el perfil (nombre → `Cliente eliminado`, email → `anon-<id>@eliminado.local`, teléfono vacío, consentimientos a `false`) e invalida los códigos de acceso. La respuesta es `{ "ok": true, "data": { "id": "…", "anonymized": true } }`. Los registros de pagos/reservas se conservan anonimizados (no se usan `DELETE` físicos para no romper la integridad de pagos).
 
 ---
 
@@ -416,10 +430,24 @@ Todos requieren **admin**:
 
 | Endpoint | Descripción |
 |---|---|
-| `GET /api/admin/stats` | Métricas globales |
+| `GET /api/admin/stats` | Métricas globales (incluye `funnel: { views, bookings, paid, days }` — embudo de conversión de los últimos 30 días) |
 | `GET /api/admin/payments` | Pagos del sistema |
 | `GET /api/admin/reviews` · `DELETE /api/admin/reviews/:id` | Moderación de reseñas |
 | `GET /api/admin/services` · `DELETE /api/admin/services/:serviceId` | Moderación de servicios |
+
+---
+
+## Analítica (embudo de conversión)
+
+### `POST /api/analytics/view`
+
+Público (rate limit 300/15 min). Registra una vista de negocio para el embudo:
+
+```json
+{ "businessId": "negocio-1" }
+```
+
+Los eventos se guardan en `analytics_events`; si la base no está disponible, se acumulan en memoria con recorte a 10.000. El consumo lo hace `GET /api/admin/stats` (`funnel`).
 
 ---
 

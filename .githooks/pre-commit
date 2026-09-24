@@ -1,0 +1,28 @@
+#!/usr/bin/env sh
+set -eu
+
+ROOT="$(git rev-parse --show-toplevel)"
+PRETTIER="$ROOT/frontend/node_modules/.bin/prettier"
+
+STAGED="$(git diff --cached --name-only --diff-filter=ACM)"
+
+FILES=""
+for f in $STAGED; do
+  case "$f" in
+    *.js|*.mjs|*.ts|*.html|*.json|*.md|*.css|*.scss|*.yml|*.yaml)
+      FILES="$FILES $f" ;;
+  esac
+done
+
+if [ -z "$FILES" ]; then
+  exit 0
+fi
+
+echo "Prettier: comprobando archivos staged..."
+cd "$ROOT"
+if ! "$PRETTIER" --check $FILES >/dev/null 2>&1; then
+  echo ""
+  echo "Formato incorrecto. Ejecuta y luego vuelve a hacer stage:"
+  echo "  pnpm --dir frontend format:fix"
+  exit 1
+fi

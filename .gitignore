@@ -40,13 +40,16 @@ desktop.ini
 
 # IDE / Editor
 .idea/
-.vscode/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
 *.swp
 *.swo
 *~
 
 # Docker
 pgdata/
+backups/
 
 # Angular
 .angular/cache/

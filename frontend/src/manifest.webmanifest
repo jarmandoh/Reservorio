@@ -1,0 +1,32 @@
+{
+  "name": "Reservorio · Reservas online",
+  "short_name": "Reservorio",
+  "description": "Encuentra negocios locales, consulta disponibilidad y reserva tu cita online en minutos.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#040814",
+  "theme_color": "#1a73e8",
+  "lang": "es",
+  "categories": ["business", "productivity", "local"],
+  "icons": [
+    {
+      "src": "assets/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icons/icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

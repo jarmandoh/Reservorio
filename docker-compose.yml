@@ -68,6 +68,32 @@ services:
     networks:
       - reservorio-net
 
+  backup:
+    image: postgres:16-alpine
+    container_name: reservorio-backup
+    environment:
+      PGHOST: db
+      PGPORT: 5432
+      PGUSER: reservorio
+      PGPASSWORD: reservorio_pass
+      PGDATABASE: reservorio
+    volumes:
+      - ./backups:/backups
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - reservorio-net
+    entrypoint: >
+      sh -c '
+      while true; do
+        ts=$(date +%Y%m%d-%H%M%S);
+        pg_dump -Fc -Z 9 -f "/backups/reservorio-$ts.dump" "$PGDATABASE" || echo "backup failed at $ts";
+        find /backups -name "reservorio-*.dump" -mtime +14 -delete;
+        sleep 86400;
+      done'
+
 networks:
   reservorio-net:
     driver: bridge

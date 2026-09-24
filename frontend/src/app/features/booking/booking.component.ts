@@ -6,7 +6,8 @@ import { FormsModule } from '@angular/forms';
 import {
   ReactiveFormsModule, FormBuilder, Validators, AbstractControl
 } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { Title } from '@angular/platform-browser';
 import { interval, Subscription, switchMap, startWith, catchError, of } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ApiService }   from '../../core/services/api.service';
@@ -26,7 +27,7 @@ interface ConfirmedBooking {
 
 @Component({
     selector: 'app-booking',
-    imports: [CommonModule, ReactiveFormsModule, FormsModule],
+    imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink],
     template: `
   <div class="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(26,115,232,0.26),_transparent_32%),linear-gradient(180deg,#040814_0%,#091324_52%,#0c1628_100%)] text-white">
     <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
@@ -435,6 +436,19 @@ interface ConfirmedBooking {
                         }
                       </div>
 
+                      <label class="flex cursor-pointer items-start gap-3 rounded-2xl border border-outline-variant bg-white p-3">
+                        <input id="dataConsent" type="checkbox" formControlName="dataConsent"
+                               class="mt-0.5 h-5 w-5 accent-primary" />
+                        <span class="flex-1 text-xs leading-5 text-on-surface-variant">
+                          He leído y acepto la
+                          <a routerLink="/privacy" class="font-semibold text-primary underline">política de privacidad</a>
+                          y el tratamiento de mis datos para gestionar esta reserva.
+                        </span>
+                      </label>
+                      @if (fieldInvalid('dataConsent')) {
+                        <p class="mt-1 text-xs text-error">Debes aceptar la política de privacidad</p>
+                      }
+
                       <div class="rounded-2xl border border-primary/15 bg-primary-fixed px-3 py-3 text-xs sm:text-sm text-primary">
                         Completa y envía. El negocio confirmará en minutos.
                       </div>
@@ -640,6 +654,7 @@ interface ConfirmedBooking {
 export class BookingComponent implements OnInit, OnDestroy {
   private api   = inject(ApiService);
   private toast = inject(ToastService);
+  private title = inject(Title);
   readonly Math = Math;
   private fb    = inject(FormBuilder);
   private router = inject(Router);
@@ -714,9 +729,10 @@ export class BookingComponent implements OnInit, OnDestroy {
   ] as const;
 
   readonly bookingForm = this.fb.group({
-    cliente:  ['', [Validators.required, Validators.minLength(2)]],
-    telefono: ['', [Validators.required, Validators.pattern(/^[0-9+\s\-]{7,15}$/)]],
-    notas:    [''],
+    cliente:     ['', [Validators.required, Validators.minLength(2)]],
+    telefono:    ['', [Validators.required, Validators.pattern(/^[0-9+\s\-]{7,15}$/)]],
+    notas:       [''],
+    dataConsent: [false, [Validators.requiredTrue]],
   });
 
   readonly reviewForm = this.fb.group({
@@ -745,8 +761,12 @@ export class BookingComponent implements OnInit, OnDestroy {
     this.api.getBusinesses().pipe(catchError(() => of([])), takeUntilDestroyed(this.destroyRef)).subscribe(list => {
       const found = list.find(b => b.id === this.businessId);
       if(!found) location.replace('/'); // Redirect if business not found
-      if (found) this.business.set(found);
+      if (found) {
+        this.business.set(found);
+        this.title.setTitle(`Reserva en ${found.name} — Reservorio`);
+      }
     });
+    this.api.trackBusinessView(this.businessId).subscribe();
     this.loadServices();
     this.loadReviews();
     this.loadRatingStats();
@@ -988,7 +1008,7 @@ export class BookingComponent implements OnInit, OnDestroy {
     this.bookingForm.markAllAsTouched();
     if (this.bookingForm.invalid || !this.selectedSlot() || !this.selectedService()) return;
 
-    const { cliente, telefono, notas } = this.bookingForm.value;
+    const { cliente, telefono, notas, dataConsent } = this.bookingForm.value;
     const payload: ConfirmedBooking = {
       franja:   this.selectedSlot()!.franja,
       cliente:  cliente!.trim(),
@@ -998,7 +1018,7 @@ export class BookingComponent implements OnInit, OnDestroy {
     };
 
     this.submitting.set(true);
-    this.api.createBusinessCheckout(this.businessId, payload).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    this.api.createBusinessCheckout(this.businessId, { ...payload, dataConsent: dataConsent === true }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: checkout => {
         const selected = this.selectedSlot();
         if (selected) {

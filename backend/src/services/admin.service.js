@@ -4,6 +4,15 @@ const db = require('../db');
 const { listBookings } = require('./bookings.service');
 const { listCustomers } = require('./customers.service');
 const { listPayments } = require('./payments.service');
+const { countViews } = require('./analytics.service');
+
+const FUNNEL_DAYS = 30;
+
+function firstOfWindow(entity) {
+  const cutoff = Date.now() - FUNNEL_DAYS * 24 * 60 * 60 * 1000;
+  const createdAt = entity.createdAt ? new Date(entity.createdAt).getTime() : NaN;
+  return Number.isFinite(createdAt) && createdAt >= cutoff;
+}
 
 async function getMarketplaceStats() {
   const [bookingsResult, customersResult, paymentsResult] = await Promise.all([
@@ -30,12 +39,18 @@ async function getMarketplaceStats() {
         (SELECT COUNT(*)::int FROM bookings WHERE status = 'confirmed') AS confirmed_bookings,
         (SELECT COUNT(*)::int FROM reservations) AS reservations,
         (SELECT COUNT(*)::int FROM ratings) AS reviews,
-        (SELECT COALESCE(ROUND(AVG(rating)::numeric, 1), 0)::float8 FROM ratings) AS average_rating`);
+        (SELECT COALESCE(ROUND(AVG(rating)::numeric, 1), 0)::float8 FROM ratings) AS average_rating,
+        (SELECT COUNT(*)::int FROM bookings WHERE created_at >= now() - interval '${FUNNEL_DAYS} days') AS funnel_bookings,
+        (SELECT COUNT(*)::int FROM payments WHERE status = 'paid' AND created_at >= now() - interval '${FUNNEL_DAYS} days') AS funnel_paid`);
       dbStats = rows[0];
     } catch (_error) {
       dbStats = null;
     }
   }
+
+  const views = await countViews({ days: FUNNEL_DAYS });
+  const funnelBookings = dbStats?.funnel_bookings ?? bookings.filter(firstOfWindow).length;
+  const funnelPaid = dbStats?.funnel_paid ?? payments.filter(p => p.status === 'paid' && firstOfWindow(p)).length;
 
   return {
     ok: true,
@@ -54,6 +69,12 @@ async function getMarketplaceStats() {
       revenue,
       reviews: dbStats?.reviews ?? 0,
       averageRating: dbStats?.average_rating ?? 0,
+      funnel: {
+        views,
+        bookings: funnelBookings,
+        paid: funnelPaid,
+        days: FUNNEL_DAYS,
+      },
     },
   };
 }

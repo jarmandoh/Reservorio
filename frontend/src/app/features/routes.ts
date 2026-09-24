@@ -72,5 +72,12 @@ export const featureRoutes: Routes = [
     path: 'payment/cancel',
     loadComponent: () => import('./payment-cancel/payment-cancel.component').then(m => m.PaymentCancelComponent),
   },
-  { path: '**', redirectTo: '' },
+  {
+    path: 'privacy',
+    loadComponent: () => import('./privacy/privacy.component').then(m => m.PrivacyPolicyComponent),
+  },
+  {
+    path: '**',
+    loadComponent: () => import('./not-found/not-found.component').then(m => m.NotFoundComponent),
+  },
 ];

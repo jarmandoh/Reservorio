@@ -14,7 +14,7 @@ const bookingsService = require('./bookings.service');
  * iniciar la sesión de pago, de modo que el payment quede referenciado a filas reales.
  */
 async function checkoutForBusiness(businessId, payload = {}) {
-  const { franja, cliente, telefono, servicio, notas, email } = payload ?? {};
+  const { franja, cliente, telefono, servicio, notas, email, dataConsent, marketingConsent } = payload ?? {};
 
   if (!franja || !cliente || !telefono) {
     return { ok: false, status: 400, message: 'franja, cliente y telefono son requeridos' };
@@ -29,6 +29,8 @@ async function checkoutForBusiness(businessId, payload = {}) {
     name: cliente,
     email: String(email ?? '').trim() || `guest-${reservationResult.data.id}-${Date.now()}@reservando.local`,
     phone: telefono,
+    dataConsent,
+    marketingConsent,
   });
   if (!customerResult.ok) {
     return customerResult;

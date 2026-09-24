@@ -49,9 +49,15 @@ async function createCustomer(payload = {}) {
   const name = String(payload.name ?? '').trim();
   const email = String(payload.email ?? '').trim().toLowerCase();
   const phone = String(payload.phone ?? '').trim();
+  const dataConsent = payload.dataConsent === true;
+  const marketingConsent = payload.marketingConsent === true;
 
   if (!name || !email) {
     return { ok: false, status: 400, message: 'name y email son requeridos' };
+  }
+
+  if (!dataConsent) {
+    return { ok: false, status: 400, message: 'Debes aceptar la política de privacidad (dataConsent)' };
   }
 
   if (!process.env.DATABASE_URL) {
@@ -60,6 +66,9 @@ async function createCustomer(payload = {}) {
       name,
       email,
       phone,
+      dataConsent: true,
+      consentAt: new Date().toISOString(),
+      marketingConsent,
     };
     fallbackCustomers.push(customer);
     return { ok: true, status: 201, data: customer };
@@ -73,8 +82,10 @@ async function createCustomer(payload = {}) {
 
     const id = randomUUID();
     const { rows } = await db.query(
-      'INSERT INTO customers (id, name, email, phone) VALUES ($1, $2, $3, $4) RETURNING id, name, email, phone, created_at',
-      [id, name, email, phone]
+      `INSERT INTO customers (id, name, email, phone, data_consent, consent_at, marketing_consent)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING id, name, email, phone, created_at`,
+      [id, name, email, phone, true, new Date(), marketingConsent]
     );
 
     return { ok: true, status: 201, data: rows[0] };
@@ -83,10 +94,11 @@ async function createCustomer(payload = {}) {
   }
 }
 
-async function findOrCreateCustomer({ name, email, phone } = {}) {
+async function findOrCreateCustomer({ name, email, phone, dataConsent, marketingConsent } = {}) {
   const cleanName = String(name ?? '').trim();
   const cleanEmail = String(email ?? '').trim().toLowerCase();
   const cleanPhone = String(phone ?? '').trim();
+  const hasConsent = dataConsent === true;
 
   if (!cleanName || !cleanEmail) {
     return { ok: false, status: 400, message: 'name y email son requeridos' };
@@ -95,23 +107,47 @@ async function findOrCreateCustomer({ name, email, phone } = {}) {
   if (!process.env.DATABASE_URL) {
     const existing = fallbackCustomers.find(c => c.email.toLowerCase() === cleanEmail);
     if (existing) {
+      if (hasConsent && !existing.dataConsent) {
+        existing.dataConsent = true;
+        existing.consentAt = new Date().toISOString();
+      }
       return { ok: true, status: 200, data: existing, created: false };
     }
-    const customer = { id: `cliente-${Date.now()}`, name: cleanName, email: cleanEmail, phone: cleanPhone };
+    const customer = {
+      id: `cliente-${Date.now()}`,
+      name: cleanName,
+      email: cleanEmail,
+      phone: cleanPhone,
+      dataConsent: hasConsent,
+      consentAt: hasConsent ? new Date().toISOString() : null,
+      marketingConsent: marketingConsent === true,
+    };
     fallbackCustomers.push(customer);
     return { ok: true, status: 201, data: customer, created: true };
   }
 
   try {
-    const existing = await db.query('SELECT id, name, email, phone, created_at FROM customers WHERE email = $1', [cleanEmail]);
+    const existing = await db.query(
+      'SELECT id, name, email, phone, data_consent, created_at FROM customers WHERE email = $1',
+      [cleanEmail]
+    );
     if (existing.rows.length) {
+      // Consentimiento renovado (RGPD): guardamos la aceptación si aún no consta.
+      if (hasConsent && existing.rows[0].data_consent !== true) {
+        await db.query(
+          `UPDATE customers SET data_consent = true, consent_at = now() WHERE id = $1`,
+          [existing.rows[0].id]
+        );
+      }
       return { ok: true, status: 200, data: existing.rows[0], created: false };
     }
 
     const id = randomUUID();
     await db.query(
-      'INSERT INTO customers (id, name, email, phone) VALUES ($1, $2, $3, $4) ON CONFLICT (email) DO NOTHING',
-      [id, cleanName, cleanEmail, cleanPhone]
+      `INSERT INTO customers (id, name, email, phone, data_consent, consent_at, marketing_consent)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       ON CONFLICT (email) DO NOTHING`,
+      [id, cleanName, cleanEmail, cleanPhone, hasConsent, hasConsent ? new Date() : null, marketingConsent === true]
     );
 
     const { rows } = await db.query('SELECT id, name, email, phone, created_at FROM customers WHERE email = $1', [cleanEmail]);
@@ -279,6 +315,120 @@ async function getCustomerHistory(customerId, query = {}) {
   }
 }
 
+/**
+ * Export RGPD: todos los datos personales del cliente (perfil + bookings +
+ * pagos + notificaciones). Descargable por el propio cliente.
+ */
+async function exportCustomerData(customerId) {
+  const cleanId = String(customerId ?? '').trim();
+  if (!cleanId) {
+    return { ok: false, status: 400, message: 'customerId requerido' };
+  }
+
+  if (!process.env.DATABASE_URL) {
+    const customer = fallbackCustomers.find(c => c.id === cleanId);
+    if (!customer) {
+      return { ok: false, status: 404, message: 'Cliente no encontrado' };
+    }
+    return { ok: true, status: 200, data: { customer, bookings: [], payments: [], notifications: [] } };
+  }
+
+  try {
+    const { rows: customerRows } = await db.query(
+      'SELECT id, name, email, phone, created_at, data_consent, consent_at, marketing_consent FROM customers WHERE id = $1',
+      [cleanId]
+    );
+    if (!customerRows.length) {
+      return { ok: false, status: 404, message: 'Cliente no encontrado' };
+    }
+
+    const { rows: bookings } = await db.query(
+      `SELECT b.id, b.provider_id, b.service_id, b.booking_date, b.slot, b.status, b.notes, b.created_at
+       FROM bookings b WHERE b.customer_id = $1 ORDER BY b.created_at DESC`,
+      [cleanId]
+    );
+
+    const { rows: payments } = await db.query(
+      `SELECT id, booking_id, provider_id, amount, currency, method, status, external_reference, created_at
+       FROM payments WHERE customer_id = $1 ORDER BY created_at DESC`,
+      [cleanId]
+    );
+
+    const { rows: notifications } = await db.query(
+      `SELECT id, business_id, booking_id, type, channel, title, message, status, created_at
+       FROM notifications WHERE customer_id = $1 ORDER BY created_at DESC`,
+      [cleanId]
+    );
+
+    return {
+      ok: true,
+      status: 200,
+      data: {
+        exportedAt: new Date().toISOString(),
+        customer: customerRows[0],
+        bookings,
+        payments,
+        notifications,
+      },
+    };
+  } catch (error) {
+    return { ok: false, status: 500, message: error.message };
+  }
+}
+
+/**
+ * Derecho al olvido (borrado): anonimiza el registro en lugar de borrarlo para
+ * no destruir el historial financiero ni romper las referencias de pagos.
+ * El email se vuelve irrecuperable y el cliente pierde acceso (login por email).
+ * Los códigos de acceso pendientes se invalidan.
+ */
+async function deleteCustomer(customerId) {
+  const cleanId = String(customerId ?? '').trim();
+  if (!cleanId) {
+    return { ok: false, status: 400, message: 'customerId requerido' };
+  }
+
+  if (!process.env.DATABASE_URL) {
+    const idx = fallbackCustomers.findIndex(c => c.id === cleanId);
+    if (idx === -1) {
+      return { ok: false, status: 404, message: 'Cliente no encontrado' };
+    }
+    fallbackCustomers[idx] = {
+      id: cleanId,
+      name: 'Cliente eliminado',
+      email: `anon-${cleanId}@eliminado.local`,
+      phone: '',
+      dataConsent: false,
+    };
+    return { ok: true, status: 200, data: { id: cleanId, anonymized: true } };
+  }
+
+  try {
+    const { rows } = await db.query(
+      `UPDATE customers
+       SET name = 'Cliente eliminado',
+           email = 'anon-' || id || '@eliminado.local',
+           phone = '',
+           sms_opt_in = false,
+           data_consent = false,
+           marketing_consent = false,
+           consent_at = NULL
+       WHERE id = $1
+       RETURNING id`,
+      [cleanId]
+    );
+    if (!rows.length) {
+      return { ok: false, status: 404, message: 'Cliente no encontrado' };
+    }
+
+    await db.query('DELETE FROM customer_login_codes WHERE customer_id = $1', [cleanId]);
+
+    return { ok: true, status: 200, data: { id: rows[0].id, anonymized: true } };
+  } catch (error) {
+    return { ok: false, status: 500, message: error.message };
+  }
+}
+
 module.exports = {
   listCustomers,
   createCustomer,
@@ -286,4 +436,6 @@ module.exports = {
   findCustomerByEmail,
   getCustomerProfile,
   getCustomerHistory,
+  exportCustomerData,
+  deleteCustomer,
 };

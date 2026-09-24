@@ -2,8 +2,9 @@ import {
   Component, OnInit, OnDestroy, AfterViewInit, signal, computed, inject, ElementRef
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { Title, Meta } from '@angular/platform-browser';
 import { Subscription } from 'rxjs';
 import { catchError, of } from 'rxjs';
 import { ApiService } from '../../core/services/api.service';
@@ -311,6 +312,10 @@ const CATEGORIES = ['Todos', 'Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci
       <p class="text-xs text-outline">
         Resérvame © 2026 · Tu agenda, siempre a mano
       </p>
+      <a routerLink="/privacy" class="btn-tertiary btn-sm mt-3 inline-flex items-center gap-1.5">
+        <span class="material-icons-round text-base">shield</span>
+        Política de privacidad
+      </a>
     </footer>
 
   </div>
@@ -326,6 +331,8 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   private router = inject(Router);
   private sub?: Subscription;
   private elRef = inject(ElementRef);
+  private title = inject(Title);
+  private meta  = inject(Meta);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private gsapCtx?: any;
 
@@ -367,6 +374,11 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   ngOnInit(): void {
+    this.title.setTitle('Reservorio · Reserva cita online en tus negocios favoritos');
+    this.meta.updateTag({ name: 'description', content: 'Encuentra negocios locales, consulta disponibilidad y reserva tu cita online en minutos. Gratis y sin esperas.' });
+    this.meta.updateTag({ name: 'og:title', content: 'Reservorio · Reserva cita online' });
+    this.meta.updateTag({ name: 'og:description', content: 'Encuentra negocios locales, consulta disponibilidad y reserva tu cita online en minutos.' });
+    this.meta.updateTag({ property: 'og:type', content: 'website' });
     this.loadBusinesses();
   }
 

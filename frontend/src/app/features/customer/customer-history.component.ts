@@ -1,16 +1,17 @@
 import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
+import { ToastService } from '../../core/services/toast.service';
 import { Customer, CustomerHistoryBooking } from '../../core/models/reservation.model';
 
 @Component({
   selector: 'app-customer-history',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterLink],
   template: `
     <div class="min-h-screen bg-surface p-4 sm:p-6">
       <div class="max-w-3xl mx-auto space-y-6">
@@ -54,6 +55,30 @@ import { Customer, CustomerHistoryBooking } from '../../core/models/reservation.
               @if (c.phone) {
                 <p class="text-sm text-on-surface-variant">{{ c.phone }}</p>
               }
+            </div>
+          </section>
+
+          <!-- GDPR -->
+          <section class="card p-5 space-y-3">
+            <div class="flex items-center gap-2">
+              <span class="material-icons-round text-primary">shield</span>
+              <h3 class="font-medium">Mis datos (RGPD)</h3>
+            </div>
+            <p class="text-sm text-on-surface-variant">
+              Descarga una copia completa de tus datos o elimina tu cuenta (los datos se anonimizan de forma permanente).
+              Consulta la <a routerLink="/privacy" class="font-semibold text-primary underline">política de privacidad</a>.
+            </p>
+            <div class="flex flex-col sm:flex-row gap-2">
+              <button class="btn-secondary btn-sm flex items-center gap-1.5" type="button"
+                      (click)="exportData()" [disabled]="gdprBusy()">
+                <span class="material-icons-round text-base">{{ exporting() ? 'refresh' : 'download' }}</span>
+                {{ exporting() ? 'Descargando...' : 'Exportar mis datos' }}
+              </button>
+              <button class="btn-danger btn-sm flex items-center gap-1.5" type="button"
+                      (click)="deleteData()" [disabled]="gdprBusy()">
+                <span class="material-icons-round text-base">delete_outline</span>
+                {{ deleting() ? 'Eliminando...' : 'Eliminar mi cuenta' }}
+              </button>
             </div>
           </section>
 
@@ -125,6 +150,7 @@ export class CustomerHistoryComponent implements OnInit {
   private api = inject(ApiService);
   private auth = inject(AuthService);
   private router = inject(Router);
+  private toast = inject(ToastService);
   private readonly destroyRef = inject(DestroyRef);
 
   readonly loading = signal(true);
@@ -135,6 +161,10 @@ export class CustomerHistoryComponent implements OnInit {
   readonly pageSize = signal(10);
   readonly total = signal<number | null>(null);
   readonly changingPage = signal(false);
+  readonly exporting = signal(false);
+  readonly deleting = signal(false);
+
+  readonly gdprBusy = computed(() => this.exporting() || this.deleting());
 
   private token: string | null = null;
   private customerId: string | null = null;
@@ -235,6 +265,56 @@ export class CustomerHistoryComponent implements OnInit {
 
   bookAgain(b: CustomerHistoryBooking): void {
     this.router.navigate(['/booking', b.providerId]);
+  }
+
+  exportData(): void {
+    const token = this.token;
+    const customerId = this.customerId;
+    if (!token || !customerId) return;
+
+    this.exporting.set(true);
+    this.api.exportCustomerData(customerId, token).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: data => {
+        this.exporting.set(false);
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `mis-datos-reservorio-${new Date().toISOString().slice(0, 10)}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        this.toast.success('Datos exportados.');
+      },
+      error: (err: HttpErrorResponse) => {
+        this.exporting.set(false);
+        this.toast.error(err.error?.message ?? 'No se pudo exportar tus datos.');
+      },
+    });
+  }
+
+  deleteData(): void {
+    const token = this.token;
+    const customerId = this.customerId;
+    if (!token || !customerId) return;
+    if (!window.confirm(
+      '¿Seguro que quieres eliminar tu cuenta?\n\n' +
+      'Tus datos personales se anonimizarán de forma permanente. ' +
+      'Este proceso no se puede deshacer.'
+    )) return;
+
+    this.deleting.set(true);
+    this.api.deleteCustomer(customerId, token).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: () => {
+        this.deleting.set(false);
+        this.auth.clearCustomerToken();
+        this.toast.success('Cuenta eliminada. Tus datos han sido anonimizados.');
+        this.router.navigate(['/']);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.deleting.set(false);
+        this.toast.error(err.error?.message ?? 'No se pudo eliminar tu cuenta.');
+      },
+    });
   }
 
   logout(): void {

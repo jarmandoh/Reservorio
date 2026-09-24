@@ -27,6 +27,7 @@ const paymentsRoutes    = require('./routes/payments.routes');
 const notificationsRoutes = require('./routes/notifications.routes');
 const ratingsRoutes     = require('./routes/ratings.routes');
 const adminRoutes       = require('./routes/admin.routes');
+const analyticsRoutes   = require('./routes/analytics.routes');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
 
 const app  = express();
@@ -157,6 +158,7 @@ app.use('/api/google',       googleOAuth);
 app.use('/api/categories',   categoriesRoutes);
 app.use('/api/tags',         tagsRoutes);
 app.use('/api/ux-tips',      uxRoutes);
+app.use('/api/analytics',    analyticsRoutes);
 
 // ── Health check ─────────────────────────────────────────────────────────────
 app.get('/health', async (_req, res) => {

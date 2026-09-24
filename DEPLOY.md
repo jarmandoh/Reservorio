@@ -64,11 +64,41 @@ docker compose --env-file .env.production pull
 docker compose --env-file .env.production up --build -d
 ```
 
-## 6. Backup de la base de datos
+## 6. Backup y restauración de la base de datos
+
+### Backups automáticos
+
+El servicio `backup` de docker-compose vuelca la base a diario (formato compatible con `pg_restore`) en `./backups/` y conserva **14 días** de historia:
 
 ```bash
-docker compose exec db pg_dump -U reservorio reservorio > backup.sql
+docker compose up -d backup
 ```
+
+Verifica que se generen ficheros:
+
+```bash
+ls -la backups/   # ej. reservorio-20260924-030000.dump
+```
+
+> La retención y el horario se controlan en `docker-compose.yml` (bucle `sleep 86400` y `find -mtime +14 -delete`).
+
+### Restauración manual
+
+Antes de restaurar, detén el backend para evitar escrituras concurrentes:
+
+```bash
+docker compose stop backend
+bash backend/scripts/restore.sh backups/reservorio-20260924-030000.dump
+docker compose start backend
+```
+
+El script pide confirmación, corta conexiones activas, recrea la base y aplica el volcado con `pg_restore`. **Prueba una restauración real al menos una vez en un entorno de ensayo** antes de confiar en ella en producción.
+
+### PWA, SEO y dominio
+
+- **PWA**: `ng build` genera `browser/ngsw.json` + `ngsw-worker.js`; el Service Worker se registra en producción. Tras desplegar una versión nueva, los usuarios la activan en el siguiente arranque (el SW comprueba actualizaciones).
+- **SEO**: sustituye el dominio placeholder `TU-DOMINIO.EJEMPLO` en `frontend/src/robots.txt` y `frontend/src/sitemap.xml` por el dominio real (los ficheros se copian a la raíz del sitio en el build).
+- **HTTPS**: el contenedor Nginx envía HSTS y CSP, pero solo tienen efecto sirviendo el sitio por HTTPS (usa un reverse proxy/CDN con TLS real; el `Strict-Transport-Security` se ignora en HTTP simple).
 
 ## 7. Reset rápido
 

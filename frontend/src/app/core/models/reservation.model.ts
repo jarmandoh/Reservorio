@@ -138,6 +138,13 @@ export interface NotificationItem {
   sentAt?: string | null;
 }
 
+export interface AdminFunnel {
+  views: number;
+  bookings: number;
+  paid: number;
+  days: number;
+}
+
 export interface AdminStats {
   businesses: number;
   activeBusinesses: number;
@@ -152,6 +159,50 @@ export interface AdminStats {
   revenue: number;
   reviews: number;
   averageRating: number;
+  funnel?: AdminFunnel;
+}
+
+export interface CustomerExportBooking {
+  id: string;
+  provider_id: string;
+  service_id: string;
+  booking_date: string;
+  slot: string;
+  status: string;
+  notes?: string;
+  created_at: string;
+}
+
+export interface CustomerExportPayment {
+  id: string;
+  booking_id: string;
+  provider_id: string;
+  amount: number;
+  currency: string;
+  method: PaymentMethod;
+  status: PaymentStatus;
+  external_reference?: string;
+  created_at: string;
+}
+
+export interface CustomerExportNotification {
+  id: string;
+  business_id: string;
+  booking_id?: string;
+  type: string;
+  channel: string;
+  title: string;
+  message: string;
+  status: string;
+  created_at: string;
+}
+
+export interface CustomerExport {
+  exportedAt: string;
+  customer: Customer;
+  bookings: CustomerExportBooking[];
+  payments: CustomerExportPayment[];
+  notifications: CustomerExportNotification[];
 }
 
 export interface AdminReview {

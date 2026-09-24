@@ -6,7 +6,7 @@ Documento vivo: cada mejora marcada con ✅ indica trabajo completado y verifica
 
 ## Estado actual (resumen)
 
-- **Backend**: Node 22 + Express 5 + PostgreSQL 16. **29 suites / 134 tests** (jest, `--runInBand`; suite de integración real solo en CI, gate `RUN_INTEGRATION=1`).
+- **Backend**: Node 22 + Express 5 + PostgreSQL 16. **31 suites / 149 tests** (jest, `--runInBand`; suite de integración real solo en CI, gate `RUN_INTEGRATION=1`).
 - **Frontend**: Angular 22 (Standalone + Signals) + Tailwind 3 + GSAP + Leaflet. Build OK, specs **vitest + jsdom** (`ng test --watch=false`), e2e Playwright en CI.
 - **CI**: `.github/workflows/ci.yml` → service container PostgreSQL + `db:migrate` + tests (con integración real) + build frontend + **`ng test`** + **job E2E Playwright** en cada push/PR.
 - **Migraciones**: `backend/db/migrate.js` + `backend/db/migrations/`. Docs: `README.md`, `backend/README.md`, `frontend/README.md`, `docs/API.md`, `docs/DEVELOPERS.md`, `docs/GUIA-ADMIN.md`, `SECURITY_CHECKLIST.md`, `DEPLOY.md`.
@@ -36,6 +36,8 @@ Documento vivo: cada mejora marcada con ✅ indica trabajo completado y verifica
 > Registro reciente con verificación: panel de cliente (24 suites/90 tests) y notificaciones/OTP (26 suites/111 tests) — ambas con build Angular OK, realizadas el 24/09/2026.
 >
 > Lote 24/09/2026 (2ª ronda): backoff OTP, pino, paginación, Docker multi-stage, vitest unificado, modo oscuro, CSV, i18n y E2E en CI. Verificado: **29 suites / 134 tests PASS** (backend), `pnpm build` + `ng test --watch=false` (2/2 vitest) verdes en frontend.
+>
+> Lote 24/09/2026 (3ª ronda, baja prioridad): GDPR (consentimiento/export/anonimización + `/privacy`), analytics de embudo (vista→reserva→pago), PWA (SW+manifest+iconos), SEO (robots/sitemap/JSON-LD), cabeceras Nginx (HSTS/CSP), backup+restauración, 404, y deuda menor (editorconfig/vscode/prettier/hooks, `node-fetch` retirado). Verificado: **31 suites / 149 tests PASS** (backend, con `gdpr.test.js` y `analytics.test.js`) y `pnpm build` verde en frontend.
 
 ---
 
@@ -63,14 +65,14 @@ Documento vivo: cada mejora marcada con ✅ indica trabajo completado y verifica
 
 ### Baja prioridad / mejoras de producto
 
-- [ ] **PWA offline-first real** — La caché offline es de lecturas; completar con Service Worker (Angular `service-worker`), manifiesto e instalación.
-- [ ] **SEO** — `sitemap.xml`, `robots.txt`, datos estructurados (JSON-LD de local business) y páginas de negocio con metadatos propios.
-- [ ] **Cumplimiento/GDPR** — Consentimiento explícito en el alta de clientes (email/phone), exportar y borrar datos (`DELETE /customers/:id` con autenticación), y política de privacidad.
-- [ ] **Seguridad del sandbox Nginx** — Cabeceras adicionales (HSTS, CSP) y directiva `server_tokens off`.
-- [ ] **Backup agendado y restaurado** — `scripts/backup.sh` existe; añadir cron en Docker y probar la restauración al menos una vez.
-- [ ] **Gráficas de conversión en el panel admin** — Embudo por paso (vista → reserva → pago) usando los datos de analytics ya recolectados.
-- [ ] **Página 404 personalizada** — Hoy el wildcard `**` redirige a `/`. Una NotFound con enlaces útiles mejora UX y SEO.
-- [ ] **Limpieza de deuda menor** — Ganchos de control en `git` (lint/prettier), `EditorConfig`/`.vscode/extensions.json`, y revisión de dependencias sin uso.
+- [x] **PWA offline-first real** ✅ — `@angular/service-worker@22.0.1` (pinned), `src/ngsw-config.json` (app prefetch, assets lazy, `dataGroups` API con strategy `freshness` 1 h), `manifest.webmanifest`, iconos PNG generados sin deps (`frontend/scripts/gen-icons.mjs`, 192/512 + maskable), `provideServiceWorker` en `app.config.ts` (`registerWhenStable:3000`, solo en producción) y `serviceWorker` habilitado en `angular.json`. Build emite `browser/ngsw.json`, `ngsw-worker.js` y `safety-worker.js`.
+- [x] **SEO** ✅ — `src/robots.txt` (desindexa /api, /owner, /admin, /business, /customer, /payment), `src/sitemap.xml` (dominio placeholder `TU-DOMINIO.EJEMPLO` → sustituir en despliegue), JSON-LD `WebSite` + `SearchAction` en `index.html`, y metadatos dinámicos `Title`/`Meta` en `HomeComponent` y título por negocio en `BookingComponent`.
+- [x] **Cumplimiento/GDPR** ✅ — Consentimiento explícito: formulario de reserva exige checkbox (política de privacidad en `/privacy`), backend exige `dataConsentRequired` (400 sin él) y almacena `data_consent`/`consent_at`/`marketing_consent` (migración `0002_consent_and_gdpr.sql`). Derechos: `GET /customers/:id/export` (JSON completo: perfil, reservas, pagos, notificaciones) y `DELETE /customers/:id` **anonimiza** (nombre/email/teléfono borrados, códigos de acceso invalidos; sin borrado físico para no romper pagos). UI en "Mis datos (RGPD)" del historial + página `/privacy`.
+- [x] **Seguridad del sandbox Nginx** ✅ — `server_tokens off` (ya existía) + **HSTS** (`max-age=31536000`) + **CSP** (script/style `'self' 'unsafe-inline'` por scripts anti-flash, `img-src` OpenStreetMap, `connect/frame-src` Stripe, `object-src 'none'`, `frame-ancestors 'self'`) a nivel server **y** repetidas en el location de estáticos (que define su propio `add_header` y no hereda).
+- [x] **Backup agendado y restaurado** ✅ — Servicio `backup` en `docker-compose.yml` (sidecar `postgres:16-alpine`): `pg_dump -Fc -Z9` diario a `./backups/`, retención 14 días (`find -mtime +14`), volumen bind-mount host. `backend/scripts/restore.sh` restaura un volcado con confirmación, corte de conexiones y `DROP/CREATE` + `pg_restore`. Restauración manual pendiente de una prueba real en despliegue.
+- [x] **Gráficas de conversión en el panel admin** ✅ — Embudo (vista → reserva → pago, 30 días) en "Panel": migración `0003_analytics.sql` (`analytics_events`), `POST /api/analytics/view` (rate 300/15 min, fallback memoria), grabación de vista en `BookingComponent`, `funnel` en `getMarketplaceStats()` y bloque visual con barras de conversión en `admin.component.html`. Verificado: `test/gdpr.test.js` (13) + `test/analytics.test.js` (6), backend **31 suites / 149 tests PASS**.
+- [x] **Página 404 personalizada** ✅ — `NotFoundComponent` reemplaza el wildcard `redirectTo`, con enlaces útiles (inicio, acceso negocios, admin) y lexía monográfica.
+- [x] **Limpieza de deuda menor** ✅ — `.editorconfig` raíz, `.vscode/extensions.json` + `settings.json` (whitelisted en `.gitignore`), Prettier 3 como devDep + `.prettierrc`/`.prettierignore` + scripts `format:check`/`format:fix` en frontend, gancho `.githooks/pre-commit` (prettier --check sobre staged; activar con `git config core.hooksPath .githooks`), y eliminada dependencia sin uso `node-fetch` del backend (se usa el `fetch` global de Node 22).
 
 ---
 
