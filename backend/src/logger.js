@@ -19,6 +19,20 @@ const logger = pino({
   level,
   base: { service: 'reservorio-api' },
   timestamp: pino.stdTimeFunctions.isoTime,
+  redact: {
+    paths: [
+      'authorization',
+      'req.headers.authorization',
+      '*.token',
+      'token',
+      '*.pin',
+      '*.password',
+      'cookie',
+      'x-api-key',
+      'stripe-signature',
+    ],
+    censor: '[REDACTED]',
+  },
   ...(isTest ? { enabled: false } : {}),
 });
 

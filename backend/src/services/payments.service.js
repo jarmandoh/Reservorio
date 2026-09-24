@@ -335,7 +335,10 @@ async function processWebhook({ rawBody, signature, event }) {
   let processedEvent = event;
   const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
-  if (rawBody && Buffer.isBuffer(rawBody) && endpointSecret && stripeClient && signature) {
+  if (endpointSecret && stripeClient) {
+    if (!rawBody || !Buffer.isBuffer(rawBody) || !signature) {
+      return { ok: false, status: 400, message: 'Firma de webhook inválida' };
+    }
     try {
       processedEvent = stripeClient.webhooks.constructEvent(rawBody, signature, endpointSecret);
     } catch (_error) {

@@ -76,6 +76,15 @@ function validateRuntimeConfig() {
     if (!process.env.CORS_ORIGINS || !process.env.CORS_ORIGINS.split(',').map(v => v.trim()).filter(Boolean).length) {
       throw new Error('CORS_ORIGINS debe contener al menos un origen válido en producción');
     }
+
+    const frontendUrl = String(process.env.FRONTEND_URL ?? '').trim();
+    if (!/^https:\/\//.test(frontendUrl)) {
+      throw new Error('FRONTEND_URL debe ser una URL https:// válida en producción (se usa en los magic-links y CORS)');
+    }
+
+    if (String(process.env.OTP_DEBUG ?? '').toLowerCase() === '1') {
+      logger.warn('OTP_DEBUG=1 está ACTIVO en producción: los códigos one-time se exponen en las respuestas. Desactívalo.');
+    }
   }
 
   return true;
