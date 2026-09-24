@@ -5,17 +5,24 @@ const { body } = require('express-validator');
 const { handleValidation } = require('../middleware/validation');
 const { requireAuth } = require('../middleware/auth');
 const authService = require('../services/auth.service');
+const customerAuthService = require('../services/customer-auth.service');
 
 const router = express.Router();
 
+function makeLimiter(max) {
+  return rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { ok: false, message: 'Demasiados intentos de autenticación, inténtalo más tarde.' },
+  });
+}
+
 // Límite estricto anti-fuerza bruta sobre autenticación (10 intentos / 15 min por IP)
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 10,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { ok: false, message: 'Demasiados intentos de autenticación, inténtalo más tarde.' },
-});
+const authLimiter = makeLimiter(10);
+// Los endpoints OTP/magic-link tienen su propio contador (solicitar + verificar)
+const otpLimiter = makeLimiter(30);
 
 /** POST /api/auth/admin */
 router.post(
@@ -110,6 +117,75 @@ router.post(
       return res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
     } catch (error) {
       console.error('Error en login de cliente:', error);
+      return res.status(500).json({ ok: false, message: 'Server error' });
+    }
+  }
+);
+
+/** POST /api/auth/customer/otp/request — solicita un OTP por email/SMS */
+router.post(
+  '/customer/otp/request',
+  otpLimiter,
+  body('email').trim().isEmail().withMessage('email inválido'),
+  handleValidation,
+  async (req, res) => {
+    try {
+      const result = await customerAuthService.requestOtp({ email: req.body.email });
+      return res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
+    } catch (error) {
+      console.error('Error en solicitud de OTP:', error);
+      return res.status(500).json({ ok: false, message: 'Server error' });
+    }
+  }
+);
+
+/** POST /api/auth/customer/otp/verify — canjea el OTP por un JWT de cliente */
+router.post(
+  '/customer/otp/verify',
+  otpLimiter,
+  body('email').trim().isEmail().withMessage('email inválido'),
+  body('code').trim().matches(/^\d{4,8}$/).withMessage('code inválido (4-8 dígitos)'),
+  handleValidation,
+  async (req, res) => {
+    try {
+      const result = await customerAuthService.verifyOtp({ email: req.body.email, code: req.body.code });
+      return res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
+    } catch (error) {
+      console.error('Error en verificación de OTP:', error);
+      return res.status(500).json({ ok: false, message: 'Server error' });
+    }
+  }
+);
+
+/** POST /api/auth/customer/magic-link/request — solicita un enlace de acceso por email */
+router.post(
+  '/customer/magic-link/request',
+  otpLimiter,
+  body('email').trim().isEmail().withMessage('email inválido'),
+  handleValidation,
+  async (req, res) => {
+    try {
+      const result = await customerAuthService.requestMagicLink({ email: req.body.email });
+      return res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
+    } catch (error) {
+      console.error('Error en solicitud de magic-link:', error);
+      return res.status(500).json({ ok: false, message: 'Server error' });
+    }
+  }
+);
+
+/** POST /api/auth/customer/magic-link/verify — canjea el enlace por un JWT de cliente */
+router.post(
+  '/customer/magic-link/verify',
+  otpLimiter,
+  body('token').trim().isLength({ min: 16, max: 256 }).withMessage('token inválido'),
+  handleValidation,
+  async (req, res) => {
+    try {
+      const result = await customerAuthService.verifyMagicLink({ token: req.body.token });
+      return res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
+    } catch (error) {
+      console.error('Error en verificación de magic-link:', error);
       return res.status(500).json({ ok: false, message: 'Server error' });
     }
   }

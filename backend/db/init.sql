@@ -69,6 +69,22 @@ CREATE TABLE IF NOT EXISTS customers (
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Preferencia de SMS del cliente (envío opcional de recordatorios/pagos).
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS sms_opt_in BOOLEAN NOT NULL DEFAULT true;
+
+-- Códigos de acceso one-time para clientes (OTP y magic-link).
+-- Solo se guarda el hash SHA-256; jamás el código/token en claro.
+CREATE TABLE IF NOT EXISTS customer_login_codes (
+  id          TEXT PRIMARY KEY,
+  customer_id TEXT NOT NULL UNIQUE REFERENCES customers(id) ON DELETE CASCADE,
+  kind        TEXT NOT NULL DEFAULT 'otp' CHECK (kind IN ('otp', 'magic_link')),
+  code_hash   TEXT NOT NULL,
+  attempts    INT NOT NULL DEFAULT 0,
+  expires_at  TIMESTAMPTZ NOT NULL,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_customer_login_codes_hash ON customer_login_codes(code_hash);
+
 CREATE TABLE IF NOT EXISTS bookings (
   id            TEXT PRIMARY KEY,
   provider_id   TEXT NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,

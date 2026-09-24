@@ -99,8 +99,13 @@ El backend lee su configuración desde `backend/.env`. Crea ese archivo basándo
 | `ADMIN_PIN` | No | PIN numérico para el panel de administración global. Por defecto: `1234`. | `9876` |
 | `PORT` | No | Puerto en que escucha el backend. Por defecto: `3000`. | `3000` |
 | `CORS_ORIGINS` | No | Orígenes permitidos por CORS, separados por coma. | `http://localhost,https://midominio.com` |
+| `FRONTEND_URL` | Sí | URL pública del frontend (se usa en los magic-links de cliente). | `http://localhost:4200` |
+| `EMAIL_PROVIDER` / `EMAIL_WEBHOOK_URL` | No | Canal de email: `console` (defecto) o `http` hacia un webhook. | `email` |
+| `SMS_PROVIDER` / `SMS_WEBHOOK_URL` | No | Canal de SMS para OTP y recordatorios. | `sms` |
+| `OTP_DEBUG` | No | Exponer el código/token OTP en la respuesta. **Solo desarrollo/test.** | `1` |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_TOKENS_KEY` | No | OAuth de Google Sheets. | — |
 
-> **Nota:** En el entorno Docker, `DATABASE_URL` ya se inyecta automáticamente desde `docker-compose.yml`. Solo es necesario configurarla manualmente para desarrollo local.
+> **Nota:** `backend/.env.example` es la fuente de verdad con todos los valores, incluidas las cabeceras de webhook (`EMAIL_WEBHOOK_HEADERS`, `SMS_WEBHOOK_HEADERS`). En el entorno Docker, `DATABASE_URL` ya se inyecta automáticamente desde `docker-compose.yml`; solo es necesario configurarla manualmente para desarrollo local.
 
 ---
 
@@ -150,11 +155,21 @@ Reservorio/
 │       │   ├── reservations.routes.js
 │       │   ├── services.routes.js
 │       │   ├── tags.routes.js
-│       │   └── ux.routes.js
+│       │   ├── ux.routes.js
+│       │   └── admin.routes.js
+│       ├── controllers/
+│       ├── validators/
+│       ├── repositories/
 │       ├── services/
 │       │   ├── auth.service.js
+│       │   ├── customer-auth.service.js   # OTP y magic-link de clientes
 │       │   ├── bookings.service.js
 │       │   ├── businesses.service.js
+│       │   ├── checkout.service.js
+│       │   ├── customers.service.js
+│       │   ├── admin.service.js
+│       │   ├── ratings.service.js
+│       │   ├── channels.js                # Proveedores email/SMS (console|http)
 │       │   ├── googleSheets.js
 │       │   ├── notifications.service.js
 │       │   ├── payments.service.js
@@ -234,11 +249,13 @@ chmod +x scripts/dev.sh scripts/prod.sh
 ## Seguridad
 
 - Todas las entradas del usuario pasan por `sanitize.js` antes de llegar a la base de datos. Las queries usan parámetros posicionales (`$1`, `$2`...) para prevenir inyección SQL.
-- Los tokens JWT expiran en 8 horas y solo aceptan firmas **HS256** (`jwt.js` fija `algorithms: ['HS256']`).
+- Los tokens JWT expiran a las **8 horas** (2 h para el token del administrador global) y solo aceptan firmas **HS256** (`jwt.js` fija `algorithms: ['HS256']`).
 - El backend aplica rate limiting: máximo **60 peticiones cada 15 minutos** por IP en todas las rutas `/api/`.
-- Los endpoints de autenticación (`/api/auth/admin`, `/api/auth/owner/login`, `/api/auth/owner/register`) y el login por PIN (`/api/businesses/:id/auth`) tienen un límite estricto de **10 intentos cada 15 minutos** por IP (anti fuerza bruta).
+- Los endpoints de autenticación (`/api/auth/admin`, `/api/auth/owner/login`, `/api/auth/owner/register`), el login por PIN (`/api/businesses/:id/auth`) tienen un límite estricto de **10 intentos cada 15 minutos** por IP, y los de OTP/magic-link un límite propio de **30 cada 15 minutos** (anti fuerza bruta).
+- Los códigos OTP y magic-links de cliente se guardan **solo como hash SHA-256** (one-time, con expiración) y nunca en claro. `OTP_DEBUG` está pensado únicamente para desarrollo.
 - Las cabeceras de seguridad HTTP son gestionadas por `helmet`.
 - El PIN de cada negocio se almacena como hash bcrypt (cost factor 10), nunca en texto plano.
+- Los canales de email/SMS envían a webhooks con token Bearer opcional (no se loguean secretos).
 - En producción el backend **aborta el arranque** si `JWT_SECRET` es débil, `ADMIN_PIN` es el default (`1234`) o no existe `CORS_ORIGINS`.
 
 ---
@@ -276,6 +293,7 @@ El pipeline de GitHub Actions (`.github/workflows/ci.yml`) ejecuta en cada push/
 | Documento | Descripción |
 |---|---|
 | [docs/API.md](docs/API.md) | Referencia completa de todos los endpoints REST |
-| [docs/DEVELOPERS.md](docs/DEVELOPERS.md) | Arquitectura interna, convenciones de código y mejoras pendientes |
+| [docs/DEVELOPERS.md](docs/DEVELOPERS.md) | Arquitectura interna y convenciones de código |
 | [docs/GUIA-ADMIN.md](docs/GUIA-ADMIN.md) | Guía de uso del panel para administradores de negocio |
+| [mejoras-futuras.md](mejoras-futuras.md) | Listado priorizado de mejoras y recomendaciones |
 | [SECURITY_CHECKLIST.md](SECURITY_CHECKLIST.md) | Revisión de seguridad y despliegue antes de producción |

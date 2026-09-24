@@ -42,6 +42,10 @@ export const featureRoutes: Routes = [
     canMatch: [customerGuard],
   },
   {
+    path: 'customer/verify',
+    loadComponent: () => import('./customer-magic-verify/customer-magic-verify.component').then(m => m.CustomerMagicVerifyComponent),
+  },
+  {
     path: 'admin',
     loadComponent: () => import('./admin/admin.component').then(m => m.AdminComponent),
     canActivate: [adminGuard],

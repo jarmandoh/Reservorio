@@ -1,68 +1,53 @@
-# Referencia de la API — Reservorio
+# API — Referencia
 
-Base URL en desarrollo: `http://localhost:3000/api`  
-Base URL en producción (Docker): `/api`
-
----
+API REST de **Reservorio**. Base URL: `/api` (proxy en producción `/api/* → backend:3000`).
 
 ## Convenciones
 
 ### Autenticación
 
-Los endpoints protegidos requieren un token JWT en la cabecera `Authorization`:
+La mayoría de los endpoints requieren un JWT en la cabecera:
 
 ```
 Authorization: Bearer <token>
 ```
 
-Hay dos roles de token:
-
-| Rol | Cómo se obtiene | Acceso |
+| Rol | Obtención | Expiración |
 |---|---|---|
-| `admin` | `POST /api/auth/admin` | Panel global: todos los negocios |
-| `business-admin` | `POST /api/businesses/:id/auth` | Solo su propio negocio |
+| `admin` | `POST /api/auth/admin` | 2 h |
+| `owner` | `POST /api/auth/owner/register` / `owner/login` | 8 h |
+| `business-admin` | `POST /api/businesses/:id/auth` | 8 h |
+| `customer` | `POST /api/auth/customer/login`, OTP o magic-link | 8 h |
 
 ### Formato de respuesta
 
-Todas las respuestas siguen esta estructura:
-
 ```json
-{
-  "ok": true,
-  "data": { }
-}
-```
-
-En caso de error:
-
-```json
-{
-  "ok": false,
-  "message": "Descripción del error"
-}
-```
-
-O para errores de validación con múltiples campos:
-
-```json
-{
-  "ok": false,
-  "errors": ["franja es obligatorio", "telefono inválido"]
-}
+// Éxito
+{ "ok": true, "data": { ... } }
+// Error
+{ "ok": false, "message": "Descripción del error" }
 ```
 
 ### Códigos de estado HTTP
 
 | Código | Significado |
 |---|---|
-| `200` | OK |
-| `201` | Recurso creado |
-| `400` | Solicitud inválida (datos faltantes o incorrectos) |
-| `401` | No autenticado (token faltante o expirado) |
-| `403` | Sin permiso para acceder al recurso |
-| `404` | Recurso no encontrado |
-| `409` | Conflicto (p. ej., franja ya reservada, servicio ya existe) |
-| `500` | Error interno del servidor |
+| 200 / 201 | OK / Recurso creado |
+| 400 | Validación de entrada fallida |
+| 401 | No autenticado / credenciales inválidas / token expirado |
+| 403 | Autenticado pero sin permiso para el recurso |
+| 404 | Recurso no encontrado |
+| 409 | Conflicto (p. ej., email ya registrado) |
+| 422 | Regla de negocio (p. ej., franja ya ocupada) |
+| 429 | Rate limit excedido |
+| 500 | Error interno |
+
+### Rate limits (por IP)
+
+- **Global** en todas las rutas `/api/`: 60 peticiones / 15 min.
+- `authLimiter` (login admin, owners, credenciales de cliente): 10 / 15 min.
+- `otpLimiter` (OTP y magic-link): 30 / 15 min.
+- Login por PIN de negocio: límite estricto anti fuerza bruta.
 
 ---
 
@@ -70,74 +55,80 @@ O para errores de validación con múltiples campos:
 
 ### `POST /api/auth/admin`
 
-Obtiene un token JWT con rol `admin`.
-
-**Autenticación requerida:** No
-
-**Cuerpo de la solicitud:**
+Autentica el administrador global con el PIN de `ADMIN_PIN`.
 
 ```json
-{
-  "pin": "1234"
-}
+// Request
+{ "pin": "9876" }
+// Response 200
+{ "ok": true, "data": { "token": "<jwt admin, 2h>" } }
 ```
 
-**Respuesta exitosa `200`:**
+### `POST /api/auth/owner/register`
 
 ```json
-{
-  "ok": true,
-  "data": {
-    "token": "eyJhbGci..."
-  }
-}
+{ "name": "Ana", "email": "ana@correo.com", "password": "123456" }
+// 201
+{ "ok": true, "data": { "token": "<jwt owner, 8h>", "owner": { "id": "...", "name": "Ana", "email": "ana@correo.com" } } }
 ```
 
-**Errores:**
+Errores: `409` si el email ya existe.
 
-| Código | Motivo |
-|---|---|
-| `400` | `pin` no enviado |
-| `401` | PIN incorrecto |
+### `POST /api/auth/owner/login`
+
+```json
+{ "email": "ana@correo.com", "password": "123456" }
+// 200 — mismo shape que register
+```
+
+### `GET /api/auth/owner/me`
+
+Requiere **owner**. Devuelve `{ id, name, email, created_at }`.
 
 ### `POST /api/auth/customer/login`
 
-Login del cliente (panel "Mi cuenta") sin contraseña: se valida el email y el teléfono con los que se registró al reservar. Emite un JWT con rol `customer`.
-
-**Autenticación requerida:** No
-
-**Cuerpo de la solicitud:**
+Login de cliente sin contraseña por email (+ teléfono si lo registró).
 
 ```json
-{
-  "email": "ana@example.com",
-  "phone": "600 111 222"
-}
+{ "email": "cliente@correo.com", "phone": "+34600111222" }
+// 200
+{ "ok": true, "data": { "token": "<jwt customer, 8h>", "customer": { "id": "...", "name": "...", "email": "...", "phone": "..." } } }
 ```
 
-**Respuesta exitosa `200`:**
+### `POST /api/auth/customer/otp/request`
+
+Solicita un código OTP (6 dígitos, TTL 10 min, máx. 5 intentos, one-time) por email/SMS.
 
 ```json
-{
-  "ok": true,
-  "data": {
-    "token": "eyJhbGci...",
-    "customer": {
-      "id": "cliente1",
-      "name": "Ana García",
-      "email": "ana@example.com",
-      "phone": "+34123456789"
-    }
-  }
-}
+{ "email": "cliente@correo.com" }
 ```
 
-**Errores:**
+Respuesta genérica (no revela si el email existe). Con `OTP_DEBUG=1` (solo dev/test) incluye `debugCode`/`debugToken`.
 
-| Código | Motivo |
-|---|---|
-| `400` | `email` no enviado o inválido / `phone` inválido |
-| `401` | Email sin historial o teléfono que no coincide |
+### `POST /api/auth/customer/otp/verify`
+
+```json
+{ "email": "cliente@correo.com", "code": "123456" }
+// 200
+{ "ok": true, "data": { "token": "<jwt customer, 8h>", "customer": { ... } } }
+```
+
+Errores: `400` código inválido, `410` expirado/agotado.
+
+### `POST /api/auth/customer/magic-link/request`
+
+Envía un email con `<FRONTEND_URL>/customer/verify?token=<token>` (TTL 15 min, one-time).
+
+```json
+{ "email": "cliente@correo.com" }
+```
+
+### `POST /api/auth/customer/magic-link/verify`
+
+```json
+{ "token": "<token del email>" }
+// 200 — mismo shape que otp/verify
+```
 
 ---
 
@@ -145,91 +136,113 @@ Login del cliente (panel "Mi cuenta") sin contraseña: se valida el email y el t
 
 ### `GET /api/businesses`
 
-Lista todos los negocios **activos**. Respuesta pública, no requiere autenticación.
-
-**Autenticación requerida:** No
-
-**Respuesta exitosa `200`:**
-
-```json
-{
-  "ok": true,
-  "data": [
-    {
-      "id": "cancha_abc_1abc2",
-      "name": "Cancha El Prado",
-      "category": "Deportes",
-      "description": "Cancha de fútbol 5 techada",
-      "location": "Av. Siempre Viva 123",
-      "rating": 4.8,
-      "reviews": 42,
-      "tags": ["fútbol", "techada"],
-      "gradient": "linear-gradient(135deg,#005bbf,#1a73e8)",
-      "icon": "sports_soccer",
-      "schedule": "Lunes a Domingo 8:00–22:00",
-      "logo": "",
-      "phone": "+54 9 11 1234-5678",
-      "active": true,
-      "available": 0,
-      "total": 0,
-      "routePath": "/booking/cancha_abc_1abc2"
-    }
-  ]
-}
-```
-
----
+Listado público de negocios activos. Opcional `?category=` y `?tag=` para filtrar. Cada negocio incluye `cantidadReservasHoy`/`cantidadReservasTotales`, `verified`, `cancellationPolicy`, redes sociales, etc.
 
 ### `GET /api/businesses/all`
 
-Lista **todos** los negocios (incluyendo inactivos). Solo para administradores globales.
+Requiere **admin**. Listado completo (incluye inactivos).
 
-**Autenticación requerida:** Sí — rol `admin`
+### `GET /api/businesses/owner`
 
-**Respuesta exitosa `200`:** Igual que `GET /api/businesses` pero incluye negocios con `active: false`.
+Requiere **owner**. Negocios del dueño logueado.
 
----
+### `POST /api/businesses`
+
+Requiere **admin** u **owner**. Crea un negocio.
+
+```json
+{
+  "name": "Cancha Central", "category": "Deportes", "pin": "5678",
+  "description": "...", "location": "...", "phone": "...", "schedule": "...",
+  "tags": "cancha,tenis", "rating": 4.5, "reviews": 12, "cancellationPolicy": "..."
+}
+```
+
+`pin` obligatorio en el alta; se almacena como hash bcrypt.
 
 ### `POST /api/businesses/:id/auth`
 
-Inicia sesión como administrador de un negocio específico usando su PIN.
+Login por PIN del negocio.
 
-**Autenticación requerida:** No
+```json
+{ "pin": "5678" }
+// 200
+{ "ok": true, "data": { "token": "<jwt business-admin, 8h>", "business": { ... } } }
+```
 
-**Parámetros de ruta:**
+### `GET /api/businesses/:id`
 
-| Parámetro | Tipo | Descripción |
-|---|---|---|
-| `id` | string | ID del negocio |
+Requiere **business-admin**. Detalle completo del negocio.
 
-**Cuerpo de la solicitud:**
+### `GET /api/businesses/:id/availability`
+
+Público. Devuelve las franjas disponibles (`disponibilidad = 'Disponible'`) del negocio para reservar.
+
+### `PUT /api/businesses/:id`
+
+Requiere **business-admin**. Actualiza campos del negocio (todos opcionales; `pin` opcional para cambiarlo).
+
+### `PATCH /api/businesses/:id/toggle`
+
+Requiere **admin**. Activa/desactiva el negocio (`{ "active": true|false }`).
+
+### `PATCH /api/businesses/:id/verify`
+
+Requiere **admin**. Marca el negocio como verificado (`{ "verified": true }`).
+
+### `DELETE /api/businesses/:id`
+
+Requiere **admin**. Elimina el negocio (servicios, reservaciones, bookings, pagos y ratings en cascada).
+
+### `GET /api/businesses/:id/reservations`
+
+Requiere **business-admin**. Franjas y reservaciones del negocio.
+
+### `POST /api/businesses/:id/reservations`
+
+Público (creación de franja reservada). Crea/actualiza una reservación:
+
+```json
+{ "franja": "10:00", "cliente": "Juan", "telefono": "600111222", "servicio": "Corte", "notas": "" }
+```
+
+### `PUT /api/businesses/:id/reservations/:row`
+
+Requiere **business-admin**. Cambia estado/notas de una franja:
+
+```json
+{ "disponibilidad": "Confirmado", "notas": "..." }
+```
+
+Estados permitidos: `Disponible | Pendiente | Reservado | Confirmado | Cancelado`.
+
+### `POST /api/businesses/:id/checkout`
+
+Registra una reserva en el checkout del negocio (crea `booking` + `payment`):
 
 ```json
 {
-  "pin": "5678"
+  "franja": "10:00", "cliente": "Juan", "telefono": "600111222",
+  "servicio": "Corte", "notas": "", "email": "juan@correo.com",
+  "amount": 20, "currency": "EUR", "method": "card"
 }
 ```
 
-**Respuesta exitosa `200`:**
+### `GET /api/businesses/:id/services`
+
+Público. Lista de servicios (nombres) del negocio. En el panel incluye precio/duración si están configurados.
+
+### `POST /api/businesses/:id/services`
+
+Requiere **business-admin**. Crea un servicio:
 
 ```json
-{
-  "ok": true,
-  "data": {
-    "token": "eyJhbGci...",
-    "business": { }
-  }
-}
+{ "nombre": "Corte de cabello" }
 ```
 
-**Errores:**
+### `DELETE /api/businesses/:id/services/:nombre`
 
-| Código | Motivo |
-|---|---|
-| `400` | `pin` no enviado |
-| `401` | PIN incorrecto |
-| `404` | Negocio no encontrado |
-| `503` | El negocio no tiene PIN configurado |
+Requiere **business-admin**. Elimina el servicio (codifica el nombre en la URL).
 
 ---
 
@@ -237,481 +250,171 @@ Inicia sesión como administrador de un negocio específico usando su PIN.
 
 ### `GET /api/customers`
 
-Lista clientes disponibles en la base del marketplace.
-
-**Autenticación requerida:** No
-
-**Respuesta exitosa `200`:**
-
-```json
-{
-  "ok": true,
-  "data": [
-    {
-      "id": "cliente1",
-      "name": "Ana García",
-      "email": "ana@example.com",
-      "phone": "+34123456789"
-    }
-  ]
-}
-```
+Requiere **admin**. Listado de clientes.
 
 ### `POST /api/customers`
 
-Crea un cliente del marketplace.
-
-**Autenticación requerida:** No
-
-**Cuerpo de la solicitud:**
+Público. Alta de cliente (se usa en el checkout):
 
 ```json
-{
-  "name": "Ana García",
-  "email": "ana@example.com",
-  "phone": "+34123456789"
-}
+{ "name": "Juan", "email": "juan@correo.com", "phone": "600111222" }
 ```
 
-**Respuesta exitosa `201`:**
+### `GET /api/customers/email/:email`
 
-```json
-{
-  "ok": true,
-  "data": {
-    "id": "cliente-1712345678901",
-    "name": "Ana García",
-    "email": "ana@example.com",
-    "phone": "+34123456789"
-  }
-}
-```
+Público. Busca un cliente por email.
 
 ### `GET /api/customers/me`
 
-Perfil del cliente autenticado (token con rol `customer`).
-
-**Autenticación requerida:** Sí — `Authorization: Bearer <token de cliente>`
-
-**Respuesta exitosa `200`:**
-
-```json
-{
-  "ok": true,
-  "data": {
-    "id": "cliente1",
-    "name": "Ana García",
-    "email": "ana@example.com",
-    "phone": "+34123456789",
-    "created_at": "2026-09-24T10:00:00.000Z"
-  }
-}
-```
-
-**Errores:** `401` sin token o inválido · `403` rol distinto de `customer`
+Requiere **customer**. Perfil del cliente logueado.
 
 ### `GET /api/customers/:id/history`
 
-Historial de reservas del cliente con nombre del negocio y estado del pago. Solo accesible por el propio cliente (`:id` debe coincidir con el `customerId` del token).
-
-**Autenticación requerida:** Sí — `Authorization: Bearer <token de cliente>`
-
-**Respuesta exitosa `200`:**
-
-```json
-{
-  "ok": true,
-  "data": {
-    "customer": {
-      "id": "cliente1",
-      "name": "Ana García",
-      "email": "ana@example.com",
-      "phone": "+34123456789"
-    },
-    "bookings": [
-      {
-        "id": "b1",
-        "providerId": "neg1",
-        "businessName": "Barbería Norte",
-        "serviceId": "Corte",
-        "date": "2026-09-24",
-        "slot": "10:30",
-        "status": "confirmed",
-        "notes": "",
-        "createdAt": "2026-09-24T10:00:00.000Z",
-        "paymentAmount": 1500,
-        "paymentCurrency": "EUR",
-        "paymentStatus": "paid",
-        "paymentMethod": "card"
-      }
-    ]
-  }
-}
-```
-
-**Errores:** `401` sin token o inválido · `403` el `:id` no corresponde al cliente · `404` cliente inexistente
+Requiere **customer** (solo el propio `id`; otro id → `403`). Historial de reservas y pagos del cliente.
 
 ---
 
-## Reservas del marketplace
+## Marketplace — bookings, pagos y notificaciones
 
 ### `GET /api/bookings`
 
-Lista reservas creadas por clientes.
-
-**Autenticación requerida:** No
-
-**Respuesta exitosa `200`:**
-
-```json
-{
-  "ok": true,
-  "data": []
-}
-```
+Requiere **admin**. Lista todas las reservas del marketplace.
 
 ### `POST /api/bookings`
 
-Crea una solicitud de reserva para un proveedor y servicio concreto.
-
-**Autenticación requerida:** No
-
-**Cuerpo de la solicitud:**
+Público. Crea una reserva:
 
 ```json
 {
-  "providerId": "negocio1",
-  "customerId": "cliente1",
-  "serviceId": "servicio-1",
-  "date": "2026-09-10",
+  "providerId": "cancha_abc_1abc2",
+  "customerId": "c_...",
+  "serviceId": "nombre-o-id-del-servicio",
+  "date": "2026-10-05",
   "slot": "10:00",
-  "notes": "Necesito atención urgente"
+  "notes": ""
 }
 ```
 
-**Respuesta exitosa `201`:**
+### `GET /api/payments`
+
+Requiere **admin**. Listado de pagos. Filtros opcionales por query.
+
+### `POST /api/payments`
+
+Público. Registra un pago:
 
 ```json
 {
-  "ok": true,
-  "data": {
-    "id": "booking-1712345678901",
-    "providerId": "negocio1",
-    "customerId": "cliente1",
-    "serviceId": "servicio-1",
-    "date": "2026-09-10",
-    "slot": "10:00",
-    "status": "pending",
-    "notes": "Necesito atención urgente"
-  }
+  "bookingId": "...", "providerId": "...", "customerId": "...",
+  "amount": 20, "currency": "EUR", "method": "card", "status": "pending"
 }
 ```
+
+Métodos: `card | paypal | transfer | cash`.
+
+### `POST /api/payments/checkout`
+
+Público. Crea una sesión de checkout (mismos campos + `successUrl`/`cancelUrl` opcionales).
+
+### `POST /api/payments/webhook`
+
+Public. Webhook de la pasarela — verifica la firma `stripe-signature` antes de procesar el evento y actualiza el estado del pago. El body llega como `raw` (se monta con `express.raw` en esta ruta).
+
+### `PATCH /api/payments/:id`
+
+Requiere **auth**. Actualiza el estado (`pending | paid | failed | refunded`). Solo accesible al negocio/rol dueño del pago (`canAccessBusinessId`).
+
+### `GET /api/notifications?businessId=&bookingId=`
+
+Público (con o sin filtro). Lista de avisos internos.
+
+### `POST /api/notifications`
+
+Crea un aviso:
+
+```json
+{ "businessId": "...", "title": "Nueva reserva", "message": "...", "type": "booking_created", "channel": "in_app" }
+```
+
+### `POST /api/notifications/reminder`
+
+Dispara un recordatorio (email/SMS) a partir del aviso indicado en el body.
 
 ---
 
-### `POST /api/businesses`
+## Ratings, categorías, tags y UX
 
-Crea un nuevo negocio.
+### `GET /api/ratings/:businessId`
 
-**Autenticación requerida:** Sí — rol `admin`
+Valoraciones de un negocio.
 
-**Cuerpo de la solicitud:**
+### `GET /api/ratings/:businessId/average`
 
-| Campo | Tipo | Requerido | Descripción |
-|---|---|---|---|
-| `name` | string | Sí | Nombre del negocio |
-| `category` | string | Sí | Categoría (p. ej., "Deportes", "Salud") |
-| `pin` | string | Sí | PIN de acceso para el administrador del negocio |
-| `description` | string | No | Descripción breve |
-| `location` | string | No | Dirección o ubicación |
-| `rating` | number | No | Puntuación inicial (defecto: `5.0`) |
-| `reviews` | number | No | Número inicial de reseñas (defecto: `0`) |
-| `tags` | string[] \| string | No | Etiquetas separadas por coma o array |
-| `gradient` | string | No | CSS gradient para la tarjeta |
-| `icon` | string | No | Nombre de ícono Material (defecto: `"store"`) |
-| `schedule` | string | No | Horario de atención |
-| `logo` | string | No | URL del logo |
-| `phone` | string | No | Teléfono de contacto |
+Media de valoraciones `{ average, count }`.
 
-**Respuesta exitosa `201`:**
+### `POST /api/ratings/:businessId`
+
+Rating de un negocio (limitado por IP):
 
 ```json
-{
-  "ok": true,
-  "data": { }
-}
+{ "rating": 5, "review": "Muy buen servicio" }
 ```
+
+### `GET /api/categories` · `GET /api/categories/all`
+
+Lista de categorías. `all` se usa para prellenar filtros en el panel.
+
+### `GET /api/tags/all`
+
+Lista de etiquetas.
+
+### `GET /api/ux-tips`
+
+Sugerencias de UX mostradas en los paneles.
 
 ---
 
-### `PUT /api/businesses/:id`
+## Google Sheets (OAuth)
 
-Actualiza los datos de un negocio. Solo se modifican los campos enviados.
-
-**Autenticación requerida:** Sí — rol `admin` o `business-admin` dueño del negocio
-
-**Parámetros de ruta:**
-
-| Parámetro | Tipo | Descripción |
-|---|---|---|
-| `id` | string | ID del negocio |
-
-**Cuerpo de la solicitud:** Cualquier subconjunto de los campos de `POST /api/businesses` (excepto que `name`, `category` y `pin` son opcionales aquí).
-
-**Respuesta exitosa `200`:**
-
-```json
-{
-  "ok": true,
-  "data": { }
-}
-```
+Requieren cualquier token (`requireAnyAuth`): `start`, `callback`, `status`, `disconnect`, `create-sheet`, `link-sheet`, `sync`. El flujo está pensado para vincular un negocio (`:businessId`) a una hoja de cálculo y sincronizar reservas/servicios.
 
 ---
 
-### `PATCH /api/businesses/:id/toggle`
+## Panel de administración global
 
-Activa o desactiva un negocio (invierte el valor de `active`).
+Todos requieren **admin**:
 
-**Autenticación requerida:** Sí — rol `admin`
-
-**Parámetros de ruta:**
-
-| Parámetro | Tipo | Descripción |
-|---|---|---|
-| `id` | string | ID del negocio |
-
-**Respuesta exitosa `200`:**
-
-```json
-{
-  "ok": true,
-  "data": { "active": false }
-}
-```
-
----
-
-## Reservaciones por negocio
-
-### `GET /api/businesses/:id/reservations`
-
-Lista todas las reservaciones de un negocio.
-
-**Autenticación requerida:** No
-
-**Parámetros de ruta:**
-
-| Parámetro | Tipo | Descripción |
-|---|---|---|
-| `id` | string | ID del negocio |
-
-**Respuesta exitosa `200`:**
-
-```json
-{
-  "ok": true,
-  "data": [
-    {
-      "id": 1,
-      "business_id": "cancha_abc_1abc2",
-      "franja": "10:00–11:00",
-      "disponibilidad": "Reservado",
-      "cliente": "Juan Pérez",
-      "telefono": "+54 9 11 1234-5678",
-      "servicio": "Cancha Fútbol 5",
-      "notas": "",
-      "created_at": "2026-04-07T10:00:00.000Z",
-      "updated_at": "2026-04-07T10:00:00.000Z"
-    }
-  ]
-}
-```
-
----
-
-### `POST /api/businesses/:id/reservations`
-
-Crea una nueva reservación en un negocio. Verifica que la franja no esté ya ocupada.
-
-**Autenticación requerida:** No
-
-**Parámetros de ruta:**
-
-| Parámetro | Tipo | Descripción |
-|---|---|---|
-| `id` | string | ID del negocio |
-
-**Cuerpo de la solicitud:**
-
-| Campo | Tipo | Requerido | Descripción |
-|---|---|---|---|
-| `franja` | string | Sí | Ej: `"10:00–11:00"` |
-| `cliente` | string | Sí | Nombre del cliente |
-| `telefono` | string | Sí | Teléfono (7–15 dígitos, puede incluir `+`, espacios y guiones) |
-| `servicio` | string | No | Nombre del servicio seleccionado |
-| `notas` | string | No | Observaciones adicionales |
-
-**Respuesta exitosa `201`:**
-
-```json
-{
-  "ok": true,
-  "data": { }
-}
-```
-
-**Errores:**
-
-| Código | Motivo |
+| Endpoint | Descripción |
 |---|---|
-| `400` | Campos requeridos faltantes o teléfono con formato inválido |
-| `404` | Negocio no encontrado o inactivo |
-| `409` | La franja ya está reservada |
-
----
-
-### `PUT /api/businesses/:id/reservations/:row`
-
-Actualiza el estado de una reservación (confirmar, cancelar, etc.).
-
-**Autenticación requerida:** Sí — rol `admin` o `business-admin` dueño del negocio
-
-**Parámetros de ruta:**
-
-| Parámetro | Tipo | Descripción |
-|---|---|---|
-| `id` | string | ID del negocio |
-| `row` | number | ID de la reservación |
-
-**Cuerpo de la solicitud:**
-
-| Campo | Tipo | Requerido | Valores permitidos |
-|---|---|---|---|
-| `disponibilidad` | string | Sí | `Disponible`, `Pendiente`, `Reservado`, `Confirmado` |
-| `notas` | string | No | Texto libre |
-
-**Respuesta exitosa `200`:**
-
-```json
-{
-  "ok": true,
-  "data": { }
-}
-```
-
----
-
-## Servicios por negocio
-
-### `GET /api/businesses/:id/services`
-
-Lista los servicios de un negocio.
-
-**Autenticación requerida:** No
-
-**Respuesta exitosa `200`:**
-
-```json
-{
-  "ok": true,
-  "data": ["Cancha Fútbol 5", "Cancha Fútbol 7", "Arquería"]
-}
-```
-
----
-
-### `POST /api/businesses/:id/services`
-
-Agrega un nuevo servicio a un negocio.
-
-**Autenticación requerida:** Sí — rol `admin` o `business-admin` dueño del negocio
-
-**Cuerpo de la solicitud:**
-
-```json
-{
-  "nombre": "Nuevo Servicio"
-}
-```
-
-**Respuesta exitosa `201`:**
-
-```json
-{
-  "ok": true,
-  "data": { "nombre": "Nuevo Servicio" }
-}
-```
-
-**Errores:**
-
-| Código | Motivo |
-|---|---|
-| `400` | `nombre` no enviado o supera 100 caracteres |
-| `409` | El servicio ya existe en este negocio |
-
----
-
-### `DELETE /api/businesses/:id/services/:nombre`
-
-Elimina un servicio de un negocio.
-
-**Autenticación requerida:** Sí — rol `admin` o `business-admin` dueño del negocio
-
-**Parámetros de ruta:**
-
-| Parámetro | Tipo | Descripción |
-|---|---|---|
-| `id` | string | ID del negocio |
-| `nombre` | string | Nombre del servicio, URL-encoded |
-
-**Respuesta exitosa `200`:**
-
-```json
-{ "ok": true }
-```
+| `GET /api/admin/stats` | Métricas globales |
+| `GET /api/admin/payments` | Pagos del sistema |
+| `GET /api/admin/reviews` · `DELETE /api/admin/reviews/:id` | Moderación de reseñas |
+| `GET /api/admin/services` · `DELETE /api/admin/services/:serviceId` | Moderación de servicios |
 
 ---
 
 ## Rutas legacy
 
-Estas rutas existen por compatibilidad con la versión anterior del sistema que usaba una sola hoja de cálculo. Para nuevos desarrollos se recomienda usar las rutas `/api/businesses/:id/...`.
+Compatibilidad con el cliente anterior. Prefijo `/api`:
 
-### `GET /api/reservations?businessId=<id>`
-
-Equivalente a `GET /api/businesses/:id/reservations`.
-
-### `POST /api/reservations`
-
-Equivalente a `POST /api/businesses/:id/reservations`. El cuerpo debe incluir el campo `businessId`.
-
-### `PUT /api/reservations/:id`
-
-Equivalente a `PUT /api/businesses/:id/reservations/:row`.
-
-### `GET /api/services?businessId=<id>`
-
-Equivalente a `GET /api/businesses/:id/services`.
-
-### `POST /api/services`
-
-Equivalente a `POST /api/businesses/:id/services`. El cuerpo debe incluir el campo `businessId`.
-
-### `DELETE /api/services/:nombre?businessId=<id>`
-
-Equivalente a `DELETE /api/businesses/:id/services/:nombre`.
+| Endpoint | Notas |
+|---|---|
+| `GET /api/reservations?businessId=` | Lista de reservaciones (requiere auth) |
+| `POST /api/reservations` | Crea una reservación |
+| `PUT /api/reservations/:id` | Actualiza franja/estado (requiere auth) |
+| `GET /api/services?businessId=` · `POST /api/services` (auth) · `DELETE /api/services/:nombre` (auth) | Servicios legacy |
+| `GET /api/providers...` | Alias de `/api/businesses` (mismo router) |
 
 ---
 
-## Health check
+## Salud y métricas
 
 ### `GET /health`
 
-Verifica que el servidor esté corriendo. No forma parte del prefijo `/api`.
-
-**Respuesta `200`:**
-
 ```json
-{ "ok": true, "service": "reservorio-api" }
+{ "ok": true, "status": "healthy", "database": "connected", ... }
 ```
+
+### `GET /metrics`
+
+Uptime, nº de requests, errores del proceso, desglose por status code, uso de memoria y versión de Node.

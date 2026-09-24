@@ -115,6 +115,38 @@ export class AuthService {
     );
   }
 
+  requestCustomerOtp(email: string): Observable<ApiResponse<{ message?: string; debugCode?: string }>> {
+    return this.api.requestCustomerOtp(email);
+  }
+
+  loginCustomerWithOtp(email: string, code: string): Observable<ApiResponse<{ token: string; customer: Customer }>> {
+    return this.api.verifyCustomerOtp(email, code).pipe(
+      tap(res => {
+        if (res.data?.token) this.setCustomerToken(res.data.token);
+      }),
+      catchError(err => {
+        this.clearCustomerToken();
+        return throwError(() => err);
+      })
+    );
+  }
+
+  requestCustomerMagicLink(email: string): Observable<ApiResponse<{ message?: string; debugToken?: string }>> {
+    return this.api.requestCustomerMagicLink(email);
+  }
+
+  redeemCustomerMagicLink(token: string): Observable<ApiResponse<{ token: string; customer: Customer }>> {
+    return this.api.verifyCustomerMagicLink(token).pipe(
+      tap(res => {
+        if (res.data?.token) this.setCustomerToken(res.data.token);
+      }),
+      catchError(err => {
+        this.clearCustomerToken();
+        return throwError(() => err);
+      })
+    );
+  }
+
   // ── Admin JWT ─────────────────────────────────────────────────────────
 
   getAdminToken(): string | null {

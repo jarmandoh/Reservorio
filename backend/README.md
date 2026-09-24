@@ -1,338 +1,154 @@
-# Reservorio Backend
+# Backend — Reservorio API
 
-## 1. Visión general
+API REST de **Reservorio**: sistema de reservas multi-negocio. Construida con **Node.js 22 + Express 5** y **PostgreSQL 16**.
 
-El backend de Reservorio expone una API REST para un marketplace de servicios con:
+## Requisitos
 
-- proveedores / negocios
-- clientes
-- servicios ofertados
-- reservas agendadas
-- pagos asociados a reservas
-- autenticación de administradores y dueños
+- Node.js `>=22.22.3` (ver `.nvmrc` / `.node-version` en la raíz del repositorio)
+- pnpm `>=9.15.0`
+- PostgreSQL 16 (o el contenedor `db` de `docker-compose.yml`)
 
-La API está construida sobre Node.js 22 + Express y usa PostgreSQL para persistencia. El diseño está orientado a un marketplace real, con compatibilidad con módulos existentes y rutas legacy para no romper el proyecto actual.
-
----
-
-## 2. Arquitectura
-
-### Capa de aplicación
-
-```text
-backend/
-├── src/
-│   ├── index.js              # arranque de la API (health, metrics, logging)
-│   ├── db.js                 # Pool de PostgreSQL
-│   ├── controllers/          # handlers HTTP
-│   ├── services/             # lógica de negocio
-│   ├── validators/           # validaciones con express-validator
-│   ├── routes/               # endpoints REST
-│   ├── middleware/           # auth, validation, error handling, sanitization
-│   └── utils/                # helpers
-├── db/
-│   ├── init.sql              # esquema base (única fuente de verdad, auto-aplicado al crear el contenedor)
-│   └── migrations/
-│       └── README.md         # historial: migraciones marketplace retiradas, todo vive en init.sql
-├── scripts/
-│   └── backup.sh             # copias de seguridad pg_dump
-├── test/
-├── package.json
-├── Dockerfile
-└── .env.example
-```
-
-### Roles
-
-- `admin`: panel global
-- `owner`: dueño de un negocio o proveedor
-- `business-admin`: permiso por negocio autenticado con PIN
-- `customer`: cliente del marketplace
-
----
-
-## 3. Entidades del negocio
-
-### Providers
-
-Representan los proveedores o negocios que ofrecen servicios.
-
-```sql
-providers (
-  id UUID PK,
-  owner_id UUID NULL,
-  name TEXT,
-  slug TEXT UNIQUE,
-  category TEXT,
-  description TEXT,
-  location TEXT,
-  phone TEXT,
-  email TEXT,
-  website TEXT,
-  logo_url TEXT,
-  banner_url TEXT,
-  rating NUMERIC,
-  review_count INTEGER,
-  active BOOLEAN,
-  pin_hash TEXT,
-  created_at TIMESTAMPTZ,
-  updated_at TIMESTAMPTZ
-)
-```
-
-### Customers
-
-```sql
-customers (
-  id UUID PK,
-  first_name TEXT,
-  last_name TEXT,
-  email TEXT UNIQUE,
-  phone TEXT,
-  status TEXT,
-  created_at TIMESTAMPTZ,
-  updated_at TIMESTAMPTZ
-)
-```
-
-### Services
-
-```sql
-services (
-  id UUID PK,
-  provider_id UUID FK,
-  title TEXT,
-  description TEXT,
-  duration_min INTEGER,
-  price_cents INTEGER,
-  currency TEXT,
-  active BOOLEAN,
-  created_at TIMESTAMPTZ,
-  updated_at TIMESTAMPTZ
-)
-```
-
-### Bookings
-
-```sql
-bookings (
-  id UUID PK,
-  provider_id UUID FK,
-  customer_id UUID FK,
-  service_id UUID FK,
-  booking_date DATE,
-  slot_start TIME,
-  slot_end TIME,
-  status TEXT,
-  notes TEXT,
-  created_at TIMESTAMPTZ,
-  updated_at TIMESTAMPTZ
-)
-```
-
-### Payments
-
-```sql
-payments (
-  id UUID PK,
-  booking_id UUID FK,
-  provider_id UUID FK,
-  customer_id UUID FK,
-  amount_cents INTEGER,
-  currency TEXT,
-  status TEXT,
-  provider_fee_cents INTEGER,
-  platform_fee_cents INTEGER,
-  payment_method TEXT,
-  external_reference TEXT,
-  created_at TIMESTAMPTZ,
-  updated_at TIMESTAMPTZ
-)
-```
-
----
-
-## 4. Endpoints productivos
-
-### Auth
-
-- `POST /api/auth/admin`
-- `POST /api/auth/owner/register`
-- `POST /api/auth/owner/login`
-- `GET /api/auth/owner/me`
-
-### Providers / businesses
-
-- `GET /api/providers`
-- `GET /api/providers/all`
-- `GET /api/providers/owner`
-- `POST /api/providers`
-- `GET /api/providers/:id`
-- `PUT /api/providers/:id`
-- `PATCH /api/providers/:id/toggle`
-- `DELETE /api/providers/:id`
-- `POST /api/providers/:id/auth`
-
-### Customers
-
-- `GET /api/customers`
-- `POST /api/customers`
-
-### Bookings
-
-- `GET /api/bookings`
-- `POST /api/bookings` — crea reserva y notificación; devuelve **409** si la franja ya está tomada.
-
-### Payments
-
-- `POST /api/payments/checkout` — crea sesión de pago (Stripe).
-- `POST /api/payments/webhook` — recibe eventos de Stripe y emite notificación al confirmarse `paid`.
-- `GET /api/payments` / `POST /api/payments` — registro de pagos.
-
-### Notifications
-
-- `GET /api/notifications?businessId=...&bookingId=...`
-- `POST /api/notifications` — crear notificación interna.
-- `POST /api/notifications/reminder` — recordatorio de reserva.
-
-Las reservas generan notificaciones automáticas: al crear (`booking_created`), al confirmar/cancelar (`booking_confirmed` / `booking_cancelled`) y al cobrar (`payment_received`).
-
-### Ratings
-
-- `GET /api/ratings/:businessId`
-- `GET /api/ratings/:businessId/average`
-- `POST /api/ratings/:businessId`
-
-### Businesses (trust signals)
-
-- `PATCH /api/businesses/:id/verify` — marca un negocio como verificado (solo admin).
-- `PATCH /api/businesses/:id/toggle` — activa/desactiva (solo admin).
-- `PUT /api/businesses/:id` — `rating`/`reviews` solo los acepta el rol `admin` (evita trust signals falsas).
-
-### Legacy compatibility
-
-- `GET /api/businesses`
-- `POST /api/businesses/:id/reservations`
-- `GET /api/services?businessId=...`
-- `POST /api/services`
-
-Estas rutas legacy se mantienen para no romper la versión antigua mientras evoluciona el producto.
-
----
-
-## 5. Flujo de negocio
-
-### Flujo de cliente
-
-1. El cliente consulta proveedores activos.
-2. El cliente selecciona un proveedor y un servicio.
-3. Se crea una reserva con fecha, hora y notas.
-4. El sistema valida disponibilidad y genera un registro de booking.
-5. Se puede asociar un pago a la reserva.
-
-### Flujo de proveedor
-
-1. El proveedor se autentica con su PIN o mediante token owner/admin.
-2. Gestiona servicios, horarios y disponibilidad.
-3. Confirma o cancela reservas.
-4. Revisa el estado de pagos y reservas.
-
-### Flujo de admin
-
-1. Admin global revisa negocios activos e inactivos.
-2. Controla la operación del marketplace.
-3. Modifica o habilita proveedores.
-
----
-
-## 6. Criterios de persistencia
-
-- Se usan consultas parametrizadas con `$1`, `$2`, etc.
-- Los campos sensibles (PIN, tokens, secretos) no deben exponerse en respuestas.
-- La API pública usa nombres de campo amigables para frontend (`providerId`, `customerId`, `bookingDate`, etc.).
-- El almacenamiento en PostgreSQL sigue usando nombres internos normalizados.
-
----
-
-## 7. Variables de entorno
-
-```env
-DATABASE_URL=postgres://reservorio:reservorio_pass@localhost:5432/reservorio
-JWT_SECRET=tu_secreto_largo_y_aleatorio
-ADMIN_PIN=1234
-PORT=3000
-CORS_ORIGINS=http://localhost:4200,http://localhost:3000
-NODE_ENV=development
-```
-
----
-
-## 8. Esquema de base de datos
-
-**`backend/db/init.sql` es la única fuente de verdad.** Se aplica automáticamente al crear el
-contenedor por primera vez y es idempotente (`CREATE TABLE IF NOT EXISTS` /
-`ALTER TABLE ... ADD COLUMN IF NOT EXISTS`).
-
-El esquema cubre:
-
-- Core: `businesses`, `owners`, `business_owners`, `services`, `reservations`.
-- Catálogo: `categories`, `business_categories`, `schedules`, `tags`, `business_tags`, `ratings`.
-- Marketplace: `customers`, `bookings`, `payments`, `notifications` — todos con `id` TEXT
-  coherentes con `businesses(id)` (un negocio actúa como provider en `bookings.provider_id` /
-  `payments.provider_id`).
-- Anti doble-reserva a nivel de BD: índices únicos parciales `uq_reservations_franja` y
-  `uq_bookings_active_slot`.
-
-El directorio `migrations/` quedó retirado: la antigua `001_marketplace_schema.sql` proponía un
-modelo UUID (`providers`/`bookings`/`payments`) que el código nunca usó y contradecía `init.sql`;
-los índices de `002_availability_locks.sql` se movieron a `init.sql`. Detalle en
-[db/migrations/README.md](db/migrations/README.md).
-
----
-
-## 9. Operación y monitoreo
-
-### Health y métricas
-
-- `GET /health` — estado del servicio y conexión a PostgreSQL.
-- `GET /metrics` — uptime, requests, errores de proceso, **desglose por status code**, uso de memoria y versión de Node.
-
-### Logging estructurado
-
-Cada request registra una línea JSON con `requestId`, método, URL, status y duración en ms. El mismo `requestId` se expone en la cabecera `X-Request-Id` para correlacionar fallos con las trazas.
-
-### Backups
+## Puesta en marcha
 
 ```bash
-DATABASE_URL="postgres://reservorio:reservorio_pass@localhost:5432/reservorio" \
-  ./scripts/backup.sh
+pnpm install
+cp .env.example .env        # ajusta los valores según tu entorno
+pnpm run dev                # arranca con nodemon en http://localhost:3000
 ```
 
-Genera un dump `pg_dump` con marca de tiempo en `backend/backups/`, retiene 14 días por defecto y es programable con cron (instrucciones en el propio script).
+En Docker la base de datos se levanta con `docker compose up db`, y `DATABASE_URL` ya se inyecta desde `docker-compose.yml`.
 
-### Endurecimiento de seguridad
+## Estructura
 
-- JWT solo acepta firmas **HS256** (`middleware/jwt.js`).
-- Rate limiting global: 60 peticiones / 15 min por IP en `/api/`.
-- Rate limiting estricto (10 / 15 min) en autenticación: `/api/auth/*` y `/api/businesses/:id/auth`.
-- En producción el arranque aborta si `JWT_SECRET` < 32 chars, `ADMIN_PIN` es el default o falta `CORS_ORIGINS`.
-- Anti doble reserva a nivel de base de datos: índices únicos parciales en `init.sql` (`uq_reservations_franja`, `uq_bookings_active_slot`).
+```
+src/
+├── index.js                    # Bootstrap: middlewares globales, montaje de rutas, /health y /metrics
+├── db.js                       # Pool de pg (singleton)
+├── middleware/
+│   ├── auth.js                 # requireAuth, requireAdmin, requireOwnerAuth, requireBusinessAuth,
+│   │                           #   requireCustomer, requireAnyAuth, canAccessBusinessId
+│   ├── errorHandler.js         # Not found + manejo centralizado de errores
+│   ├── jwt.js                  # sign() / verify() — wrapper sobre jsonwebtoken (HS256, exp 8h)
+│   ├── sanitize.js             # clean(), isValidPhone(), validateReservation(), validateUpdate()
+│   └── validation.js           # handleValidation para express-validator
+├── controllers/                # Handlers finos de rutas (bookings, customers)
+├── validators/                 # Esquemas express-validator (bookings, customers)
+├── repositories/
+│   └── business.repository.js  # Acceso a datos de businesses
+├── routes/                     # Un router por recurso; ver tabla de endpoints abajo
+├── services/                   # Lógica de negocio
+│   ├── auth.service.js         # Admin, owners, login de cliente
+│   ├── customer-auth.service.js# OTP (SMS/email) y magic-link con hash SHA-256
+│   ├── businesses.service.js   # CRUD de negocios, reservaciones y servicios
+│   ├── bookings.service.js     # Reservas del marketplace
+│   ├── customers.service.js    # Altas y historial de clientes
+│   ├── payments.service.js     # Pagos y checkout
+│   ├── checkout.service.js     # Checkout de reserva → booking + pago
+│   ├── notifications.service.js# Notificaciones + despacho externo email/SMS
+│   ├── channels.js             # Proveedores de envío: console (outbox) o http (webhook)
+│   ├── ratings.service.js      # Valoraciones de negocios
+│   ├── admin.service.js        # Estadísticas, moderación de reviews/servicios
+│   ├── googleSheets.js         # OAuth de Google + Sheets
+│   └── syncService.js          # Sincronización con Google Sheets / bulk de franjas
+└── utils/
+    └── crypto.js               # encrypt/decrypt AES-256-GCM para tokens de Google
+```
 
----
+## Endpoints
 
-## 10. Validación
+Todos bajo `/api/` salvo `/health` y `/metrics`.
 
-Se valida con Jest y la API actual:
+| Método y ruta | Auth | Descripción |
+|---|---|---|
+| `POST /auth/admin` | — | Login del administrador global (PIN). Limiter 10/15min |
+| `POST /auth/owner/register` | — | Alta de dueño (nombre, email, password) |
+| `POST /auth/owner/login` | — | Login de dueño (email, password) |
+| `GET /auth/owner/me` | owner | Perfil del dueño |
+| `POST /auth/customer/login` | — | Login de cliente por email/teléfono → JWT |
+| `POST /auth/customer/otp/request` | — | Solicita un código OTP por email/SMS |
+| `POST /auth/customer/otp/verify` | — | Canjea el OTP por un JWT de cliente |
+| `POST /auth/customer/magic-link/request` | — | Solicita un enlace de acceso por email |
+| `POST /auth/customer/magic-link/verify` | — | Canjea el enlace por un JWT de cliente |
+| `GET/POST /businesses` | admin/owner para POST | Listado público / alta de negocio |
+| `GET /businesses/all` | admin | Listado completo (incluye inactivos) |
+| `GET /businesses/owner` | owner | Negocios del dueño logueado |
+| `POST /businesses/:id/auth` | — | Login por PIN del negocio → JWT business-admin |
+| `PUT /businesses/:id` | business-admin | Actualización del negocio |
+| `PATCH /businesses/:id/toggle` | admin | Activar/desactivar |
+| `PATCH /businesses/:id/verify` | admin | Marcar como verificado |
+| `DELETE /businesses/:id` | admin | Eliminar negocio (cascada) |
+| `GET /businesses/:id` | business-admin | Detalle del negocio |
+| `GET /businesses/:id/availability` | — | Disponibilidad de franjas del negocio |
+| `GET/POST /businesses/:id/reservations` | GET: business-admin / POST: público | Franjas y reservaciones del negocio |
+| `PUT /businesses/:id/reservations/:row` | business-admin | Cambiar estado/notas de una franja |
+| `POST /businesses/:id/checkout` | — | Checkout de reserva (crea booking + pago) |
+| `GET/POST /businesses/:id/services` | POST: business-admin | Servicios del negocio |
+| `DELETE /businesses/:id/services/:nombre` | business-admin | Eliminar servicio |
+| `GET/POST /customers` | — | Listado (admin) / alta de cliente |
+| `GET /customers/email/:email` | — | Buscar cliente por email |
+| `GET /customers/me` | customer | Perfil del cliente logueado |
+| `GET /customers/:id/history` | customer (self) | Historial de reservas del cliente |
+| `GET/POST /bookings` | — | Reservas del marketplace |
+| `GET/POST /payments`, `POST /payments/checkout` | PATCH: auth | Pagos y sesión de checkout |
+| `POST /payments/webhook` | — | Webhook de pasarela (firma `stripe-signature`) |
+| `GET/POST /notifications`, `POST /notifications/reminder` | — | Avisos internos y recordatorios |
+| `GET/POST /ratings/:businessId`, `GET /ratings/:businessId/average` | — | Valoraciones |
+| `GET /categories`, `GET /categories/all` | — | Categorías |
+| `GET /tags/all` | — | Etiquetas |
+| `GET /ux-tips` | — | Sugerencias de UX para el panel |
+| `GET /google/...` | any-auth | OAuth de Google (start, callback, status, disconnect, create/link sheet, sync) |
+| `GET/POST /admin/stats`, `/admin/payments`, `/admin/reviews`, `/admin/services` | admin | Panel de administración global |
+| `GET/POST/DELETE /reservations`, `GET/POST/DELETE /services` | — | Endpoints legacy (compatibilidad) |
+| `GET /health` | — | Salud del proceso + `SELECT 1` contra la BD |
+| `GET /metrics` | — | Uptime, requests, errores, memoria, versión de Node |
+
+> `/api/providers` es un alias de compatibilidad de `/api/businesses`.
+
+Referencia completa de contratos: [docs/API.md](../docs/API.md).
+
+## Roles y tokens
+
+| Rol | Obtención | Expiración | Uso |
+|---|---|---|---|
+| `admin` | `POST /auth/admin` | 8h | Panel global |
+| `owner` | `POST /auth/owner/register` / `login` | 8h | Panel de dueños |
+| `business-admin` | `POST /businesses/:id/auth` | 8h | Panel del negocio (`businessId` en payload) |
+| `customer` | `POST /auth/customer/login` o OTP/magic-link | 8h | Panel "Mi cuenta" |
+
+## Seguridad
+
+- Queries paramétricas (`$1`, `$2`...), sanitización con `clean()` y validación `express-validator`.
+- Rate limiting global (`60 req / 15 min` por IP), `authLimiter` (10/15min) y `otpLimiter` (30/15min) para autenticación.
+- `helmet` + CORS restringido por `CORS_ORIGINS`.
+- `JWT_SECRET` estricto: el arranque aborta en producción si es débil, `ADMIN_PIN` es `1234` o falta `CORS_ORIGINS`.
+- PINs de negocio con **bcrypt** (cost 10); códigos OTP/magic-link guardados **solo como hash SHA-256**.
+- En producción aborta con alerta si `OTP_DEBUG=1`.
+
+## Notificaciones email/SMS (`channels.js`)
+
+- Proveedor `console` (defecto): loguea y guarda en una outbox en memoria (`getOutbox()`, `resetOutbox()`).
+- Proveedor `http`: `POST` JSON a `EMAIL_WEBHOOK_URL` / `SMS_WEBHOOK_URL` con cabeceras `EMAIL_WEBHOOK_HEADERS` / `SMS_WEBHOOK_HEADERS` y token Bearer opcional (compatible con Resend, SendGrid, Brevo, Twilio...).
+
+## Tests
 
 ```bash
-cd backend
-pnpm test
+pnpm test                 # 26 suites / 111 tests (jest --runInBand)
+pnpm test:integration     # requiere Postgres real (RUN_INTEGRATION=1 + DATABASE_URL)
 ```
 
-La suite actual queda verde con la capa productiva preparada.
+## Variables de entorno
 
----
+Recuerda: también están documentadas en `.env.example` y `docker-compose.yml`.
 
-## 11. Recomendación final
-
-Para un despliegue real, conviene evolucionar al modelo de `providers`/`customers`/`bookings`/`payments` como fuente de verdad del marketplace, dejando las rutas legacy como compatibilidad temporal durante la migración del frontend y la lógica de negocio.
+| Variable | Descripción |
+|---|---|
+| `PORT` | Puerto del servidor (defecto 3000) |
+| `DATABASE_URL` | Cadena de conexión PostgreSQL |
+| `JWT_SECRET` | Clave de firma de JWT (obligatoria y fuerte en producción) |
+| `ADMIN_PIN` | PIN del panel global (defecto 1234) |
+| `CORS_ORIGINS` | Orígenes permitidos, separados por coma |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_TOKENS_KEY` | OAuth de Google Sheets |
+| `EMAIL_PROVIDER`, `EMAIL_FROM`, `EMAIL_WEBHOOK_URL`, `EMAIL_WEBHOOK_HEADERS` | Canal de email |
+| `SMS_PROVIDER`, `SMS_WEBHOOK_URL`, `SMS_WEBHOOK_HEADERS` | Canal de SMS |
+| `FRONTEND_URL` | URL pública del frontend (magic-link) |
+| `OTP_DEBUG` | Exponer el código/token en la respuesta (solo dev/test) |

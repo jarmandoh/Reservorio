@@ -224,6 +224,9 @@ function startServer() {
     if (!process.env.DATABASE_URL) console.warn('[WARN] DATABASE_URL no configurado en .env');
     if (!process.env.ADMIN_PIN)    console.warn('[WARN] ADMIN_PIN no configurado — usando "1234" por defecto');
     if (!process.env.JWT_SECRET)   console.warn('[WARN] JWT_SECRET no configurado — usando secreto inseguro');
+    if (process.env.OTP_DEBUG === '1' && (process.env.NODE_ENV || 'development') === 'production') {
+      console.warn('[WARN] OTP_DEBUG=1 está activo en producción — los códigos de acceso se exponen en la respuesta');
+    }
 
     // Google OAuth warnings
     if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {

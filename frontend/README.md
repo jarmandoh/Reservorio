@@ -1,27 +1,93 @@
-# Frontend
+# Frontend — Reservorio
 
-This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 17.3.17.
+Aplicación web de **Reservorio** construida con **Angular 22** (Standalone Components), **Tailwind CSS 3**, **GSAP** y **Leaflet**. Servida en producción por Nginx.
 
-## Development server
+## Requisitos
 
-Run `ng serve` for a dev server. Navigate to `http://localhost:4200/`. The application will automatically reload if you change any of the source files.
+- Node.js `>=22.22.3`
+- pnpm `>=9.15.0`
 
-## Code scaffolding
+## Puesta en marcha
 
-Run `ng generate component component-name` to generate a new component. You can also use `ng generate directive|pipe|service|class|guard|interface|enum|module`.
+```bash
+pnpm install
+pnpm start              # ng serve → http://localhost:4200
+pnpm build              # build de producción → dist/frontend
+pnpm test               # specs con Karma/Jasmine
+pnpm e2e                # test e2e con Playwright
+```
 
-## Build
+El proxy de desarrollo (`angular.json`) redirige `/api/*` a `http://localhost:3000/api`.
 
-Run `ng build` to build the project. The build artifacts will be stored in the `dist/` directory.
+## Configuración de la API
 
-## Running unit tests
+`src/environments/environment.ts` resuelve la URL base así:
 
-Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.io).
+```ts
+apiUrl: window.__APP_CONFIG__?.apiUrl ?? 'http://localhost:3000/api'  // dev
+apiUrl: window.__APP_CONFIG__?.apiUrl ?? '/api'                       // prod
+```
 
-## Running end-to-end tests
+En Docker, `docker-compose.yml` inyecta `API_URL` en el HTML servido, lo que permite apuntar al dominio real sin recompilar.
 
-Run `ng e2e` to execute the end-to-end tests via a platform of your choice. To use this command, you need to first add a package that implements end-to-end testing capabilities.
+## Estructura
 
-## Further help
+```
+src/app/
+├── app.component.*                # Shell raíz (router-outlet + ToastComponent)
+├── app.config.ts                  # provideRouter + provideHttpClient
+├── app.routes.ts                  # featureRoutes (de features/routes.ts)
+├── core/
+│   ├── guards/                    # admin, owner, business, customer
+│   ├── models/                    # business, categorias, reservation
+│   ├── services/                  # api, auth, storage, session.store, toast, offline,
+│   │                              #   admin, owner-business, business-admin, business
+│   └── state/session.store.ts     # Estado reactivo global (signals)
+├── shared/components/             # badge, pin-auth-card, map-modal, business-form, toast
+└── features/
+    ├── home/                      # Listado público de negocios
+    ├── booking/                   # Formulario de reserva del cliente
+    ├── login/                     # Login del administrador global (PIN)
+    ├── admin/                     # Panel global: CRUD de negocios
+    ├── business-login/            # Login por PIN del negocio
+    ├── business-admin/            # Panel del negocio + bulk-slot-generator
+    ├── owner-register|login|dashboard/  # Flujo de dueños
+    ├── customer-login/            # Login de cliente (email/teléfono + OTP + magic-link)
+    ├── customer-magic-verify/     # Canje del magic-link desde el email
+    ├── customer-history/          # Panel "Mi cuenta" del cliente
+    └── payment-success|cancel/    # Confirmación/cancelación de pago
+```
 
-To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI Overview and Command Reference](https://angular.io/cli) page.
+## Rutas
+
+| Ruta | Componente | Guard |
+|---|---|---|
+| `/` | Home | — |
+| `/booking/:businessId` | Booking | — |
+| `/login` | Login | — |
+| `/admin` | Admin | admin |
+| `/business/:businessId/login` | BusinessLogin | — |
+| `/business/:businessId/admin` | BusinessAdmin | business |
+| `/owner/business/:businessId` | BusinessAdmin | owner |
+| `/owner/register`, `/owner/login`, `/owner/dashboard` | Owner flow | dashboard: owner |
+| `/customer/login`, `/customer/history`, `/customer/verify` | Cliente | history: customer |
+| `/payment/success`, `/payment/cancel` | Pagos | — |
+
+## Almacenamiento de tokens (`auth.service.ts`)
+
+| Clave | Contenido | Almacenamiento |
+|---|---|---|
+| `reservorio_admin_jwt` | JWT admin global | sessionStorage |
+| `reservorio_owner_jwt` | JWT dueño | sessionStorage |
+| `negocio_jwt_<businessId>` | JWT business-admin | sessionStorage |
+| `reservorio_customer_jwt` | JWT cliente (persistente) | localStorage |
+| `reservorio_unlocked` | Flag legacy de sesión | sessionStorage |
+| `reservorio_admin_pin` | PIN legacy | localStorage |
+
+`isTokenValid()` verifica la expiración en el cliente decodificando el payload del JWT.
+
+## Convenciones
+
+- Standalone Components (sin `NgModule`), `inject()` en lugar de constructor.
+- Estado reactivo con **Signals** (`signal`, `computed`) — ver `session.store.ts`.
+- Interfaces de datos en `core/models`.

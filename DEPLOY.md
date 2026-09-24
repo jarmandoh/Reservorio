@@ -13,6 +13,9 @@
    - `ADMIN_PIN`
    - `DATABASE_URL`
    - `CORS_ORIGINS`
+   - `FRONTEND_URL` (dominio público real — se usa en los magic-links de cliente)
+   - `EMAIL_PROVIDER` / `EMAIL_WEBHOOK_URL` (+ `EMAIL_WEBHOOK_HEADERS` con el token) y `SMS_*` si se envían notificaciones
+   - `OTP_DEBUG` debe quedar vacío o `0` (¡nunca `1` en producción!)
    - Google OAuth y Apps Script si se usan
 
 > No subas este archivo a Git ni lo compartas en repositorios públicos.
@@ -45,6 +48,7 @@ El backend debe responder con `ok: true` y la base de datos en estado `connected
 - Mantén `CORS_ORIGINS` limitado a dominios reales.
 - No expongas la base de datos directamente al público.
 - Cambia el valor por defecto de `ADMIN_PIN` antes del despliegue.
+- Verifica que `OTP_DEBUG` no esté activo y que los webhooks de email/SMS usen token Bearer.
 - Revisa periódicamente los logs del backend y del contenedor.
 
 ## 5. Actualizaciones

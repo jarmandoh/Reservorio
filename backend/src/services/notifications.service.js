@@ -2,6 +2,12 @@
 
 const { randomUUID } = require('crypto');
 const db = require('../db');
+const channels = require('./channels');
+
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:4200';
+
+// Tipos que además generan SMS (los recordatorios y confirmaciones lleguen al móvil).
+const SMS_TYPES = new Set(['reminder', 'booking_confirmed', 'payment_received']);
 
 function mapNotification(row) {
   if (!row) return row;
@@ -89,10 +95,70 @@ async function createNotification(payload = {}) {
       [notification.id, businessId, customerId || null, bookingId || null, type, channel, title, message, status]
     );
 
+    if (customerId) {
+      // Copia externa (email/sms) — fire-and-forget, nunca bloquea ni propaga errores.
+      deliverExternalNotification(notification).catch(error => {
+        console.error('[notifications] envío externo falló:', error?.message ?? error);
+      });
+    }
+
     return { ok: true, status: 201, data: mapNotification(rows[0]) };
   } catch (error) {
     console.error('[notifications] createNotification falló:', error.message);
     return { ok: false, status: 500, message: error.message };
+  }
+}
+
+/**
+ * Envía una copia del aviso por email (y SMS según el tipo) al cliente.
+ * Tolerante a fallos: ante cualquier problema solo registra y continúa.
+ */
+async function deliverExternalNotification(notification) {
+  const { businessId, bookingId, type, title, message } = notification;
+  if (!notification.customerId) return;
+
+  const rowsOf = result => (result && Array.isArray(result.rows) ? result.rows : []);
+
+  try {
+    const customerRows = rowsOf(await db.query('SELECT id, name, email, phone, sms_opt_in FROM customers WHERE id = $1', [notification.customerId]));
+    const customer = customerRows[0];
+    if (!customer) return;
+
+    const businessRows = rowsOf(await db.query('SELECT name FROM businesses WHERE id = $1', [businessId]));
+    const businessName = businessRows[0]?.name ?? '';
+
+    let detail = '';
+    if (bookingId) {
+      try {
+        const bookingRows = rowsOf(await db.query('SELECT booking_date, slot, service_id FROM bookings WHERE id = $1', [bookingId]));
+        const booking = bookingRows[0];
+        if (booking) {
+          detail = ` el ${String(booking.booking_date).slice(0, 10)} a las ${booking.slot}${booking.service_id ? ` (${booking.service_id})` : ''}`;
+        }
+      } catch {
+        // El detalle de la reserva es opcional.
+      }
+    }
+
+    const businessRef = businessName ? ` en ${businessName}` : '';
+    const subject = `${title}${businessRef}`;
+    const body = `Hola ${customer.name},\n\n${message.trim()}${detail}.\n\nPuedes consultar tu historial en ${FRONTEND_URL}/customer/history.\n\n— Reservorio`;
+
+    const outcome = { email: 'skipped', sms: 'skipped' };
+    if (customer.email) {
+      const emailResult = await channels.sendEmail({ to: customer.email, subject, textBody: body });
+      outcome.email = emailResult.ok ? 'sent' : 'failed';
+    }
+
+    if (SMS_TYPES.has(type) && customer.phone && customer.sms_opt_in !== false) {
+      const sms = `${subject}: ${message.trim()}${detail}`.slice(0, 160);
+      const smsResult = await channels.sendSms({ to: customer.phone, message: sms });
+      outcome.sms = smsResult.ok ? 'sent' : 'failed';
+    }
+
+    console.log(`[notifications] externo ${type} → email:${outcome.email} sms:${outcome.sms}`);
+  } catch (error) {
+    console.error('[notifications] deliverExternalNotification ignorado:', error.message);
   }
 }
 
@@ -117,4 +183,4 @@ async function sendReminderNotification(payload = {}) {
   });
 }
 
-module.exports = { listNotifications, createNotification, sendReminderNotification };
+module.exports = { listNotifications, createNotification, sendReminderNotification, deliverExternalNotification };

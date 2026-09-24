@@ -125,6 +125,30 @@ export class ApiService {
       .pipe(catchError(this.handleError));
   }
 
+  requestCustomerOtp(email: string): Observable<ApiResponse<{ message?: string; debugCode?: string }>> {
+    return this.http
+      .post<ApiResponse<{ message?: string; debugCode?: string }>>(`${this.base}/auth/customer/otp/request`, { email })
+      .pipe(catchError(this.handleError));
+  }
+
+  verifyCustomerOtp(email: string, code: string): Observable<ApiResponse<{ token: string; customer: Customer }>> {
+    return this.http
+      .post<ApiResponse<{ token: string; customer: Customer }>>(`${this.base}/auth/customer/otp/verify`, { email, code })
+      .pipe(catchError(this.handleError));
+  }
+
+  requestCustomerMagicLink(email: string): Observable<ApiResponse<{ message?: string; debugToken?: string }>> {
+    return this.http
+      .post<ApiResponse<{ message?: string; debugToken?: string }>>(`${this.base}/auth/customer/magic-link/request`, { email })
+      .pipe(catchError(this.handleError));
+  }
+
+  verifyCustomerMagicLink(token: string): Observable<ApiResponse<{ token: string; customer: Customer }>> {
+    return this.http
+      .post<ApiResponse<{ token: string; customer: Customer }>>(`${this.base}/auth/customer/magic-link/verify`, { token })
+      .pipe(catchError(this.handleError));
+  }
+
   registerOwner(payload: OwnerAuthPayload): Observable<ApiResponse<{ token: string }>> {
     return this.http
       .post<ApiResponse<{ token: string }>>(`${this.base}/auth/owner/register`, payload)
