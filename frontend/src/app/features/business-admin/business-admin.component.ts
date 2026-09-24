@@ -73,10 +73,17 @@ type negocioTab = 'reservas' | 'servicios' | 'perfil' | 'google';
 
         <div class="flex items-center justify-between">
           <h2 class="font-display font-semibold text-[1.375rem]">Reservas</h2>
-          <button class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-surface-container
-                         text-on-surface-variant transition sm:w-10 sm:h-10 min-h-[44px] sm:min-h-[auto]" (click)="loadReservations()" title="Actualizar">
-            <span class="material-icons-round text-lg" [class.animate-spin]="resLoading()">refresh</span>
-          </button>
+          <div class="flex items-center gap-2">
+            <button type="button" class="btn-secondary btn-sm min-h-[44px] sm:min-h-[auto]"
+                    (click)="exportReservationsCsv()" title="Exportar reservas a CSV">
+              <span class="material-icons-round text-base">file_download</span>
+              <span class="hidden sm:inline">CSV</span>
+            </button>
+            <button class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-surface-container
+                           text-on-surface-variant transition sm:w-10 sm:h-10 min-h-[44px] sm:min-h-[auto]" (click)="loadReservations()" title="Actualizar">
+              <span class="material-icons-round text-lg" [class.animate-spin]="resLoading()">refresh</span>
+            </button>
+          </div>
         </div>
 
         <!-- Stats -->
@@ -1227,6 +1234,30 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
   contactHref(r: Reservation): string {
     const phone = String(r.telefono ?? '').replace(/\s+/g, '').replace(/^\+/, '');
     return phone ? `https://wa.me/${phone}` : '';
+  }
+
+  exportReservationsCsv(): void {
+    const header = ['Franja', 'Disponibilidad', 'Cliente', 'Telefono', 'Servicio', 'Notas'];
+    const escape = (value: unknown): string => `"${String(value ?? '').replace(/"/g, '""')}"`;
+    const rows   = this.filteredRes();
+
+    const lines = [header.map(escape).join(';')];
+    for (const r of rows) {
+      lines.push([r.franja, r.disponibilidad, r.cliente, r.telefono, r.servicio, r.notas]
+        .map(escape).join(';'));
+    }
+
+    const blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href  = url;
+    a.download = `reservas-${this.negocioId}-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    this.toast.success(rows.length ? `Exportadas ${rows.length} reservas` : 'No hay reservas que exportar');
   }
 
   // ── Google Sheets ──────────────────────────────────────────────

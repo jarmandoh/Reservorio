@@ -3,13 +3,14 @@
 const { google } = require('googleapis');
 const db = require('../db');
 const { encrypt, decrypt } = require('../utils/crypto');
+const logger = require('../logger');
 
 const CLIENT_ID     = process.env.GOOGLE_CLIENT_ID;
 const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const REDIRECT_URI  = process.env.GOOGLE_REDIRECT_URI;
 
 if (!CLIENT_ID || !CLIENT_SECRET || !REDIRECT_URI) {
-  console.warn('[WARN] Variables de Google OAuth no configuradas (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI).');
+  logger.warn('[WARN] Variables de Google OAuth no configuradas (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI).');
 }
 
 const SCOPES = [
@@ -18,7 +19,7 @@ const SCOPES = [
   'https://www.googleapis.com/auth/userinfo.email',
 ];
 
-// â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â¬â¬ Helpers â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬
 
 /**
  * Crea un OAuth2Client base (sin tokens).
@@ -29,7 +30,7 @@ function createOAuth2Client() {
 
 /**
  * Genera la URL de consentimiento OAuth.
- * @param {string} state â€” JWT firmado con businessId (protecciÃ³n CSRF)
+ * @param {string} state â¬ JWT firmado con businessId (protecciÃ³n CSRF)
  */
 function getAuthUrl(state) {
   const client = createOAuth2Client();
@@ -144,7 +145,7 @@ async function disconnect(businessId) {
       const token = decrypt(rows[0].google_access_token);
       const client = createOAuth2Client();
       await client.revokeToken(token);
-    } catch (_) { /* token ya expirado/revocado â€” ignorar */ }
+    } catch (_) { /* token ya expirado/revocado â¬ ignorar */ }
   }
   await db.query(
     `UPDATE businesses
@@ -203,7 +204,7 @@ async function createTemplateSheet(businessId, businessName) {
 
   const res = await sheets.spreadsheets.create({
     requestBody: {
-      properties: { title: `${businessName} â€” Reservorio` },
+      properties: { title: `${businessName} â¬ Reservorio` },
       sheets: [
         {
           properties: { title: 'Reservas' },
@@ -252,3 +253,4 @@ module.exports = {
   writeSheet,
   createTemplateSheet,
 };
+

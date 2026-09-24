@@ -115,6 +115,17 @@ Los tokens se generan con `sign(payload)`, firma **HS256**. Expiración: **2 hor
 
 `JWT_SECRET` debe configurarse en `.env`. Si no está definido, se usa un secreto hardcodeado de desarrollo y se imprime una advertencia en consola. En producción el arranque **aborta** si `JWT_SECRET` es débil.
 
+### Migraciones SQL versionadas
+
+`backend/db/init.sql` sigue siendo la fuente para contenedores nuevos y la baseline; el schema en producción y CI se evoluciona con migraciones numeradas en `backend/db/migrations/`:
+
+```bash
+pnpm db:migrate            # aplica pendientes (idempotente; registra en schema_migrations)
+pnpm db:migrate:create -- nombre_cambio   # crea el siguiente NNNN_*.sql
+```
+
+El contenedor backend (`Dockerfile`) ejecuta `node db/migrate.js` antes de arrancar, por lo que un despliegue sobre un volumen existente recibe los cambios automáticamente. Cada migración corre en una transacción y nunca se repite. Nuevos cambios al schema: primero migración **y**, si afecta a contenedores nuevos, también `init.sql`.
+
 ### Schema de la base de datos (fuente única: `backend/db/init.sql`)
 
 ```sql
@@ -238,11 +249,13 @@ Todas las peticiones HTTP pasan por `ApiService`. Los errores se transforman con
 
 ```
 POST /api/auth/admin  {pin}
-    → backend compara contra ADMIN_PIN del .env (authLimiter 10/15min)
-    → devuelve JWT con role: "admin"
+    → backend compara con bcrypt (hash cacheado de ADMIN_PIN, o ADMIN_PIN_HASH si se define) (authLimiter 10/15min)
+    → devuelve JWT con role: "admin" (expira en 2h)
     → frontend guarda token en sessionStorage (clave: reservorio_admin_jwt)
     → adminGuard permite acceso a /admin
 ```
+
+**Renovación de sesión (todos los roles).** Los JWT expiran (admin 2 h, resto 8 h). Para no cortar sesiones activas, `POST /api/auth/refresh` re-emite un token válido (o expirado dentro de `REFRESH_GRACE`, defecto 6 h) conservando rol/identidad. En el frontend, `AuthService.refreshSession()` renueva la sesión activa (admin/owner/customer) de forma silenciosa y `AppComponent` la invoca a los 5 s del arranque y luego cada hora. Los guardas (`isTokenValid`) siguen validando `exp` localmente; fuera de gracia la sesión caduca con normalidad.
 
 ### Dueño (owner)
 
@@ -327,6 +340,10 @@ Ambos flujos usan `otpLimiter` (30/15min por IP) y respuestas genéricas (no rev
 - `http`: hace `POST` JSON a `EMAIL_WEBHOOK_URL` / `SMS_WEBHOOK_URL` con las cabeceras `EMAIL_WEBHOOK_HEADERS` / `SMS_WEBHOOK_HEADERS` (JSON) y opcional `EMAIL_WEBHOOK_TOKEN` / `SMS_WEBHOOK_TOKEN` (`Authorization: Bearer ...`). Sirve para Resend, SendGrid, Brevo, Twilio, etc., sin dependencias extra.
 
 Los avisos internos (`notifications`) con `customerId` se copian por email al cliente (y SMS en recordatorios/confirmaciones/pagos si `customers.sms_opt_in`) de forma fire-and-forget — `deliverExternalNotification()` en `notifications.service.js`. La autenticación de cliente sin contraseña usa OTP/magic-link (`customer-auth.service.js`): códigos/tokens one-time guardados solo como hash SHA-256 en `customer_login_codes`.
+
+### Recordatorios agendados
+
+`backend/src/services/reminders.worker.js` programado por defecto a cada **60 min** (`REMINDER_INTERVAL_MINUTES`) revisa reservas cuyo inicio esté dentro de `REMINDER_WINDOW_HOURS` (defecto 24 h) y sin recordatorio previo (`notifications` type='reminder' en queued/sent), y les crea el aviso vía `sendReminderNotification()` (email + SMS si `sms_opt_in`). Es opt-in: solo arranca en `index.js` cuando `ENABLE_REMINDER_WORKER=1` — jamás corre en tests.
 
 ---
 

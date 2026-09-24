@@ -3,6 +3,8 @@
 const { randomUUID } = require('crypto');
 const db = require('../db');
 const { createNotification } = require('./notifications.service');
+const { parsePagination } = require('../utils/pagination');
+const logger = require('../logger');
 
 function mapBooking(row) {
   if (!row) return row;
@@ -21,17 +23,32 @@ function mapBooking(row) {
   };
 }
 
-async function listBookings() {
+async function listBookings(query = {}) {
   if (!process.env.DATABASE_URL) {
-    console.error('[bookings] listBookings: DATABASE_URL no configurado');
+    logger.error('[bookings] listBookings: DATABASE_URL no configurado');
     return { ok: false, status: 500, message: 'DATABASE_URL no configurado; el servicio requiere PostgreSQL' };
   }
 
   try {
-    const { rows } = await db.query('SELECT * FROM bookings ORDER BY created_at DESC');
-    return { ok: true, status: 200, data: rows.map(mapBooking) };
+    const { page, pageSize, limit, offset, paginated } = parsePagination(query);
+    let sql = 'SELECT * FROM bookings ORDER BY created_at DESC';
+    const values = [];
+    if (paginated) {
+      sql += ' LIMIT $1 OFFSET $2';
+      values.push(limit, offset);
+    }
+
+    const { rows } = await db.query(sql, values);
+    const result = { ok: true, status: 200, data: rows.map(mapBooking) };
+
+    if (paginated) {
+      const count = await db.query('SELECT COUNT(*)::int AS total FROM bookings');
+      result.meta = { total: Number(count.rows[0]?.total) || 0, page, pageSize };
+    }
+
+    return result;
   } catch (error) {
-    console.error('[bookings] listBookings falló:', error.message);
+    logger.error('[bookings] listBookings falló:', error.message);
     return { ok: false, status: 500, message: error.message };
   }
 }
@@ -49,7 +66,7 @@ async function createBooking(payload = {}) {
   }
 
   if (!process.env.DATABASE_URL) {
-    console.error('[bookings] createBooking: DATABASE_URL no configurado');
+    logger.error('[bookings] createBooking: DATABASE_URL no configurado');
     return { ok: false, status: 500, message: 'DATABASE_URL no configurado; el servicio requiere PostgreSQL' };
   }
 
@@ -94,9 +111,10 @@ async function createBooking(payload = {}) {
 
     return { ok: true, status: 201, data: mapBooking(rows[0]) };
   } catch (error) {
-    console.error('[bookings] createBooking falló:', error.message);
+    logger.error('[bookings] createBooking falló:', error.message);
     return { ok: false, status: 500, message: error.message };
   }
 }
 
 module.exports = { listBookings, createBooking };
+

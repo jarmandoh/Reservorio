@@ -47,7 +47,29 @@ Authorization: Bearer <token>
 - **Global** en todas las rutas `/api/`: 60 peticiones / 15 min.
 - `authLimiter` (login admin, owners, credenciales de cliente): 10 / 15 min.
 - `otpLimiter` (OTP y magic-link): 30 / 15 min.
+- `refreshLimiter` (`POST /api/auth/refresh`): 60 / 15 min.
 - Login por PIN de negocio: límite estricto anti fuerza bruta.
+
+---
+
+## Renovación de sesión
+
+### `POST /api/auth/refresh`
+
+Re-emite un token de acceso sin pedir credenciales de nuevo. Estrategia de "deslizamiento": se admite un token **aún válido o expirado dentro de la ventana de gracia** (`REFRESH_GRACE`, horas, defecto 6). Se valida la firma (HS256), se conserva el rol y la identidad (`ownerId`/`businessId`/`customerId`), y se re-firma con expiración completa (admin 2 h, resto 8 h).
+
+**Request**
+
+```json
+{ "token": "<token_actual_o_recientemente_expirado>" }
+```
+
+**Respuestas**
+
+- `200` → `{ "ok": true, "data": { "token": "<nuevo_token>" } }`
+- `401` → token inválido, rol desconocido, o exponería fuera de la ventana de gracia ("Sesión expirada; vuelve a iniciar sesión").
+
+**Uso en el frontend**: `AuthService.refreshSession()` renueva la sesión activa (admin/owner/customer); `AppComponent` lo dispara a los 5 s del arranque y luego cada hora.
 
 ---
 
@@ -55,7 +77,7 @@ Authorization: Bearer <token>
 
 ### `POST /api/auth/admin`
 
-Autentica el administrador global con el PIN de `ADMIN_PIN`.
+Autentica el administrador global con el PIN (se compara contra el hash bcrypt derivado de `ADMIN_PIN`, o directamente contra `ADMIN_PIN_HASH`).
 
 ```json
 // Request
@@ -252,6 +274,8 @@ Requiere **business-admin**. Elimina el servicio (codifica el nombre en la URL).
 
 Requiere **admin**. Listado de clientes.
 
+Parámetros opcionales: `page` y `pageSize` (máx 200, default 25). Si se pasan, la respuesta incluye `meta: { total, page, pageSize }` y `data` es la página correspondiente; sin ellos se devuelve el listado completo como hasta ahora.
+
 ### `POST /api/customers`
 
 Público. Alta de cliente (se usa en el checkout):
@@ -272,6 +296,8 @@ Requiere **customer**. Perfil del cliente logueado.
 
 Requiere **customer** (solo el propio `id`; otro id → `403`). Historial de reservas y pagos del cliente.
 
+Soporta paginación opcional con `page`/`pageSize`; cuando se usa, añade `meta: { total, page, pageSize }` a la respuesta `{ customer, bookings }`.
+
 ---
 
 ## Marketplace — bookings, pagos y notificaciones
@@ -279,6 +305,8 @@ Requiere **customer** (solo el propio `id`; otro id → `403`). Historial de res
 ### `GET /api/bookings`
 
 Requiere **admin**. Lista todas las reservas del marketplace.
+
+Parámetros opcionales: `page`/`pageSize` (máx 200, default 25); con ellos la respuesta incluye `meta: { total, page, pageSize }`.
 
 ### `POST /api/bookings`
 
@@ -297,7 +325,7 @@ Público. Crea una reserva:
 
 ### `GET /api/payments`
 
-Requiere **admin**. Listado de pagos. Filtros opcionales por query.
+Requiere **admin**. Listado de pagos. Filtros opcionales por query (`providerId`). Paginación opcional con `page`/`pageSize` (máx 200, default 25) → añade `meta: { total, page, pageSize }`.
 
 ### `POST /api/payments`
 
@@ -339,6 +367,8 @@ Crea un aviso:
 ### `POST /api/notifications/reminder`
 
 Dispara un recordatorio (email/SMS) a partir del aviso indicado en el body.
+
+> **Recordatorios agendados**: el worker interno (`backend/src/services/reminders.worker.js`) dispara este recordatorio de forma automática para cada reserva dentro de la ventana `REMINDER_WINDOW_HOURS` (defecto 24 h) que no tenga ya un recordatorio en `queued/sent`. Se activa con `ENABLE_REMINDER_WORKER=1` e itera cada `REMINDER_INTERVAL_MINUTES` (defecto 60).
 
 ---
 

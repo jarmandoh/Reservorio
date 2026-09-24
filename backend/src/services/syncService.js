@@ -3,9 +3,10 @@
 const { google } = require('googleapis');
 const db         = require('../db');
 const gsheets    = require('./googleSheets');
+const logger     = require('../logger');
 
 /**
- * Sincroniza TODAS las reservas de un negocio: PG â†’ Google Sheets.
+ * Sincroniza TODAS las reservas de un negocio: PG â  Google Sheets.
  * Sobreescribe la hoja "Reservas" completa (cabecera + datos).
  */
 async function syncReservations(businessId) {
@@ -43,7 +44,7 @@ async function syncReservations(businessId) {
 }
 
 /**
- * Sincroniza TODOS los servicios de un negocio: PG â†’ Google Sheets.
+ * Sincroniza TODOS los servicios de un negocio: PG â  Google Sheets.
  */
 async function syncServices(businessId) {
   const { rows: negocio } = await db.query(
@@ -96,7 +97,7 @@ function syncInBackground(businessId, type = 'all') {
            : syncAll;
 
   fn(businessId).catch(err => {
-    console.error(`[Sync] Error sincronizando ${type} para ${businessId}:`, err.message);
+    logger.error(`[Sync] Error sincronizando ${type} para ${businessId}:`, err.message);
   });
 }
 
@@ -108,3 +109,5 @@ async function bulkCreateSlots(businessId, slots) {
 } 
 
 module.exports = { syncReservations, syncServices, syncAll, syncInBackground, bulkCreateSlots };
+
+

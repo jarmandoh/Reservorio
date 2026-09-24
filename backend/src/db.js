@@ -1,13 +1,14 @@
 'use strict';
 
 const { Pool } = require('pg');
+const logger = require('./logger');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
 pool.on('error', (err) => {
-  console.error('[DB] Error inesperado en cliente idle:', err.message);
+  logger.error('[DB] Error inesperado en cliente idle:', err.message);
 });
 
 module.exports = pool;

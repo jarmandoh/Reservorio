@@ -188,7 +188,14 @@ export interface CustomerHistoryBooking {
   paymentMethod?: PaymentMethod | null;
 }
 
+export interface PaginationMeta {
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
 export interface CustomerHistory {
   customer: Customer;
   bookings: CustomerHistoryBooking[];
+  meta?: PaginationMeta;
 }

@@ -155,6 +155,12 @@ export class ApiService {
       .pipe(catchError(this.handleError));
   }
 
+  refreshToken(token: string): Observable<ApiResponse<{ token: string }>> {
+    return this.http
+      .post<ApiResponse<{ token: string }>>(`${this.base}/auth/refresh`, { token })
+      .pipe(catchError(this.handleError));
+  }
+
   // ── Multi-business (public) ───────────────────────────────────────────
   getBusinesses(params?: BusinessQuery): Observable<Business[]> {
     let httpParams = new HttpParams();
@@ -381,9 +387,13 @@ export class ApiService {
       .pipe(map(r => r.data!));
   }
 
-  getCustomerHistory(customerId: string, token: string): Observable<CustomerHistory> {
+  getCustomerHistory(customerId: string, token: string, page?: number, pageSize?: number): Observable<CustomerHistory> {
+    let httpParams = new HttpParams();
+    if (page != null) httpParams = httpParams.set('page', String(page));
+    if (pageSize != null) httpParams = httpParams.set('pageSize', String(pageSize));
+
     return this.http
-      .get<ApiResponse<CustomerHistory>>(`${this.base}/customers/${customerId}/history`, this.authHeader(token))
+      .get<ApiResponse<CustomerHistory>>(`${this.base}/customers/${customerId}/history`, { params: httpParams, ...this.authHeader(token) })
       .pipe(map(r => r.data!));
   }
 

@@ -1,32 +1,35 @@
 # Migraciones SQL
 
-**El esquema vive en `backend/db/init.sql`**, que es la única fuente de verdad: se ejecuta
-automáticamente al crear el contenedor por primera vez (`docker-entrypoint-initdb.d`).
+El esquema se gestiona con migraciones **numeradas** en este directorio. Cada archivo
+`NNNN_nombre.sql` se aplica una sola vez en orden, dentro de una transacción, y queda
+registrado en la tabla `schema_migrations`.
 
-El directorio `migrations/` queda retirado:
-
-- `001_marketplace_schema.sql` (retirado): proponía un modelo marketplace con `providers` /
-  `bookings` / `payments` con UUID. Divergía del esquema real que usa la aplicación
-  (id de `businesses` TEXT y `bookings`/`customers`/`notifications` también TEXT) y el
-  código nunca la utilizaba. `customers`, `bookings`, `notifications` y ahora `payments`
-  ya están definidos en `init.sql` con FKs coherentes.
-- `002_availability_locks.sql` (retirado): sus índices únicos parciales
-  (`uq_reservations_franja`, `uq_bookings_active_slot`) se movieron a `init.sql`, por lo que
-  una base recién creada ya viene protegida contra dobles reservas.
-
-## Si ya tienes una base creada con el esquema antiguo
-
-Para alinear una base existente a `init.sql`, elimina los objetos fuera de lugar antes de
-volver a aplicar el esquema:
+## Uso
 
 ```bash
-# (opcional) solo si aplicaste la antigua 001 en algún entorno
-DROP TABLE IF EXISTS booking_events, payments, providers CASCADE;
+# Aplicar pendientes (idempotente — seguro repetir)
+pnpm db:migrate
+
+# Crear el siguiente archivo numerado
+pnpm db:migrate:create -- anadir_columna_x
 ```
 
-Después recrea lo que falte aplicando `init.sql` (sus `CREATE TABLE IF NOT EXISTS` /
-`ALTER TABLE ... ADD COLUMN IF NOT EXISTS` son idempotentes):
+El runner (`backend/db/migrate.js`) requiere `DATABASE_URL` válida. En Docker el
+backend aplica `db:migrate` antes de arrancar (ver `backend/Dockerfile`), por lo que
+un despliegue sobre un volumen existente recibe los cambios de schema automáticamente.
 
-```bash
-psql "$DATABASE_URL" -f backend/db/init.sql
-```
+## Baseline
+
+`0001_init.sql` es la baseline (equivale a `backend/db/init.sql`, la misma fuente de
+verdad que usa el contenedor de PostgreSQL en su primer arranque). Las sentencias son
+idempotentes (`IF NOT EXISTS` + `ON CONFLICT DO NOTHING`), por lo que aplicarla sobre
+una base ya creada con `init.sql` no causa errores.
+
+## Convenciones
+
+- Prefijo de 4 dígitos (`0001_`, `0002_`, ...). No renumerar ni editar una migración
+  una vez aplicada a producción — crea una nueva.
+- Las migraciones no deben contener parámetros (`$1`, ...); el runner las ejecuta como
+  bloque simple.
+- Todo cambio permanente al schema va primero como migración; si afecta a contenedores
+  nuevos, refleja el cambio también en `init.sql`.

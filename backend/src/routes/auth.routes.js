@@ -6,6 +6,7 @@ const { handleValidation } = require('../middleware/validation');
 const { requireAuth } = require('../middleware/auth');
 const authService = require('../services/auth.service');
 const customerAuthService = require('../services/customer-auth.service');
+const logger = require('../logger');
 
 const router = express.Router();
 
@@ -23,6 +24,8 @@ function makeLimiter(max) {
 const authLimiter = makeLimiter(10);
 // Los endpoints OTP/magic-link tienen su propio contador (solicitar + verificar)
 const otpLimiter = makeLimiter(30);
+// El refresh de sesión tiene un límite generoso (renovaciones periódicas legítimas).
+const refreshLimiter = makeLimiter(60);
 
 /** POST /api/auth/admin */
 router.post(
@@ -36,7 +39,7 @@ router.post(
       const result = await authService.authenticateAdmin(pin);
       return res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
     } catch (error) {
-      console.error('Error en autenticación admin:', error);
+      logger.error('Error en autenticación admin:', error);
       return res.status(500).json({ ok: false, message: 'Server error' });
     }
   }
@@ -59,7 +62,7 @@ router.post(
       });
       return res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
     } catch (error) {
-      console.error('Error en registro de dueño:', error);
+      logger.error('Error en registro de dueño:', error);
       return res.status(500).json({ ok: false, message: 'Server error' });
     }
   }
@@ -80,7 +83,7 @@ router.post(
       });
       return res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
     } catch (error) {
-      console.error('Error en login de dueño:', error);
+      logger.error('Error en login de dueño:', error);
       return res.status(500).json({ ok: false, message: 'Server error' });
     }
   }
@@ -96,7 +99,7 @@ router.get('/owner/me', requireAuth, async (req, res) => {
     const result = await authService.getOwnerProfile(req.authPayload.ownerId);
     return res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (error) {
-    console.error('Error owner/me:', error);
+    logger.error('Error owner/me:', error);
     res.status(500).json({ ok: false, message: 'Server error' });
   }
 });
@@ -116,13 +119,13 @@ router.post(
       });
       return res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
     } catch (error) {
-      console.error('Error en login de cliente:', error);
+      logger.error('Error en login de cliente:', error);
       return res.status(500).json({ ok: false, message: 'Server error' });
     }
   }
 );
 
-/** POST /api/auth/customer/otp/request — solicita un OTP por email/SMS */
+/** POST /api/auth/customer/otp/request � solicita un OTP por email/SMS */
 router.post(
   '/customer/otp/request',
   otpLimiter,
@@ -133,13 +136,13 @@ router.post(
       const result = await customerAuthService.requestOtp({ email: req.body.email });
       return res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
     } catch (error) {
-      console.error('Error en solicitud de OTP:', error);
+      logger.error('Error en solicitud de OTP:', error);
       return res.status(500).json({ ok: false, message: 'Server error' });
     }
   }
 );
 
-/** POST /api/auth/customer/otp/verify — canjea el OTP por un JWT de cliente */
+/** POST /api/auth/customer/otp/verify � canjea el OTP por un JWT de cliente */
 router.post(
   '/customer/otp/verify',
   otpLimiter,
@@ -151,13 +154,13 @@ router.post(
       const result = await customerAuthService.verifyOtp({ email: req.body.email, code: req.body.code });
       return res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
     } catch (error) {
-      console.error('Error en verificación de OTP:', error);
+      logger.error('Error en verificación de OTP:', error);
       return res.status(500).json({ ok: false, message: 'Server error' });
     }
   }
 );
 
-/** POST /api/auth/customer/magic-link/request — solicita un enlace de acceso por email */
+/** POST /api/auth/customer/magic-link/request � solicita un enlace de acceso por email */
 router.post(
   '/customer/magic-link/request',
   otpLimiter,
@@ -168,13 +171,13 @@ router.post(
       const result = await customerAuthService.requestMagicLink({ email: req.body.email });
       return res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
     } catch (error) {
-      console.error('Error en solicitud de magic-link:', error);
+      logger.error('Error en solicitud de magic-link:', error);
       return res.status(500).json({ ok: false, message: 'Server error' });
     }
   }
 );
 
-/** POST /api/auth/customer/magic-link/verify — canjea el enlace por un JWT de cliente */
+/** POST /api/auth/customer/magic-link/verify � canjea el enlace por un JWT de cliente */
 router.post(
   '/customer/magic-link/verify',
   otpLimiter,
@@ -185,10 +188,28 @@ router.post(
       const result = await customerAuthService.verifyMagicLink({ token: req.body.token });
       return res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
     } catch (error) {
-      console.error('Error en verificación de magic-link:', error);
+      logger.error('Error en verificación de magic-link:', error);
+      return res.status(500).json({ ok: false, message: 'Server error' });
+    }
+  }
+);
+
+/** POST /api/auth/refresh � reemite un token de sesión dentro de la ventana de gracia */
+router.post(
+  '/refresh',
+  refreshLimiter,
+  body('token').trim().notEmpty().withMessage('token requerido'),
+  handleValidation,
+  async (req, res) => {
+    try {
+      const result = await authService.refreshAccessToken(req.body.token);
+      return res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
+    } catch (error) {
+      logger.error('Error en refresh de token:', error);
       return res.status(500).json({ ok: false, message: 'Server error' });
     }
   }
 );
 
 module.exports = router;
+

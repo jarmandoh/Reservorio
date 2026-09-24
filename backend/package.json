@@ -8,7 +8,9 @@
     "dev": "nodemon --watch src src/index.js",
     "test": "jest --runInBand",
     "test:watch": "jest --watchAll",
-    "test:integration": "jest --runInBand test/real-business.routes.test.js"
+    "test:integration": "jest --runInBand test/real-business.routes.test.js",
+    "db:migrate": "node db/migrate.js",
+    "db:migrate:create": "node scripts/create-migration.mjs"
   },
   "keywords": [],
   "author": "",
@@ -32,7 +34,8 @@
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.3",
     "node-fetch": "^3.3.2",
-    "pg": "^8.13.3"
+    "pg": "^8.13.3",
+    "pino": "^10.3.1"
   },
   "devDependencies": {
     "jest": "^30.4.2",

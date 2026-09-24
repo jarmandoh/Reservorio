@@ -1,10 +1,11 @@
 'use strict';
 
 const jwt    = require('jsonwebtoken');
+const logger = require('../logger');
 const SECRET = process.env.JWT_SECRET || 'reservorio_dev_secret_change_me';
 
 if (!process.env.JWT_SECRET) {
-  console.warn('[WARN] JWT_SECRET no configurado — usando secreto temporal inseguro.');
+  logger.warn('[WARN] JWT_SECRET no configurado — usando secreto temporal inseguro.');
 }
 
 function sign(payload, expiresIn = '8h') {

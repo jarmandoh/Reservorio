@@ -1,4 +1,4 @@
-import { Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
@@ -99,6 +99,22 @@ import { Customer, CustomerHistoryBooking } from '../../core/models/reservation.
                 </article>
               }
             </section>
+
+            @if (total() != null && total()! > pageSize()) {
+              <nav class="flex items-center justify-between gap-3" aria-label="Paginación del historial">
+                <button class="btn-tertiary btn-sm flex items-center gap-1.5" type="button"
+                        [disabled]="page() <= 1 || changingPage()" (click)="goToPage(page() - 1)">
+                  <span class="material-icons-round text-base">chevron_left</span>
+                  Anterior
+                </button>
+                <span class="text-sm text-on-surface-variant">Página {{ page() }} de {{ totalPages() }}</span>
+                <button class="btn-tertiary btn-sm flex items-center gap-1.5" type="button"
+                        [disabled]="page() >= totalPages() || changingPage()" (click)="goToPage(page() + 1)">
+                  Siguiente
+                  <span class="material-icons-round text-base">chevron_right</span>
+                </button>
+              </nav>
+            }
           }
         }
       </div>
@@ -115,25 +131,50 @@ export class CustomerHistoryComponent implements OnInit {
   readonly error = signal<string | null>(null);
   readonly customer = signal<Customer | null>(null);
   readonly bookings = signal<CustomerHistoryBooking[]>([]);
+  readonly page = signal(1);
+  readonly pageSize = signal(10);
+  readonly total = signal<number | null>(null);
+  readonly changingPage = signal(false);
+
+  private token: string | null = null;
+  private customerId: string | null = null;
 
   private readonly statusInfo = { pending: 'Pendiente', confirmed: 'Confirmado', completed: 'Completado', cancelled: 'Cancelado' };
 
-  ngOnInit(): void {
-    const token = this.auth.getCustomerToken();
-    const customerId = this.auth.getCustomerPayload()?.customerId as string | undefined;
+  readonly totalPages = computed(() => {
+    const t = this.total();
+    const ps = this.pageSize();
+    return t != null && ps > 0 ? Math.max(1, Math.ceil(t / ps)) : 1;
+  });
 
-    if (!token || !customerId) {
+  ngOnInit(): void {
+    this.token = this.auth.getCustomerToken();
+    this.customerId = this.auth.getCustomerPayload()?.customerId as string | undefined ?? null;
+
+    if (!this.token || !this.customerId) {
       this.auth.clearCustomerToken();
       this.router.navigate(['/customer/login']);
       return;
     }
 
-    this.api.getCustomerHistory(customerId, token).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    this.loadHistory(this.page());
+  }
+
+  loadHistory(page: number): void {
+    const token = this.token;
+    const customerId = this.customerId;
+    if (!token || !customerId) return;
+
+    this.loading.set(true);
+    this.error.set(null);
+
+    this.api.getCustomerHistory(customerId, token, page, this.pageSize()).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: data => {
         this.customer.set(data.customer);
         this.bookings.set(data.bookings);
+        this.page.set(page);
+        this.total.set(data.meta?.total ?? data.bookings.length);
         this.loading.set(false);
-        this.error.set(null);
       },
       error: err => {
         this.loading.set(false);
@@ -145,6 +186,13 @@ export class CustomerHistoryComponent implements OnInit {
         this.error.set(err.error?.message ?? 'No se pudo cargar tu historial.');
       },
     });
+  }
+
+  goToPage(page: number): void {
+    if (page < 1 || page > this.totalPages() || page === this.page()) return;
+    this.changingPage.set(true);
+    this.loadHistory(page);
+    this.changingPage.set(false);
   }
 
   initials(name?: string): string {

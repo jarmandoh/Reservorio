@@ -3,6 +3,8 @@
 const { randomUUID } = require('crypto');
 const db = require('../db');
 const { createNotification } = require('./notifications.service');
+const { parsePagination } = require('../utils/pagination');
+const logger = require('../logger');
 
 let stripeClient = null;
 
@@ -49,18 +51,37 @@ async function listPayments(filters = {}) {
   const providerId = String(filters.providerId ?? '').trim();
 
   try {
-    let query = 'SELECT * FROM payments ORDER BY created_at DESC';
+    const { page, pageSize, limit, offset, paginated } = parsePagination(filters);
+    let query = 'SELECT * FROM payments';
     const values = [];
 
     if (providerId) {
-      query = 'SELECT * FROM payments WHERE provider_id = $1 ORDER BY created_at DESC';
+      query += ' WHERE provider_id = $1';
       values.push(providerId);
     }
 
+    query += ' ORDER BY created_at DESC';
+
+    if (paginated) {
+      query += ` LIMIT $${values.length + 1} OFFSET $${values.length + 2}`;
+      values.push(limit, offset);
+    }
+
     const { rows } = await db.query(query, values);
-    return { ok: true, status: 200, data: rows.map(mapPayment) };
+    const result = { ok: true, status: 200, data: rows.map(mapPayment) };
+
+    if (paginated) {
+      const countValues = providerId ? [providerId] : [];
+      const countQuery = providerId
+        ? 'SELECT COUNT(*)::int AS total FROM payments WHERE provider_id = $1'
+        : 'SELECT COUNT(*)::int AS total FROM payments';
+      const count = await db.query(countQuery, countValues);
+      result.meta = { total: Number(count.rows[0]?.total) || 0, page, pageSize };
+    }
+
+    return result;
   } catch (error) {
-    console.error('[payments] listPayments falló:', error.message);
+    logger.error('[payments] listPayments falló:', error.message);
     return { ok: false, status: 500, message: 'Error al listar los pagos' };
   }
 }
@@ -97,7 +118,7 @@ async function createPayment(payload = {}) {
   };
 
   if (!process.env.DATABASE_URL) {
-    console.error('[payments] createPayment: DATABASE_URL no configurado');
+    logger.error('[payments] createPayment: DATABASE_URL no configurado');
     return { ok: false, status: 500, message: 'DATABASE_URL no configurado; el servicio requiere PostgreSQL' };
   }
 
@@ -111,7 +132,7 @@ async function createPayment(payload = {}) {
 
     return { ok: true, status: 201, data: mapPayment(rows[0]) };
   } catch (error) {
-    console.error('[payments] createPayment falló:', error.message);
+    logger.error('[payments] createPayment falló:', error.message);
     return { ok: false, status: 500, message: 'Error al registrar el pago en la base de datos' };
   }
 }
@@ -133,7 +154,7 @@ async function getPayment(id) {
   }
 
   if (!process.env.DATABASE_URL) {
-    console.error('[payments] getPayment: DATABASE_URL no configurado');
+    logger.error('[payments] getPayment: DATABASE_URL no configurado');
     return { ok: false, status: 500, message: 'DATABASE_URL no configurado; el servicio requiere PostgreSQL' };
   }
 
@@ -144,7 +165,7 @@ async function getPayment(id) {
     }
     return { ok: true, status: 200, data: mapPayment(rows[0]) };
   } catch (error) {
-    console.error('[payments] getPayment falló:', error.message);
+    logger.error('[payments] getPayment falló:', error.message);
     return { ok: false, status: 500, message: error.message };
   }
 }
@@ -156,7 +177,7 @@ async function updatePaymentStatus(id, status) {
   }
 
   if (!process.env.DATABASE_URL) {
-    console.error('[payments] updatePaymentStatus: DATABASE_URL no configurado');
+    logger.error('[payments] updatePaymentStatus: DATABASE_URL no configurado');
     return { ok: false, status: 500, message: 'DATABASE_URL no configurado; el servicio requiere PostgreSQL' };
   }
 
@@ -189,7 +210,7 @@ async function updatePaymentStatus(id, status) {
 
     return { ok: true, status: 200, data: payment };
   } catch (error) {
-    console.error('[payments] updatePaymentStatus falló:', error.message);
+    logger.error('[payments] updatePaymentStatus falló:', error.message);
     return { ok: false, status: 500, message: error.message };
   }
 }
@@ -356,7 +377,7 @@ async function processWebhook({ rawBody, signature, event }) {
   };
 
   if (!process.env.DATABASE_URL) {
-    console.warn('[payments] webhook procesado sin DATABASE_URL; no se persiste');
+    logger.warn('[payments] webhook procesado sin DATABASE_URL; no se persiste');
   } else if (status === 'paid') {
     try {
       await db.query(
@@ -373,7 +394,7 @@ async function processWebhook({ rawBody, signature, event }) {
         [providerId, bookingId]
       );
     } catch (error) {
-      console.error('[payments] webhook: error al confirmar el pago en BD:', error.message);
+      logger.error('[payments] webhook: error al confirmar el pago en BD:', error.message);
       return { ok: false, status: 500, message: 'Error al confirmar el pago en la base de datos' };
     }
   }
@@ -395,3 +416,5 @@ async function processWebhook({ rawBody, signature, event }) {
 }
 
 module.exports = { listPayments, createPayment, createCheckoutSession, processWebhook, getPayment, updatePaymentStatus };
+
+

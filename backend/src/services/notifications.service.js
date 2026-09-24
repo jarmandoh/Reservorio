@@ -3,6 +3,7 @@
 const { randomUUID } = require('crypto');
 const db = require('../db');
 const channels = require('./channels');
+const logger = require('../logger');
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:4200';
 
@@ -54,7 +55,7 @@ async function listNotifications(filters = {}) {
     const { rows } = await db.query(query, values);
     return { ok: true, status: 200, data: rows.map(mapNotification) };
   } catch (error) {
-    console.error('[notifications] listNotifications falló:', error.message);
+    logger.error('[notifications] listNotifications falló:', error.message);
     return { ok: false, status: 500, message: error.message };
   }
 }
@@ -96,15 +97,15 @@ async function createNotification(payload = {}) {
     );
 
     if (customerId) {
-      // Copia externa (email/sms) — fire-and-forget, nunca bloquea ni propaga errores.
+      // Copia externa (email/sms) � fire-and-forget, nunca bloquea ni propaga errores.
       deliverExternalNotification(notification).catch(error => {
-        console.error('[notifications] envío externo falló:', error?.message ?? error);
+        logger.error('[notifications] envío externo falló:', error?.message ?? error);
       });
     }
 
     return { ok: true, status: 201, data: mapNotification(rows[0]) };
   } catch (error) {
-    console.error('[notifications] createNotification falló:', error.message);
+    logger.error('[notifications] createNotification falló:', error.message);
     return { ok: false, status: 500, message: error.message };
   }
 }
@@ -142,7 +143,7 @@ async function deliverExternalNotification(notification) {
 
     const businessRef = businessName ? ` en ${businessName}` : '';
     const subject = `${title}${businessRef}`;
-    const body = `Hola ${customer.name},\n\n${message.trim()}${detail}.\n\nPuedes consultar tu historial en ${FRONTEND_URL}/customer/history.\n\n— Reservorio`;
+    const body = `Hola ${customer.name},\n\n${message.trim()}${detail}.\n\nPuedes consultar tu historial en ${FRONTEND_URL}/customer/history.\n\n� Reservorio`;
 
     const outcome = { email: 'skipped', sms: 'skipped' };
     if (customer.email) {
@@ -156,9 +157,9 @@ async function deliverExternalNotification(notification) {
       outcome.sms = smsResult.ok ? 'sent' : 'failed';
     }
 
-    console.log(`[notifications] externo ${type} → email:${outcome.email} sms:${outcome.sms}`);
+    logger.info(`[notifications] externo ${type} �  email:${outcome.email} sms:${outcome.sms}`);
   } catch (error) {
-    console.error('[notifications] deliverExternalNotification ignorado:', error.message);
+    logger.error('[notifications] deliverExternalNotification ignorado:', error.message);
   }
 }
 
@@ -184,3 +185,4 @@ async function sendReminderNotification(payload = {}) {
 }
 
 module.exports = { listNotifications, createNotification, sendReminderNotification, deliverExternalNotification };
+

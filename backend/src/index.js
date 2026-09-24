@@ -9,6 +9,7 @@ const cors           = require('cors');
 const helmet         = require('helmet');
 const rateLimit      = require('express-rate-limit');
 const db             = require('./db');
+const logger         = require('./logger');
 
 
 const reservations      = require('./routes/reservations.routes');
@@ -66,8 +67,9 @@ function validateRuntimeConfig() {
     }
 
     const adminPin = String(process.env.ADMIN_PIN ?? '');
-    if (!adminPin || adminPin === '1234' || adminPin.length < 6) {
-      throw new Error('ADMIN_PIN debe configurarse con una clave segura (≠ 1234, ≥ 6 caracteres) en producción');
+    const hasAdminHash = /^\$2[aby]\$/.test(String(process.env.ADMIN_PIN_HASH ?? '').trim());
+    if (!hasAdminHash && (!adminPin || adminPin === '1234' || adminPin.length < 6)) {
+      throw new Error('ADMIN_PIN debe configurarse con una clave segura (≠ 1234, ≥ 6 caracteres) o definirse ADMIN_PIN_HASH (bcrypt) en producción');
     }
 
     if (!process.env.CORS_ORIGINS || !process.env.CORS_ORIGINS.split(',').map(v => v.trim()).filter(Boolean).length) {
@@ -126,15 +128,14 @@ app.use((req, res, next) => {
     latencySamples.push({ ts: Date.now(), ms: durationMs });
     if (latencySamples.length > MAX_LATENCY_SAMPLES) latencySamples.shift();
 
-    console.log(JSON.stringify({
-      level: res.statusCode >= 500 ? 'error' : res.statusCode >= 400 ? 'warn' : 'info',
-      ts: new Date().toISOString(),
+    const level = res.statusCode >= 500 ? 'error' : res.statusCode >= 400 ? 'warn' : 'info';
+    logger[level]({
       requestId: req.requestId,
       method: req.method,
       url: req.originalUrl,
       status: res.statusCode,
       durationMs: Math.round(durationMs * 10) / 10,
-    }));
+    }, 'http request');
   });
 
   next();
@@ -220,27 +221,34 @@ app.use(errorHandler);
 
 function startServer() {
   const server = app.listen(PORT, async () => {
-    console.log(`[reservorio-api] corriendo en http://localhost:${PORT}`);
-    if (!process.env.DATABASE_URL) console.warn('[WARN] DATABASE_URL no configurado en .env');
-    if (!process.env.ADMIN_PIN)    console.warn('[WARN] ADMIN_PIN no configurado — usando "1234" por defecto');
-    if (!process.env.JWT_SECRET)   console.warn('[WARN] JWT_SECRET no configurado — usando secreto inseguro');
+    logger.info(`[reservorio-api] corriendo en http://localhost:${PORT}`);
+    if (!process.env.DATABASE_URL) logger.warn('[WARN] DATABASE_URL no configurado en .env');
+    if (!process.env.ADMIN_PIN)    logger.warn('[WARN] ADMIN_PIN no configurado — usando "1234" por defecto');
+    if (!process.env.JWT_SECRET)   logger.warn('[WARN] JWT_SECRET no configurado — usando secreto inseguro');
     if (process.env.OTP_DEBUG === '1' && (process.env.NODE_ENV || 'development') === 'production') {
-      console.warn('[WARN] OTP_DEBUG=1 está activo en producción — los códigos de acceso se exponen en la respuesta');
+      logger.warn('[WARN] OTP_DEBUG=1 está activo en producción — los códigos de acceso se exponen en la respuesta');
+    }
+
+    // Worker de recordatorios (opt-in; no corre en tests)
+    if (process.env.ENABLE_REMINDER_WORKER === '1') {
+      const { startReminderWorker } = require('./services/reminders.worker');
+      startReminderWorker();
+      logger.info('[reminders] worker de recordatorios habilitado');
     }
 
     // Google OAuth warnings
     if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
-      console.warn('[WARN] GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET no configurados — OAuth deshabilitado');
+      logger.warn('[WARN] GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET no configurados — OAuth deshabilitado');
     }
     if (process.env.GOOGLE_CLIENT_ID && (!process.env.GOOGLE_TOKENS_KEY || process.env.GOOGLE_TOKENS_KEY.length !== 64)) {
-      console.warn('[WARN] GOOGLE_TOKENS_KEY ausente o inválida (requiere 64 chars hex) — cifrado de tokens fallará');
+      logger.warn('[WARN] GOOGLE_TOKENS_KEY ausente o inválida (requiere 64 chars hex) — cifrado de tokens fallará');
     }
 
     try {
       await db.query('SELECT 1');
-      console.log('[DB] Conexion a PostgreSQL establecida');
+      logger.info('[DB] Conexion a PostgreSQL establecida');
     } catch (e) {
-      console.error('[DB] No se pudo conectar a PostgreSQL:', e.message);
+      logger.error('[DB] No se pudo conectar a PostgreSQL:', e.message);
     }
   });
 

@@ -2,13 +2,29 @@
 
 const { randomUUID } = require('crypto');
 const bcrypt = require('bcrypt');
-const { sign } = require('../middleware/jwt');
+const { sign, verify } = require('../middleware/jwt');
 const db = require('../db');
 
 const ADMIN_PIN = process.env.ADMIN_PIN || '1234';
 
+// Hash bcrypt del PIN de administración. Se usa ADMIN_PIN_HASH si está definido
+// (mezcla de sal aleatoria en el entorno); en caso contrario, se deriva de ADMIN_PIN
+// una sola vez en memoria. Esto evita comparar el PIN en texto plano.
+let adminHashPromise = null;
+function getAdminHash() {
+  if (!adminHashPromise) {
+    const configured = String(process.env.ADMIN_PIN_HASH || '').trim();
+    adminHashPromise = configured
+      ? Promise.resolve(configured)
+      : bcrypt.hash(String(ADMIN_PIN), 10);
+  }
+  return adminHashPromise;
+}
+
 async function authenticateAdmin(pin) {
-  if (String(pin) !== ADMIN_PIN) {
+  const hash = await getAdminHash();
+  const matches = await bcrypt.compare(String(pin), hash);
+  if (!matches) {
     return { ok: false, status: 401, message: 'PIN incorrecto' };
   }
 
@@ -111,10 +127,49 @@ async function loginCustomer({ email, phone } = {}) {
   };
 }
 
+/**
+ * Reemite un token de acceso sin pedir credenciales de nuevo.
+ *
+ * Estrategia de "deslizamiento": se admite un token ya expirado siempre que haya
+ * expirado dentro de la ventana REFRESH_GRACE (en horas, defecto 6). Se valida la
+ * firma (HS256) y se re-firma el mismo rol/identidad con expiración completa.
+ * Esto evita cortar sesiones activas sin introducir almacenamiento de refresh tokens.
+ */
+async function refreshAccessToken(tokenValue) {
+  let payload;
+  try {
+    payload = verify(String(tokenValue).trim(), { ignoreExpiration: true });
+  } catch {
+    return { ok: false, status: 401, message: 'Token inválido' };
+  }
+
+  const allowedRoles = ['admin', 'owner', 'business-admin', 'customer'];
+  if (!allowedRoles.includes(payload.role)) {
+    return { ok: false, status: 401, message: 'Token inválido' };
+  }
+
+  const graceMs = (Number(process.env.REFRESH_GRACE) || 6) * 60 * 60 * 1000;
+  const expMs = Number(payload.exp ?? 0) * 1000;
+  if (!expMs || Date.now() > expMs + graceMs) {
+    return { ok: false, status: 401, message: 'Sesión expirada; vuelve a iniciar sesión' };
+  }
+
+  const freshPayload = { role: payload.role };
+  if (payload.role === 'owner') freshPayload.ownerId = payload.ownerId;
+  if (payload.role === 'business-admin') freshPayload.businessId = payload.businessId;
+  if (payload.role === 'customer') freshPayload.customerId = payload.customerId;
+
+  const expiresIn = payload.role === 'admin' ? '2h' : '8h';
+  const token = sign(freshPayload, expiresIn);
+
+  return { ok: true, status: 200, data: { token } };
+}
+
 module.exports = {
   authenticateAdmin,
   registerOwner,
   loginOwner,
   loginCustomer,
   getOwnerProfile,
+  refreshAccessToken,
 };

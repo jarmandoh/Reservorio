@@ -16,12 +16,45 @@ const { randomUUID } = require('crypto');
 const { sign } = require('../middleware/jwt');
 const channels = require('./channels');
 const db = require('../db');
+const logger = require('../logger');
 
 const OTP_TTL_MS     = 10 * 60 * 1000;  // 10 min
 const MAGIC_TTL_MS   = 15 * 60 * 1000;  // 15 min
 const MAX_ATTEMPTS   = 5;
 const FRONTEND_URL   = process.env.FRONTEND_URL || 'http://localhost:4200';
 const otpDebug       = () => process.env.OTP_DEBUG === '1';
+
+// Backoff simple por email para solicitudes OTP/magic-link (anti-spam)
+// Mantiene respuesta genérica para evitar enumeración
+const OTP_BACKOFF_MAX   = Number(process.env.OTP_MAX_REQUESTS) || 5;
+const OTP_BACKOFF_WINDOW_MS = (Number(process.env.OTP_WINDOW_MIN) || 5) * 60 * 1000;
+const emailOtpRequests = new Map();
+function cleanEmailOtpStore() {
+  const now = Date.now();
+  for (const [k, v] of emailOtpRequests) {
+    if (v.expiresAt <= now) emailOtpRequests.delete(k);
+  }
+}
+function isEmailOtpRateLimited(email) {
+  if (!email) return false;
+  cleanEmailOtpStore();
+  const entry = emailOtpRequests.get(email);
+  if (!entry) return false;
+  if (entry.count >= OTP_BACKOFF_MAX && entry.expiresAt > Date.now()) return true;
+  return false;
+}
+function recordEmailOtpRequest(email) {
+  if (!email) return;
+  cleanEmailOtpStore();
+  const now = Date.now();
+  const entry = emailOtpRequests.get(email);
+  if (!entry || entry.expiresAt <= now) {
+    emailOtpRequests.set(email, { count: 1, expiresAt: now + OTP_BACKOFF_WINDOW_MS });
+    return;
+  }
+  entry.count += 1;
+  emailOtpRequests.set(email, entry);
+}
 
 function sha256(value) {
   return crypto.createHash('sha256').update(String(value)).digest('hex');
@@ -91,11 +124,17 @@ async function requestOtp({ email } = {}) {
   if (!clean) return { ok: false, status: 400, message: 'email requerido' };
 
   try {
+    if (isEmailOtpRateLimited(clean)) {
+      // Respuesta genérica para evitar enumeración
+      return { ok: true, status: 200, data: { message: 'Si el correo está registrado, recibirás un código de acceso.' } };
+    }
     const customer = await findCustomerByEmail(clean);
     if (!customer) {
+      recordEmailOtpRequest(clean);
       return { ok: true, status: 200, data: { message: 'Si el correo está registrado, recibirás un código de acceso.' } };
     }
 
+    recordEmailOtpRequest(clean);
     const code = generateOtp();
     await saveCode(customer.id, 'otp', `${clean}:${code}`, new Date(Date.now() + OTP_TTL_MS));
 
@@ -126,7 +165,7 @@ async function requestOtp({ email } = {}) {
       },
     };
   } catch (error) {
-    console.error('[customer-auth] requestOtp falló:', error.message);
+    logger.error('[customer-auth] requestOtp falló:', error.message);
     return { ok: false, status: 500, message: error.message };
   }
 }
@@ -167,7 +206,7 @@ async function verifyOtp({ email, code } = {}) {
     await db.query('DELETE FROM customer_login_codes WHERE id = $1', [record.id]);
     return issueCustomerToken(customer);
   } catch (error) {
-    console.error('[customer-auth] verifyOtp falló:', error.message);
+    logger.error('[customer-auth] verifyOtp falló:', error.message);
     return { ok: false, status: 500, message: error.message };
   }
 }
@@ -178,11 +217,16 @@ async function requestMagicLink({ email } = {}) {
   if (!clean) return { ok: false, status: 400, message: 'email requerido' };
 
   try {
+    if (isEmailOtpRateLimited(clean)) {
+      return { ok: true, status: 200, data: { message: 'Si el correo está registrado, recibirás un enlace de acceso.' } };
+    }
     const customer = await findCustomerByEmail(clean);
     if (!customer) {
+      recordEmailOtpRequest(clean);
       return { ok: true, status: 200, data: { message: 'Si el correo está registrado, recibirás un enlace de acceso.' } };
     }
 
+    recordEmailOtpRequest(clean);
     const token = generateMagicToken();
     await saveCode(customer.id, 'magic_link', token, new Date(Date.now() + MAGIC_TTL_MS));
 
@@ -203,7 +247,7 @@ async function requestMagicLink({ email } = {}) {
       },
     };
   } catch (error) {
-    console.error('[customer-auth] requestMagicLink falló:', error.message);
+    logger.error('[customer-auth] requestMagicLink falló:', error.message);
     return { ok: false, status: 500, message: error.message };
   }
 }
@@ -233,7 +277,7 @@ async function verifyMagicLink({ token } = {}) {
     await db.query('DELETE FROM customer_login_codes WHERE id = $1', [record.id]);
     return issueCustomerToken(rows[0]);
   } catch (error) {
-    console.error('[customer-auth] verifyMagicLink falló:', error.message);
+    logger.error('[customer-auth] verifyMagicLink falló:', error.message);
     return { ok: false, status: 500, message: error.message };
   }
 }

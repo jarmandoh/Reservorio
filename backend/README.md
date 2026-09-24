@@ -45,6 +45,7 @@ src/
 │   ├── payments.service.js     # Pagos y checkout
 │   ├── checkout.service.js     # Checkout de reserva → booking + pago
 │   ├── notifications.service.js# Notificaciones + despacho externo email/SMS
+│   ├── reminders.worker.js     # Worker de recordatorios agendados (opt-in)
 │   ├── channels.js             # Proveedores de envío: console (outbox) o http (webhook)
 │   ├── ratings.service.js      # Valoraciones de negocios
 │   ├── admin.service.js        # Estadísticas, moderación de reviews/servicios
@@ -69,6 +70,7 @@ Todos bajo `/api/` salvo `/health` y `/metrics`.
 | `POST /auth/customer/otp/verify` | — | Canjea el OTP por un JWT de cliente |
 | `POST /auth/customer/magic-link/request` | — | Solicita un enlace de acceso por email |
 | `POST /auth/customer/magic-link/verify` | — | Canjea el enlace por un JWT de cliente |
+| `POST /auth/refresh` | — | Re-emite un token válido/expirado dentro de la ventana de gracia (`REFRESH_GRACE`). Limiter 60/15min |
 | `GET/POST /businesses` | admin/owner para POST | Listado público / alta de negocio |
 | `GET /businesses/all` | admin | Listado completo (incluye inactivos) |
 | `GET /businesses/owner` | owner | Negocios del dueño logueado |
@@ -110,29 +112,44 @@ Referencia completa de contratos: [docs/API.md](../docs/API.md).
 
 | Rol | Obtención | Expiración | Uso |
 |---|---|---|---|
-| `admin` | `POST /auth/admin` | 8h | Panel global |
+| `admin` | `POST /auth/admin` | 2h | Panel global |
 | `owner` | `POST /auth/owner/register` / `login` | 8h | Panel de dueños |
 | `business-admin` | `POST /businesses/:id/auth` | 8h | Panel del negocio (`businessId` en payload) |
 | `customer` | `POST /auth/customer/login` o OTP/magic-link | 8h | Panel "Mi cuenta" |
 
+> **Renovación**: `POST /auth/refresh` re-firma el token de cualquier rol (admin 2 h, resto 8 h) dentro de la ventana de gracia, evitando cortar sesiones activas. El frontend lo llama de forma periódica y silenciosa.
+
 ## Seguridad
 
 - Queries paramétricas (`$1`, `$2`...), sanitización con `clean()` y validación `express-validator`.
-- Rate limiting global (`60 req / 15 min` por IP), `authLimiter` (10/15min) y `otpLimiter` (30/15min) para autenticación.
+- Rate limiting global (`60 req / 15 min` por IP), `authLimiter` (10/15min), `otpLimiter` (30/15min) y `refreshLimiter` (60/15min) para autenticación.
 - `helmet` + CORS restringido por `CORS_ORIGINS`.
-- `JWT_SECRET` estricto: el arranque aborta en producción si es débil, `ADMIN_PIN` es `1234` o falta `CORS_ORIGINS`.
-- PINs de negocio con **bcrypt** (cost 10); códigos OTP/magic-link guardados **solo como hash SHA-256**.
+- `JWT_SECRET` estricto: el arranque aborta en producción si es débil, si `ADMIN_PIN` es `1234`, o si falta `CORS_ORIGINS`.
+- PIN admin comparado con **bcrypt** (hash derivado de `ADMIN_PIN` o `ADMIN_PIN_HASH`); PINs de negocio con bcrypt (cost 10); códigos OTP/magic-link guardados **solo como hash SHA-256**.
 - En producción aborta con alerta si `OTP_DEBUG=1`.
+
+## Migraciones SQL
+
+```bash
+pnpm db:migrate            # aplica las pendientes de db/migrations/ (idempotente, en transacciones)
+pnpm db:migrate:create -- nombre  # crea el siguiente NNNN_*.sql
+```
+
+`0001_init.sql` = baseline equivalente a `db/init.sql` (fuente para contenedores nuevos). El `Dockerfile` ejecuta `db:migrate` antes de arrancar, por lo que los cambios de schema llegan solos en despliegues sobre volúmenes existentes.
 
 ## Notificaciones email/SMS (`channels.js`)
 
 - Proveedor `console` (defecto): loguea y guarda en una outbox en memoria (`getOutbox()`, `resetOutbox()`).
 - Proveedor `http`: `POST` JSON a `EMAIL_WEBHOOK_URL` / `SMS_WEBHOOK_URL` con cabeceras `EMAIL_WEBHOOK_HEADERS` / `SMS_WEBHOOK_HEADERS` y token Bearer opcional (compatible con Resend, SendGrid, Brevo, Twilio...).
 
+## Recordatorios agendados
+
+`services/reminders.worker.js` revisa cada `REMINDER_INTERVAL_MINUTES` (60) las reservas cuyo inicio cae en `REMINDER_WINDOW_HOURS` (24) y crea el recordatorio (email + SMS si `sms_opt_in`) sin duplicados. Opt-in: `ENABLE_REMINDER_WORKER=1` en el arranque de `index.js`. Sus tests unitarios (`test/reminders.worker.test.js`) mocks DB y canal de envío.
+
 ## Tests
 
 ```bash
-pnpm test                 # 26 suites / 111 tests (jest --runInBand)
+pnpm test                 # 28 suites / 125 tests (jest --runInBand; integración solo con RUN_INTEGRATION=1)
 pnpm test:integration     # requiere Postgres real (RUN_INTEGRATION=1 + DATABASE_URL)
 ```
 
@@ -145,7 +162,11 @@ Recuerda: también están documentadas en `.env.example` y `docker-compose.yml`.
 | `PORT` | Puerto del servidor (defecto 3000) |
 | `DATABASE_URL` | Cadena de conexión PostgreSQL |
 | `JWT_SECRET` | Clave de firma de JWT (obligatoria y fuerte en producción) |
-| `ADMIN_PIN` | PIN del panel global (defecto 1234) |
+| `ADMIN_PIN` | PIN del panel global (defecto 1234; se compara contra bcrypt) |
+| `ADMIN_PIN_HASH` | Hash bcrypt del PIN de admin (alternativa segura; si se define, `ADMIN_PIN` se ignora) |
+| `REFRESH_GRACE` | Horas de ventana para reemitir tokens expirados (defecto 6) |
+| `ENABLE_REMINDER_WORKER` | `1` activa el worker de recordatorios agendados |
+| `REMINDER_WINDOW_HOURS` / `REMINDER_INTERVAL_MINUTES` | Ventana previa a la reserva (24) y cadencia del worker (60) |
 | `CORS_ORIGINS` | Orígenes permitidos, separados por coma |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_TOKENS_KEY` | OAuth de Google Sheets |
 | `EMAIL_PROVIDER`, `EMAIL_FROM`, `EMAIL_WEBHOOK_URL`, `EMAIL_WEBHOOK_HEADERS` | Canal de email |

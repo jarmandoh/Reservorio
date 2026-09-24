@@ -1,6 +1,6 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
-import { Observable, throwError } from 'rxjs';
-import { catchError, tap } from 'rxjs/operators';
+import { Observable, of, throwError } from 'rxjs';
+import { catchError, map, tap } from 'rxjs/operators';
 import { ApiResponse, Customer } from '../models/reservation.model';
 import { Business, OwnerAuthPayload } from '../models/businesses.model';
 import { SessionStore } from '../state/session.store';
@@ -228,6 +228,37 @@ export class AuthService {
   }
 
   // ── JWT helper ────────────────────────────────────────────────────────
+
+  /**
+   * Renueva la sesión activa (admin, owner o customer) vía POST /auth/refresh.
+   * El backend solo reemite si el token expiró dentro de la ventana de gracia,
+   * por lo que una sesión activa nunca se corta mientras se use la app.
+   * Silencioso: si falla (red, sesión irreparable), se conserva el token actual.
+   */
+  refreshSession(): Observable<void> {
+    const admin = this.storage.getItem(ADMIN_JWT);
+    const owner = this.storage.getItem(OWNER_JWT);
+    const customer = this.storage.getItem(CUSTOMER_JWT, 'local');
+
+    let target: { token: string; apply: (t: string) => void } | null = null;
+    if (admin) {
+      target = { token: admin, apply: t => this.setAdminToken(t) };
+    } else if (owner) {
+      target = { token: owner, apply: t => this.setOwnerToken(t) };
+    } else if (customer) {
+      target = { token: customer, apply: t => this.setCustomerToken(t) };
+    }
+
+    if (!target) return of(undefined);
+
+    return this.api.refreshToken(target.token).pipe(
+      tap(res => {
+        if (res.data?.token) target!.apply(res.data.token);
+      }),
+      map(() => undefined),
+      catchError(() => of(undefined)),
+    );
+  }
 
   private decodeToken(token: string | null): { [key: string]: unknown } | null {
     if (!token) return null;

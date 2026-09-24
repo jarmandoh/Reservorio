@@ -189,3 +189,97 @@
   }
 }
 
+/* ── Modo oscuro ────────────────────────────────────────────────────────────
+   Activado con `.dark` en <html> (darkMode: 'class'). Las utilidades
+   semánticas (bg-surface*, text-on-surface*, border-outline*, bg-white) se
+   reasignan con mayor especificidad para cubrir home, booking y paneles sin
+   tocar cada plantilla. ──────────────────────────────────────────────────── */
+.dark body {
+  background: linear-gradient(180deg, #0e141b 0%, #151c26 100%);
+  color: #e6e9ee;
+}
+
+/* Utilidades de superficie */
+.dark .bg-surface          { background-color: #161d27; }
+.dark .bg-surface-low      { background-color: #121821; }
+.dark .bg-surface-container{ background-color: #1a222d; }
+.dark .bg-surface-high     { background-color: #202a36; }
+.dark .bg-surface-highest  { background-color: #26303e; }
+.dark .bg-surface-lowest   { background-color: #161d27; }
+.dark .bg-white            { background-color: #161d27; }
+.dark .bg-brand-soft       { background-color: #1b2740; }
+.dark .bg-brand-soft-high  { background-color: #1e2a45; }
+
+.dark .text-on-surface         { color: #e6e9ee; }
+.dark .text-on-surface-variant { color: #b8bfc9; }
+.dark .text-outline            { color: #8b93a3; }
+.dark .text-outline-variant    { color: #b8bfc9; }
+
+.dark .border-outline         { border-color: #3a4350; }
+.dark .border-outline-variant { border-color: #3a4350; }
+
+/* Componentes */
+.dark .btn-secondary { background-color: #2a3442; color: #e6e9ee; }
+.dark .btn-secondary:hover { background-color: #33404f; }
+.dark .btn-tertiary { color: #8fb5ff; }
+.dark .btn-tertiary:hover { background-color: #1b2740; }
+.dark .btn-danger { background-color: #4a2a28; color: #ffb4ab; }
+
+.dark .form-input, .dark .form-select, .dark .form-textarea {
+  background-color: #202a36; color: #e6e9ee;
+}
+.dark .form-input:focus, .dark .form-select:focus, .dark .form-textarea:focus {
+  background-color: #161d27; border-bottom-color: #8fb5ff;
+}
+.dark .form-label { color: #b8bfc9; }
+
+.dark .card {
+  background-color: #1a222d;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+.dark .card-flat { background-color: #202a36; }
+
+.dark .slot-chip { background-color: #2a3442; color: #e6e9ee; }
+.dark .slot-chip:hover { background-color: #1b2740; color: #8fb5ff; }
+.dark .slot-chip.selected { background-color: #4d8efe; color: #ffffff; }
+.dark .slot-chip.taken { background-color: #202a36; color: #8b93a3; }
+
+.dark .badge-avail { @apply bg-green-900 text-green-100; }
+.dark .badge-reserved { background-color: #4a2a28; color: #ffb4ab; }
+.dark .badge-pending { background-color: #1b2740; color: #8fb5ff; }
+.dark .badge-confirmed { @apply bg-green-900 text-green-100; }
+.dark .badge-low { @apply bg-amber-900 text-amber-100; }
+
+.dark .skeleton {
+  background: linear-gradient(90deg, #202a36 25%, #26303e 50%, #202a36 75%);
+  background-size: 400% 100%;
+}
+
+.dark .service-tag { background-color: #1b2740; color: #8fb5ff; }
+
+.dark .nav-item { color: #b8bfc9; }
+.dark .nav-item:hover { background-color: #202a36; color: #e6e9ee; }
+.dark .nav-item.active { background-color: #1b2740; color: #8fb5ff; }
+
+.dark .payment-option {
+  border-color: #3a4350;
+  background-color: #161d27;
+}
+.dark .payment-option:hover { border-color: #4d8efe; }
+.dark .payment-option.selected {
+  border-color: #8fb5ff;
+  background-color: #1e2a45;
+  box-shadow: 0 0 0 2px rgba(143, 181, 255, 0.25);
+}
+
+.dark .instructions-box {
+  background-color: #1e2a45;
+  border-color: #2b3d5c;
+  color: #e6e9ee;
+}
+
+.dark .history-row {
+  background-color: #161d27;
+  border-color: #3a4350;
+}
+

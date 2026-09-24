@@ -5,11 +5,13 @@ import { ApiService } from './api.service';
 
 describe('AuthService auth flows', () => {
   let service: AuthService;
-  let api: jasmine.SpyObj<ApiService>;
+  let loginOwnerSpy: ReturnType<typeof vi.fn>;
+  let api: ApiService;
 
   beforeEach(() => {
     sessionStorage.clear();
-    api = jasmine.createSpyObj<ApiService>('ApiService', ['loginOwner']);
+    loginOwnerSpy = vi.fn();
+    api = { loginOwner: loginOwnerSpy } as unknown as ApiService;
 
     TestBed.configureTestingModule({
       providers: [
@@ -21,15 +23,11 @@ describe('AuthService auth flows', () => {
     service = TestBed.inject(AuthService);
   });
 
-  it('stores the owner token after a successful login', (done) => {
-    api.loginOwner.and.returnValue(of({ data: { token: 'owner-token' } } as any));
+  it('stores the owner token after a successful login', () => {
+    loginOwnerSpy.mockReturnValue(of({ data: { token: 'owner-token' } } as any));
 
-    service.loginOwner('owner@example.com', 'secret123').subscribe({
-      next: () => {
-        expect(sessionStorage.getItem('reservorio_owner_jwt')).toBe('owner-token');
-        done();
-      },
-      error: done.fail
-    });
+    service.loginOwner('owner@example.com', 'secret123').subscribe();
+
+    expect(sessionStorage.getItem('reservorio_owner_jwt')).toBe('owner-token');
   });
 });

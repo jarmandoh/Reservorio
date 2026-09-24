@@ -96,7 +96,11 @@ El backend lee su configuración desde `backend/.env`. Crea ese archivo basándo
 |---|---|---|---|
 | `DATABASE_URL` | Sí | Cadena de conexión a PostgreSQL | `postgres://reservorio:reservorio_pass@localhost:5432/reservorio` |
 | `JWT_SECRET` | Sí | Clave secreta para firmar tokens JWT. Usa una cadena larga y aleatoria en producción. | `mi_clave_super_secreta_2026` |
-| `ADMIN_PIN` | No | PIN numérico para el panel de administración global. Por defecto: `1234`. | `9876` |
+| `ADMIN_PIN` | No | PIN numérico para el panel de administración global (se compara contra su hash bcrypt). Por defecto: `1234`. | `9876` |
+| `ADMIN_PIN_HASH` | No | Hash bcrypt del PIN de admin; si se define, se usa para autenticar y `ADMIN_PIN` queda ignorado. | `$2b$10$...` |
+| `REFRESH_GRACE` | No | Horas de ventana de gracia para reemitir un token expirado vía `POST /api/auth/refresh`. Por defecto: `6`. | `6` |
+| `ENABLE_REMINDER_WORKER` | No | `1` activa el worker de recordatorios (email/SMS 24 h antes de la reserva). | `1` |
+| `REMINDER_WINDOW_HOURS` / `REMINDER_INTERVAL_MINUTES` | No | Ventana previa a la reserva (24) y cadencia del worker (60). | `24` / `60` |
 | `PORT` | No | Puerto en que escucha el backend. Por defecto: `3000`. | `3000` |
 | `CORS_ORIGINS` | No | Orígenes permitidos por CORS, separados por coma. | `http://localhost,https://midominio.com` |
 | `FRONTEND_URL` | Sí | URL pública del frontend (se usa en los magic-links de cliente). | `http://localhost:4200` |
@@ -283,8 +287,10 @@ El script genera un dump de `pg_dump` con marca de tiempo en `backend/backups/`,
 ### CI/CD
 
 El pipeline de GitHub Actions (`.github/workflows/ci.yml`) ejecuta en cada push/PR:
-- Tests del backend (`pnpm test`).
+- Tests del backend sobre un **service container de PostgreSQL real** (`pnpm db:migrate` carga el schema y `RUN_INTEGRATION=1` + `DATABASE_URL` activan la suite de integración).
 - Build del frontend (`pnpm build`) y publica el artefacto `dist`.
+
+> **Migraciones**: en desarrollo/CI se gestionan con `pnpm db:migrate` (ver `backend/db/migrations/`); en Docker el backend las aplica automáticamente antes de arrancar.
 
 ---
 

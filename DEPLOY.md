@@ -10,12 +10,14 @@
 
 2. Ajusta los valores sensibles en `.env.production`:
    - `JWT_SECRET`
-   - `ADMIN_PIN`
+   - `ADMIN_PIN` (o `ADMIN_PIN_HASH` con un hash bcrypt y dejar `ADMIN_PIN` sin usar)
    - `DATABASE_URL`
    - `CORS_ORIGINS`
    - `FRONTEND_URL` (dominio público real — se usa en los magic-links de cliente)
    - `EMAIL_PROVIDER` / `EMAIL_WEBHOOK_URL` (+ `EMAIL_WEBHOOK_HEADERS` con el token) y `SMS_*` si se envían notificaciones
    - `OTP_DEBUG` debe quedar vacío o `0` (¡nunca `1` en producción!)
+   - `REFRESH_GRACE` (ventana de re-emisión de tokens; defecto 6 h)
+   - `ENABLE_REMINDER_WORKER=1` si quieres recordatorios agendados (email/SMS respetando `sms_opt_in`); `REMINDER_WINDOW_HOURS` y `REMINDER_INTERVAL_MINUTES` para ajustar ventana/cadencia
    - Google OAuth y Apps Script si se usan
 
 > No subas este archivo a Git ni lo compartas en repositorios públicos.
@@ -33,6 +35,8 @@ Esto levanta:
 - Backend
 - Frontend servido con Nginx
 
+> **Migraciones**: el contenedor backend ejecuta `node db/migrate.js` antes de arrancar, así que sobre un volumen PostgreSQL ya existente se aplican automáticamente los cambios de schema en orden (registrados en `schema_migrations`). Haz siempre backup antes de un despliegue con migraciones.
+
 ## 3. Verificar salud
 
 ```bash
@@ -47,7 +51,7 @@ El backend debe responder con `ok: true` y la base de datos en estado `connected
 - Usa HTTPS con un reverse proxy o CDN real.
 - Mantén `CORS_ORIGINS` limitado a dominios reales.
 - No expongas la base de datos directamente al público.
-- Cambia el valor por defecto de `ADMIN_PIN` antes del despliegue.
+- Cambia el valor por defecto de `ADMIN_PIN` antes del despliegue (o usa `ADMIN_PIN_HASH`, comparación bcrypt).
 - Verifica que `OTP_DEBUG` no esté activo y que los webhooks de email/SMS usen token Bearer.
 - Revisa periódicamente los logs del backend y del contenedor.
 

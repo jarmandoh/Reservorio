@@ -2,7 +2,10 @@ import { Component, DestroyRef, ElementRef, OnInit, ViewChild, inject } from '@a
 import { NavigationEnd, NavigationStart, Router, RouterOutlet } from '@angular/router';
 import { ToastComponent } from './shared/components/toast/toast.component';
 import { OfflineService } from './core/services/offline.service';
-import { filter } from 'rxjs';
+import { AuthService } from './core/services/auth.service';
+import { ThemeService } from './core/services/theme.service';
+import { filter, timer } from 'rxjs';
+import { switchMap } from 'rxjs/operators';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import gsap from 'gsap';
 
@@ -45,6 +48,15 @@ function rand(len: number) { return Math.floor(Math.random() * len); }
     </div>
     <app-toast />
 
+    <button
+      type="button"
+      class="fixed bottom-4 right-4 z-40 flex h-11 w-11 items-center justify-center rounded-full text-white shadow-soft transition active:scale-95"
+      style="background: linear-gradient(135deg, #005bbf 0%, #1a73e8 100%);"
+      [attr.aria-label]="themeService.isDark() ? 'Activar tema claro' : 'Activar tema oscuro'"
+      (click)="themeService.toggle()">
+      <span class="material-icons-round">{{ themeService.isDark() ? 'light_mode' : 'dark_mode' }}</span>
+    </button>
+
     @if (!online()) {
       <div class="offline-banner" role="status" aria-live="polite">
         <span class="material-icons-round text-[1.1rem] flex-shrink-0">wifi_off</span>
@@ -58,11 +70,22 @@ export class AppComponent implements OnInit {
 @ViewChild('pageHost', { static: true }) pageHost!: ElementRef<HTMLDivElement>;
   private router = inject(Router);
   private offlineService = inject(OfflineService);
+  private readonly auth = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
+  protected readonly themeService = inject(ThemeService);
   protected readonly online = this.offlineService.online;
   private busy = false;
 
   ngOnInit() {
+    // Renovación de sesión activa (admin/owner/customer): primero a los 5s y luego cada hora.
+    // Silencioso; si el backend rechaza (expirada fuera de gracia), la sesión caduca con normalidad.
+    timer(5_000, 60 * 60 * 1000)
+      .pipe(
+        switchMap(() => this.auth.refreshSession()),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe();
+
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
     this.router.events

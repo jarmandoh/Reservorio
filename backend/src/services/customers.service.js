@@ -3,20 +3,43 @@
 const { randomUUID } = require('crypto');
 const db = require('../db');
 const { listBookings } = require('./bookings.service');
+const { parsePagination } = require('../utils/pagination');
 
 const fallbackCustomers = [
   { id: 'cliente1', name: 'Ana García', email: 'ana@example.com', phone: '+34123456789' },
   { id: 'cliente2', name: 'Luis Pérez', email: 'luis@example.com', phone: '+34123456790' },
 ];
 
-async function listCustomers() {
+async function listCustomers(query = {}) {
+  const { page, pageSize, limit, offset, paginated } = parsePagination(query);
+
   if (!process.env.DATABASE_URL) {
-    return { ok: true, status: 200, data: fallbackCustomers };
+    let data = fallbackCustomers;
+    if (paginated) {
+      const total = data.length;
+      data = data.slice(offset, offset + limit);
+      return { ok: true, status: 200, data, meta: { total, page, pageSize } };
+    }
+    return { ok: true, status: 200, data };
   }
 
   try {
-    const { rows } = await db.query('SELECT id, name, email, phone, created_at FROM customers ORDER BY created_at DESC');
-    return { ok: true, status: 200, data: rows };
+    let sql = 'SELECT id, name, email, phone, created_at FROM customers ORDER BY created_at DESC';
+    const values = [];
+    if (paginated) {
+      sql += ' LIMIT $1 OFFSET $2';
+      values.push(limit, offset);
+    }
+
+    const { rows } = await db.query(sql, values);
+    const result = { ok: true, status: 200, data: rows };
+
+    if (paginated) {
+      const count = await db.query('SELECT COUNT(*)::int AS total FROM customers');
+      result.meta = { total: Number(count.rows[0]?.total) || 0, page, pageSize };
+    }
+
+    return result;
   } catch (error) {
     return { ok: false, status: 500, message: error.message };
   }
@@ -149,8 +172,9 @@ async function getCustomerProfile(customerId) {
   }
 }
 
-async function getCustomerHistory(customerId) {
+async function getCustomerHistory(customerId, query = {}) {
   const cleanId = String(customerId ?? '').trim();
+  const { page, pageSize, limit, offset, paginated } = parsePagination(query);
   if (!cleanId) {
     return { ok: false, status: 400, message: 'customerId requerido' };
   }
@@ -162,10 +186,18 @@ async function getCustomerHistory(customerId) {
     }
     const bookingsResult = await listBookings();
     const bookingsSource = bookingsResult.ok ? bookingsResult.data : [];
-    const bookings = bookingsSource
+    let bookings = bookingsSource
       .filter(b => b.customerId === cleanId)
       .map(b => ({ ...b, businessName: '' }));
-    return { ok: true, status: 200, data: { customer, bookings } };
+    const total = bookings.length;
+    if (paginated) {
+      bookings = bookings.slice(offset, offset + limit);
+    }
+    const result = { ok: true, status: 200, data: { customer, bookings } };
+    if (paginated) {
+      result.meta = { total, page, pageSize };
+    }
+    return result;
   }
 
   try {
@@ -177,15 +209,19 @@ async function getCustomerHistory(customerId) {
       return { ok: false, status: 404, message: 'Cliente no encontrado' };
     }
 
-    const { rows } = await db.query(
-      `SELECT b.id, b.provider_id, p.name AS business_name, b.service_id,
-              b.booking_date AS date, b.slot, b.status, b.notes, b.created_at
-       FROM bookings b
-       LEFT JOIN businesses p ON p.id = b.provider_id
-       WHERE b.customer_id = $1
-       ORDER BY b.created_at DESC`,
-      [cleanId]
-    );
+    let sql = `SELECT b.id, b.provider_id, p.name AS business_name, b.service_id,
+               b.booking_date AS date, b.slot, b.status, b.notes, b.created_at
+        FROM bookings b
+        LEFT JOIN businesses p ON p.id = b.provider_id
+        WHERE b.customer_id = $1
+        ORDER BY b.created_at DESC`;
+    const values = [cleanId];
+    if (paginated) {
+      sql += ' LIMIT $2 OFFSET $3';
+      values.push(limit, offset);
+    }
+
+    const { rows } = await db.query(sql, values);
 
     const bookingIds = rows.map(r => r.id);
     let paymentsByBooking = {};
@@ -203,7 +239,7 @@ async function getCustomerHistory(customerId) {
       }, {});
     }
 
-    return {
+    const result = {
       ok: true,
       status: 200,
       data: {
@@ -228,6 +264,16 @@ async function getCustomerHistory(customerId) {
         }),
       },
     };
+
+    if (paginated) {
+      const count = await db.query(
+        'SELECT COUNT(*)::int AS total FROM bookings WHERE customer_id = $1',
+        [cleanId]
+      );
+      result.meta = { total: Number(count.rows[0]?.total) || 0, page, pageSize };
+    }
+
+    return result;
   } catch (error) {
     return { ok: false, status: 500, message: error.message };
   }

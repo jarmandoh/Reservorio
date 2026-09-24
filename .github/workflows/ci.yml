@@ -10,6 +10,24 @@ jobs:
     name: Backend tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: reservorio
+          POSTGRES_PASSWORD: reservorio_pass
+          POSTGRES_DB: reservorio
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U reservorio -d reservorio"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://reservorio:reservorio_pass@localhost:5432/reservorio
+      JWT_SECRET: ${{ secrets.JWT_SECRET || 'ci-test-secret-with-32-chars-min' }}
+      ADMIN_PIN: '1234'
     steps:
       - uses: actions/checkout@v4
 
@@ -25,11 +43,14 @@ jobs:
         working-directory: backend
         run: pnpm install --frozen-lockfile
 
-      - name: Run tests
+      - name: Apply migrations
+        working-directory: backend
+        run: pnpm db:migrate
+
+      - name: Run tests (incl. integration with real PostgreSQL)
         working-directory: backend
         env:
-          JWT_SECRET: ${{ secrets.JWT_SECRET || 'ci-test-secret-with-32-chars-min' }}
-          ADMIN_PIN: '1234'
+          RUN_INTEGRATION: '1'
         run: pnpm test
 
   frontend:
@@ -51,6 +72,10 @@ jobs:
         working-directory: frontend
         run: pnpm install --frozen-lockfile
 
+      - name: Unit tests (vitest)
+        working-directory: frontend
+        run: npx ng test --watch=false
+
       - name: Build
         working-directory: frontend
         run: pnpm build
@@ -61,3 +86,65 @@ jobs:
           name: frontend-dist
           path: frontend/dist/frontend
           if-no-files-found: error
+
+  e2e:
+    name: E2E (Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: reservorio
+          POSTGRES_PASSWORD: reservorio_pass
+          POSTGRES_DB: reservorio
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U reservorio -d reservorio"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://reservorio:reservorio_pass@localhost:5432/reservorio
+      JWT_SECRET: ${{ secrets.JWT_SECRET || 'e2e-test-secret-with-32-chars-min' }}
+      ADMIN_PIN: '1234'
+      PLAYWRIGHT_ADMIN_PIN: '1234'
+      PLAYWRIGHT_BUSINESS_PIN: '1234'
+      PLAYWRIGHT_API_URL: http://127.0.0.1:3000
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+          cache-dependency-path: |
+            backend/pnpm-lock.yaml
+            frontend/pnpm-lock.yaml
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: pnpm install --frozen-lockfile
+
+      - name: Apply migrations
+        working-directory: backend
+        run: pnpm db:migrate
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Build frontend
+        working-directory: frontend
+        run: pnpm build
+
+      - name: Install Playwright browsers
+        working-directory: frontend
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run E2E tests
+        working-directory: frontend
+        run: pnpm e2e

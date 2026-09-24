@@ -18,6 +18,8 @@ const EMAIL_PROVIDER = String(process.env.EMAIL_PROVIDER || 'console').toLowerCa
 const SMS_PROVIDER   = String(process.env.SMS_PROVIDER || 'console').toLowerCase();
 const EMAIL_FROM     = process.env.EMAIL_FROM || 'no-reply@reservorio.app';
 
+const logger = require('../logger');
+
 const outbox = [];
 
 function getOutbox({ clear = false } = {}) {
@@ -93,7 +95,7 @@ async function httpSms({ to, message }) {
   return httpPost(url, headers, { to, message, type: 'sms' });
 }
 
-/** Envía un email. Devuelve { ok, status, message, provider? } — nunca lanza. */
+/** Envía un email. Devuelve { ok, status, message, provider? } � nunca lanza. */
 async function sendEmail({ to, subject, textBody, htmlBody } = {}) {
   const cleanTo = String(to ?? '').trim();
   if (!cleanTo) return { ok: false, status: 400, message: 'Destinatario de email requerido' };
@@ -102,12 +104,12 @@ async function sendEmail({ to, subject, textBody, htmlBody } = {}) {
       ? await httpEmail({ to: cleanTo, subject, textBody, htmlBody })
       : consoleEmail({ to: cleanTo, subject, textBody, htmlBody });
   } catch (error) {
-    console.error('[channels] sendEmail falló:', error.message);
+    logger.error('[channels] sendEmail falló:', error.message);
     return { ok: false, status: 500, message: error.message };
   }
 }
 
-/** Envía un SMS. Devuelve { ok, status, message, provider? } — nunca lanza. */
+/** Envía un SMS. Devuelve { ok, status, message, provider? } � nunca lanza. */
 async function sendSms({ to, message } = {}) {
   const cleanTo = digitsOnly(to);
   if (!cleanTo) return { ok: false, status: 400, message: 'Destinatario de SMS requerido' };
@@ -116,7 +118,7 @@ async function sendSms({ to, message } = {}) {
       ? await httpSms({ to: cleanTo, message })
       : consoleSms({ to: cleanTo, message });
   } catch (error) {
-    console.error('[channels] sendSms falló:', error.message);
+    logger.error('[channels] sendSms falló:', error.message);
     return { ok: false, status: 500, message: error.message };
   }
 }

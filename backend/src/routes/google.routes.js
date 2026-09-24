@@ -6,10 +6,11 @@ const { sign, verify } = require('../middleware/jwt');
 const db               = require('../db');
 const gsheets          = require('../services/googleSheets');
 const { syncAll }      = require('../services/syncService');
+const logger           = require('../logger');
 
 const router = express.Router();
 
-// ‚îÄ‚îÄ Rate limiter espec√≠fico para OAuth (m√°s estricto) ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ
+// ‚¨‚¨ Rate limiter espec√≠fico para OAuth (m√°s estricto) ‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨
 const oauthLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
@@ -26,14 +27,14 @@ const syncLimiter = rateLimit({
   message: { ok: false, message: 'Demasiadas sincronizaciones, int√©ntalo m√°s tarde.' },
 });
 
-// ‚îÄ‚îÄ Validaci√≥n de formatos ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ
+// ‚¨‚¨ Validaci√≥n de formatos ‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨
 const SHEET_ID_RE = /^[a-zA-Z0-9_-]{20,60}$/;
 
 function isValidSheetId(id) {
   return typeof id === 'string' && SHEET_ID_RE.test(id);
 }
 
-// ‚îÄ‚îÄ Auth middleware (reutiliza l√≥gica de businesses.routes) ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ
+// ‚¨‚¨ Auth middleware (reutiliza l√≥gica de businesses.routes) ‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨‚¨
 
 function requireAnyAuth(req, res, next) {
   const hdr = req.headers.authorization;
@@ -52,7 +53,7 @@ function canAccessBusiness(req, res) {
   return false;
 }
 
-// ‚ïê‚ïê ROUTES ‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê
+// ‚"ê‚"ê ROUTES ‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê‚"ê
 
 /**
  * GET /api/google/start/:businessId
@@ -110,12 +111,12 @@ router.get('/callback', oauthLimiter, async (req, res) => {
     // Guardar tokens cifrados
     await gsheets.saveTokens(businessId, tokens, email);
 
-    // Redirigir al frontend ‚Äî usar el ID de la BD (no del state) para evitar inyecci√≥n en URL
+    // Redirigir al frontend ‚¨ usar el ID de la BD (no del state) para evitar inyecci√≥n en URL
     const safeId = rows[0].id.replace(/[^a-zA-Z0-9_-]/g, '');
     const frontendUrl = (process.env.CORS_ORIGINS || 'http://localhost:4200').split(',')[0].trim();
     res.redirect(`${frontendUrl}/business/${encodeURIComponent(safeId)}/admin?google=linked`);
   } catch (e) {
-    console.error('[Google OAuth] Error en callback:', e.message);
+    logger.error('[Google OAuth] Error en callback:', e.message);
     res.status(500).json({ ok: false, message: 'Error al vincular cuenta Google.' });
   }
 });
@@ -145,7 +146,7 @@ router.get('/status/:businessId', requireAnyAuth, async (req, res) => {
       },
     });
   } catch (e) { 
-    console.error('[Google] Error status:', e.message);
+    logger.error('[Google] Error status:', e.message);
     res.status(500).json({ ok: false, message: 'Error al consultar estado de Google.' }); 
   }
 });
@@ -161,7 +162,7 @@ router.post('/disconnect/:businessId', requireAnyAuth, async (req, res) => {
     await gsheets.disconnect(req.params.businessId);
     res.json({ ok: true, message: 'Cuenta Google desvinculada.' });
   } catch (e) {
-    console.error('[Google] Error disconnect:', e.message);
+    logger.error('[Google] Error disconnect:', e.message);
     res.status(500).json({ ok: false, message: 'Error al desvincular cuenta Google.' });
   }
 });
@@ -181,7 +182,7 @@ router.post('/create-sheet/:businessId', requireAnyAuth, async (req, res) => {
     const sheetId = await gsheets.createTemplateSheet(req.params.businessId, rows[0].name);
     res.json({ ok: true, message: 'Spreadsheet creada.', sheetId });
   } catch (e) {
-    console.error('[Google] Error create-sheet:', e.message);
+    logger.error('[Google] Error create-sheet:', e.message);
     res.status(500).json({ ok: false, message: 'Error al crear spreadsheet.' });
   }
 });
@@ -215,14 +216,14 @@ router.post('/link-sheet/:businessId', requireAnyAuth, async (req, res) => {
     if (e.code === 404 || e.code === 403) {
       return res.status(400).json({ ok: false, message: 'No se puede acceder a esa spreadsheet. Verifica el ID y permisos.' });
     }
-    console.error('[Google] Error link-sheet:', e.message);
+    logger.error('[Google] Error link-sheet:', e.message);
     res.status(500).json({ ok: false, message: 'Error al vincular spreadsheet.' });
   }
 });
 
 /**
  * POST /api/google/sync/:businessId
- * Sincronizaci√≥n manual: vuelca reservas + servicios de PG ‚Üí Google Sheets.
+ * Sincronizaci√≥n manual: vuelca reservas + servicios de PG ‚  Google Sheets.
  */
 router.post('/sync/:businessId', syncLimiter, requireAnyAuth, async (req, res) => {
   if (!canAccessBusiness(req, res)) return;
@@ -239,9 +240,10 @@ router.post('/sync/:businessId', syncLimiter, requireAnyAuth, async (req, res) =
     await syncAll(req.params.businessId);
     res.json({ ok: true, message: 'Sincronizaci√≥n completada.' });
   } catch (e) {
-    console.error('[Sync] Error manual:', e.message);
+    logger.error('[Sync] Error manual:', e.message);
     res.status(500).json({ ok: false, message: 'Error al sincronizar.' });
   }
 });
 
 module.exports = router;
+

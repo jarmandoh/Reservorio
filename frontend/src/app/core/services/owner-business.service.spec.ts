@@ -6,12 +6,20 @@ import { OwnerBusinessService } from './owner-business.service';
 
 describe('OwnerBusinessService', () => {
   let service: OwnerBusinessService;
-  let auth: jasmine.SpyObj<AuthService>;
-  let businessService: jasmine.SpyObj<BusinessService>;
+  let auth: { getOwnerToken: ReturnType<typeof vi.fn> };
+  let businessService: {
+    createBusiness: ReturnType<typeof vi.fn>;
+    updateBusiness: ReturnType<typeof vi.fn>;
+    getOwnerBusinesses: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(() => {
-    auth = jasmine.createSpyObj<AuthService>('AuthService', ['getOwnerToken']);
-    businessService = jasmine.createSpyObj<BusinessService>('BusinessService', ['createBusiness', 'updateBusiness', 'getOwnerBusinesses']);
+    auth = { getOwnerToken: vi.fn() };
+    businessService = {
+      createBusiness: vi.fn(),
+      updateBusiness: vi.fn(),
+      getOwnerBusinesses: vi.fn(),
+    };
 
     TestBed.configureTestingModule({
       providers: [
@@ -24,9 +32,9 @@ describe('OwnerBusinessService', () => {
     service = TestBed.inject(OwnerBusinessService);
   });
 
-  it('crea un payload normalizado y delega la creación al BusinessService', (done) => {
-    auth.getOwnerToken.and.returnValue('owner-token');
-    businessService.createBusiness.and.returnValue(of({ ok: true } as any));
+  it('crea un payload normalizado y delega la creación al BusinessService', () => {
+    auth.getOwnerToken.mockReturnValue('owner-token');
+    businessService.createBusiness.mockReturnValue(of({ ok: true } as any));
 
     service.saveBusiness({
       name: 'Mi negocio',
@@ -42,17 +50,16 @@ describe('OwnerBusinessService', () => {
       whatsapp: '',
       linkedin: '',
       pin: '1234'
-    }, null).subscribe({
-      next: () => {
-        expect(businessService.createBusiness).toHaveBeenCalledWith(jasmine.objectContaining({
-          name: 'Mi negocio',
-          category: 'Gastronomía',
-          tags: ['café', 'brunch'],
-          pin: '1234'
-        }), 'owner-token');
-        done();
-      },
-      error: done.fail
-    });
+    }, null).subscribe();
+
+    expect(businessService.createBusiness).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'Mi negocio',
+        category: 'Gastronomía',
+        tags: ['café', 'brunch'],
+        pin: '1234'
+      }),
+      'owner-token'
+    );
   });
 });
