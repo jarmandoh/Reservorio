@@ -53,6 +53,11 @@ async function createReview(businessId, rating, review) {
   }
 
   try {
+    const { rows: negocioRows } = await db.query('SELECT 1 FROM businesses WHERE id = $1', [businessId]);
+    if (!negocioRows.length) {
+      return { ok: false, status: 404, message: 'Negocio no encontrado' };
+    }
+
     const { rows } = await db.query(
       'INSERT INTO ratings (business_id, rating, review) VALUES ($1, $2, $3) RETURNING id, business_id, rating, review, created_at',
       [businessId, rating, review || '']

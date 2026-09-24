@@ -1,7 +1,8 @@
-import { Component, signal, inject } from '@angular/core';
+import { Component, DestroyRef, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../core/services/auth.service';
 import { AuthCardComponent } from '../../shared/components/auth-card/auth-card.component';
 
@@ -38,6 +39,7 @@ export class OwnerLoginComponent {
   private fb = inject(FormBuilder);
   private auth = inject(AuthService);
   private router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
@@ -53,7 +55,7 @@ export class OwnerLoginComponent {
     this.error.set(null);
 
     const { email, password } = this.form.value;
-    this.auth.loginOwner(email!, password!).subscribe({
+    this.auth.loginOwner(email!, password!).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.loading.set(false);
         this.router.navigate(['/owner/dashboard']);

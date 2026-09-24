@@ -3,8 +3,7 @@
     <!-- TOP BAR -->
     <header class="sticky top-0 z-20 bg-surface-lowest border-b border-outline-variant/30
                    flex items-center gap-3 px-6 h-16">
-      <div class="w-9 h-9 flex items-center justify-center rounded-md text-white text-base"
-           style="background:linear-gradient(135deg,#005bbf,#1a73e8)">
+      <div class="w-9 h-9 flex items-center justify-center rounded-md text-white text-base bg-gradient-to-br from-primary to-primary-container">
         <span class="material-icons-round text-sm">admin_panel_settings</span>
       </div>
       <span class="font-display font-bold text-base flex-1">Panel de administración</span>
@@ -22,12 +21,229 @@
     <!-- NAV TABS -->
     <nav class="flex items-center gap-1 px-4 py-2 bg-surface-lowest border-b border-outline-variant/30 overflow-x-auto">
       @for (t of tabs; track t.id) {
-        <button class="nav-item whitespace-nowrap" [class.active]="tab() === t.id" (click)="tab.set(t.id)">
+        <button class="nav-item whitespace-nowrap" [class.active]="tab() === t.id" (click)="selectTab(t.id)">
           <span class="material-icons-round text-[1rem]">{{ t.icon }}</span>
           {{ t.label }}
         </button>
       }
     </nav>
+
+    <!-- ══ TAB: PANEL (estadísticas) ═══════════════════════════════════════ -->
+    @if (tab() === 'panel') {
+      <div class="flex-1 p-4 sm:p-6 flex flex-col gap-5 max-w-6xl mx-auto w-full">
+        @if (adminPanelError() && !adminStats()) {
+          <div class="bg-error-container rounded-xl p-4 flex items-center gap-3 text-error-on-container">
+            <span class="material-icons-round">warning</span>
+            <p class="text-sm">{{ adminPanelError() }}</p>
+          </div>
+        }
+
+        @if (adminPanelLoading() && !adminStats()) {
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            @for (i of [1,2,3,4,5,6]; track i) {
+              <div class="skeleton h-24 rounded-2xl"></div>
+            }
+          </div>
+        } @else {
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            @for (card of panelCards(); track card.label) {
+              <div class="card flex flex-col gap-2">
+                <div class="flex items-center justify-between gap-2">
+                  <p class="text-[11px] uppercase tracking-widest text-outline font-semibold">{{ card.label }}</p>
+                  <span class="material-icons-round text-outline-variant text-[1.1rem]">{{ card.icon }}</span>
+                </div>
+                <p class="font-display font-bold text-2xl text-on-surface">{{ card.value }}</p>
+              </div>
+            }
+          </div>
+
+          @if (adminStats(); as s) {
+            <div class="card p-0 overflow-hidden">
+              <div class="px-5 py-4 border-b border-outline-variant/30">
+                <h3 class="font-display font-semibold text-on-surface">Actividad general</h3>
+              </div>
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 p-5 text-sm">
+                <div>
+                  <p class="text-outline text-[11px] uppercase tracking-widest font-semibold">Negocios activos</p>
+                  <p class="font-display font-bold text-xl text-success mt-1">{{ s.activeBusinesses }}</p>
+                </div>
+                <div>
+                  <p class="text-outline text-[11px] uppercase tracking-widest font-semibold">Verificados</p>
+                  <p class="font-display font-bold text-xl text-primary mt-1">{{ s.verifiedBusinesses }}</p>
+                </div>
+                <div>
+                  <p class="text-outline text-[11px] uppercase tracking-widest font-semibold">Reservas confirmadas</p>
+                  <p class="font-display font-bold text-xl text-on-surface mt-1">{{ s.confirmedBookings }}</p>
+                </div>
+                <div>
+                  <p class="text-outline text-[11px] uppercase tracking-widest font-semibold">Valoración media</p>
+                  <p class="font-display font-bold text-xl text-on-surface mt-1">{{ s.averageRating }} <span class="material-icons-round text-yellow-400 text-[1rem] align-middle">star</span></p>
+                </div>
+              </div>
+            </div>
+          }
+        }
+      </div>
+    }
+
+    <!-- ══ TAB: RESEÑAS (moderación) ═══════════════════════════════════════ -->
+    @if (tab() === 'resenas') {
+      <div class="flex-1 p-4 sm:p-6 flex flex-col gap-4 max-w-6xl mx-auto w-full">
+        @if (adminPanelLoading() && !allReviews().length) {
+          <div class="flex flex-col gap-2">
+            @for (i of [1,2,3]; track i) {
+              <div class="skeleton h-24 rounded-2xl"></div>
+            }
+          </div>
+        } @else if (!allReviews().length) {
+          <div class="flex flex-col items-center justify-center gap-3 py-16 text-center">
+            <span class="material-icons-round text-[3.5rem] text-outline-variant">rate_review</span>
+            <h3 class="font-display font-semibold text-xl">Sin reseñas</h3>
+            <p class="text-sm text-on-surface-variant">Las reseñas de los clientes aparecerán aquí.</p>
+          </div>
+        } @else {
+          <div class="flex flex-col gap-3">
+            @for (review of allReviews(); track review.id) {
+              <div class="rounded-2xl border border-outline-variant/30 bg-white p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2 mb-1 flex-wrap">
+                    <span class="material-icons-round text-yellow-400 text-[0.9rem]">star</span>
+                    <span class="text-sm font-bold text-on-surface">{{ review.rating }}.0</span>
+                    <span class="text-sm font-medium text-on-surface truncate">{{ review.businessName }}</span>
+                  </div>
+                  <p class="text-sm text-on-surface">{{ review.review || 'Reseña sin texto.' }}</p>
+                  <p class="text-xs text-on-surface-variant mt-1">{{ review.createdAt | date:'short' }}</p>
+                </div>
+                <button class="btn-danger btn-sm gap-1 flex-shrink-0"
+                        [disabled]="deletingReviewId() === review.id"
+                        (click)="deleteReview(review.id)">
+                  <span class="material-icons-round text-[0.875rem]">delete</span>
+                  Eliminar
+                </button>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    }
+
+    <!-- ══ TAB: PAGOS ════════════════════════════════════════════════════ -->
+    @if (tab() === 'pagos') {
+      <div class="flex-1 p-4 sm:p-6 flex flex-col gap-5 max-w-6xl mx-auto w-full">
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div class="card flex flex-col gap-1.5">
+            <p class="text-[11px] uppercase tracking-widest text-outline font-semibold">Total</p>
+            <p class="font-display font-bold text-2xl text-on-surface">{{ paymentStats().total }}</p>
+          </div>
+          <div class="card flex flex-col gap-1.5">
+            <p class="text-[11px] uppercase tracking-widest text-outline font-semibold">Cobrados</p>
+            <p class="font-display font-bold text-2xl text-success">{{ paymentStats().paid }}</p>
+          </div>
+          <div class="card flex flex-col gap-1.5">
+            <p class="text-[11px] uppercase tracking-widest text-outline font-semibold">Pendientes</p>
+            <p class="font-display font-bold text-2xl text-tertiary">{{ paymentStats().pending }}</p>
+          </div>
+          <div class="card flex flex-col gap-1.5">
+            <p class="text-[11px] uppercase tracking-widest text-outline font-semibold">Ingresos</p>
+            <p class="font-display font-bold text-2xl text-info">{{ paymentStats().revenue }} €</p>
+          </div>
+        </div>
+
+        <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+          <select class="form-select sm:w-56"
+                  [value]="adminPaymentFilter()"
+                  (change)="setPaymentFilter(getInputValue($event))">
+            <option value="">Todos los estados</option>
+            <option value="pending">Pendientes</option>
+            <option value="paid">Cobrados</option>
+            <option value="failed">Fallidos</option>
+            <option value="refunded">Reembolsados</option>
+          </select>
+          <button class="btn-tertiary btn-sm gap-1" (click)="loadAdminPayments()">
+            <span class="material-icons-round text-base">refresh</span>
+            Recargar
+          </button>
+        </div>
+
+        @if (!filteredPayments().length) {
+          <div class="flex flex-col items-center justify-center gap-4 py-16 text-center">
+            <span class="material-icons-round text-[3.5rem] text-outline-variant">payments</span>
+            <h3 class="font-display font-semibold text-xl">Sin pagos</h3>
+            <p class="text-sm text-on-surface-variant">Aún no hay movimientos de pago.</p>
+          </div>
+        } @else {
+          <div class="hidden sm:block card p-0 overflow-hidden">
+            <table class="w-full text-sm text-left">
+              <thead>
+                <tr class="border-b border-outline-variant/30 text-[11px] uppercase tracking-wider text-outline bg-surface-low">
+                  <th class="px-5 py-3">Fecha</th>
+                  <th class="px-5 py-3">Método</th>
+                  <th class="px-5 py-3">Importe</th>
+                  <th class="px-5 py-3">Estado</th>
+                  <th class="px-5 py-3">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (payment of filteredPayments(); track payment.id) {
+                  <tr class="border-b border-outline-variant/20 hover:bg-surface-low transition">
+                    <td class="px-5 py-3.5">{{ payment.createdAt | date:'short' }}</td>
+                    <td class="px-5 py-3.5 capitalize">{{ payment.method }}</td>
+                    <td class="px-5 py-3.5 font-display font-semibold">{{ payment.amount }} €</td>
+                    <td class="px-5 py-3.5">
+                      <span class="rounded-full px-2.5 py-1 text-xs font-semibold {{ statusBadgeClass(payment.status) }}">{{ payment.status }}</span>
+                    </td>
+                    <td class="px-5 py-3.5">
+                      @if (payment.status === 'pending') {
+                        <button class="btn-primary btn-sm gap-1"
+                                [disabled]="paidUpdating() === payment.id"
+                                (click)="setPaymentStatus(payment, 'paid')">
+                          <span class="material-icons-round text-[0.875rem]">check</span>
+                          Marcar cobrado
+                        </button>
+                      }
+                      @if (payment.status === 'paid') {
+                        <button class="btn-tertiary btn-sm gap-1"
+                                [disabled]="paidUpdating() === payment.id"
+                                (click)="setPaymentStatus(payment, 'refunded')">
+                          <span class="material-icons-round text-[0.875rem]">reply</span>
+                          Reembolsar
+                        </button>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <div class="flex flex-col gap-3 sm:hidden">
+            @for (payment of filteredPayments(); track payment.id) {
+              <div class="rounded-2xl border border-outline-variant/30 bg-white p-4 flex flex-col gap-2">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="font-display font-bold text-lg">{{ payment.amount }} €</span>
+                  <span class="rounded-full px-2.5 py-1 text-xs font-semibold {{ statusBadgeClass(payment.status) }}">{{ payment.status }}</span>
+                </div>
+                <p class="text-sm text-on-surface-variant capitalize">{{ payment.method }} · {{ payment.createdAt | date:'short' }}</p>
+                @if (payment.status === 'pending') {
+                  <button class="btn-primary btn-sm gap-1"
+                          [disabled]="paidUpdating() === payment.id"
+                          (click)="setPaymentStatus(payment, 'paid')">
+                    <span class="material-icons-round text-[0.875rem]">check</span> Marcar cobrado
+                  </button>
+                }
+                @if (payment.status === 'paid') {
+                  <button class="btn-tertiary btn-sm gap-1"
+                          [disabled]="paidUpdating() === payment.id"
+                          (click)="setPaymentStatus(payment, 'refunded')">
+                    <span class="material-icons-round text-[0.875rem]">reply</span> Reembolsar
+                  </button>
+                }
+              </div>
+            }
+          </div>
+        }
+      </div>
+    }
 
     <!-- ══ TAB: RESERVAS ═══════════════════════════════════════════ -->
     @if (tab() === 'reservas') {
@@ -66,7 +282,7 @@
 
         <!-- Error -->
         @if (error() && !loading()) {
-          <div class="bg-error-container rounded-xl p-4 flex items-center gap-3 text-[#93000a]">
+          <div class="bg-error-container rounded-xl p-4 flex items-center gap-3 text-error-on-container">
             <span class="material-icons-round">warning</span>
             <p class="text-sm">{{ error() }}</p>
           </div>
@@ -184,11 +400,10 @@
                      autocomplete="off" />
             </div>
             <button type="submit"
-                    class="flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold
-                           text-white transition disabled:opacity-40 disabled:cursor-not-allowed
-                           whitespace-nowrap w-full sm:w-auto flex-shrink-0"
-                    style="background:linear-gradient(135deg,#005bbf,#1a73e8)"
-                    [disabled]="serviceForm.invalid || addingService()">
+                        class="flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold
+                               text-white transition disabled:opacity-40 disabled:cursor-not-allowed
+                               whitespace-nowrap w-full sm:w-auto flex-shrink-0 bg-gradient-to-br from-primary to-primary-container"
+                        [disabled]="serviceForm.invalid || addingService()">
               @if (addingService()) {
                 <span class="material-icons-round text-base animate-spin">refresh</span>
                 Guardando…
@@ -211,13 +426,12 @@
         @if (!servicesLoading()) {
           @if (!services().length) {
             <div class="flex flex-col items-center justify-center gap-4 py-14 text-center">
-              <div class="w-16 h-16 rounded-full flex items-center justify-center"
-                   style="background:#ebeef4">
-                <span class="material-icons-round text-3xl" style="color:#727785">category</span>
+              <div class="w-16 h-16 rounded-full flex items-center justify-center bg-surface-container">
+                <span class="material-icons-round text-3xl text-outline">category</span>
               </div>
               <div>
                 <h3 class="font-display font-semibold text-base">Sin servicios aún</h3>
-                <p class="text-sm mt-1" style="color:#727785">Agrega el primero usando el formulario de arriba.</p>
+                <p class="text-sm mt-1 text-outline">Agrega el primero usando el formulario de arriba.</p>
               </div>
             </div>
           } @else {
@@ -225,18 +439,15 @@
               <p class="section-label">{{ services().length }} servicio{{ services().length !== 1 ? 's' : '' }} registrado{{ services().length !== 1 ? 's' : '' }}</p>
               <div class="flex flex-col gap-2">
                 @for (svc of services(); track svc; let i = $index) {
-                  <div class="flex items-center gap-4 px-5 py-4 rounded-xl transition"
-                       style="background:#ffffff;box-shadow:0 2px 8px rgba(24,28,32,0.04)">
-                    <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
-                         style="background:#d8e2ff">
-                      <span class="material-icons-round text-[1.1rem]" style="color:#005bbf">spa</span>
+<div class="flex items-center gap-4 px-5 py-4 rounded-xl transition bg-surface-lowest shadow-card">
+                    <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 bg-primary-fixed">
+                      <span class="material-icons-round text-[1.1rem] text-primary">spa</span>
                     </div>
                     <span class="font-medium flex-1">{{ svc }}</span>
                     <button
-                      class="w-9 h-9 rounded-lg flex items-center justify-center transition
-                             disabled:opacity-40 disabled:cursor-not-allowed"
-                      style="color:#93000a;background:#fff0ef"
-                      (click)="deleteService(svc)"
+                        class="w-9 h-9 rounded-lg flex items-center justify-center transition bg-error-container text-error-on-container
+                               disabled:opacity-40 disabled:cursor-not-allowed"
+                        (click)="deleteService(svc)"
                       [disabled]="deletingService() === svc"
                       [attr.aria-label]="'Eliminar ' + svc">
                       @if (deletingService() === svc) {
@@ -287,8 +498,7 @@
         </div>
 
         @if (!adminToken()) {
-          <div class="flex flex-col gap-3 p-4 rounded-xl text-sm"
-               style="background:#fff8e1;color:#7c4f00;border:1px solid #f5d87c">
+<div class="flex flex-col gap-3 p-4 rounded-xl text-sm bg-amber-50 text-amber-800 border border-amber-300">
             <span class="material-icons-round text-base mt-0.5">warning</span>
             <div class="flex-1">
               <p class="font-semibold">No se obtuvo el token de administrador</p>
@@ -330,15 +540,16 @@
                     <div class="flex items-center gap-2 flex-wrap">
                       <h3 class="font-display font-bold text-base truncate">{{ negocio.name }}</h3>
                       @if (negocio.verified) {
-                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold"
-                              style="background:#e6f4ea;color:#1e7e34">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-success-container text-success-on">
                           <span class="material-icons-round text-[12px]">verified</span>
                           Verificado
                         </span>
                       }
                       <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold"
-                            [style.background]="negocio.active ? '#e6f4ea' : '#f5f5f5'"
-                            [style.color]="negocio.active ? '#1e7e34' : '#727785'">
+                            [class.bg-success-container]="negocio.active"
+                            [class.text-success-on]="negocio.active"
+                            [class.bg-surface-high]="!negocio.active"
+                            [class.text-outline]="!negocio.active">
                         {{ negocio.active ? 'Activo' : 'Inactivo' }}
                       </span>
                     </div>
@@ -347,15 +558,16 @@
                     </p>
                   </div>
                   <div class="flex items-center gap-2 flex-shrink-0">
-                    <button class="w-9 h-9 flex items-center justify-center rounded-lg transition"
-                            style="background:#d8e2ff;color:#005bbf"
-                            (click)="opennegocioModal(negocio)" [disabled]="!adminToken()"
+<button class="w-9 h-9 flex items-center justify-center rounded-lg transition bg-primary-fixed text-primary"
+                        (click)="opennegocioModal(negocio)" [disabled]="!adminToken()"
                             aria-label="Editar {{ negocio.name }}">
                       <span class="material-icons-round text-base">edit</span>
                     </button>
                     <button class="w-9 h-9 flex items-center justify-center rounded-lg transition disabled:opacity-40"
-                            [style.background]="negocio.active ? '#fff0ef' : '#e8f5e9'"
-                            [style.color]="negocio.active ? '#93000a' : '#2e7d32'"
+                            [class.bg-error-container]="negocio.active"
+                            [class.text-error-on-container]="negocio.active"
+                            [class.bg-success-container]="!negocio.active"
+                            [class.text-success-on]="!negocio.active"
                             (click)="toggleBusiness(negocio.id)"
                             [disabled]="togglingBusiness() === negocio.id || !adminToken()"
                             [attr.aria-label]="negocio.active ? 'Desactivar negocio' : 'Activar negocio'">
@@ -366,8 +578,10 @@
                       }
                     </button>
                     <button class="w-9 h-9 flex items-center justify-center rounded-lg transition disabled:opacity-40"
-                            [style.background]="negocio.verified ? '#e8f5e9' : '#f1f3f4'"
-                            [style.color]="negocio.verified ? '#2e7d32' : '#727785'"
+                            [class.bg-success-container]="negocio.verified"
+                            [class.text-success-on]="negocio.verified"
+                            [class.bg-surface-container]="!negocio.verified"
+                            [class.text-outline]="!negocio.verified"
                             (click)="verifyBusiness(negocio.id)"
                             [disabled]="verifyingBusiness() === negocio.id || !adminToken()"
                             [attr.aria-label]="(negocio.verified ? 'Desmarcar como verificad' : 'Marcar como verificado') + ' ' + negocio.name"
@@ -378,8 +592,7 @@
                         <span class="material-icons-round text-base">{{ negocio.verified ? 'verified' : 'verified_user' }}</span>
                       }
                     </button>
-                    <button class="w-9 h-9 flex items-center justify-center rounded-lg transition disabled:opacity-40"
-                            style="background:#f8d7da;color:#842029"
+                    <button class="w-9 h-9 flex items-center justify-center rounded-lg transition bg-error-container text-error-on-container disabled:opacity-40"
                             (click)="deleteBusiness(negocio.id)"
                             [disabled]="deletingBusiness() === negocio.id || !adminToken()"
                             aria-label="Eliminar {{ negocio.name }}">

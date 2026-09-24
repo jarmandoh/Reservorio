@@ -25,8 +25,7 @@ import { PinAuthCardComponent } from '../../shared/components/pin-auth-card/pin-
     (backAction)="goBack()"
   >
     <div header class="flex flex-col items-center gap-3">
-      <div class="w-16 h-16 rounded-2xl flex items-center justify-center text-white shadow-soft"
-           style="background:linear-gradient(135deg,#005bbf,#1a73e8)">
+      <div class="w-16 h-16 rounded-2xl flex items-center justify-center text-white shadow-soft bg-gradient-to-br from-primary to-primary-container">
         <span class="material-icons-round text-2xl">admin_panel_settings</span>
       </div>
       <div class="text-center">

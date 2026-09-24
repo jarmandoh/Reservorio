@@ -3,8 +3,6 @@
 const { randomUUID } = require('crypto');
 const db = require('../db');
 
-const fallbackNotifications = [];
-
 function mapNotification(row) {
   if (!row) return row;
 
@@ -49,13 +47,9 @@ async function listNotifications(filters = {}) {
     query += ' ORDER BY created_at DESC';
     const { rows } = await db.query(query, values);
     return { ok: true, status: 200, data: rows.map(mapNotification) };
-  } catch (_error) {
-    const rows = fallbackNotifications.filter((notification) => {
-      const matchesBusiness = !businessId || notification.businessId === businessId;
-      const matchesBooking = !bookingId || notification.bookingId === bookingId;
-      return matchesBusiness && matchesBooking;
-    });
-    return { ok: true, status: 200, data: rows.map(mapNotification) };
+  } catch (error) {
+    console.error('[notifications] listNotifications falló:', error.message);
+    return { ok: false, status: 500, message: error.message };
   }
 }
 
@@ -96,9 +90,9 @@ async function createNotification(payload = {}) {
     );
 
     return { ok: true, status: 201, data: mapNotification(rows[0]) };
-  } catch (_error) {
-    fallbackNotifications.push(notification);
-    return { ok: true, status: 201, data: notification, message: 'Base de datos no disponible; se usó almacenamiento en memoria' };
+  } catch (error) {
+    console.error('[notifications] createNotification falló:', error.message);
+    return { ok: false, status: 500, message: error.message };
   }
 }
 

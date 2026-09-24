@@ -21,7 +21,7 @@ const reservationCreateValidators = [
 
 const reservationUpdateValidators = [
   param('id').toInt().isInt({ min: 1 }).withMessage('ID invalido'),
-  body('disponibilidad').trim().isIn(['Disponible', 'Pendiente', 'Reservado', 'Confirmado']).withMessage('Estado no permitido'),
+  body('disponibilidad').trim().isIn(['Disponible', 'Pendiente', 'Reservado', 'Confirmado', 'Cancelado']).withMessage('Estado no permitido'),
   body('notas').optional().trim().isLength({ max: 500 }).withMessage('notas demasiado largas'),
   handleValidation,
 ];

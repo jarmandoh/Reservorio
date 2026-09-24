@@ -1,8 +1,9 @@
-import { Component, OnInit, signal, inject } from '@angular/core';
+import { Component, DestroyRef, OnInit, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { catchError, of } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ApiService }  from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
 import { Business }    from '../../core/models/businesses.model';
@@ -62,6 +63,7 @@ export class BusinessLoginComponent implements OnInit {
   private api    = inject(ApiService);
   private auth   = inject(AuthService);
   private fb     = inject(FormBuilder);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly business   = signal<Business | null>(null);
   readonly notFound   = signal(false);
@@ -83,7 +85,7 @@ export class BusinessLoginComponent implements OnInit {
     }
 
     // Load business name for display
-    this.api.getBusinesses().pipe(catchError(() => of([]))).subscribe(list => {
+    this.api.getBusinesses().pipe(catchError(() => of([])), takeUntilDestroyed(this.destroyRef)).subscribe(list => {
       const found = list.find(b => b.id === id);
       if (found) this.business.set(found);
     });
@@ -96,7 +98,7 @@ export class BusinessLoginComponent implements OnInit {
     this.loading.set(true);
     this.loginError.set(null);
 
-    this.auth.loginBusiness(id, pin).subscribe({
+    this.auth.loginBusiness(id, pin).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.loading.set(false);
         this.router.navigate(['/business', id, 'admin']);

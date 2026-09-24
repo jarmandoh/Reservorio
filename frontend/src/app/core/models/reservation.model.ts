@@ -1,5 +1,6 @@
 export interface Reservation {
-  _rowIndex: number;
+  id:             number;
+  _rowIndex:      number;
   franja:         string;
   disponibilidad: string;
   cliente:        string;
@@ -54,6 +55,9 @@ export interface BookingRequest {
   notes?: string;
 }
 
+export type PaymentMethod = 'card' | 'paypal' | 'transfer' | 'cash';
+export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'refunded';
+
 export interface Payment {
   id: string;
   bookingId: string;
@@ -61,8 +65,8 @@ export interface Payment {
   customerId: string;
   amount: number;
   currency: string;
-  method: 'card' | 'transfer' | 'cash';
-  status: 'pending' | 'paid' | 'failed';
+  method: PaymentMethod;
+  status: PaymentStatus;
   createdAt?: string;
 }
 
@@ -72,8 +76,25 @@ export interface PaymentRequest {
   customerId: string;
   amount: number;
   currency?: string;
-  method: 'card' | 'transfer' | 'cash';
-  status?: 'pending' | 'paid' | 'failed';
+  method: PaymentMethod;
+  status?: PaymentStatus;
+}
+
+export interface CheckoutInstructions {
+  beneficiary?: string;
+  iban?: string;
+  bank?: string;
+  reference?: string;
+  message?: string;
+}
+
+export interface CheckoutSession {
+  sessionId?: string;
+  checkoutUrl: string | null;
+  paymentId?: string;
+  method?: PaymentMethod;
+  status?: PaymentStatus;
+  instructions?: CheckoutInstructions;
 }
 
 export interface UpdatePayload {
@@ -115,4 +136,59 @@ export interface NotificationItem {
   status: 'queued' | 'sent' | 'failed';
   createdAt?: string;
   sentAt?: string | null;
+}
+
+export interface AdminStats {
+  businesses: number;
+  activeBusinesses: number;
+  verifiedBusinesses: number;
+  customers: number;
+  bookings: number;
+  confirmedBookings: number;
+  reservations: number;
+  payments: number;
+  paidPayments: number;
+  pendingPayments: number;
+  revenue: number;
+  reviews: number;
+  averageRating: number;
+}
+
+export interface AdminReview {
+  id: number;
+  businessId: string;
+  businessName: string;
+  rating: number;
+  review: string;
+  createdAt: string;
+}
+
+export interface AdminServiceRecord {
+  id: number;
+  businessId: string;
+  businessName: string;
+  nombre: string;
+  active: boolean;
+  createdAt: string;
+}
+
+export interface CustomerHistoryBooking {
+  id: string;
+  providerId: string;
+  businessName: string;
+  serviceId: string;
+  date: string;
+  slot: string;
+  status: PaymentStatus | 'pending' | 'confirmed' | 'cancelled' | 'completed';
+  notes?: string;
+  createdAt?: string;
+  paymentAmount?: number | null;
+  paymentCurrency?: string | null;
+  paymentStatus?: PaymentStatus | null;
+  paymentMethod?: PaymentMethod | null;
+}
+
+export interface CustomerHistory {
+  customer: Customer;
+  bookings: CustomerHistoryBooking[];
 }

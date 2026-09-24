@@ -96,6 +96,20 @@ CREATE TABLE IF NOT EXISTS notifications (
   sent_at     TIMESTAMPTZ
 );
 
+CREATE TABLE IF NOT EXISTS payments (
+  id                 TEXT PRIMARY KEY,
+  booking_id         TEXT NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+  provider_id        TEXT NOT NULL REFERENCES businesses(id) ON DELETE RESTRICT,
+  customer_id        TEXT NOT NULL REFERENCES customers(id) ON DELETE RESTRICT,
+  amount             NUMERIC(10,2) NOT NULL CHECK (amount > 0),
+  currency           TEXT NOT NULL DEFAULT 'EUR',
+  method             TEXT NOT NULL DEFAULT 'card' CHECK (method IN ('card', 'paypal', 'transfer', 'cash')),
+  status             TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'paid', 'failed', 'refunded')),
+  external_reference TEXT NOT NULL DEFAULT '',
+  created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at         TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE INDEX IF NOT EXISTS idx_reservations_business ON reservations(business_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_business ON notifications(business_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_booking ON notifications(booking_id);
@@ -103,6 +117,17 @@ CREATE INDEX IF NOT EXISTS idx_services_business ON services(business_id);
 CREATE INDEX IF NOT EXISTS idx_customers_email ON customers(email);
 CREATE INDEX IF NOT EXISTS idx_bookings_provider ON bookings(provider_id);
 CREATE INDEX IF NOT EXISTS idx_bookings_customer ON bookings(customer_id);
+
+-- Anti doble-reserva a nivel de base de datos (reemplaza migration 002):
+-- Una franja ocupada (Reservado/Confirmado/Cancelado) no se puede asignar dos veces al mismo negocio.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_reservations_franja
+  ON reservations (business_id, franja)
+  WHERE disponibilidad <> 'Disponible';
+
+-- Un provider no puede tener dos reservas activas (pending/confirmed) en el mismo día y franja.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_bookings_active_slot
+  ON bookings (provider_id, booking_date, slot)
+  WHERE status IN ('pending', 'confirmed');
 
 -- ── Google OAuth columns ─────────────────────────────────────────────────────
 ALTER TABLE businesses ADD COLUMN IF NOT EXISTS google_email         TEXT;

@@ -1,0 +1,200 @@
+import { Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
+import { Router } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ApiService } from '../../core/services/api.service';
+import { AuthService } from '../../core/services/auth.service';
+import { Customer, CustomerHistoryBooking } from '../../core/models/reservation.model';
+
+@Component({
+  selector: 'app-customer-history',
+  standalone: true,
+  imports: [CommonModule],
+  template: `
+    <div class="min-h-screen bg-surface p-4 sm:p-6">
+      <div class="max-w-3xl mx-auto space-y-6">
+
+        <header class="flex items-center justify-between gap-3">
+          <button class="btn-tertiary btn-sm flex items-center gap-1.5" type="button" (click)="goHome()">
+            <span class="material-icons-round text-base">arrow_back</span>
+            Inicio
+          </button>
+          <div class="flex items-center gap-2">
+            @if (customer()) {
+              <h1 class="font-display text-xl font-bold">Mi historial</h1>
+            }
+            <button class="btn-tertiary btn-sm flex items-center gap-1.5" type="button" (click)="logout()">
+              <span class="material-icons-round text-base">logout</span>
+              <span class="hidden sm:inline">Salir</span>
+            </button>
+          </div>
+        </header>
+
+        @if (loading()) {
+          <div class="card p-5 space-y-4">
+            <div class="skeleton h-16 rounded-xl"></div>
+            <div class="skeleton h-24 rounded-xl"></div>
+            <div class="skeleton h-24 rounded-xl"></div>
+          </div>
+        } @else if (error()) {
+          <div class="card p-6 flex flex-col items-center gap-4 text-center">
+            <p class="text-error">{{ error() }}</p>
+            <button class="btn-primary" type="button" (click)="goHome()">Volver al inicio</button>
+          </div>
+        } @else if (customer(); as c) {
+          <!-- Profile -->
+          <section class="card p-5 flex items-center gap-4">
+            <div class="w-14 h-14 rounded-2xl flex items-center justify-center bg-primary text-white font-display text-lg font-bold shrink-0">
+              {{ initials(c.name) }}
+            </div>
+            <div class="min-w-0">
+              <h2 class="font-display text-lg font-bold">{{ c.name }}</h2>
+              <p class="text-sm text-on-surface-variant truncate">{{ c.email }}</p>
+              @if (c.phone) {
+                <p class="text-sm text-on-surface-variant">{{ c.phone }}</p>
+              }
+            </div>
+          </section>
+
+          <!-- Bookings -->
+          @if (bookings().length === 0) {
+            <section class="card p-8 flex flex-col items-center gap-3 text-center">
+              <span class="material-icons-round text-5xl text-outline">event_available</span>
+              <p class="font-medium">Aún no tienes reservas</p>
+              <p class="text-sm text-on-surface-variant">Cuando reserves en algún negocio, tu historial aparecerá aquí.</p>
+              <button class="btn-primary" type="button" (click)="goHome()">Explorar negocios</button>
+            </section>
+          } @else {
+            <section class="flex flex-col gap-3">
+              @for (b of bookings(); track b.id) {
+                <article class="card p-4 sm:p-5">
+                  <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div class="min-w-0">
+                      <div class="flex items-center gap-2">
+                        <span class="material-icons-round text-primary text-base">store</span>
+                        <h3 class="font-medium truncate">{{ b.businessName || 'Negocio' }}</h3>
+                      </div>
+                      <p class="text-sm text-on-surface-variant mt-1">{{ b.serviceId || 'Servicio' }}</p>
+                      <p class="text-sm mt-1 flex items-center gap-2">
+                        <span class="material-icons-round text-base text-on-surface-variant">schedule</span>
+                        {{ formatDate(b.date) }} · {{ b.slot }}
+                      </p>
+                    </div>
+                    <span class="badge" [ngClass]="statusCss(b.status)">{{ statusLabel(b.status) }}</span>
+                  </div>
+
+                  @if (b.paymentStatus) {
+                    <div class="flex flex-wrap items-center gap-2 mt-3 rounded-xl bg-surface-low px-3 py-2 text-sm">
+                      <span class="material-icons-round text-base text-on-surface-variant">payments</span>
+                      <span>{{ paymentLabel(b) }}</span>
+                    </div>
+                  }
+
+                  <button class="btn-secondary btn-sm mt-4 flex items-center gap-1.5" type="button"
+                          (click)="bookAgain(b)">
+                    <span class="material-icons-round text-base">add_circle_outline</span>
+                    Reservar de nuevo
+                  </button>
+                </article>
+              }
+            </section>
+          }
+        }
+      </div>
+    </div>
+  `,
+})
+export class CustomerHistoryComponent implements OnInit {
+  private api = inject(ApiService);
+  private auth = inject(AuthService);
+  private router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
+
+  readonly loading = signal(true);
+  readonly error = signal<string | null>(null);
+  readonly customer = signal<Customer | null>(null);
+  readonly bookings = signal<CustomerHistoryBooking[]>([]);
+
+  private readonly statusInfo = { pending: 'Pendiente', confirmed: 'Confirmado', completed: 'Completado', cancelled: 'Cancelado' };
+
+  ngOnInit(): void {
+    const token = this.auth.getCustomerToken();
+    const customerId = this.auth.getCustomerPayload()?.customerId as string | undefined;
+
+    if (!token || !customerId) {
+      this.auth.clearCustomerToken();
+      this.router.navigate(['/customer/login']);
+      return;
+    }
+
+    this.api.getCustomerHistory(customerId, token).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: data => {
+        this.customer.set(data.customer);
+        this.bookings.set(data.bookings);
+        this.loading.set(false);
+        this.error.set(null);
+      },
+      error: err => {
+        this.loading.set(false);
+        if (err instanceof HttpErrorResponse && err.status === 401) {
+          this.auth.clearCustomerToken();
+          this.router.navigate(['/customer/login']);
+          return;
+        }
+        this.error.set(err.error?.message ?? 'No se pudo cargar tu historial.');
+      },
+    });
+  }
+
+  initials(name?: string): string {
+    return (name ?? '')
+      .trim()
+      .split(/\s+/)
+      .map(w => w[0])
+      .slice(0, 2)
+      .join('')
+      .toUpperCase();
+  }
+
+  formatDate(date: string): string {
+    if (!date) return '';
+    const [y, m, d] = date.split('-');
+    return y && m && d ? `${d}/${m}/${y}` : date;
+  }
+
+  statusCss(status: string): string {
+    if (status === 'pending') return 'badge-pending';
+    if (status === 'cancelled') return 'badge-reserved';
+    return 'badge-confirmed';
+  }
+
+  statusLabel(status: string): string {
+    return this.statusInfo[status as keyof typeof this.statusInfo] ?? status;
+  }
+
+  paymentLabel(b: CustomerHistoryBooking): string {
+    const amount = b.paymentAmount != null
+      ? new Intl.NumberFormat('es-ES', { style: 'currency', currency: b.paymentCurrency ?? 'EUR' }).format(b.paymentAmount)
+      : '';
+    const status = b.paymentStatus === 'paid' ? 'Pagado'
+      : b.paymentStatus === 'pending' ? 'Pago pendiente'
+      : b.paymentStatus === 'refunded' ? 'Reembolsado'
+      : b.paymentStatus === 'failed' ? 'Pago fallido'
+      : '';
+    return [status, amount].filter(Boolean).join(' · ');
+  }
+
+  bookAgain(b: CustomerHistoryBooking): void {
+    this.router.navigate(['/booking', b.providerId]);
+  }
+
+  logout(): void {
+    this.auth.clearCustomerToken();
+    this.router.navigate(['/']);
+  }
+
+  goHome(): void {
+    this.router.navigate(['/']);
+  }
+}

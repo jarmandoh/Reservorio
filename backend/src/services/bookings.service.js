@@ -4,8 +4,6 @@ const { randomUUID } = require('crypto');
 const db = require('../db');
 const { createNotification } = require('./notifications.service');
 
-const fallbackBookings = [];
-
 function mapBooking(row) {
   if (!row) return row;
 
@@ -25,13 +23,15 @@ function mapBooking(row) {
 
 async function listBookings() {
   if (!process.env.DATABASE_URL) {
-    return { ok: true, status: 200, data: fallbackBookings.map(mapBooking) };
+    console.error('[bookings] listBookings: DATABASE_URL no configurado');
+    return { ok: false, status: 500, message: 'DATABASE_URL no configurado; el servicio requiere PostgreSQL' };
   }
 
   try {
     const { rows } = await db.query('SELECT * FROM bookings ORDER BY created_at DESC');
     return { ok: true, status: 200, data: rows.map(mapBooking) };
   } catch (error) {
+    console.error('[bookings] listBookings falló:', error.message);
     return { ok: false, status: 500, message: error.message };
   }
 }
@@ -49,18 +49,8 @@ async function createBooking(payload = {}) {
   }
 
   if (!process.env.DATABASE_URL) {
-    const booking = {
-      id: `booking-${Date.now()}`,
-      providerId,
-      customerId,
-      serviceId,
-      date,
-      slot,
-      status: 'pending',
-      notes,
-    };
-    fallbackBookings.push(booking);
-    return { ok: true, status: 201, data: booking };
+    console.error('[bookings] createBooking: DATABASE_URL no configurado');
+    return { ok: false, status: 500, message: 'DATABASE_URL no configurado; el servicio requiere PostgreSQL' };
   }
 
   try {
@@ -104,6 +94,7 @@ async function createBooking(payload = {}) {
 
     return { ok: true, status: 201, data: mapBooking(rows[0]) };
   } catch (error) {
+    console.error('[bookings] createBooking falló:', error.message);
     return { ok: false, status: 500, message: error.message };
   }
 }

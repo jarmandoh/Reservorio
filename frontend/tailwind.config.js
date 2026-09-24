@@ -27,6 +27,25 @@ module.exports = {
           container: '#997000',
           'fixed-dim':'#fdbc13',
         },
+        brand: {
+          DEFAULT:   '#005bbf',
+          strong:    '#004ea8',
+          bright:    '#1a73e8',
+          soft:      '#d8e2ff',
+          'soft-high':'#eef5ff',
+          light:     '#8fb5ff',
+          sky:       '#6ec3ff',
+          ink:       '#181c20',
+        },
+        success: {
+          DEFAULT: '#2e7d32',
+          container: '#e8f5e9',
+          on: '#1b5e20',
+        },
+        info: {
+          DEFAULT: '#0277bd',
+          container: '#e1f5fe',
+        },
         surface: {
           DEFAULT: '#f7f9ff',
           low:     '#f1f4fa',

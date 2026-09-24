@@ -69,9 +69,52 @@ async function getOwnerProfile(ownerId) {
   return { ok: true, status: 200, data: rows[0] };
 }
 
+function digitsOnly(value) {
+  return String(value ?? '').replace(/\D/g, '');
+}
+
+/**
+ * Login del cliente sin contraseña: se valida contra el email + teléfono
+ * con el que se registró en el checkout (único identificador verificado sin
+ * infraestructura de email/SMS). Emite JWT con rol customer.
+ */
+async function loginCustomer({ email, phone } = {}) {
+  const cleanEmail = String(email ?? '').trim().toLowerCase();
+  if (!cleanEmail) {
+    return { ok: false, status: 400, message: 'email requerido' };
+  }
+
+  const { rows } = await db.query(
+    'SELECT id, name, email, phone FROM customers WHERE email = $1',
+    [cleanEmail]
+  );
+  if (!rows.length) {
+    return { ok: false, status: 401, message: 'No encontramos un cliente con ese email y teléfono' };
+  }
+
+  const customer = rows[0];
+  const storedPhone = digitsOnly(customer.phone);
+
+  // Si el cliente dejó teléfono al registrarse, exige que coincida.
+  if (storedPhone && digitsOnly(phone) !== storedPhone) {
+    return { ok: false, status: 401, message: 'No encontramos un cliente con ese email y teléfono' };
+  }
+
+  const token = sign({ role: 'customer', customerId: customer.id }, '8h');
+  return {
+    ok: true,
+    status: 200,
+    data: {
+      token,
+      customer: { id: customer.id, name: customer.name, email: customer.email, phone: customer.phone ?? '' },
+    },
+  };
+}
+
 module.exports = {
   authenticateAdmin,
   registerOwner,
   loginOwner,
+  loginCustomer,
   getOwnerProfile,
 };

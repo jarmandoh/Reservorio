@@ -189,17 +189,21 @@ src/app/
 | `/admin` | `AdminComponent` | `adminGuard` |
 | `/business/:businessId/login` | `BusinessLoginComponent` | — |
 | `/business/:businessId/admin` | `BusinessAdminComponent` | `businessGuard` |
+| `/customer/login` | `CustomerLoginComponent` | — |
+| `/customer/history` | `CustomerHistoryComponent` | `customerGuard` |
 
 ### `AuthService` — almacenamiento de tokens
 
-Los tokens se guardan en `sessionStorage` (se borran al cerrar la pestaña):
+Los tokens de administrador, dueño y negocio se guardan en `sessionStorage` (se borran al cerrar la pestaña); el token de cliente se guarda en `localStorage` para que la sesión "Mi cuenta" persista:
 
-| Clave | Contenido |
-|---|---|
-| `reservorio_admin_jwt` | JWT del administrador global |
-| `biz_jwt_<businessId>` | JWT del administrador de cada negocio |
-| `reservorio_unlocked` | Flag legacy de sesión (`"1"`) |
-| `reservorio_admin_pin` | PIN legacy en `localStorage` (versión anterior) |
+| Clave | Contenido | Almacenamiento |
+|---|---|---|
+| `reservorio_admin_jwt` | JWT del administrador global | sessionStorage |
+| `reservorio_owner_jwt` | JWT del dueño (panel de negocios) | sessionStorage |
+| `negocio_jwt_<businessId>` | JWT del administrador de cada negocio | sessionStorage |
+| `reservorio_customer_jwt` | JWT del cliente (panel "Mi cuenta") | localStorage |
+| `reservorio_unlocked` | Flag legacy de sesión (`"1"`) | sessionStorage |
+| `reservorio_admin_pin` | PIN legacy | localStorage |
 
 El método `isTokenValid()` decodifica el payload del JWT en el cliente y compara el campo `exp` con `Date.now()` para detectar tokens expirados sin necesidad de llamar al backend.
 

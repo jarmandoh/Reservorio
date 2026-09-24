@@ -222,6 +222,15 @@ async function listReservations(businessId) {
   return { ok: true, status: 200, data: rows };
 }
 
+async function listAvailability(businessId) {
+  const { rows } = await businessRepository.listReservations(businessId);
+  return {
+    ok: true,
+    status: 200,
+    data: rows.map(r => ({ id: r.id, franja: r.franja, disponibilidad: r.disponibilidad })),
+  };
+}
+
 async function createReservation(businessId, payload) {
   const { franja, cliente, telefono, servicio, notas } = payload ?? {};
   const { rows: negocioRows } = await businessRepository.findBusinessById(businessId);
@@ -317,6 +326,7 @@ module.exports = {
   setBusinessVerified,
   deleteBusiness,
   listReservations,
+  listAvailability,
   createReservation,
   updateReservation,
   listServices,

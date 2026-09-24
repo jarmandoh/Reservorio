@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { adminGuard } from '../core/guards/admin.guard';
 import { businessGuard } from '../core/guards/business.guard';
 import { ownerGuard } from '../core/guards/owner.guard';
+import { customerGuard } from '../core/guards/customer.guard';
 
 export const featureRoutes: Routes = [
   {
@@ -29,6 +30,16 @@ export const featureRoutes: Routes = [
     loadComponent: () => import('./owner-dashboard/owner-dashboard.component').then(m => m.OwnerDashboardComponent),
     canActivate: [ownerGuard],
     canMatch: [ownerGuard],
+  },
+  {
+    path: 'customer/login',
+    loadComponent: () => import('./customer-login/customer-login.component').then(m => m.CustomerLoginComponent),
+  },
+  {
+    path: 'customer/history',
+    loadComponent: () => import('./customer/customer-history.component').then(m => m.CustomerHistoryComponent),
+    canActivate: [customerGuard],
+    canMatch: [customerGuard],
   },
   {
     path: 'admin',

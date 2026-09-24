@@ -100,6 +100,45 @@ Obtiene un token JWT con rol `admin`.
 | `400` | `pin` no enviado |
 | `401` | PIN incorrecto |
 
+### `POST /api/auth/customer/login`
+
+Login del cliente (panel "Mi cuenta") sin contraseña: se valida el email y el teléfono con los que se registró al reservar. Emite un JWT con rol `customer`.
+
+**Autenticación requerida:** No
+
+**Cuerpo de la solicitud:**
+
+```json
+{
+  "email": "ana@example.com",
+  "phone": "600 111 222"
+}
+```
+
+**Respuesta exitosa `200`:**
+
+```json
+{
+  "ok": true,
+  "data": {
+    "token": "eyJhbGci...",
+    "customer": {
+      "id": "cliente1",
+      "name": "Ana García",
+      "email": "ana@example.com",
+      "phone": "+34123456789"
+    }
+  }
+}
+```
+
+**Errores:**
+
+| Código | Motivo |
+|---|---|
+| `400` | `email` no enviado o inválido / `phone` inválido |
+| `401` | Email sin historial o teléfono que no coincide |
+
 ---
 
 ## Negocios
@@ -247,6 +286,70 @@ Crea un cliente del marketplace.
   }
 }
 ```
+
+### `GET /api/customers/me`
+
+Perfil del cliente autenticado (token con rol `customer`).
+
+**Autenticación requerida:** Sí — `Authorization: Bearer <token de cliente>`
+
+**Respuesta exitosa `200`:**
+
+```json
+{
+  "ok": true,
+  "data": {
+    "id": "cliente1",
+    "name": "Ana García",
+    "email": "ana@example.com",
+    "phone": "+34123456789",
+    "created_at": "2026-09-24T10:00:00.000Z"
+  }
+}
+```
+
+**Errores:** `401` sin token o inválido · `403` rol distinto de `customer`
+
+### `GET /api/customers/:id/history`
+
+Historial de reservas del cliente con nombre del negocio y estado del pago. Solo accesible por el propio cliente (`:id` debe coincidir con el `customerId` del token).
+
+**Autenticación requerida:** Sí — `Authorization: Bearer <token de cliente>`
+
+**Respuesta exitosa `200`:**
+
+```json
+{
+  "ok": true,
+  "data": {
+    "customer": {
+      "id": "cliente1",
+      "name": "Ana García",
+      "email": "ana@example.com",
+      "phone": "+34123456789"
+    },
+    "bookings": [
+      {
+        "id": "b1",
+        "providerId": "neg1",
+        "businessName": "Barbería Norte",
+        "serviceId": "Corte",
+        "date": "2026-09-24",
+        "slot": "10:30",
+        "status": "confirmed",
+        "notes": "",
+        "createdAt": "2026-09-24T10:00:00.000Z",
+        "paymentAmount": 1500,
+        "paymentCurrency": "EUR",
+        "paymentStatus": "paid",
+        "paymentMethod": "card"
+      }
+    ]
+  }
+}
+```
+
+**Errores:** `401` sin token o inválido · `403` el `:id` no corresponde al cliente · `404` cliente inexistente
 
 ---
 

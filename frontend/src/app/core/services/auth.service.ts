@@ -1,7 +1,7 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
 import { Observable, throwError } from 'rxjs';
 import { catchError, tap } from 'rxjs/operators';
-import { ApiResponse } from '../models/reservation.model';
+import { ApiResponse, Customer } from '../models/reservation.model';
 import { Business, OwnerAuthPayload } from '../models/businesses.model';
 import { SessionStore } from '../state/session.store';
 import { ApiService } from './api.service';
@@ -11,6 +11,7 @@ const SESSION_KEY   = 'reservorio_unlocked';
 const PIN_KEY       = 'reservorio_admin_pin';
 const ADMIN_JWT     = 'reservorio_admin_jwt';
 const OWNER_JWT     = 'reservorio_owner_jwt';
+const CUSTOMER_JWT  = 'reservorio_customer_jwt';
 const DEFAULT_PIN   = '1234';
 
 @Injectable({ providedIn: 'root' })
@@ -21,6 +22,7 @@ export class AuthService {
   private _unlocked = signal(this.storage.getItem(SESSION_KEY) === '1');
   readonly isUnlocked = computed(() => this._unlocked());
   readonly isOwnerUnlocked = computed(() => !!this.getOwnerToken());
+  readonly isCustomerUnlocked = computed(() => !!this.getCustomerToken());
 
   get storedPin(): string {
     return this.storage.getItem(PIN_KEY, 'local') ?? DEFAULT_PIN;
@@ -101,6 +103,18 @@ export class AuthService {
     );
   }
 
+  loginCustomer(email: string, phone: string): Observable<ApiResponse<{ token: string; customer: Customer }>> {
+    return this.api.loginCustomer(email, phone).pipe(
+      tap(res => {
+        if (res.data?.token) this.setCustomerToken(res.data.token);
+      }),
+      catchError(err => {
+        this.clearCustomerToken();
+        return throwError(() => err);
+      })
+    );
+  }
+
   // ── Admin JWT ─────────────────────────────────────────────────────────
 
   getAdminToken(): string | null {
@@ -139,6 +153,26 @@ export class AuthService {
 
   getOwnerPayload(): { ownerId?: string; role?: string; [key: string]: unknown } | null {
     return this.decodeToken(this.getOwnerToken());
+  }
+
+  // ── Customer JWT (panel de cliente, persistente) ──────────────────────
+
+  getCustomerToken(): string | null {
+    const token = this.storage.getItem(CUSTOMER_JWT, 'local');
+    return this.isTokenValid(token) ? token : null;
+  }
+
+  setCustomerToken(token: string): void {
+    this.storage.setItem(CUSTOMER_JWT, token, 'local');
+    this.sessionStore.setAuthenticated(true);
+  }
+
+  clearCustomerToken(): void {
+    this.storage.removeItem(CUSTOMER_JWT, 'local');
+  }
+
+  getCustomerPayload(): { customerId?: string; role?: string; [key: string]: unknown } | null {
+    return this.decodeToken(this.getCustomerToken());
   }
 
   // ── Business JWT ──────────────────────────────────────────────────────

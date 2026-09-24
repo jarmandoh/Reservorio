@@ -1,5 +1,5 @@
 import {
-  Component, OnInit, OnDestroy, signal, computed, inject
+  Component, OnInit, OnDestroy, signal, computed, inject, DestroyRef
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -8,9 +8,10 @@ import {
 } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { interval, Subscription, switchMap, startWith, catchError, of } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ApiService }   from '../../core/services/api.service';
 import { ToastService } from '../../core/services/toast.service';
-import { Reservation }  from '../../core/models/reservation.model';
+import { Reservation, PaymentMethod, CheckoutInstructions } from '../../core/models/reservation.model';
 import { Business, Review, RatingStats }     from '../../core/models/businesses.model';
 
 type Step = 1 | 2 | 3 | 4;
@@ -32,10 +33,10 @@ interface ConfirmedBooking {
       <div class="grid gap-8 lg:min-h-[calc(100vh-5rem)] lg:grid-cols-[minmax(0,1fr)_430px] lg:items-center lg:gap-12">
         <section class="flex flex-col justify-center gap-8 lg:pr-6">
           <div class="space-y-4">
-            <p class="text-[11px] font-semibold uppercase tracking-[0.35em] text-[#8fb5ff]">Reserva sin esperas</p>
+            <p class="text-[11px] font-semibold uppercase tracking-[0.35em] text-brand-light">Reserva sin esperas</p>
             <h1 class="font-display text-4xl font-bold leading-none sm:text-5xl lg:text-6xl">
               Agenda tu cita en minutos.<br>
-              <span class="text-[#6ec3ff]">Rapido, claro y al instante.</span>
+              <span class="text-brand-sky">Rapido, claro y al instante.</span>
             </h1>
             <p class="max-w-xl text-sm leading-6 text-slate-300 sm:text-base">
               Elige tu servicio, revisa la disponibilidad y deja tus datos para pedir la reserva en un flujo simple.
@@ -46,7 +47,7 @@ interface ConfirmedBooking {
             @for (item of instructionItems; track item.order) {
               <div class="rounded-3xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
                 <div class="flex items-start gap-4">
-                  <span class="pt-1 font-mono text-xs tracking-[0.28em] text-[#8fb5ff]">{{ item.order }}</span>
+                  <span class="pt-1 font-mono text-xs tracking-[0.28em] text-brand-light">{{ item.order }}</span>
                   <div>
                     <p class="font-display text-lg font-semibold text-white">{{ item.title }}</p>
                     <p class="mt-1 text-sm leading-6 text-slate-300">{{ item.description }}</p>
@@ -57,7 +58,7 @@ interface ConfirmedBooking {
           </div>
 
           <div class="rounded-[2rem] border border-white/10 bg-[linear-gradient(135deg,rgba(26,115,232,0.16),rgba(142,194,255,0.08))] p-5 backdrop-blur-sm sm:max-w-xl">
-            <p class="text-xs font-semibold uppercase tracking-[0.24em] text-[#8fb5ff]">Instrucciones</p>
+            <p class="text-xs font-semibold uppercase tracking-[0.24em] text-brand-light">Instrucciones</p>
             <p class="mt-3 text-sm leading-6 text-slate-200">
               Avanza paso a paso para reservar mas rapido. Si necesitas cambiar algo, vuelve atras y ajustalo sin empezar de nuevo.
             </p>
@@ -66,9 +67,9 @@ interface ConfirmedBooking {
 
         <section class="flex justify-center lg:justify-end">
           <div class="w-full max-w-[430px] rounded-[2.1rem] border border-white/10 bg-white/5 p-3 shadow-[0_32px_80px_rgba(0,0,0,0.45)] backdrop-blur-md">
-            <div class="overflow-hidden rounded-[1.8rem] border border-[#d8e2ff]/20 bg-surface-lowest text-on-surface shadow-soft">
+            <div class="overflow-hidden rounded-[1.8rem] border border-primary-fixed/20 bg-surface-lowest text-on-surface shadow-soft">
 
-              <header class="border-b border-white/10 bg-[linear-gradient(135deg,#004ea8_0%,#005bbf_45%,#1a73e8_100%)] px-5 py-4 text-white">
+              <header class="border-b border-white/10 bg-gradient-to-br from-brand-strong via-primary to-primary-container px-5 py-4 text-white">
                 <div class="flex items-center gap-3">
                   @if (step() < 4) {
                     <button class="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 transition hover:bg-white/15"
@@ -86,7 +87,7 @@ interface ConfirmedBooking {
                       <div class="flex items-center gap-2">
                         <p class="truncate text-sm font-semibold">{{ business()?.name ?? 'Reserva tu cita' }}</p>
                         @if (business()?.verified) {
-                          <span class="material-icons-round text-[0.9rem] text-[#4caf50] flex-shrink-0" title="Negocio verificado">verified</span>
+                          <span class="material-icons-round text-[0.9rem] text-green-500 flex-shrink-0" title="Negocio verificado">verified</span>
                         }
                       </div>
                       <div class="flex items-center gap-2 mt-0.5">
@@ -143,11 +144,20 @@ interface ConfirmedBooking {
               <div class="flex flex-col">
                 @if (step() === 1) {
                   <div class="flex flex-col gap-5 px-5 py-5">
-                    <div class="rounded-2xl border border-[#d8e2ff] bg-[#eff5ff] p-4 text-primary">
+                    <div class="rounded-2xl border border-primary-fixed bg-brand-soft-high p-4 text-primary">
                       <p class="text-[11px] font-semibold uppercase tracking-[0.2em]">Paso 1</p>
                       <h2 class="mt-2 font-display text-2xl font-semibold text-on-surface">Elige tu servicio</h2>
                       <p class="mt-1 text-sm text-on-surface-variant">Empieza por el servicio que quieres agendar.</p>
                     </div>
+
+                    @if (lastBooking() && !servicesLoading() && services().includes(lastBooking()!.servicio)) {
+                      <button type="button"
+                              class="btn-tertiary btn-sm w-full justify-start gap-2 border border-dashed border-primary/40"
+                              (click)="repeatLastService()">
+                        <span class="material-icons-round text-base">history</span>
+                        Repetir tu última reserva ({{ lastBooking()!.servicio }})
+                      </button>
+                    }
 
                     @if (servicesLoading()) {
                       <div class="flex flex-col gap-3">
@@ -159,7 +169,7 @@ interface ConfirmedBooking {
 
                     @if (servicesError() && !servicesLoading()) {
                       <div class="rounded-2xl bg-error-container p-5">
-                        <div class="flex items-start gap-3 text-[#93000a]">
+                        <div class="flex items-start gap-3 text-error-on-container">
                           <span class="material-icons-round mt-0.5">warning</span>
                           <div>
                             <p class="font-semibold">No se pudieron cargar los servicios</p>
@@ -185,14 +195,14 @@ interface ConfirmedBooking {
                               <button
                                 class="rounded-2xl border p-4 sm:p-4 text-left transition min-h-[72px] sm:min-h-[auto]"
                                 [class.border-primary]="selectedService() === svc"
-                                [class.bg-[#eff5ff]]="selectedService() === svc"
+                                [class.bg-brand-soft-high]="selectedService() === svc"
                                 [class.shadow-card]="selectedService() === svc"
                                 [class.border-outline-variant]="selectedService() !== svc"
                                 [class.bg-white]="selectedService() !== svc"
                                 (click)="selectService(svc)">
                                 <div class="flex items-center justify-between gap-3">
                                   <div class="flex items-center gap-3">
-                                    <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#005bbf,#1a73e8)] text-white">
+                                    <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary-container text-white">
                                       <span class="material-icons-round text-[1.15rem]">content_cut</span>
                                     </div>
                                     <div>
@@ -237,7 +247,7 @@ interface ConfirmedBooking {
 
                 @if (step() === 2) {
                   <div class="flex flex-col gap-5 px-5 py-5">
-                    <div class="rounded-2xl border border-[#d8e2ff] bg-[#eff5ff] p-4">
+                    <div class="rounded-2xl border border-primary-fixed bg-brand-soft-high p-4">
                       <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">Paso 2</p>
                       <h2 class="mt-2 font-display text-2xl font-semibold text-on-surface">Selecciona el horario</h2>
                       <p class="mt-1 text-sm text-on-surface-variant">Escoge el horario disponible que mejor te funcione.</p>
@@ -266,7 +276,7 @@ interface ConfirmedBooking {
 
                     @if (error() && !loading()) {
                       <div class="rounded-2xl bg-error-container p-5">
-                        <div class="flex items-start gap-3 text-[#93000a]">
+                        <div class="flex items-start gap-3 text-error-on-container">
                           <span class="material-icons-round mt-0.5">warning</span>
                           <div>
                             <p class="font-semibold">No se pudo cargar la disponibilidad</p>
@@ -310,7 +320,7 @@ interface ConfirmedBooking {
                       </div>
 
                       @if (selectedSlot()) {
-                        <div class="rounded-2xl border border-primary/15 bg-[#eff5ff] p-4">
+                        <div class="rounded-2xl border border-primary/15 bg-brand-soft-high p-4">
                           <p class="section-label">Seleccion actual</p>
                           <div class="flex items-center gap-3">
                             <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary text-white">
@@ -332,28 +342,28 @@ interface ConfirmedBooking {
 
                 @if (step() === 3) {
                                       @if (business()?.cancellationPolicy) {
-                                        <div class="rounded-2xl border-l-4 border-l-[#ff9800] bg-[#fff3e0] p-4">
-                                          <div class="flex items-start gap-3">
-                                            <span class="material-icons-round text-[#f57c00] flex-shrink-0">info</span>
+<div class="rounded-2xl border-l-4 border-l-orange-500 bg-orange-50 p-4">
+                                            <div class="flex items-center gap-2">
+                                            <span class="material-icons-round text-orange-600 flex-shrink-0">info</span>
                                             <div>
-                                              <p class="text-sm font-semibold text-[#e65100]">Política de Cancelación</p>
-                                              <p class="text-xs text-[#bf360c] mt-1">{{ business()!.cancellationPolicy }}</p>
+                                              <p class="text-sm font-semibold text-orange-900">Política de Cancelación</p>
+                                              <p class="text-xs text-deep-orange-700 mt-1">{{ business()!.cancellationPolicy }}</p>
                                             </div>
                                           </div>
                                         </div>
                                       }
 
-                                      <div class="rounded-2xl border border-[#4caf50]/30 bg-[#e8f5e9] p-4">
-                                        <div class="flex items-start gap-3">
-                                          <span class="material-icons-round text-[#2e7d32] flex-shrink-0">security</span>
-                                          <div>
-                                            <p class="text-sm font-semibold text-[#1b5e20]">Pago 100% Seguro</p>
-                                            <p class="text-xs text-[#2e7d32] mt-1">Procesado con Stripe, encriptado y protegido por SSL</p>
+<div class="rounded-2xl border border-green-500/30 bg-success-container p-4">
+                                          <div class="flex items-center gap-2">
+                                            <span class="material-icons-round text-success flex-shrink-0">security</span>
+                                            <div>
+                                              <p class="text-sm font-semibold text-success-on">Pago 100% Seguro</p>
+                                              <p class="text-xs text-success mt-1">Procesado con Stripe, encriptado y protegido por SSL</p>
                                           </div>
                                         </div>
                                       </div>
                   <div class="flex flex-col gap-5 px-5 py-5">
-                    <div class="rounded-2xl border border-[#d8e2ff] bg-[#eff5ff] p-4">
+                    <div class="rounded-2xl border border-primary-fixed bg-brand-soft-high p-4">
                       <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">Paso 3</p>
                       <h2 class="mt-2 font-display text-2xl font-semibold text-on-surface">Completa tus datos</h2>
                       <p class="mt-1 text-sm text-on-surface-variant">Dejanos tus datos para confirmar la solicitud contigo.</p>
@@ -434,7 +444,7 @@ interface ConfirmedBooking {
 
                 @if (step() === 4) {
                   <div class="flex flex-col gap-5 px-5 py-5">
-                    <div class="rounded-[1.75rem] bg-[linear-gradient(135deg,#005bbf_0%,#1a73e8_100%)] p-6 text-center text-white">
+                    <div class="rounded-[1.75rem] bg-gradient-to-br from-primary to-primary-container p-6 text-center text-white">
                       <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white/20">
                         <span class="material-icons-round text-3xl">check_circle</span>
                       </div>
@@ -482,75 +492,124 @@ interface ConfirmedBooking {
                       La confirmación del negocio suele llegar en pocos minutos. Si quieres terminar antes, puedes pagar ahora con un flujo seguro desde la misma reserva.
                     </div>
 
-                    <div class="flex flex-col gap-2 sm:gap-3 sm:flex-row">
-                      <button class="btn-primary flex-1 min-h-[56px] sm:min-h-[auto]" [disabled]="paymentLoading()" (click)="startCheckout()">
+                    <div class="rounded-2xl border border-outline-variant bg-white p-5">
+                      <p class="section-label">Método de pago</p>
+                      <div class="grid grid-cols-2 gap-2">
+                        @for (opt of paymentOptions; track opt.id) {
+                          <button type="button"
+                                  class="payment-option"
+                                  [class.selected]="paymentMethod() === opt.id"
+                                  (click)="paymentMethod.set(opt.id)">
+                            <span class="material-icons-round text-primary flex-shrink-0">{{ opt.icon }}</span>
+                            <span class="text-sm font-semibold whitespace-nowrap">{{ opt.label }}</span>
+                          </button>
+                        }
+                      </div>
+
+                      <label class="mt-3 flex cursor-pointer items-center gap-3 rounded-xl bg-surface-low px-3 py-2.5">
+                        <input type="checkbox" class="h-5 w-5 accent-primary"
+                               [checked]="depositActive()"
+                               (change)="depositActive.set(!depositActive())" />
+                        <span class="flex-1">
+                          <span class="block text-sm font-semibold text-on-surface">Pagar ahora solo el anticipo</span>
+                          <span class="block text-xs text-on-surface-variant">30% del total para asegurar tu cita</span>
+                        </span>
+                        <span class="text-sm font-bold text-primary">{{ depositActive() ? dueAmount() + ' €' : '—' }}</span>
+                      </label>
+
+                      <div class="mt-4 flex items-center justify-between gap-3 rounded-xl border border-primary/15 bg-brand-soft-high px-3 py-2.5 text-sm">
+                        <span class="text-on-surface-variant">Importe de hoy</span>
+                        <span class="font-display text-lg font-bold text-primary">{{ dueAmount() }} €</span>
+                      </div>
+                    </div>
+
+                    @if (checkoutInstructions()) {
+                      <div class="instructions-box">
+                        <p class="mb-1 font-semibold text-primary">
+                          {{ paymentMethod() === 'transfer' ? 'Instrucciones de transferencia' : 'Pago en efectivo' }}
+                        </p>
+                        @if (paymentMethod() === 'transfer' && checkoutInstructions()!.iban) {
+                          <div class="flex flex-col gap-1 text-sm">
+                            <p><span class="text-on-surface-variant">Beneficiario: </span>{{ checkoutInstructions()!.beneficiary }}</p>
+                            <p><span class="text-on-surface-variant">IBAN: </span><span class="font-mono font-semibold">{{ checkoutInstructions()!.iban }}</span></p>
+                            <p><span class="text-on-surface-variant">Banco: </span>{{ checkoutInstructions()!.bank }}</p>
+                            <p><span class="text-on-surface-variant">Referencia: </span><span class="font-mono font-semibold">{{ checkoutInstructions()!.reference }}</span></p>
+                          </div>
+                        } @else {
+                          <p class="text-sm">{{ checkoutInstructions()!.message }}</p>
+                        }
+                      </div>
+                    }
+
+                    <div class="flex flex-col gap-2 sm:flex-row sm:gap-3">
+                      <button class="btn-primary flex-1" [disabled]="paymentLoading()" (click)="startCheckout()">
                         @if (paymentLoading()) {
                           <span class="material-icons-round animate-spin text-base">refresh</span>
                         } @else {
-                          <span>Pagar</span>
+                          <span>{{ paymentLabel() }}</span>
                           <span class="material-icons-round text-base">payment</span>
                         }
                       </button>
-                      <button class="btn-secondary flex-1 min-h-[56px] sm:min-h-[auto]" (click)="resetFlow()">
+                      <button class="btn-secondary flex-1" (click)="resetFlow()">
                         <span class="material-icons-round text-base">add</span>
                         <span class="hidden sm:inline">Nueva reserva</span>
-
-                                          <div class="mt-6 border-t border-outline-variant pt-6">
-                                            <h3 class="font-display text-lg font-semibold text-on-surface mb-4">Reseñas</h3>
-
-                                            @if (reviews().length > 0) {
-                                              <div class="flex flex-col gap-3 mb-5">
-                                                @for (review of reviews(); track review.id) {
-                                                  <div class="rounded-2xl border border-outline-variant/30 bg-white/50 p-4">
-                                                    <div class="flex items-start gap-2 mb-2">
-                                                      @for (i of [1,2,3,4,5]; track i) {
-                                                        <span class="material-icons-round text-[0.9rem]"
-                                                              [class.text-yellow-400]="i <= review.rating"
-                                                              [class.text-outline/30]="i > review.rating">star</span>
-                                                      }
-                                                    </div>
-                                                    @if (review.review) {
-                                                      <p class="text-sm text-on-surface">{{ review.review }}</p>
-                                                    }
-                                                    <p class="text-xs text-on-surface-variant mt-2">{{ review.createdAt | date:'short' }}</p>
-                                                  </div>
-                                                }
-                                              </div>
-                                            } @else {
-                                              <p class="text-sm text-on-surface-variant mb-4">No hay reseñas aún. ¡Sé el primero en compartir tu experiencia!</p>
-                                            }
-
-                                            <div class="rounded-2xl border border-[#d8e2ff] bg-[#eff5ff] p-4 mt-5">
-                                              <p class="text-sm font-semibold text-primary mb-3">Deja tu reseña</p>
-                                              <div class="flex gap-2 mb-4">
-                                                @for (i of [1,2,3,4,5]; track i) {
-                                                      <button class="p-2 rounded-lg transition hover:bg-white/50 cursor-pointer"
-                                                      type="button"
-                                                      (click)="reviewForm.patchValue({rating: i})"
-                                                      [class.bg-yellow-400/20]="i <= (reviewForm.get('rating')?.value || 0)">
-                                                    <span class="material-icons-round text-[1.5rem]"
-                                                      [class.text-yellow-400]="i <= (reviewForm.get('rating')?.value || 0)"
-                                                      [class.text-outline/30]="i > (reviewForm.get('rating')?.value || 0)">star</span>
-                                                  </button>
-                                                }
-                                              </div>
-                                              <textarea class="w-full rounded-lg border border-outline p-2 text-sm resize-none focus:outline-none focus:border-primary"
-                                                        formControlName="review"
-                                                        placeholder="Cuenta tu experiencia (opcional)"
-                                                        [attr.rows]="2"></textarea>
-                                              <button class="btn-primary w-full mt-3 min-h-[44px]" 
-                                                      type="button"
-                                                      [disabled]="(reviewForm.get('rating')?.value || 0) === 0 || submitting()"
-                                                      (click)="submitReview()">
-                                                @if (submitting()) {
-                                                  <span class="material-icons-round animate-spin text-base">refresh</span>
-                                                } @else {
-                                                  <span>Enviar reseña</span>
-                                                }
-                                              </button>
-                                            </div>
-                                          </div>
                       </button>
+                    </div>
+
+                    <div class="mt-6 border-t border-outline-variant pt-6">
+                      <h3 class="font-display text-lg font-semibold text-on-surface mb-4">Reseñas</h3>
+
+                      @if (reviews().length > 0) {
+                        <div class="flex flex-col gap-3 mb-5">
+                          @for (review of reviews(); track review.id) {
+                            <div class="rounded-2xl border border-outline-variant/30 bg-white/50 p-4">
+                              <div class="flex items-start gap-2 mb-2">
+                                @for (i of [1,2,3,4,5]; track i) {
+                                  <span class="material-icons-round text-[0.9rem]"
+                                        [class.text-yellow-400]="i <= review.rating"
+                                        [class.text-outline/30]="i > review.rating">star</span>
+                                }
+                              </div>
+                              @if (review.review) {
+                                <p class="text-sm text-on-surface">{{ review.review }}</p>
+                              }
+                              <p class="text-xs text-on-surface-variant mt-2">{{ review.createdAt | date:'short' }}</p>
+                            </div>
+                          }
+                        </div>
+                      } @else {
+                        <p class="text-sm text-on-surface-variant mb-4">No hay reseñas aún. ¡Sé el primero en compartir tu experiencia!</p>
+                      }
+
+                      <div class="rounded-2xl border border-primary-fixed bg-brand-soft-high p-4 mt-5">
+                        <p class="text-sm font-semibold text-primary mb-3">Deja tu reseña</p>
+                        <div class="flex gap-2 mb-4">
+                          @for (i of [1,2,3,4,5]; track i) {
+                            <button class="p-2 rounded-lg transition hover:bg-white/50 cursor-pointer"
+                                    type="button"
+                                    (click)="reviewForm.patchValue({rating: i})"
+                                    [class.bg-yellow-400/20]="i <= (reviewForm.get('rating')?.value || 0)">
+                              <span class="material-icons-round text-[1.5rem]"
+                                    [class.text-yellow-400]="i <= (reviewForm.get('rating')?.value || 0)"
+                                    [class.text-outline/30]="i > (reviewForm.get('rating')?.value || 0)">star</span>
+                            </button>
+                          }
+                        </div>
+                        <textarea class="w-full rounded-lg border border-outline p-2 text-sm resize-none focus:outline-none focus:border-primary"
+                                  formControlName="review"
+                                  placeholder="Cuenta tu experiencia (opcional)"
+                                  [attr.rows]="2"></textarea>
+                        <button class="btn-primary w-full mt-3 min-h-[44px]"
+                                type="button"
+                                [disabled]="(reviewForm.get('rating')?.value || 0) === 0 || submitting()"
+                                (click)="submitReview()">
+                          @if (submitting()) {
+                            <span class="material-icons-round animate-spin text-base">refresh</span>
+                          } @else {
+                            <span>Enviar reseña</span>
+                          }
+                        </button>
+                      </div>
                     </div>
                   </div>
                 }
@@ -585,6 +644,7 @@ export class BookingComponent implements OnInit, OnDestroy {
   private fb    = inject(FormBuilder);
   private router = inject(Router);
   private route  = inject(ActivatedRoute);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly business = signal<Business | null>(null);
   private businessId = '';
@@ -604,6 +664,28 @@ export class BookingComponent implements OnInit, OnDestroy {
   readonly selectedService = signal<string | null>(null);
   readonly confirmed    = signal<ConfirmedBooking | null>(null);
   readonly reservationId = signal<string>('');
+  readonly customerId    = signal<string>('');
+  readonly paymentMethod = signal<PaymentMethod>('card');
+  readonly depositActive = signal(false);
+  readonly checkoutInstructions = signal<CheckoutInstructions | null>(null);
+  readonly lastBooking  = signal<{ servicio: string; franja: string; cliente: string; telefono: string } | null>(null);
+  readonly paymentOptions: { id: PaymentMethod; label: string; icon: string }[] = [
+    { id: 'card',     label: 'Tarjeta',       icon: 'credit_card' },
+    { id: 'paypal',   label: 'PayPal',        icon: 'account_balance_wallet' },
+    { id: 'transfer', label: 'Transferencia', icon: 'account_balance' },
+    { id: 'cash',     label: 'Efectivo',      icon: 'payments' },
+  ];
+  readonly baseAmount = computed(() => this.confirmed() ? this.serviceMeta(this.confirmed()!.servicio).priceNumber : 0);
+  readonly dueAmount  = computed(() => this.depositActive() ? Math.round(this.baseAmount() * 0.3) : this.baseAmount());
+  readonly paymentLabel = computed(() => {
+    if (this.paymentLoading()) return '';
+    switch (this.paymentMethod()) {
+      case 'paypal':   return 'Pagar con PayPal';
+      case 'transfer': return 'Ver datos de transferencia';
+      case 'cash':     return 'Confirmar pago en efectivo';
+      default:         return this.depositActive() ? `Pagar anticipo (${this.dueAmount()} €)` : 'Pagar';
+    }
+  });
   readonly bookingSteps = [
     { value: 1, label: 'Servicio' },
     { value: 2, label: 'Horario' },
@@ -658,8 +740,9 @@ export class BookingComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.businessId = this.route.snapshot.params['businessId'] ?? '';
+    this.loadLastBooking();
     // Load business info
-    this.api.getBusinesses().pipe(catchError(() => of([]))).subscribe(list => {
+    this.api.getBusinesses().pipe(catchError(() => of([])), takeUntilDestroyed(this.destroyRef)).subscribe(list => {
       const found = list.find(b => b.id === this.businessId);
       if(!found) location.replace('/'); // Redirect if business not found
       if (found) this.business.set(found);
@@ -670,15 +753,68 @@ export class BookingComponent implements OnInit, OnDestroy {
     this.startPolling();
   }
 
+  private lastBookingKey(): string {
+    return `reservorio_last_booking_${this.businessId}`;
+  }
+
+  private loadLastBooking(): void {
+    try {
+      const raw = localStorage.getItem(this.lastBookingKey());
+      if (raw) this.lastBooking.set(JSON.parse(raw));
+    } catch (_error) {
+      // almacenamiento no disponible
+    }
+  }
+
+  private rememberBooking(): void {
+    const booking = this.confirmed();
+    if (!booking) return;
+    try {
+      localStorage.setItem(this.lastBookingKey(), JSON.stringify({
+        servicio: booking.servicio,
+        franja: booking.franja,
+        cliente: booking.cliente,
+        telefono: booking.telefono,
+      }));
+    } catch (_error) {
+      // almacenamiento no disponible
+    }
+  }
+
+  private prefillFromLastBooking(): void {
+    const last = this.lastBooking();
+    if (!last) return;
+    if (!this.bookingForm.get('cliente')?.value && last.cliente) {
+      this.bookingForm.patchValue({ cliente: last.cliente });
+    }
+    if (!this.bookingForm.get('telefono')?.value && last.telefono) {
+      this.bookingForm.patchValue({ telefono: last.telefono });
+    }
+  }
+
+  repeatLastService(): void {
+    const last = this.lastBooking();
+    if (!last) return;
+    if (!this.services().includes(last.servicio)) {
+      this.toast.error('Ese servicio ya no está disponible actualmente.');
+      return;
+    }
+    this.selectedService.set(last.servicio);
+    this.serviceFilter.set('all');
+    const slot = this.reservations().find(r => r.franja === last.franja && !this.isTaken(r));
+    if (slot) this.selectedSlot.set(slot);
+    this.goToStep(2);
+  }
+
   loadReviews(): void {
-    this.api.getReviews(this.businessId).subscribe({
+    this.api.getReviews(this.businessId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: data => this.reviews.set(data),
       error: () => this.reviews.set([]),
     });
   }
 
   loadRatingStats(): void {
-    this.api.getAverageRating(this.businessId).subscribe({
+    this.api.getAverageRating(this.businessId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: data => this.ratingStats.set(data),
       error: () => this.ratingStats.set(null),
     });
@@ -693,7 +829,7 @@ export class BookingComponent implements OnInit, OnDestroy {
       .pipe(startWith(0), switchMap(() => {
         this.loading.set(true);
         this.error.set(null);
-        return this.api.getBusinessReservations(this.businessId);
+        return this.api.getBusinessAvailability(this.businessId);
       }))
       .subscribe({
         next:  data => { this.reservations.set(data); this.loading.set(false); },
@@ -726,7 +862,10 @@ export class BookingComponent implements OnInit, OnDestroy {
     this.selectedService.set(svc);
   }
 
-  goToStep(s: Step): void { this.step.set(s); }
+  goToStep(s: Step): void {
+    if (s === 3) this.prefillFromLastBooking();
+    this.step.set(s);
+  }
 
   readonly visibleServices = computed(() => {
     const list = this.services();
@@ -834,7 +973,7 @@ export class BookingComponent implements OnInit, OnDestroy {
   loadServices(): void {
     this.servicesLoading.set(true);
     this.servicesError.set(null);
-    this.api.getBusinessServices(this.businessId).subscribe({
+    this.api.getBusinessServices(this.businessId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next:  data => { this.services.set(data); this.servicesLoading.set(false); },
       error: err  => { this.servicesError.set(err.message); this.services.set([]); this.servicesLoading.set(false); },
     });
@@ -859,8 +998,8 @@ export class BookingComponent implements OnInit, OnDestroy {
     };
 
     this.submitting.set(true);
-    this.api.createBusinessReservation(this.businessId, payload).subscribe({
-      next: () => {
+    this.api.createBusinessCheckout(this.businessId, payload).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: checkout => {
         const selected = this.selectedSlot();
         if (selected) {
           this.reservations.set(
@@ -868,7 +1007,9 @@ export class BookingComponent implements OnInit, OnDestroy {
           );
         }
         this.confirmed.set(payload);
-        this.reservationId.set(`RES-${Date.now()}`);
+        this.reservationId.set(checkout.data?.bookingId ?? '');
+        this.customerId.set(checkout.data?.customerId ?? '');
+        this.rememberBooking();
         this.toast.success('¡Reserva enviada con éxito! Ya está lista para pagar o confirmar.');
         this.goToStep(4);
         this.submitting.set(false);
@@ -885,11 +1026,20 @@ export class BookingComponent implements OnInit, OnDestroy {
     const booking = this.confirmed();
     if (!booking) return;
 
+    const bookingId = this.reservationId();
+    const customerId = this.customerId();
+    if (!bookingId || !customerId) {
+      this.toast.error('No se pudo preparar el checkout; vuelve a intentar la reserva.');
+      return;
+    }
+
     this.paymentLoading.set(true);
-    const bookingId = this.reservationId() || `res-${Date.now()}`;
+    this.checkoutInstructions.set(null);
     const providerId = this.businessId;
-    const customerId = `guest-${Date.now()}`;
-    const amount = 89;
+    const amount = this.dueAmount();
+    const method = this.paymentMethod();
+    const successUrl = `${window.location.origin}/payment/success?bookingId=${encodeURIComponent(bookingId)}&providerId=${encodeURIComponent(providerId)}&customerId=${encodeURIComponent(customerId)}`;
+    const cancelUrl = `${window.location.origin}/payment/cancel?bookingId=${encodeURIComponent(bookingId)}&providerId=${encodeURIComponent(providerId)}&customerId=${encodeURIComponent(customerId)}`;
 
     this.api.createCheckoutSession({
       bookingId,
@@ -897,16 +1047,23 @@ export class BookingComponent implements OnInit, OnDestroy {
       customerId,
       amount,
       currency: 'EUR',
-      method: 'card',
+      method,
       status: 'pending',
-      successUrl: `${window.location.origin}/payment/success?bookingId=${encodeURIComponent(bookingId)}&providerId=${encodeURIComponent(providerId)}&customerId=${encodeURIComponent(customerId)}`,
-      cancelUrl: `${window.location.origin}/payment/cancel?bookingId=${encodeURIComponent(bookingId)}&providerId=${encodeURIComponent(providerId)}&customerId=${encodeURIComponent(customerId)}`,
-    }).subscribe({
+      successUrl,
+      cancelUrl,
+    }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: result => {
         this.paymentLoading.set(false);
-        const route = result.data?.checkoutUrl;
-        if (route) {
-          window.location.href = route;
+        const data = result.data;
+        if (data?.checkoutUrl) {
+          window.location.href = data.checkoutUrl;
+          return;
+        }
+        if (data?.instructions) {
+          this.checkoutInstructions.set(data.instructions);
+          this.toast.success(method === 'transfer'
+            ? 'Transferencia registrada: completa el pago con los datos indicados.'
+            : 'Pago en efectivo registrado: paga al completar el servicio.');
           return;
         }
         this.toast.success('Reserva registrada; el pago quedará listo para completar después.');
@@ -922,6 +1079,11 @@ export class BookingComponent implements OnInit, OnDestroy {
     this.selectedSlot.set(null);
     this.selectedService.set(null);
     this.confirmed.set(null);
+    this.reservationId.set('');
+    this.customerId.set('');
+    this.depositActive.set(false);
+    this.checkoutInstructions.set(null);
+    this.paymentMethod.set('card');
     this.bookingForm.reset();
     this.pollSub?.unsubscribe();
     this.loadServices();
@@ -940,7 +1102,7 @@ export class BookingComponent implements OnInit, OnDestroy {
     this.api.createReview(this.businessId, {
       rating,
       review: this.reviewForm.get('review')?.value?.trim() || undefined,
-    }).subscribe({
+    }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.toast.success('¡Gracias por tu reseña!');
         this.reviewForm.reset({ rating: 0, review: '' });

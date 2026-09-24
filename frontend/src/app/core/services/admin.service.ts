@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, of } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { ApiResponse, Reservation, UpdatePayload, BookingPayload } from '../models/reservation.model';
+import { ApiResponse, Reservation, UpdatePayload, BookingPayload, Payment, PaymentStatus, AdminStats, AdminReview, AdminServiceRecord } from '../models/reservation.model';
 import { Categoria } from '../models/categorias.model';
 import { Business, NewBusinessPayload } from '../models/businesses.model';
 import { AuthService } from './auth.service';
@@ -79,5 +79,35 @@ export class AdminService {
 
   deleteBusiness(id: string, token: string): Observable<ApiResponse> {
     return this.api.deleteBusiness(id, token);
+  }
+
+  // ── Panel avanzado (#14) ───────────────────────────────────────────────
+
+  getAdminStats(token: string): Observable<AdminStats> {
+    return this.api.getAdminStats(token);
+  }
+
+  getAdminReviews(token: string): Observable<AdminReview[]> {
+    return this.api.getAdminReviews(token);
+  }
+
+  deleteAdminReview(id: number, token: string): Observable<ApiResponse> {
+    return this.api.deleteAdminReview(id, token);
+  }
+
+  getAdminServices(token: string): Observable<AdminServiceRecord[]> {
+    return this.api.getAdminServices(token);
+  }
+
+  deleteAdminService(id: number, token: string): Observable<ApiResponse> {
+    return this.api.deleteAdminService(id, token);
+  }
+
+  getAdminPayments(token: string, status?: PaymentStatus): Observable<Payment[]> {
+    return this.api.getAdminPayments(token, status);
+  }
+
+  updatePaymentStatus(id: string, status: PaymentStatus, token: string): Observable<ApiResponse> {
+    return this.api.markPaymentStatus(id, status, token);
   }
 }

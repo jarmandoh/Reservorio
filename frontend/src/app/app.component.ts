@@ -1,7 +1,9 @@
-import { Component, ElementRef, OnInit, ViewChild, inject } from '@angular/core';
+import { Component, DestroyRef, ElementRef, OnInit, ViewChild, inject } from '@angular/core';
 import { NavigationEnd, NavigationStart, Router, RouterOutlet } from '@angular/router';
 import { ToastComponent } from './shared/components/toast/toast.component';
+import { OfflineService } from './core/services/offline.service';
 import { filter } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import gsap from 'gsap';
 
 // ── Presets de animación ──────────────────────────────────────────────────────
@@ -42,18 +44,32 @@ function rand(len: number) { return Math.floor(Math.random() * len); }
       <router-outlet />
     </div>
     <app-toast />
+
+    @if (!online()) {
+      <div class="offline-banner" role="status" aria-live="polite">
+        <span class="material-icons-round text-[1.1rem] flex-shrink-0">wifi_off</span>
+        <span class="flex-1">Sin conexión. Los datos mostrados pueden estar desactualizados.</span>
+        <button type="button">Esperando conexión…</button>
+      </div>
+    }
   `
 })
 export class AppComponent implements OnInit {
-  @ViewChild('pageHost', { static: true }) pageHost!: ElementRef<HTMLDivElement>;
+@ViewChild('pageHost', { static: true }) pageHost!: ElementRef<HTMLDivElement>;
   private router = inject(Router);
+  private offlineService = inject(OfflineService);
+  private readonly destroyRef = inject(DestroyRef);
+  protected readonly online = this.offlineService.online;
   private busy = false;
 
   ngOnInit() {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
     this.router.events
-      .pipe(filter(e => e instanceof NavigationStart || e instanceof NavigationEnd))
+      .pipe(
+        filter(e => e instanceof NavigationStart || e instanceof NavigationEnd),
+        takeUntilDestroyed(this.destroyRef)
+      )
       .subscribe(event => {
         const el = this.pageHost.nativeElement;
 

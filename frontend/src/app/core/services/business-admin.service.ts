@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, throwError } from 'rxjs';
-import { ApiResponse, BookingRecord, Customer, Payment, PaymentRequest, Reservation, UpdatePayload } from '../models/reservation.model';
+import { ApiResponse, BookingRecord, Customer, NotificationItem, Payment, PaymentRequest, Reservation, UpdatePayload, CheckoutSession } from '../models/reservation.model';
 import { Business } from '../models/businesses.model';
 import { AuthService } from './auth.service';
 import { ApiService } from './api.service';
@@ -24,8 +24,8 @@ export class BusinessAdminService {
     return this.api.getBusinessById(negocioId, token);
   }
 
-  loadReservations(negocioId: string): Observable<Reservation[]> {
-    return this.api.getBusinessReservations(negocioId);
+  loadReservations(negocioId: string, token: string): Observable<Reservation[]> {
+    return this.api.getBusinessReservations(negocioId, token);
   }
 
   loadMarketplaceBookings(): Observable<BookingRecord[]> {
@@ -40,7 +40,7 @@ export class BusinessAdminService {
     return this.api.getPayments();
   }
 
-  loadNotifications(businessId: string, bookingId?: string): Observable<any[]> {
+  loadNotifications(businessId: string, bookingId?: string): Observable<NotificationItem[]> {
     return this.api.getNotifications(businessId, bookingId);
   }
 
@@ -52,7 +52,7 @@ export class BusinessAdminService {
     return this.api.createPayment(payload);
   }
 
-  createCheckoutSession(payload: PaymentRequest & { successUrl?: string; cancelUrl?: string }): Observable<ApiResponse<{ sessionId: string; checkoutUrl: string; paymentId?: string }>> {
+  createCheckoutSession(payload: PaymentRequest & { successUrl?: string; cancelUrl?: string }): Observable<ApiResponse<CheckoutSession>> {
     return this.api.createCheckoutSession(payload);
   }
 

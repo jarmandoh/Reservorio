@@ -60,4 +60,29 @@ describe('Providers API', () => {
     expect(response.body.ok).toBe(true);
     expect(response.body.data).toHaveProperty('token');
   });
+
+  test('PUT /api/providers/:id/reservations/:row validates estado (rejects invalid)', async () => {
+    const token = require('../src/middleware/jwt').sign({ role: 'business-admin', businessId: 'negocio1' });
+
+    const response = await request(app)
+      .put('/api/providers/negocio1/reservations/1')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ disponibilidad: 'foo' });
+
+    expect(response.status).toBe(400);
+  });
+
+  test('PUT /api/providers/:id/reservations/:row accepts estado Cancelado', async () => {
+    const { sign } = require('../src/middleware/jwt');
+    const token = sign({ role: 'business-admin', businessId: 'negocio1' });
+    db.query.mockResolvedValue({ rows: [{ id: 1, franja: '10:00', business_id: 'negocio1' }], rowCount: 1 });
+
+    const response = await request(app)
+      .put('/api/providers/negocio1/reservations/1')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ disponibilidad: 'Cancelado' });
+
+    expect(response.status).toBe(200);
+    expect(response.body.ok).toBe(true);
+  });
 });

@@ -1,7 +1,8 @@
-import { Component, signal, inject, OnInit } from '@angular/core';
+import { Component, DestroyRef, signal, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../core/services/auth.service';
 import { OwnerBusinessService } from '../../core/services/owner-business.service';
 import { Business } from '../../core/models/businesses.model';
@@ -91,6 +92,7 @@ export class OwnerDashboardComponent implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly businesses = signal<Business[]>([]);
   readonly loading = signal(true);
@@ -120,7 +122,7 @@ export class OwnerDashboardComponent implements OnInit {
       return;
     }
 
-    this.ownerBusinessService.loadBusinesses().subscribe({
+    this.ownerBusinessService.loadBusinesses().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: list => {
         this.businesses.set(list);
         this.loading.set(false);
@@ -163,7 +165,7 @@ export class OwnerDashboardComponent implements OnInit {
     const values = this.businessForm.getRawValue();
     this.saving.set(true);
 
-    this.ownerBusinessService.saveBusiness(values, this.editingBusiness()).subscribe({
+    this.ownerBusinessService.saveBusiness(values, this.editingBusiness()).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.saving.set(false);
         this.closeModal();
@@ -177,7 +179,7 @@ export class OwnerDashboardComponent implements OnInit {
   }
 
   refreshBusinesses(): void {
-    this.ownerBusinessService.loadBusinesses().subscribe({
+    this.ownerBusinessService.loadBusinesses().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: list => this.businesses.set(list),
       error: () => this.businesses.set([]),
     });

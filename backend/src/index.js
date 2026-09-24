@@ -25,6 +25,7 @@ const bookingsRoutes    = require('./routes/bookings.routes');
 const paymentsRoutes    = require('./routes/payments.routes');
 const notificationsRoutes = require('./routes/notifications.routes');
 const ratingsRoutes     = require('./routes/ratings.routes');
+const adminRoutes       = require('./routes/admin.routes');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
 
 const app  = express();
@@ -35,6 +36,22 @@ const appMetrics = {
   errors: 0,
   statusCodes: {},
 };
+
+// Ventana deslizante de latencias para percentiles (media móvil).
+const LATENCY_WINDOW_MS = 10 * 60 * 1000; // 10 minutos
+const MAX_LATENCY_SAMPLES = 10000;
+const latencySamples = [];
+
+function percentiles(values, ps) {
+  if (!values.length) return Object.fromEntries(ps.map(p => ['p' + p, null]));
+  const sorted = [...values].sort((a, b) => a - b);
+  const out = {};
+  for (const p of ps) {
+    const index = Math.min(sorted.length - 1, Math.max(0, Math.ceil((p / 100) * sorted.length) - 1));
+    out['p' + p] = Math.round(sorted[index] * 10) / 10;
+  }
+  return out;
+}
 
 function validateRuntimeConfig() {
   const env = process.env.NODE_ENV || 'development';
@@ -106,6 +123,9 @@ app.use((req, res, next) => {
     appMetrics.statusCodes[res.statusCode] = (appMetrics.statusCodes[res.statusCode] || 0) + 1;
     if (res.statusCode >= 500) appMetrics.errors += 1;
 
+    latencySamples.push({ ts: Date.now(), ms: durationMs });
+    if (latencySamples.length > MAX_LATENCY_SAMPLES) latencySamples.shift();
+
     console.log(JSON.stringify({
       level: res.statusCode >= 500 ? 'error' : res.statusCode >= 400 ? 'warn' : 'info',
       ts: new Date().toISOString(),
@@ -130,6 +150,7 @@ app.use('/api/bookings',     bookingsRoutes);
 app.use('/api/payments',     paymentsRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/ratings',      ratingsRoutes);
+app.use('/api/admin',        adminRoutes);
 app.use('/api/auth',         auth);
 app.use('/api/google',       googleOAuth);
 app.use('/api/categories',   categoriesRoutes);
@@ -162,6 +183,11 @@ app.get('/health', async (_req, res) => {
 app.get('/metrics', (_req, res) => {
   const memory = process.memoryUsage();
 
+  const now = Date.now();
+  const windowStart = now - LATENCY_WINDOW_MS;
+  const inWindow = latencySamples.filter(sample => sample.ts >= windowStart).map(sample => sample.ms);
+  const latency = percentiles(inWindow, [50, 95, 99]);
+
   return res.status(200).json({
     ok: true,
     service: 'reservorio-api',
@@ -169,6 +195,11 @@ app.get('/metrics', (_req, res) => {
     requests: appMetrics.requests,
     errors: appMetrics.errors,
     statusCodes: appMetrics.statusCodes,
+    latency: {
+      ...latency,
+      samples: inWindow.length,
+      windowMs: LATENCY_WINDOW_MS,
+    },
     startedAt: new Date(appMetrics.startTime).toISOString(),
     memory: {
       rss: memory.rss,

@@ -1,11 +1,21 @@
 'use strict';
 
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const { body } = require('express-validator');
 const { handleValidation } = require('../middleware/validation');
 const { listReviews, getAverageRating, createReview } = require('../services/ratings.service');
 
 const router = express.Router();
+
+// Anti-spam: máximo 5 reseñas por hora y por IP en escritura
+const ratingsLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { ok: false, message: 'Demasiadas reseñas, inténtalo más tarde.' },
+});
 
 router.get('/:businessId', async (req, res) => {
   try {
@@ -25,7 +35,7 @@ router.get('/:businessId/average', async (req, res) => {
   }
 });
 
-router.post('/:businessId', [
+router.post('/:businessId', ratingsLimiter, [
   body('rating').isInt({ min: 1, max: 5 }).withMessage('rating debe estar entre 1 y 5'),
   body('review').optional().trim().isLength({ max: 500 }).withMessage('review no puede exceder 500 caracteres'),
   handleValidation,

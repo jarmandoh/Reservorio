@@ -1,11 +1,12 @@
 import {
-  Component, OnInit, OnDestroy,
+  Component, OnInit, OnDestroy, DestroyRef,
   signal, computed, inject,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { interval, Subscription, switchMap, startWith } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { AuthService }  from '../../core/services/auth.service';
 import { BusinessAdminService } from '../../core/services/business-admin.service';
@@ -656,6 +657,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
   private toast  = inject(ToastService);
   private fb     = inject(FormBuilder);
   private businessAdminService = inject(BusinessAdminService);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly tabs: { id: negocioTab; label: string; icon: string }[] = [
     { id: 'reservas',  label: 'Reservas',  icon: 'event_note' },
@@ -971,7 +973,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
   }
 
   loadBusiness(): void {
-    this.businessAdminService.loadBusiness(this.negocioId, this.token).subscribe({
+    this.businessAdminService.loadBusiness(this.negocioId, this.token).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: found => {
         this.business.set(found);
         this.profileForm.patchValue({
@@ -995,7 +997,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
       startWith(0),
       switchMap(() => {
         this.resLoading.set(true);
-        return this.businessAdminService.loadReservations(this.negocioId);
+        return this.businessAdminService.loadReservations(this.negocioId, this.token);
       }),
     ).subscribe({
       next:  data => { this.reservations.set(data); this.resLoading.set(false); },
@@ -1004,22 +1006,22 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
   }
 
   loadMarketplaceData(): void {
-    this.businessAdminService.loadMarketplaceBookings().subscribe({
+    this.businessAdminService.loadMarketplaceBookings().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: data => this.marketplaceBookings.set(data),
       error: () => this.marketplaceBookings.set([]),
     });
 
-    this.businessAdminService.loadNotifications(this.negocioId).subscribe({
+    this.businessAdminService.loadNotifications(this.negocioId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: data => this.notifications.set(data),
       error: () => this.notifications.set([]),
     });
 
-    this.businessAdminService.loadCustomers().subscribe({
+    this.businessAdminService.loadCustomers().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: data => this.customers.set(data),
       error: () => this.customers.set([]),
     });
 
-    this.businessAdminService.loadPayments().subscribe({
+    this.businessAdminService.loadPayments().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: data => {
         this.payments.set(data);
         const routeBookingId = this.route.snapshot.queryParamMap.get('bookingId');
@@ -1079,7 +1081,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
       status: 'pending',
       successUrl,
       cancelUrl,
-    }).subscribe({
+    }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: data => {
         const current = this.payments();
         const checkoutData = data.data;
@@ -1098,7 +1100,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
   }
 
   loadNotifications(): void {
-    this.businessAdminService.loadNotifications(this.negocioId).subscribe({
+    this.businessAdminService.loadNotifications(this.negocioId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: data => this.notifications.set(data),
       error: () => this.notifications.set([]),
     });
@@ -1106,7 +1108,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
 
   loadReservations(): void {
     this.resLoading.set(true);
-    this.businessAdminService.loadReservations(this.negocioId).subscribe({
+    this.businessAdminService.loadReservations(this.negocioId, this.token).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next:  data => { this.reservations.set(data); this.resLoading.set(false); },
       error: ()   => { this.resLoading.set(false); },
     });
@@ -1114,7 +1116,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
 
   loadServices(): void {
     this.svcLoading.set(true);
-    this.businessAdminService.loadServices(this.negocioId).subscribe({
+    this.businessAdminService.loadServices(this.negocioId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next:  data => { this.services.set(data); this.svcLoading.set(false); },
       error: ()   => { this.svcLoading.set(false); },
     });
@@ -1124,7 +1126,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
     if (this.serviceForm.invalid) return;
     const nombre = this.serviceForm.value.nombre!;
     this.addingSvc.set(true);
-    this.businessAdminService.addService(this.negocioId, nombre, this.token).subscribe({
+    this.businessAdminService.addService(this.negocioId, nombre, this.token).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.toast.success('Servicio agregado');
         this.serviceForm.reset();
@@ -1137,7 +1139,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
 
   deleteService(nombre: string): void {
     this.deletingSvc.set(nombre);
-    this.businessAdminService.removeService(this.negocioId, nombre, this.token).subscribe({
+    this.businessAdminService.removeService(this.negocioId, nombre, this.token).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.toast.success('Servicio eliminado');
         this.deletingSvc.set(null);
@@ -1160,7 +1162,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
       cancellationPolicy: v.cancellationPolicy ?? null,
     };
     this.savingProfile.set(true);
-    this.businessAdminService.saveProfile(this.negocioId, profileValues, this.token).subscribe({
+    this.businessAdminService.saveProfile(this.negocioId, profileValues, this.token).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => { this.toast.success('Perfil actualizado'); this.savingProfile.set(false); },
       error: err => { this.toast.error(err?.error?.message ?? 'Error al guardar'); this.savingProfile.set(false); },
     });
@@ -1170,7 +1172,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
     if (this.pinForm.invalid || this.pinMismatch()) return;
     const pin = this.pinForm.value.pin!;
     this.savingPin.set(true);
-    this.businessAdminService.updatePin(this.negocioId, pin, this.token).subscribe({
+    this.businessAdminService.updatePin(this.negocioId, pin, this.token).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.toast.success('PIN actualizado. Inicia sesión de nuevo.');
         this.auth.clearBusinessToken(this.negocioId);
@@ -1195,7 +1197,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
       rowIndex:       r._rowIndex,
       disponibilidad: this.newResStatus(),
       notas:          r.notas ?? '',
-    }, this.token).subscribe({
+    }, this.token).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.toast.success('Estado actualizado');
         this.savingRes.set(false);
@@ -1212,7 +1214,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
       rowIndex:       r._rowIndex,
       disponibilidad: estado,
       notas:          r.notas ?? '',
-    }, this.token).subscribe({
+    }, this.token).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.toast.success(estado === 'Confirmado' ? 'Reserva confirmada' : 'Reserva cancelada');
         this.loadReservations();
@@ -1231,14 +1233,14 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
 
   loadGoogleStatus(): void {
     this.googleLoading.set(true);
-    this.businessAdminService.getGoogleStatus(this.negocioId, this.token).subscribe({
+    this.businessAdminService.getGoogleStatus(this.negocioId, this.token).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next:  data => { this.googleStatus.set(data); this.googleLoading.set(false); },
       error: ()   => { this.googleLoading.set(false); },
     });
   }
 
   startGoogleAuth(): void {
-    this.businessAdminService.getGoogleAuthUrl(this.negocioId, this.token).subscribe({
+    this.businessAdminService.getGoogleAuthUrl(this.negocioId, this.token).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next:  url => { window.location.href = url; },
       error: err => { this.toast.error(err?.message ?? 'Error al iniciar vinculación'); },
     });
@@ -1246,7 +1248,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
 
   syncSheets(): void {
     this.syncing.set(true);
-    this.businessAdminService.syncGoogleSheet(this.negocioId, this.token).subscribe({
+    this.businessAdminService.syncGoogleSheet(this.negocioId, this.token).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next:  () => { this.toast.success('Sincronización completada'); this.syncing.set(false); },
       error: err => { this.toast.error(err?.message ?? 'Error al sincronizar'); this.syncing.set(false); },
     });
@@ -1254,7 +1256,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
 
   createSheet(): void {
     this.creatingSheet.set(true);
-    this.businessAdminService.createGoogleSheet(this.negocioId, this.token).subscribe({
+    this.businessAdminService.createGoogleSheet(this.negocioId, this.token).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next:  () => {
         this.toast.success('Spreadsheet creada');
         this.creatingSheet.set(false);
@@ -1267,7 +1269,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
   linkSheet(): void {
     const sheetId = this.linkSheetId().trim();
     if (!sheetId) return;
-    this.businessAdminService.linkGoogleSheet(this.negocioId, sheetId, this.token).subscribe({
+    this.businessAdminService.linkGoogleSheet(this.negocioId, sheetId, this.token).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next:  () => {
         this.toast.success('Spreadsheet vinculada');
         this.linkSheetId.set('');
@@ -1280,7 +1282,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
   disconnectGoogle(): void {
     if (!confirm('¿Desvincular tu cuenta Google? Se dejará de sincronizar.')) return;
     this.disconnecting.set(true);
-    this.businessAdminService.disconnectGoogle(this.negocioId, this.token).subscribe({
+    this.businessAdminService.disconnectGoogle(this.negocioId, this.token).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next:  () => {
         this.toast.success('Cuenta Google desvinculada');
         this.googleStatus.set(null);

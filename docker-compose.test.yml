@@ -1,0 +1,20 @@
+services:
+  test-db:
+    image: postgres:16-alpine
+    container_name: reservorio-test-db
+    environment:
+      POSTGRES_USER: reservorio_test
+      POSTGRES_PASSWORD: reservorio_test_pass
+      POSTGRES_DB: reservorio_test
+    volumes:
+      - ./backend/db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "5434:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U reservorio_test -d reservorio_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  test-pgdata:

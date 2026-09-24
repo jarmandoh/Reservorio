@@ -1,53 +1,72 @@
 'use strict';
 
-const customersService = require('../services/customers.service');
+const express = require('express');
+const { requireAdmin } = require('../middleware/auth');
+const {
+  getMarketplaceStats,
+  listAllReviews,
+  deleteReview,
+  listAllServices,
+  deleteService,
+  listAdminPayments,
+} = require('../services/admin.service');
 
-async function listCustomers(req, res) {
+const router = express.Router();
+
+router.use(requireAdmin);
+
+router.get('/stats', async (req, res) => {
   try {
-    const result = await customersService.listCustomers();
+    const result = await getMarketplaceStats();
     return res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (error) {
     return res.status(500).json({ ok: false, message: error.message });
   }
-}
+});
 
-async function createCustomer(req, res) {
+router.get('/payments', async (req, res) => {
   try {
-    const result = await customersService.createCustomer(req.body);
+    const result = await listAdminPayments(req.query);
     return res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (error) {
     return res.status(500).json({ ok: false, message: error.message });
   }
-}
+});
 
-async function findCustomerByEmail(req, res) {
+router.get('/reviews', async (req, res) => {
   try {
-    const result = await customersService.findCustomerByEmail(req.params.email);
+    const result = await listAllReviews();
     return res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (error) {
     return res.status(500).json({ ok: false, message: error.message });
   }
-}
+});
 
-async function getCustomerHistory(req, res) {
+router.delete('/reviews/:id', async (req, res) => {
   try {
-    if (String(req.customerId) !== String(req.params.id)) {
-      return res.status(403).json({ ok: false, message: 'Sin acceso a este historial' });
-    }
-    const result = await customersService.getCustomerHistory(req.params.id);
+    const result = await deleteReview(req.params.id);
     return res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (error) {
     return res.status(500).json({ ok: false, message: error.message });
   }
-}
+});
 
-async function getCustomerProfile(req, res) {
+router.get('/services', async (req, res) => {
   try {
-    const result = await customersService.getCustomerProfile(req.customerId);
+    const result = await listAllServices();
     return res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (error) {
     return res.status(500).json({ ok: false, message: error.message });
   }
-}
+});
 
-module.exports = { listCustomers, createCustomer, findCustomerByEmail, getCustomerHistory, getCustomerProfile };
+router.delete('/services/:serviceId', async (req, res) => {
+  try {
+    const result = await deleteService(req.params.serviceId);
+    return res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: error.message });
+  }
+});
+
+module.exports = router;

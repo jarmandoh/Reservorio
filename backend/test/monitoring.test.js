@@ -28,4 +28,17 @@ describe('Monitoring endpoints', () => {
     expect(response.body.statusCodes).toBeDefined();
     expect(response.body.requests).toBeGreaterThanOrEqual(1);
   });
+
+  test('GET /metrics reports moving-average latency percentiles (p50/p95/p99)', async () => {
+    const response = await request(app).get('/metrics');
+
+    expect(response.status).toBe(200);
+    expect(response.body.ok).toBe(true);
+    expect(response.body.latency).toBeDefined();
+    expect(response.body.latency).toHaveProperty('p50');
+    expect(response.body.latency).toHaveProperty('p95');
+    expect(response.body.latency).toHaveProperty('p99');
+    expect(typeof response.body.latency.p95).toBe('number');
+    expect(response.body.latency.samples).toBeGreaterThanOrEqual(1);
+  });
 });

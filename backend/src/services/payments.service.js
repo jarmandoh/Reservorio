@@ -4,7 +4,6 @@ const { randomUUID } = require('crypto');
 const db = require('../db');
 const { createNotification } = require('./notifications.service');
 
-const fallbackPayments = [];
 let stripeClient = null;
 
 if (process.env.STRIPE_SECRET_KEY) {
@@ -46,24 +45,8 @@ function normalizePaymentInput(payload = {}) {
   return { bookingId, providerId, customerId, amount, currency, method: allowedPaymentMethods.includes(method) ? method : 'card', status };
 }
 
-function upsertFallbackPayment(payment) {
-  const idx = fallbackPayments.findIndex(item => item.bookingId === payment.bookingId);
-  if (idx >= 0) {
-    fallbackPayments[idx] = { ...fallbackPayments[idx], ...payment };
-    return fallbackPayments[idx];
-  }
-
-  fallbackPayments.push(payment);
-  return payment;
-}
-
 async function listPayments(filters = {}) {
   const providerId = String(filters.providerId ?? '').trim();
-
-  if (!process.env.DATABASE_URL) {
-    const rows = fallbackPayments.map(mapPayment);
-    return { ok: true, status: 200, data: providerId ? rows.filter(row => row.providerId === providerId) : rows };
-  }
 
   try {
     let query = 'SELECT * FROM payments ORDER BY created_at DESC';
@@ -76,8 +59,9 @@ async function listPayments(filters = {}) {
 
     const { rows } = await db.query(query, values);
     return { ok: true, status: 200, data: rows.map(mapPayment) };
-  } catch (_error) {
-    return { ok: true, status: 200, data: fallbackPayments.map(mapPayment) };
+  } catch (error) {
+    console.error('[payments] listPayments falló:', error.message);
+    return { ok: false, status: 500, message: 'Error al listar los pagos' };
   }
 }
 
@@ -113,8 +97,8 @@ async function createPayment(payload = {}) {
   };
 
   if (!process.env.DATABASE_URL) {
-    upsertFallbackPayment(payment);
-    return { ok: true, status: 201, data: payment };
+    console.error('[payments] createPayment: DATABASE_URL no configurado');
+    return { ok: false, status: 500, message: 'DATABASE_URL no configurado; el servicio requiere PostgreSQL' };
   }
 
   try {
@@ -126,9 +110,87 @@ async function createPayment(payload = {}) {
     );
 
     return { ok: true, status: 201, data: mapPayment(rows[0]) };
-  } catch (_error) {
-    upsertFallbackPayment(payment);
-    return { ok: true, status: 201, data: payment, message: 'Base de datos no disponible; uso en memoria' };
+  } catch (error) {
+    console.error('[payments] createPayment falló:', error.message);
+    return { ok: false, status: 500, message: 'Error al registrar el pago en la base de datos' };
+  }
+}
+
+function getTransferInstructions(bookingId) {
+  return {
+    beneficiary: process.env.TRANSFER_BENEFICIARY || 'Reservorio S.L.',
+    iban: process.env.TRANSFER_IBAN || 'ES00 0000 0000 0000 0000 0000',
+    bank: process.env.TRANSFER_BANK || 'Reservorio Bank',
+    reference: bookingId,
+    currency: 'EUR',
+  };
+}
+
+async function getPayment(id) {
+  const cleanId = String(id ?? '').trim();
+  if (!cleanId) {
+    return { ok: false, status: 400, message: 'id requerido' };
+  }
+
+  if (!process.env.DATABASE_URL) {
+    console.error('[payments] getPayment: DATABASE_URL no configurado');
+    return { ok: false, status: 500, message: 'DATABASE_URL no configurado; el servicio requiere PostgreSQL' };
+  }
+
+  try {
+    const { rows } = await db.query('SELECT * FROM payments WHERE id = $1', [cleanId]);
+    if (!rows.length) {
+      return { ok: false, status: 404, message: 'Pago no encontrado' };
+    }
+    return { ok: true, status: 200, data: mapPayment(rows[0]) };
+  } catch (error) {
+    console.error('[payments] getPayment falló:', error.message);
+    return { ok: false, status: 500, message: error.message };
+  }
+}
+
+async function updatePaymentStatus(id, status) {
+  const cleanId = String(id ?? '').trim();
+  if (!['pending', 'paid', 'failed', 'refunded'].includes(status)) {
+    return { ok: false, status: 400, message: 'status inválido' };
+  }
+
+  if (!process.env.DATABASE_URL) {
+    console.error('[payments] updatePaymentStatus: DATABASE_URL no configurado');
+    return { ok: false, status: 500, message: 'DATABASE_URL no configurado; el servicio requiere PostgreSQL' };
+  }
+
+  try {
+    const { rows } = await db.query(
+      'UPDATE payments SET status = $1, updated_at = now() WHERE id = $2 RETURNING *',
+      [status, cleanId]
+    );
+    if (!rows.length) {
+      return { ok: false, status: 404, message: 'Pago no encontrado' };
+    }
+
+    const payment = mapPayment(rows[0]);
+    if (status === 'paid' && payment.bookingId) {
+      await db.query(
+        "UPDATE bookings SET status = 'confirmed', updated_at = now() WHERE id = $1",
+        [payment.bookingId]
+      );
+      await createNotification({
+        businessId: payment.providerId,
+        customerId: payment.customerId,
+        bookingId: payment.bookingId,
+        type: 'payment_received',
+        channel: 'in_app',
+        title: 'Pago confirmado',
+        message: `Se registró el pago (${payment.amount} ${payment.currency}) de la reserva.`,
+        status: 'queued',
+      });
+    }
+
+    return { ok: true, status: 200, data: payment };
+  } catch (error) {
+    console.error('[payments] updatePaymentStatus falló:', error.message);
+    return { ok: false, status: 500, message: error.message };
   }
 }
 
@@ -143,6 +205,10 @@ async function createCheckoutSession(payload = {}) {
     return { ok: false, status: 400, message: 'amount debe ser un número mayor que 0' };
   }
 
+  if (!allowedPaymentMethods.includes(method)) {
+    return { ok: false, status: 400, message: 'method inválido' };
+  }
+
   const paymentRecord = await createPayment({
     bookingId,
     providerId,
@@ -152,6 +218,39 @@ async function createCheckoutSession(payload = {}) {
     method,
     status: 'pending',
   });
+
+  if (!paymentRecord.ok) {
+    return paymentRecord;
+  }
+
+  // Canales sin pasarela online: se registran con instrucciones para el cliente.
+  if (method === 'transfer') {
+    return {
+      ok: true,
+      status: 200,
+      data: {
+        paymentId: paymentRecord.data?.id,
+        method: 'transfer',
+        checkoutUrl: null,
+        status: 'pending',
+        instructions: getTransferInstructions(bookingId),
+      },
+    };
+  }
+
+  if (method === 'cash') {
+    return {
+      ok: true,
+      status: 200,
+      data: {
+        paymentId: paymentRecord.data?.id,
+        method: 'cash',
+        checkoutUrl: null,
+        status: 'pending',
+        instructions: { message: 'Paga en efectivo en el establecimiento al completar el servicio.' },
+      },
+    };
+  }
 
   const successUrl = String(payload.successUrl || `${process.env.FRONTEND_URL || 'http://localhost:4200'}/payment/success?bookingId=${encodeURIComponent(bookingId)}`);
   const cancelUrl = String(payload.cancelUrl || `${process.env.FRONTEND_URL || 'http://localhost:4200'}/payment/cancel?bookingId=${encodeURIComponent(bookingId)}`);
@@ -256,7 +355,28 @@ async function processWebhook({ rawBody, signature, event }) {
     createdAt: new Date().toISOString(),
   };
 
-  upsertFallbackPayment(payment);
+  if (!process.env.DATABASE_URL) {
+    console.warn('[payments] webhook procesado sin DATABASE_URL; no se persiste');
+  } else if (status === 'paid') {
+    try {
+      await db.query(
+        `UPDATE payments SET status = $1, external_reference = $2, updated_at = now() WHERE id = $3`,
+        [status, String(session.payment_intent || ''), payment.id]
+      );
+      await db.query(
+        `UPDATE bookings SET status = 'confirmed', updated_at = now() WHERE id = $1`,
+        [bookingId]
+      );
+      await db.query(
+        `UPDATE reservations SET disponibilidad = 'Confirmado', updated_at = now()
+         WHERE business_id = $1 AND franja = (SELECT slot FROM bookings WHERE id = $2)`,
+        [providerId, bookingId]
+      );
+    } catch (error) {
+      console.error('[payments] webhook: error al confirmar el pago en BD:', error.message);
+      return { ok: false, status: 500, message: 'Error al confirmar el pago en la base de datos' };
+    }
+  }
 
   if (status === 'paid') {
     await createNotification({
@@ -274,4 +394,4 @@ async function processWebhook({ rawBody, signature, event }) {
   return { ok: true, status: 200, data: payment };
 }
 
-module.exports = { listPayments, createPayment, createCheckoutSession, processWebhook };
+module.exports = { listPayments, createPayment, createCheckoutSession, processWebhook, getPayment, updatePaymentStatus };

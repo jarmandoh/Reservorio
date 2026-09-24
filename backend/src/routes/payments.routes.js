@@ -3,7 +3,8 @@
 const express = require('express');
 const { body } = require('express-validator');
 const { handleValidation } = require('../middleware/validation');
-const { listPayments, createPayment, createCheckoutSession, processWebhook } = require('../services/payments.service');
+const { requireAuth, canAccessBusinessId } = require('../middleware/auth');
+const { listPayments, createPayment, createCheckoutSession, processWebhook, getPayment, updatePaymentStatus } = require('../services/payments.service');
 
 const router = express.Router();
 
@@ -68,6 +69,29 @@ router.post('/webhook', async (req, res) => {
       event: req.body && !Buffer.isBuffer(req.body) ? req.body : null,
     });
 
+    return res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: error.message });
+  }
+});
+
+router.patch('/:id', requireAuth, async (req, res) => {
+  try {
+    const id = String(req.params.id ?? '').trim();
+    const status = String(req.body?.status ?? '').trim();
+
+    if (!['pending', 'paid', 'failed', 'refunded'].includes(status)) {
+      return res.status(400).json({ ok: false, message: 'status inválido' });
+    }
+
+    const found = await getPayment(id);
+    if (!found.ok) {
+      return res.status(found.status).json({ ok: false, message: found.message });
+    }
+
+    if (!canAccessBusinessId(req, res, found.data.providerId)) return;
+
+    const result = await updatePaymentStatus(id, status);
     return res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (error) {
     return res.status(500).json({ ok: false, message: error.message });

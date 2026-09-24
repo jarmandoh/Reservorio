@@ -124,11 +124,9 @@ Reservorio/
 │   ├── scripts/
 │   │   └── backup.sh
 │   ├── db/
-│   │   ├── init.sql
+│   │   ├── init.sql          # esquema base (única fuente de verdad)
 │   │   └── migrations/
-│   │       ├── README.md
-│   │       ├── 001_marketplace_schema.sql
-│   │       └── 002_availability_locks.sql
+│   │       └── README.md     # historial y notas
 │   └── src/
 │       ├── index.js
 │       ├── db.js

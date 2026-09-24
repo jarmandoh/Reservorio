@@ -31,11 +31,9 @@ backend/
 │   ├── middleware/           # auth, validation, error handling, sanitization
 │   └── utils/                # helpers
 ├── db/
-│   ├── init.sql              # esquema base actual
+│   ├── init.sql              # esquema base (única fuente de verdad, auto-aplicado al crear el contenedor)
 │   └── migrations/
-│       ├── README.md
-│       ├── 001_marketplace_schema.sql
-│       └── 002_availability_locks.sql
+│       └── README.md         # historial: migraciones marketplace retiradas, todo vive en init.sql
 ├── scripts/
 │   └── backup.sh             # copias de seguridad pg_dump
 ├── test/
@@ -269,19 +267,26 @@ NODE_ENV=development
 
 ---
 
-## 8. Migración real desde el modelo actual
+## 8. Esquema de base de datos
 
-La migración recomendada está en:
+**`backend/db/init.sql` es la única fuente de verdad.** Se aplica automáticamente al crear el
+contenedor por primera vez y es idempotente (`CREATE TABLE IF NOT EXISTS` /
+`ALTER TABLE ... ADD COLUMN IF NOT EXISTS`).
 
-- [backend/db/migrations/001_marketplace_schema.sql](db/migrations/001_marketplace_schema.sql)
+El esquema cubre:
 
-### Paso a paso
+- Core: `businesses`, `owners`, `business_owners`, `services`, `reservations`.
+- Catálogo: `categories`, `business_categories`, `schedules`, `tags`, `business_tags`, `ratings`.
+- Marketplace: `customers`, `bookings`, `payments`, `notifications` — todos con `id` TEXT
+  coherentes con `businesses(id)` (un negocio actúa como provider en `bookings.provider_id` /
+  `payments.provider_id`).
+- Anti doble-reserva a nivel de BD: índices únicos parciales `uq_reservations_franja` y
+  `uq_bookings_active_slot`.
 
-1. Mantener el esquema actual de `businesses`, `owners`, `reservations`, `services`.
-2. Crear las nuevas tablas `providers`, `customers`, `bookings`, `payments`.
-3. Migrar los datos actuales de `businesses` a `providers`.
-4. Migrar la relación de dueños y clientes existentes.
-5. Conectar reservas actuales a `bookings` o mantener una visión híbrida durante la transición.
+El directorio `migrations/` quedó retirado: la antigua `001_marketplace_schema.sql` proponía un
+modelo UUID (`providers`/`bookings`/`payments`) que el código nunca usó y contradecía `init.sql`;
+los índices de `002_availability_locks.sql` se movieron a `init.sql`. Detalle en
+[db/migrations/README.md](db/migrations/README.md).
 
 ---
 
@@ -311,7 +316,7 @@ Genera un dump `pg_dump` con marca de tiempo en `backend/backups/`, retiene 14 d
 - Rate limiting global: 60 peticiones / 15 min por IP en `/api/`.
 - Rate limiting estricto (10 / 15 min) en autenticación: `/api/auth/*` y `/api/businesses/:id/auth`.
 - En producción el arranque aborta si `JWT_SECRET` < 32 chars, `ADMIN_PIN` es el default o falta `CORS_ORIGINS`.
-- Anti doble reserva a nivel de base de datos: `002_availability_locks.sql`.
+- Anti doble reserva a nivel de base de datos: índices únicos parciales en `init.sql` (`uq_reservations_franja`, `uq_bookings_active_slot`).
 
 ---
 

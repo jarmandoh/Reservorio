@@ -9,16 +9,24 @@ import {
   BookingPayload,
   BookingRecord,
   BookingRequest,
+  CheckoutSession,
   Customer,
   CustomerPayload,
+  CustomerHistory,
+  AdminStats,
+  AdminReview,
+  AdminServiceRecord,
   GoogleStatus,
+  NotificationItem,
   Payment,
   PaymentRequest,
+  PaymentStatus,
   Reservation,
   UpdatePayload
 } from '../models/reservation.model';
 import { Categoria } from '../models/categorias.model';
 import { Business, NewBusinessPayload, Owner, OwnerAuthPayload } from '../models/businesses.model';
+import { OfflineService } from './offline.service';
 
 export interface BusinessQuery {
   q?: string;
@@ -31,10 +39,26 @@ export interface BusinessQuery {
 @Injectable({ providedIn: 'root' })
 export class ApiService {
   private readonly http = inject(HttpClient);
+  private readonly offline = inject(OfflineService);
   private readonly base = environment.apiUrl;
 
   private authHeader(token: string): { headers: HttpHeaders } {
     return { headers: new HttpHeaders({ Authorization: `Bearer ${token}` }) };
+  }
+
+  private cachedGet<T>(key: string, request$: Observable<T>): Observable<T> {
+    const cached = this.offline.read<T>(key);
+    if (!this.offline.online() && cached !== null) {
+      return of(cached);
+    }
+
+    return request$.pipe(
+      map(value => {
+        this.offline.write(key, value);
+        return value;
+      }),
+      catchError(err => (cached !== null ? of(cached) : throwError(() => err))),
+    );
   }
 
   // ── Legacy / single-business ──────────────────────────────────────────
@@ -42,7 +66,7 @@ export class ApiService {
   getReservations(): Observable<Reservation[]> {
     return this.http
       .get<ApiResponse<Reservation[]>>(`${this.base}/reservations`)
-      .pipe(map(r => r.data ?? []), catchError(this.handleError));
+      .pipe(map(r => (r.data ?? []).map(row => ({ ...row, _rowIndex: Number(row.id) }))), catchError(this.handleError));
   }
 
   getServices(): Observable<string[]> {
@@ -95,6 +119,12 @@ export class ApiService {
       .pipe(catchError(this.handleError));
   }
 
+  loginCustomer(email: string, phone: string): Observable<ApiResponse<{ token: string; customer: Customer }>> {
+    return this.http
+      .post<ApiResponse<{ token: string; customer: Customer }>>(`${this.base}/auth/customer/login`, { email, phone })
+      .pipe(catchError(this.handleError));
+  }
+
   registerOwner(payload: OwnerAuthPayload): Observable<ApiResponse<{ token: string }>> {
     return this.http
       .post<ApiResponse<{ token: string }>>(`${this.base}/auth/owner/register`, payload)
@@ -112,9 +142,11 @@ export class ApiService {
       });
     }
 
-    return this.http
+    const request$ = this.http
       .get<ApiResponse<Business[]>>(`${this.base}/businesses`, { params: httpParams })
       .pipe(map(r => r.data ?? []), catchError(this.handleError));
+
+    return this.cachedGet(`businesses:${httpParams.toString()}`, request$);
   };
 
   getOwnerBusinesses(token: string): Observable<Business[]> {
@@ -124,9 +156,11 @@ export class ApiService {
   }
 
   getBusinessById(businessId: string, token: string): Observable<Business> {
-    return this.http
+    const request$ = this.http
       .get<ApiResponse<Business>>(`${this.base}/businesses/${businessId}`, this.authHeader(token))
       .pipe(map(r => r.data!), catchError(this.handleError));
+
+    return this.cachedGet(`business:${businessId}`, request$);
   }
 
   // ── Multi-business (admin) ────────────────────────────────────────────
@@ -169,15 +203,30 @@ export class ApiService {
 
   // ── Per-business operations ───────────────────────────────────────────
 
-  getBusinessReservations(negocioId: string): Observable<Reservation[]> {
+  getBusinessReservations(negocioId: string, token?: string): Observable<Reservation[]> {
+    const httpOptions = token ? this.authHeader(token) : {};
     return this.http
-      .get<ApiResponse<Reservation[]>>(`${this.base}/businesses/${negocioId}/reservations`)
-      .pipe(map(r => r.data ?? []), catchError(this.handleError));
+      .get<ApiResponse<Reservation[]>>(`${this.base}/businesses/${negocioId}/reservations`, httpOptions)
+      .pipe(map(r => (r.data ?? []).map(row => ({ ...row, _rowIndex: Number(row.id) }))), catchError(this.handleError));
+  }
+
+  getBusinessAvailability(negocioId: string): Observable<Reservation[]> {
+    const request$ = this.http
+      .get<ApiResponse<Reservation[]>>(`${this.base}/businesses/${negocioId}/availability`)
+      .pipe(map(r => (r.data ?? []).map(row => ({ ...row, _rowIndex: Number(row.id) }))), catchError(this.handleError));
+
+    return this.cachedGet(`availability:${negocioId}`, request$);
   }
 
   createBusinessReservation(negocioId: string, payload: BookingPayload): Observable<ApiResponse> {
     return this.http
       .post<ApiResponse>(`${this.base}/businesses/${negocioId}/reservations`, payload)
+      .pipe(catchError(this.handleError));
+  }
+
+  createBusinessCheckout(negocioId: string, payload: BookingPayload & { email?: string }): Observable<ApiResponse<{ bookingId: string; customerId: string; reservationId: number }>> {
+    return this.http
+      .post<ApiResponse<{ bookingId: string; customerId: string; reservationId: number }>>(`${this.base}/businesses/${negocioId}/checkout`, payload)
       .pipe(catchError(this.handleError));
   }
 
@@ -188,9 +237,11 @@ export class ApiService {
   }
 
   getBusinessServices(negocioId: string): Observable<string[]> {
-    return this.http
+    const request$ = this.http
       .get<ApiResponse<string[]>>(`${this.base}/businesses/${negocioId}/services`)
       .pipe(map(r => r.data ?? []), catchError(this.handleError));
+
+    return this.cachedGet(`services:${negocioId}`, request$);
   }
 
   createBusinessService(negocioId: string, nombre: string, token: string): Observable<ApiResponse> {
@@ -237,14 +288,14 @@ export class ApiService {
       .pipe(map(r => r.data ?? []), catchError(this.handleError));
   }
 
-  getNotifications(businessId: string, bookingId?: string): Observable<any[]> {
+  getNotifications(businessId: string, bookingId?: string): Observable<NotificationItem[]> {
     let httpParams = new HttpParams().set('businessId', businessId);
     if (bookingId) {
       httpParams = httpParams.set('bookingId', bookingId);
     }
 
     return this.http
-      .get<ApiResponse<any[]>>(`${this.base}/notifications`, { params: httpParams })
+      .get<ApiResponse<NotificationItem[]>>(`${this.base}/notifications`, { params: httpParams })
       .pipe(map(r => r.data ?? []), catchError(this.handleError));
   }
 
@@ -255,15 +306,19 @@ export class ApiService {
   }
 
   getReviews(businessId: string): Observable<Review[]> {
-    return this.http
+    const request$ = this.http
       .get<ApiResponse<Review[]>>(`${this.base}/ratings/${businessId}`)
       .pipe(map(r => r.data ?? []), catchError(this.handleError));
+
+    return this.cachedGet(`reviews:${businessId}`, request$);
   }
 
   getAverageRating(businessId: string): Observable<RatingStats> {
-    return this.http
+    const request$ = this.http
       .get<ApiResponse<RatingStats>>(`${this.base}/ratings/${businessId}/average`)
       .pipe(map(r => r.data ?? { businessId, averageRating: 0, reviewCount: 0 }), catchError(() => of({ businessId, averageRating: 0, reviewCount: 0 })));
+
+    return this.cachedGet(`rating:${businessId}`, request$);
   }
 
   createReview(businessId: string, payload: { rating: number; review?: string }): Observable<ApiResponse<Review>> {
@@ -278,10 +333,76 @@ export class ApiService {
       .pipe(catchError(this.handleError));
   }
 
-  createCheckoutSession(payload: PaymentRequest & { successUrl?: string; cancelUrl?: string }): Observable<ApiResponse<{ sessionId: string; checkoutUrl: string; paymentId?: string }>> {
+  createCheckoutSession(payload: PaymentRequest & { successUrl?: string; cancelUrl?: string }): Observable<ApiResponse<CheckoutSession>> {
     return this.http
-      .post<ApiResponse<{ sessionId: string; checkoutUrl: string; paymentId?: string }>>(`${this.base}/payments/checkout`, payload)
+      .post<ApiResponse<CheckoutSession>>(`${this.base}/payments/checkout`, payload)
       .pipe(catchError(this.handleError));
+  }
+
+  markPaymentStatus(paymentId: string, status: PaymentStatus, token: string): Observable<ApiResponse<Payment>> {
+    return this.http
+      .patch<ApiResponse<Payment>>(`${this.base}/payments/${paymentId}`, { status }, this.authHeader(token))
+      .pipe(catchError(this.handleError));
+  }
+
+  getCustomerByEmail(email: string): Observable<Customer> {
+    return this.http
+      .get<ApiResponse<Customer>>(`${this.base}/customers/email/${encodeURIComponent(email)}`)
+      .pipe(map(r => r.data!), catchError(this.handleError));
+  }
+
+  getCustomerMe(token: string): Observable<Customer> {
+    return this.http
+      .get<ApiResponse<Customer>>(`${this.base}/customers/me`, this.authHeader(token))
+      .pipe(map(r => r.data!));
+  }
+
+  getCustomerHistory(customerId: string, token: string): Observable<CustomerHistory> {
+    return this.http
+      .get<ApiResponse<CustomerHistory>>(`${this.base}/customers/${customerId}/history`, this.authHeader(token))
+      .pipe(map(r => r.data!));
+  }
+
+  // ── Admin panel (avanzado) ────────────────────────────────────────────
+
+  getAdminStats(token: string): Observable<AdminStats> {
+    return this.http
+      .get<ApiResponse<AdminStats>>(`${this.base}/admin/stats`, this.authHeader(token))
+      .pipe(map(r => r.data!), catchError(this.handleError));
+  }
+
+  getAdminReviews(token: string): Observable<AdminReview[]> {
+    return this.http
+      .get<ApiResponse<AdminReview[]>>(`${this.base}/admin/reviews`, this.authHeader(token))
+      .pipe(map(r => r.data ?? []), catchError(this.handleError));
+  }
+
+  deleteAdminReview(id: number, token: string): Observable<ApiResponse> {
+    return this.http
+      .delete<ApiResponse>(`${this.base}/admin/reviews/${id}`, this.authHeader(token))
+      .pipe(catchError(this.handleError));
+  }
+
+  getAdminServices(token: string): Observable<AdminServiceRecord[]> {
+    return this.http
+      .get<ApiResponse<AdminServiceRecord[]>>(`${this.base}/admin/services`, this.authHeader(token))
+      .pipe(map(r => r.data ?? []), catchError(this.handleError));
+  }
+
+  deleteAdminService(id: number, token: string): Observable<ApiResponse> {
+    return this.http
+      .delete<ApiResponse>(`${this.base}/admin/services/${id}`, this.authHeader(token))
+      .pipe(catchError(this.handleError));
+  }
+
+  getAdminPayments(token: string, status?: PaymentStatus): Observable<Payment[]> {
+    let httpParams = new HttpParams();
+    if (status) {
+      httpParams = httpParams.set('status', status);
+    }
+    return this.http
+      .get<ApiResponse<Payment[]>>(`${this.base}/admin/payments`, { params: httpParams, ...this.authHeader(token) })
+      .pipe(map(r => r.data ?? []), catchError(this.handleError));
   }
 
   // ── Google OAuth ──────────────────────────────────────────────────────

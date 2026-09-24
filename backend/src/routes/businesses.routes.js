@@ -7,6 +7,7 @@ const { clean } = require('../middleware/sanitize');
 const { requireAdmin, requireAdminOrOwner, requireOwnerAuth, requireBusinessAuth } = require('../middleware/auth');
 const { handleValidation } = require('../middleware/validation');
 const businessesService = require('../services/businesses.service');
+const checkoutService = require('../services/checkout.service');
 
 const router = express.Router();
 
@@ -50,7 +51,7 @@ const reservationValidators = [
 
 const reservationUpdateValidators = [
   param('row').toInt().isInt({ min: 1 }).withMessage('ID de reserva invalido'),
-  body('disponibilidad').trim().isIn(['Disponible', 'Pendiente', 'Reservado', 'Confirmado']).withMessage('Estado no permitido'),
+  body('disponibilidad').trim().isIn(['Disponible', 'Pendiente', 'Reservado', 'Confirmado', 'Cancelado']).withMessage('Estado no permitido'),
   body('notas').optional().trim().isLength({ max: 500 }).withMessage('notas demasiado largas'),
   handleValidation,
 ];
@@ -62,6 +63,17 @@ const serviceValidators = [
 
 const serviceNameParamValidator = [
   param('nombre').trim().notEmpty().withMessage('nombre requerido'),
+  handleValidation,
+];
+
+const checkoutValidators = [
+  body('franja').trim().notEmpty().withMessage('franja requerido'),
+  body('cliente').trim().notEmpty().withMessage('cliente requerido'),
+  body('telefono').trim().notEmpty().withMessage('telefono requerido')
+    .matches(/^[0-9+\s\-]{7,15}$/).withMessage('telefono inválido'),
+  body('servicio').optional().trim().isLength({ max: 100 }).withMessage('servicio demasiado largo'),
+  body('notas').optional().trim().isLength({ max: 500 }).withMessage('notas demasiado largas'),
+  body('email').optional().trim().isEmail().withMessage('email inválido'),
   handleValidation,
 ];
 
@@ -171,6 +183,16 @@ router.delete('/:id', requireAdmin, async (req, res) => {
 
 // ── Per-business reservations ─────────────────────────────────────────────
 
+// GET /api/businesses/:id/availability  -> público, solo franjas/estado (sin datos personales)
+router.get('/:id/availability', async (req, res) => {
+  try {
+    const result = await businessesService.listAvailability(req.params.id);
+    res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
+  } catch (e) {
+    res.status(500).json({ ok: false, message: e.message });
+  }
+});
+
 // GET /api/businesses/:id
 router.get('/:id', requireBusinessAuth, async (req, res) => {
   try {
@@ -195,6 +217,16 @@ router.get('/:id/reservations', requireBusinessAuth, async (req, res) => {
 router.post(`/:id/reservations`, reservationValidators, async (req, res) => {
   try {
     const result = await businessesService.createReservation(req.params.id, req.body);
+    res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
+  } catch (e) {
+    res.status(500).json({ ok: false, message: e.message });
+  }
+});
+
+// POST /api/businesses/:id/checkout  -> prepara checkout del kiosk: reserva legacy + customer + booking reales
+router.post('/:id/checkout', checkoutValidators, async (req, res) => {
+  try {
+    const result = await checkoutService.checkoutForBusiness(req.params.id, req.body);
     res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (e) {
     res.status(500).json({ ok: false, message: e.message });

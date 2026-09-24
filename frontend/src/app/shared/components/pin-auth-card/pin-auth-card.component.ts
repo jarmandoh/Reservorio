@@ -12,8 +12,7 @@ import { FormGroup, ReactiveFormsModule } from '@angular/forms';
         <ng-content select="[header]"></ng-content>
 
         @if (errorMessage) {
-          <div class="flex gap-3 p-4 rounded-xl text-sm"
-               style="background:#fff0ef;color:#93000a;border:1px solid #f9aead">
+          <div class="flex gap-3 p-4 rounded-xl text-sm bg-error-container text-error-on-container border border-error/40">
             <span class="material-icons-round text-base mt-0.5">error_outline</span>
             <p>{{ errorMessage }}</p>
           </div>

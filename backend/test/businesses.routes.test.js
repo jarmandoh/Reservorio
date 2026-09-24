@@ -103,4 +103,67 @@ describe('Businesses routes', () => {
     expect(response.body.ok).toBe(true);
     expect(db.query).toHaveBeenCalledWith('UPDATE businesses SET verified = $1 WHERE id = $2 RETURNING *', [true, 'negocio1']);
   });
+
+  test('GET /api/businesses/:id/availability is public and hides personal data', async () => {
+    db.query.mockResolvedValue({
+      rows: [
+        { id: 1, franja: '10:00', disponibilidad: 'Disponible', cliente: 'Juan', telefono: '123456789', servicio: 'x', notas: '' },
+        { id: 2, franja: '11:00', disponibilidad: 'Reservado', cliente: 'Ana', telefono: '987654321', servicio: 'y', notas: '' },
+      ],
+    });
+
+    const response = await request(app).get('/api/businesses/negocio1/availability');
+
+    expect(response.status).toBe(200);
+    expect(response.body.ok).toBe(true);
+    expect(response.body.data).toHaveLength(2);
+    expect(response.body.data[0]).toEqual({ id: 1, franja: '10:00', disponibilidad: 'Disponible' });
+    expect(response.body.data[0]).not.toHaveProperty('cliente');
+    expect(response.body.data[0]).not.toHaveProperty('telefono');
+    expect(response.body.data[1]).not.toHaveProperty('servicio');
+  });
+
+  test('PUT /api/businesses/:id/reservations/:row accepts estado Cancelado', async () => {
+    const token = sign({ role: 'business-admin', businessId: 'negocio1' });
+    db.query.mockResolvedValue({ rows: [{ id: 1, franja: '10:00', business_id: 'negocio1' }], rowCount: 1 });
+
+    const response = await request(app)
+      .put('/api/businesses/negocio1/reservations/1')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ disponibilidad: 'Cancelado' });
+
+    expect(response.status).toBe(200);
+    expect(response.body.ok).toBe(true);
+    expect(db.query).toHaveBeenCalledWith(
+      'UPDATE reservations SET disponibilidad = $1, notas = $2, updated_at = now()\n     WHERE id = $3 AND business_id = $4 RETURNING *',
+      ['Cancelado', '', 1, 'negocio1']
+    );
+  });
+
+  test('PUT /api/businesses/:id/reservations/:row rejects invalid estado', async () => {
+    const token = sign({ role: 'business-admin', businessId: 'negocio1' });
+
+    const response = await request(app)
+      .put('/api/businesses/negocio1/reservations/1')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ disponibilidad: 'NO_EXISTE' });
+
+    expect(response.status).toBe(400);
+  });
+
+  test('POST /api/businesses/:id/checkout rejects missing telefono', async () => {
+    const response = await request(app)
+      .post('/api/businesses/negocio1/checkout')
+      .send({ franja: '10:00', cliente: 'Ana' });
+
+    expect(response.status).toBe(400);
+  });
+
+  test('POST /api/businesses/:id/checkout rejects invalid email', async () => {
+    const response = await request(app)
+      .post('/api/businesses/negocio1/checkout')
+      .send({ franja: '10:00', cliente: 'Ana', telefono: '600000000', email: 'no-es-email' });
+
+    expect(response.status).toBe(400);
+  });
 });

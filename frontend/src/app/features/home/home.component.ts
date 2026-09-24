@@ -39,8 +39,7 @@ const CATEGORIES = ['Todos', 'Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci
   <div class="min-h-screen bg-surface flex flex-col">
 
     <!-- ══ HERO ═══════════════════════════════════════════════════════ -->
-    <header class="relative overflow-hidden text-white"
-            style="background:linear-gradient(145deg,#003e8a 0%,#005bbf 50%,#1a73e8 100%)">
+    <header class="relative overflow-hidden text-white bg-gradient-to-br from-brand-strong via-primary to-primary-container">
 
       <!-- Decorative circles -->
       <div class="absolute -top-20 -right-20 w-72 h-72 rounded-full opacity-10"
@@ -59,19 +58,27 @@ const CATEGORIES = ['Todos', 'Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci
             </div>
             <span class="font-display font-bold text-lg tracking-tight">Resérvame</span>
           </div>
-          <button class="g-nav-btn flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition"
-                  style="background:rgba(255,255,255,.15);backdrop-filter:blur(8px)"
-                  (click)="goAdmin()">
-            <span class="material-icons-round text-base">admin_panel_settings</span>
-            <span class="hidden sm:inline">Admin</span>
-          </button>
+          <div class="flex items-center gap-2">
+            <button class="g-nav-btn flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition"
+                    style="background:rgba(255,255,255,.15);backdrop-filter:blur(8px)"
+                    (click)="goCustomer()">
+              <span class="material-icons-round text-base">account_circle</span>
+              <span class="hidden sm:inline">Mi cuenta</span>
+            </button>
+            <button class="g-nav-btn flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition"
+                    style="background:rgba(255,255,255,.15);backdrop-filter:blur(8px)"
+                    (click)="goAdmin()">
+              <span class="material-icons-round text-base">admin_panel_settings</span>
+              <span class="hidden sm:inline">Admin</span>
+            </button>
+          </div>
         </div>
 
         <!-- Hero text -->
         <div class="flex flex-col gap-3 mb-8">
           <h1 class="g-title font-display font-bold text-[2rem] sm:text-[2.75rem] leading-tight">
             Reserva en segundos,<br>
-            <span style="color:#adc7ff">vive sin esperas</span>
+            <span class="text-primary-fixed-dim">vive sin esperas</span>
           </h1>
           <p class="g-sub text-base opacity-80 max-w-md">
             Encuentra negocios cerca de ti y agenda tu cita al instante.
@@ -211,13 +218,11 @@ const CATEGORIES = ['Todos', 'Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci
 
               <!-- Card header gradient -->
               <div class="relative h-28 flex items-end p-5" [style.background]="negocio.gradient">
-                <div class="absolute top-4 right-4 w-10 h-10 rounded-xl flex items-center justify-center"
-                     style="background:rgba(255,255,255,.2)">
+                <div class="absolute top-4 right-4 w-10 h-10 rounded-xl flex items-center justify-center bg-white/20">
                   <span class="material-icons-round text-white text-xl">{{ negocio.icon }}</span>
                 </div>
                 <!-- Available badge -->
-                <div class="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold"
-                     style="background:rgba(255,255,255,.2);backdrop-filter:blur(8px);color:#fff">
+                <div class="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white/20 backdrop-blur-md text-white">
                   <span class="w-1.5 h-1.5 rounded-full"
                         [style.background]="negocio.available > 0 ? '#4ade80' : '#f87171'"></span>
                   @if (negocio.available > 0) {
@@ -239,7 +244,7 @@ const CATEGORIES = ['Todos', 'Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci
                     </div>
                   </div>
                   <div class="flex items-center gap-1 flex-shrink-0">
-                    <span class="material-icons-round text-[#f59e0b] text-sm">star</span>
+                    <span class="material-icons-round text-amber-500 text-sm">star</span>
                     <span class="text-sm font-semibold">{{ negocio.rating }}</span>
                     <span class="text-xs text-outline">({{ negocio.reviews }})</span>
                   </div>
@@ -449,5 +454,9 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
 
   goAdmin(): void {
     this.router.navigate(['/login']);
+  }
+
+  goCustomer(): void {
+    this.router.navigate(['/customer/history']);
   }
 }

@@ -9,10 +9,12 @@
 @layer base {
   html { @apply antialiased; }
   body {
-    background-color: #f7f9ff;
+    background: linear-gradient(180deg, #f7f9ff 0%, #eef5ff 100%);
     font-family: 'Inter', sans-serif;
     color: #181c20;
     overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-font-smoothing: antialiased;
   }
 
   /* Ocultar scrollbar manteniendo scroll funcional */
@@ -23,6 +25,11 @@
   *::-webkit-scrollbar {
     display: none;                /* Chrome / Safari / Opera */
   }
+
+  /* Tap targets cómodos en móvil */
+  button, a, input, select, textarea, label, [role="button"] {
+    touch-action: manipulation;
+  }
 }
 
 /* ── Component layer ─────────────────────────────────────────────────────── */
@@ -31,11 +38,13 @@
   .btn-primary {
     @apply flex items-center justify-center gap-2 w-full px-6 py-3.5 rounded-lg font-semibold text-white transition
            disabled:opacity-40 disabled:cursor-not-allowed;
+    min-height: 3rem;
     background: linear-gradient(135deg, #005bbf 0%, #1a73e8 100%);
   }
   .btn-primary:active { transform: scale(.98); }
   .btn-secondary {
     @apply flex items-center justify-center gap-2 px-5 py-3 rounded-lg font-medium transition;
+    min-height: 3rem;
     background-color: #e5e8ee;
     color: #181c20;
   }
@@ -44,6 +53,7 @@
 
   .btn-tertiary {
     @apply flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-semibold transition;
+    min-height: 2.75rem;
     color: #005bbf;
   }
   .btn-tertiary:hover  { background-color: #d8e2ff; }
@@ -51,16 +61,18 @@
 
   .btn-danger {
     @apply flex items-center justify-center gap-2 px-5 py-3 rounded-lg font-medium transition;
+    min-height: 3rem;
     background-color: #ffdad6;
     color: #93000a;
   }
   .btn-danger:hover  { opacity: .9; }
   .btn-danger:active { transform: scale(.98); }
-  .btn-sm { @apply text-sm py-2 px-4; }
+  .btn-sm { min-height: 2.5rem; @apply text-sm py-2 px-4; }
 
   .form-input, .form-select, .form-textarea {
     @apply w-full border-0 border-b-2 border-transparent rounded-t-md px-4 py-3
            text-base focus:outline-none transition;
+    min-height: 3rem;
     background-color: #f1f4fa;
     color: #181c20;
   }
@@ -137,6 +149,43 @@
     @apply font-semibold;
     background-color: #d8e2ff;
     color: #005bbf;
+  }
+
+  /* ── Opciones de pago (#12) ─────────────────────────────────────────── */
+  .payment-option {
+    @apply flex items-center gap-3 w-full rounded-2xl border p-4 text-left transition cursor-pointer;
+    min-height: 3.75rem;
+    border-color: #c1c6d6;
+    background-color: #ffffff;
+  }
+  .payment-option:hover { border-color: #4d8efe; }
+  .payment-option.selected {
+    border-color: #005bbf;
+    background-color: #eef5ff;
+    box-shadow: 0 0 0 2px rgba(0, 91, 191, 0.18);
+  }
+  .payment-option:disabled { opacity: .5; cursor: not-allowed; }
+
+  .instructions-box {
+    @apply rounded-2xl border border-primary/20 bg-brand-soft-high p-4 text-sm text-on-surface;
+    border-left-width: 4px;
+    border-left-color: #005bbf;
+  }
+
+  /* ── Banner offline (#16) ────────────────────────────────────────────── */
+  .offline-banner {
+    @apply fixed inset-x-0 bottom-0 z-50 flex items-center justify-center gap-2 px-4 py-3 text-center text-sm font-semibold text-white;
+    background: linear-gradient(90deg, #004ea8, #1a73e8);
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
+    animation: slide-up 0.25s ease;
+  }
+  .offline-banner button {
+    @apply rounded-full bg-white/20 px-3 py-1 text-xs font-bold text-white transition hover:bg-white/30;
+  }
+
+  /* ── Componentes de historial (#13) ──────────────────────────────────── */
+  .history-row {
+    @apply flex items-center justify-between gap-3 rounded-xl border border-outline-variant/30 bg-white px-4 py-3;
   }
 }
 

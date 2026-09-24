@@ -54,10 +54,10 @@ function validateReservation(req, res, next) {
  */
 function validateUpdate(req, res, next) {
   const { disponibilidad } = req.body ?? {};
-  const allowed = ['Disponible', 'Pendiente', 'Reservado', 'Confirmado'];
+  const allowed = ['Disponible', 'Pendiente', 'Reservado', 'Confirmado', 'Cancelado'];
   const rowIndex = parseInt(req.params.rowIndex, 10);
 
-  if (!rowIndex || rowIndex < 2 || rowIndex > 50000) {
+  if (!rowIndex || rowIndex < 1 || rowIndex > 50000) {
     return res.status(400).json({ ok: false, errors: ['rowIndex inválido'] });
   }
   if (!allowed.includes(disponibilidad)) {

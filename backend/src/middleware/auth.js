@@ -41,6 +41,16 @@ function requireOwnerAuth(req, res, next) {
   });
 }
 
+function requireCustomer(req, res, next) {
+  requireAuth(req, res, () => {
+    if (req.authPayload.role !== 'customer' || !req.authPayload.customerId) {
+      return res.status(403).json({ ok: false, message: 'Requiere rol cliente' });
+    }
+    req.customerId = req.authPayload.customerId;
+    next();
+  });
+}
+
 function requireAdminOrOwner(req, res, next) {
   requireAuth(req, res, () => {
     if (req.authPayload.role !== 'admin' && req.authPayload.role !== 'owner') {
@@ -111,6 +121,7 @@ module.exports = {
   requireAuth,
   requireAdmin,
   requireOwnerAuth,
+  requireCustomer,
   requireAdminOrOwner,
   requireBusinessAuth,
   canAccessBusiness,
