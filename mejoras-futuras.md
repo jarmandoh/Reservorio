@@ -13,25 +13,25 @@ Documento vivo: cada mejora marcada con ✅ indica trabajo completado y verifica
 
 ### Mejoras ya implementadas (histórico)
 
-| # | Mejora | Estado |
-|---|---|---|
-| 1–4 | Flujo de reserva guiado, confirmación visual, pago con feedback y comparación de servicios | ✅ |
-| 5 | Notificaciones: canales email/SMS (`channels.js`), recordatorios, **OTP + magic-link** sin contraseña | ✅ |
-| 6 | Experiencia móvil (touch targets, tarjetas), | ✅ |
-| 7 | Trust signals: reseñas, verificación, políticas de cancelación | ✅ |
-| 8 | Disponibilidad real (índices únicos anti doble-reserva) | ✅ |
-| 9 | Panel del proveedor con acciones rápidas | ✅ |
-| 10 | Analytics y métricas de negocio | ✅ |
-| 11 | Arquitectura separada services/repositories/validators | ✅ |
-| 12 | Canales de pago: Stripe/PayPal, transferencia, efectivo y anticipo 30% | ✅ |
-| 13 | **Panel de cliente completo** (login sin contraseña, historial, "Reservar de nuevo") | ✅ |
-| 14 | Panel admin avanzado (estadísticas, moderación de reseñas/pagos) | ✅ |
-| 15 | Seguridad: JWT HS256, rate limits, logs estructurados, validación de config | ✅ |
-| 16 | Caché offline de lecturas públicas + banner de conexión | ✅ |
-| 17 | Documentación técnica y de producto | ✅ |
-| 18 | Branding: tokens visuales, favicon, theme-color | ✅ |
-| 19 | Marketplace multi-proveedor | ✅ |
-| 20 | Despliegue: envs, backups, health/metrics, CI/CD | ✅ |
+| #   | Mejora                                                                                                | Estado |
+| --- | ----------------------------------------------------------------------------------------------------- | ------ |
+| 1–4 | Flujo de reserva guiado, confirmación visual, pago con feedback y comparación de servicios            | ✅     |
+| 5   | Notificaciones: canales email/SMS (`channels.js`), recordatorios, **OTP + magic-link** sin contraseña | ✅     |
+| 6   | Experiencia móvil (touch targets, tarjetas),                                                          | ✅     |
+| 7   | Trust signals: reseñas, verificación, políticas de cancelación                                        | ✅     |
+| 8   | Disponibilidad real (índices únicos anti doble-reserva)                                               | ✅     |
+| 9   | Panel del proveedor con acciones rápidas                                                              | ✅     |
+| 10  | Analytics y métricas de negocio                                                                       | ✅     |
+| 11  | Arquitectura separada services/repositories/validators                                                | ✅     |
+| 12  | Canales de pago: Stripe/PayPal, transferencia, efectivo y anticipo 30%                                | ✅     |
+| 13  | **Panel de cliente completo** (login sin contraseña, historial, "Reservar de nuevo")                  | ✅     |
+| 14  | Panel admin avanzado (estadísticas, moderación de reseñas/pagos)                                      | ✅     |
+| 15  | Seguridad: JWT HS256, rate limits, logs estructurados, validación de config                           | ✅     |
+| 16  | Caché offline de lecturas públicas + banner de conexión                                               | ✅     |
+| 17  | Documentación técnica y de producto                                                                   | ✅     |
+| 18  | Branding: tokens visuales, favicon, theme-color                                                       | ✅     |
+| 19  | Marketplace multi-proveedor                                                                           | ✅     |
+| 20  | Despliegue: envs, backups, health/metrics, CI/CD                                                      | ✅     |
 
 > Registro reciente con verificación: panel de cliente (24 suites/90 tests) y notificaciones/OTP (26 suites/111 tests) — ambas con build Angular OK, realizadas el 24/09/2026.
 >
@@ -51,7 +51,7 @@ Documento vivo: cada mejora marcada con ✅ indica trabajo completado y verifica
 - [x] **Tests de integración con Postgres real en CI** ✅ — Service container `postgres:16-alpine` en `.github/workflows/ci.yml`, schema cargado con `pnpm db:migrate` y suite ejecutándose con `RUN_INTEGRATION=1` + `DATABASE_URL` en cada push/PR.
 - [x] **PIN de administración con hash** ✅ — `authenticateAdmin` compara con `bcrypt` (hash lazily cacheado) y acepta `ADMIN_PIN_HASH` (bcrypt) como alternativa segura; validación de producción en `index.js` adaptada. Verificado: `auth.service.test.js` (PIN correcto/incorrecto).
 
-    ### Media prioridad (operación y calidad)
+  ### Media prioridad (operación y calidad)
 
 - [x] **Paginación en listados** ✅ — `bookings`, `payments`, `customers` e historial aceptan `page`/`pageSize` (solo si se pasan; sin params respuesta completa como antes): `backend/src/utils/pagination.js` (`parsePagination`, default 25, máx 200) y `meta {total,page,pageSize}` en la respuesta. Frontend: historial del cliente con controles anterior/siguiente (página 1 de N) y parámetros de API en `ApiService`. Verificado: `test/pagination.test.js` (9 tests).
 - [x] **Logging estructurado con pino** ✅ — Logger central `backend/src/logger.js` (rotado a `logs/`, niveles por `LOG_LEVEL`); 14 módulos usan `logger.info/warn/error` con contexto; arranque y checks de config/DB en `index.js`; middleware de peticiones con `requestId`. Solo quedan `console.log` intencionales (canal console en `channels.js`).
@@ -104,6 +104,30 @@ Documento vivo: cada mejora marcada con ✅ indica trabajo completado y verifica
 - [x] **Coverage gates** ✅ — `backend/package.json:48` jest `coverageThreshold` `branches 45/functions 50/lines 55/statements 55`, `frontend` `@vitest/coverage-v8@4.1` (`frontend/package.json:41`) + `ng test --watch=false --coverage` (`frontend/angular.json:118`), CI `.github/workflows/ci.yml:80` `pnpm exec jest --coverage` + `upload-artifact` backend/frontend.
 - [x] **Backup offsite S3** ✅ — `backend/scripts/backup-offsite.sh:1` `rclone sync` (fallback `aws s3 sync`) si `BACKUP_S3_BUCKET` definido, soporta `BACKUP_S3_CRYPT_REMOTE`. `docker-compose.yml:99` servicio `backup-offsite` (`rclone/rclone:1.66`, profile `offsite`, comparte `./backups`). `.env.production.example:105` `BACKUP_S3_BUCKET`/`CRYPT_REMOTE`.
 - [x] **Monorepo pnpm-workspace + turbo** ✅ — `pnpm-workspace.yaml:1` (`backend`, `frontend`), `turbo.json:1` `tasks: build/test/format:check`, `package.json:1` workspace `turbo@2.11` (`private:true`), `.npmrc:4` `shared-workspace-lockfile=false` (locks separados). `turbo run build` cachea `dist/**`.
+
+### Próximas funcionalidades propuestas (Producto) — Matriz impacto / esfuerzo
+
+Documento vivo para P4+. Cada fila es una funcionalidad candidata con estimación y dependencias. Estado: `⬜` pendiente, `🟡` en diseño, `✅` hecho.
+
+| #     | Funcionalidad                                                   | Problema que resuelve                   | Impacto    | Esfuerzo     | Riesgo         | Dependencias / Notas                                                                                                                                                                                                 |
+| ----- | --------------------------------------------------------------- | --------------------------------------- | ---------- | ------------ | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **A** | **Lista de espera + re-asignación automática** (`waitlist`)     | Huecos por cancelación → ocupación      | **Alto**   | Medio (2–3d) | Bajo           | Tabla `waitlist(business_id, slot, customer_id, created_at)`, `POST /api/businesses/:id/waitlist`, trigger en `updateReservation` `Cancelado` → `broadcast('slot_available')` + `notificationsService`               |
+| **B** | **Cupones / descuentos / referidos**                            | Adquisición/retención, ticket medio     | **Alto**   | Medio (3d)   | Medio (abuso)  | `coupons(code unique, discount_type %, value, max_uses, expires_at, business_id)`, valida en `POST /api/businesses/:id/checkout` y `POST /api/payments/checkout`, descuenta `dueAmount()` `booking.component.ts:876` |
+| **C** | **Recordatorio WhatsApp (Twilio/360dialog) + SMS fallback**     | +40% asistencia vs solo email           | **Alto**   | Medio (2d)   | Coste/msg      | Extiende `channels.js` + `reminders.worker.js:23` con canal `whatsapp`, env `WHATSAPP_PROVIDER`                                                                                                                      |
+| **D** | **Calendario 2-way Google/Outlook**                             | Evita doble-reserva fuera de Reservorio | **Alto**   | Alto (5d)    | Sync complejo  | Extiende `google.routes.js` + `syncService.js` con `watch` Calendar API + `schedules`                                                                                                                                |
+| **E** | **Equipo / roles por negocio** (`owner → manager/staff`)        | Negocios 2+ empleados                   | Medio-Alto | Medio (3d)   | Migración RBAC | `business_members(business_id, user_id, role)`, `requireBusinessAuth` + `canAccessBusiness` `middleware/auth.js:77`                                                                                                  |
+| **F** | **Predicción no-show + overbooking inteligente**                | Ingresos / ocupación                    | Medio      | Alto (4d)    | Modelo         | Heurística `bookings` 30d + `analytics_events`, score en `admin.service.js`                                                                                                                                          |
+| **G** | **Reseñas con foto + respuesta del negocio**                    | Trust / conversión                      | Medio      | Bajo (1.5d)  | Storage        | `ratings` + `photo_url` (R2/S3), `POST /api/ratings/:id/photo` `multer` → R2, UI `booking.component.ts:734`                                                                                                          |
+| **H** | **Búsqueda full-text + geo** (`tsvector` + `pg_trgm`/`postgis`) | Descubrimiento                          | Medio      | Medio (2d)   | Índice         | `businesses` `tsvector` + `GIN`, `location` geo, `business.repository.js:6` `buildBusinessWhereClauses`                                                                                                              |
+| **I** | **Suscripciones / membresías / gift cards**                     | Recurrencia (MRR)                       | Medio      | Alto (4d)    | Stripe Billing | Stripe Billing `subscriptions`, `gift_cards` tabla, `payments.service.js`                                                                                                                                            |
+| **J** | **Chat in-app ligero + notas internas** (SSE ya disponible)     | Soporte / upsell                        | Bajo-Medio | Medio (2d)   | Moderación     | Reusa `realtime.service.js:1` SSE `chat_message`, `notifications` `channel=in_app`                                                                                                                                   |
+
+**Orden recomendado (quick wins → diferenciación):**
+
+1. **Fase P4.1 (2 semanas)**: **A → B → G → H** — monetizables y de bajo riesgo, validan demanda sin infra nueva.
+2. **Fase P4.2 (2–3 semanas)**: **C → D → E** — requieren proveedor externo (WhatsApp/Calendar) y RBAC.
+
+**Criterio de priorización P4:** elige 2–3 de la tabla según objetivo 60 días: **ocupación** (A/D), **ingresos recurrentes** (B/I) o **retención** (C/G). Ver `docs/API.md` y `DEPLOY.md` para envs asociados (`WHATSAPP_*`, `COUPON_*`).
 
 ---
 
