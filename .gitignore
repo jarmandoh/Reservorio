@@ -4,10 +4,10 @@ node_modules/
 # Environment variables
 .env
 .env.*
-!.env.example
-!.env.production.example
-!backend/.env.example
-!backend/.env.production.example
+.env.example
+.env.production.example
+backend/.env.example
+backend/.env.production.example
 
 # Build outputs
 dist/
