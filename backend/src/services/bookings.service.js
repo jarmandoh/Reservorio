@@ -5,6 +5,7 @@ const db = require('../db');
 const { createNotification } = require('./notifications.service');
 const { parsePagination } = require('../utils/pagination');
 const logger = require('../logger');
+const { broadcastBookingCreated } = require('./realtime.service');
 
 function mapBooking(row) {
   if (!row) return row;
@@ -108,6 +109,10 @@ async function createBooking(payload = {}) {
       message: `Nueva solicitud para ${serviceId} en ${date} · ${slot}.`,
       status: 'queued',
     });
+
+    try {
+      broadcastBookingCreated(rows[0]);
+    } catch {}
 
     return { ok: true, status: 201, data: mapBooking(rows[0]) };
   } catch (error) {

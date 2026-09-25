@@ -4,10 +4,11 @@ import { FormsModule } from '@angular/forms';
 import { ReactiveFormsModule, FormBuilder, Validators, AbstractControl } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Title } from '@angular/platform-browser';
-import { interval, Subscription, switchMap, startWith, catchError, of } from 'rxjs';
+import { interval, Subscription, switchMap, startWith, catchError, of, fromEvent } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ApiService } from '../../core/services/api.service';
 import { ToastService } from '../../core/services/toast.service';
+import { RealtimeService } from '../../core/services/realtime.service';
 import { Reservation, PaymentMethod, CheckoutInstructions } from '../../core/models/reservation.model';
 import { Business, Review, RatingStats } from '../../core/models/businesses.model';
 
@@ -834,6 +835,7 @@ interface ConfirmedBooking {
 export class BookingComponent implements OnInit, OnDestroy {
   private api = inject(ApiService);
   private toast = inject(ToastService);
+  private realtime = inject(RealtimeService);
   private title = inject(Title);
   readonly Math = Math;
   private fb = inject(FormBuilder);
@@ -947,6 +949,7 @@ export class BookingComponent implements OnInit, OnDestroy {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.bookingFormValid.set(this.bookingForm.valid));
     this.loadLastBooking();
+    this.setupVisibilityPause();
     // Load business info
     this.api
       .getBusinesses()
@@ -967,6 +970,22 @@ export class BookingComponent implements OnInit, OnDestroy {
     this.loadReviews();
     this.loadRatingStats();
     this.startPolling();
+    this.setupRealtime();
+  }
+
+  private setupRealtime(): void {
+    this.realtime
+      .connect(this.businessId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(evt => {
+        if (evt.event === 'booking_created' || evt.event === 'booking_updated') {
+          const data = evt.data as { providerId?: string };
+          if (!data?.providerId || data.providerId === this.businessId) {
+            // SSE es push; recarga suave sin spinner
+            this.api.getBusinessAvailability(this.businessId).subscribe(d => this.reservations.set(d));
+          }
+        }
+      });
   }
 
   private lastBookingKey(): string {
@@ -1048,7 +1067,22 @@ export class BookingComponent implements OnInit, OnDestroy {
   private readonly POLL_MS = 15_000;
   private pollSub?: Subscription;
 
+  private setupVisibilityPause(): void {
+    if (typeof document === 'undefined') return;
+    fromEvent(document, 'visibilitychange')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        if (document.hidden) {
+          this.pollSub?.unsubscribe();
+        } else {
+          this.startPolling();
+        }
+      });
+  }
+
   startPolling(): void {
+    // No poll si la pestaña está oculta (ahorro de batería/red, P3)
+    if (typeof document !== 'undefined' && document.hidden) return;
     this.pollSub?.unsubscribe();
     this.pollSub = interval(this.POLL_MS)
       .pipe(

@@ -159,8 +159,41 @@ services:
         ts=$(date +%Y%m%d-%H%M%S);
         pg_dump -Fc -Z 9 -f "/backups/reservorio-$ts.dump" "$PGDATABASE" || echo "backup failed at $ts";
         find /backups -name "reservorio-*.dump" -mtime +14 -delete;
+        if [ -n "$BACKUP_S3_BUCKET" ] && [ -x "/usr/local/bin/backup-offsite.sh" ]; then
+          BACKUP_S3_BUCKET="$BACKUP_S3_BUCKET" /usr/local/bin/backup-offsite.sh /backups || echo "offsite backup failed at $ts";
+        fi;
         sleep 86400;
       done'
+
+  # Offsite sync opcional (P3): si BACKUP_S3_BUCKET está definido, sincroniza ./backups a S3 vía rclone
+  # Usa imagen rclone/rclone; monta ./backups y ./backend/scripts/backup-offsite.sh
+  backup-offsite:
+    image: rclone/rclone:1.66
+    container_name: reservorio-backup-offsite
+    environment:
+      BACKUP_S3_BUCKET: ${BACKUP_S3_BUCKET:-}
+      BACKUP_S3_CRYPT_REMOTE: ${BACKUP_S3_CRYPT_REMOTE:-}
+      # rclone config via env: RCLONE_CONFIG_* o monta rclone.conf
+    volumes:
+      - ./backups:/backups:ro
+      - ./backend/scripts/backup-offsite.sh:/backup-offsite.sh:ro
+    command: >-
+      sh -c 'while true; do if [ -n "$BACKUP_S3_BUCKET" ]; then sh /backup-offsite.sh /backups || echo "offsite sync failed"; fi; sleep 86400; done'
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - reservorio-net
+    mem_limit: 64m
+    cpus: 0.25
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    profiles:
+      - offsite
 
 networks:
   reservorio-net:

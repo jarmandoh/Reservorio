@@ -1,0 +1,23 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalDependencies": ["**/.env.*example"],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "inputs": ["src/**", "package.json", "angular.json", "tsconfig*.json", "tailwind.config.js", "postcss.config.js"],
+      "outputs": ["dist/**", "coverage/**"]
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "inputs": ["src/**", "test/**", "package.json", "tsconfig*.json"],
+      "outputs": ["coverage/**"]
+    },
+    "format:check": {
+      "inputs": ["**/*.{ts,html,js,json,md,yml,yaml,scss,css}"],
+      "cache": false
+    },
+    "format:fix": {
+      "cache": false
+    }
+  }
+}

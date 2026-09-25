@@ -11,6 +11,7 @@ concurrency:
 
 permissions:
   contents: read
+  actions: write
 
 jobs:
   lint:
@@ -83,6 +84,18 @@ jobs:
           RUN_INTEGRATION: '1'
         run: pnpm test
 
+      - name: Run tests with coverage
+        working-directory: backend
+        run: pnpm exec jest --coverage --runInBand
+
+      - name: Upload backend coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: backend/coverage
+          if-no-files-found: warn
+
       - name: Docker build (smoke)
         run: docker build -t reservorio-backend:ci ./backend
 
@@ -110,6 +123,19 @@ jobs:
       - name: Unit tests (vitest)
         working-directory: frontend
         run: npx ng test --watch=false
+
+      - name: Unit tests with coverage
+        working-directory: frontend
+        run: npx ng test --watch=false --coverage
+        continue-on-error: true
+
+      - name: Upload frontend coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: frontend/coverage
+          if-no-files-found: warn
 
       - name: Build
         working-directory: frontend

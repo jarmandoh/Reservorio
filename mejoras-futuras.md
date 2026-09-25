@@ -97,6 +97,14 @@ Documento vivo: cada mejora marcada con ✅ indica trabajo completado y verifica
 - [x] **Recursos y logging driver** ✅ — `docker-compose.yml:2` cada servicio con `mem_limit`/`cpus` (`redis 256m/0.5`, `db 512m/1.0`, `backend 512m/1.0`, `frontend 256m/0.5`, `backup 128m/0.25`) y `logging: json-file max-size 10m max-file 3`. `frontend` healthcheck `http://localhost/` en vez de `/health`.
 - [x] **CI hardening** ✅ — `.github/workflows/ci.yml:3` `concurrency: cancel-in-progress` + `permissions: contents:read`, job `lint:1` `prettier --check` (`frontend format:check`), jobs `backend`/`frontend` con `docker build -t reservorio-*:ci` smoke.
 
+### Escalabilidad P3 (producto y eficiencia)
+
+- [x] **Polling con pausa por visibilidad + SSE realtime** ✅ — `frontend/src/app/features/booking/booking.component.ts:1048` y `business-admin.component.ts:1170` `setupVisibilityPause()` (`fromEvent(document,'visibilitychange')` pausa `pollSub` si `hidden`, reanuda al volver). `backend/src/services/realtime.service.js:1` SSE `GET /api/realtime/stream?businessId` (`Content-Type: text/event-stream`, ping 25s, broadcast `booking_created/updated`), `backend/src/routes/realtime.routes.js:1`, `frontend/src/app/core/services/realtime.service.ts:1` `EventSource` con `NgZone`. Integrado en booking (`setupRealtime()`) y business-admin para recargar sin polling.
+- [x] **Zoneless experimental (opt-in)** ✅ — `frontend/src/app/app.config.ts:1` documenta `provideZonelessChangeDetection()` (quitar `zone.js` de `polyfills` en `angular.json:50` para activar). Polling ya usa `takeUntilDestroyed` y `computed` memoizado, listo para zoneless.
+- [x] **Coverage gates** ✅ — `backend/package.json:48` jest `coverageThreshold` `branches 45/functions 50/lines 55/statements 55`, `frontend` `@vitest/coverage-v8@4.1` (`frontend/package.json:41`) + `ng test --watch=false --coverage` (`frontend/angular.json:118`), CI `.github/workflows/ci.yml:80` `pnpm exec jest --coverage` + `upload-artifact` backend/frontend.
+- [x] **Backup offsite S3** ✅ — `backend/scripts/backup-offsite.sh:1` `rclone sync` (fallback `aws s3 sync`) si `BACKUP_S3_BUCKET` definido, soporta `BACKUP_S3_CRYPT_REMOTE`. `docker-compose.yml:99` servicio `backup-offsite` (`rclone/rclone:1.66`, profile `offsite`, comparte `./backups`). `.env.production.example:105` `BACKUP_S3_BUCKET`/`CRYPT_REMOTE`.
+- [x] **Monorepo pnpm-workspace + turbo** ✅ — `pnpm-workspace.yaml:1` (`backend`, `frontend`), `turbo.json:1` `tasks: build/test/format:check`, `package.json:1` workspace `turbo@2.11` (`private:true`), `.npmrc:4` `shared-workspace-lockfile=false` (locks separados). `turbo run build` cachea `dist/**`.
+
 ---
 
 ## Prioridad recomendada

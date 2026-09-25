@@ -2,12 +2,13 @@ import { Component, OnInit, OnDestroy, DestroyRef, signal, computed, inject } fr
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { interval, Subscription, switchMap, startWith } from 'rxjs';
+import { interval, Subscription, switchMap, startWith, fromEvent } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { AuthService } from '../../core/services/auth.service';
 import { BusinessAdminService } from '../../core/services/business-admin.service';
 import { ToastService } from '../../core/services/toast.service';
+import { RealtimeService } from '../../core/services/realtime.service';
 import { BadgeComponent } from '../../shared/components/badge/badge.component';
 import {
   BookingRecord,
@@ -801,6 +802,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
   private toast = inject(ToastService);
   private fb = inject(FormBuilder);
   private businessAdminService = inject(BusinessAdminService);
+  private realtime = inject(RealtimeService);
   private readonly destroyRef = inject(DestroyRef);
 
   readonly tabs: { id: negocioTab; label: string; icon: string }[] = [
@@ -1111,6 +1113,8 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
     this.loadMarketplaceData();
     this.loadNotifications();
     this.startPolling();
+    this.setupVisibilityPause();
+    this.setupRealtime();
     this.loadServices();
 
     const googleParam = this.route.snapshot.queryParams['google'];
@@ -1160,7 +1164,22 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
       });
   }
 
+  private setupVisibilityPause(): void {
+    if (typeof document === 'undefined') return;
+    fromEvent(document, 'visibilitychange')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        if (document.hidden) {
+          this.pollSub?.unsubscribe();
+        } else {
+          this.startPolling();
+        }
+      });
+  }
+
   startPolling(): void {
+    if (typeof document !== 'undefined' && document.hidden) return;
+    this.pollSub?.unsubscribe();
     this.pollSub = interval(30_000)
       .pipe(
         startWith(0),
@@ -1177,6 +1196,22 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
         error: () => {
           this.resLoading.set(false);
         },
+      });
+  }
+
+  private setupRealtime(): void {
+    this.realtime
+      .connect(this.negocioId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(evt => {
+        if (evt.event === 'booking_created' || evt.event === 'booking_updated') {
+          const data = evt.data as { providerId?: string };
+          if (!data?.providerId || data.providerId === this.negocioId) {
+            this.businessAdminService
+              .loadReservations(this.negocioId, this.token)
+              .subscribe(d => this.reservations.set(d));
+          }
+        }
       });
   }
 
