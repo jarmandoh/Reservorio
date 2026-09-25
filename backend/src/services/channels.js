@@ -15,8 +15,8 @@
  */
 
 const EMAIL_PROVIDER = String(process.env.EMAIL_PROVIDER || 'console').toLowerCase();
-const SMS_PROVIDER   = String(process.env.SMS_PROVIDER || 'console').toLowerCase();
-const EMAIL_FROM     = process.env.EMAIL_FROM || 'no-reply@reservorio.app';
+const SMS_PROVIDER = String(process.env.SMS_PROVIDER || 'console').toLowerCase();
+const EMAIL_FROM = process.env.EMAIL_FROM || 'no-reply@reservorio.app';
 
 const logger = require('../logger');
 
@@ -59,7 +59,15 @@ function parseWebhookHeaders(raw, label) {
 }
 
 function consoleEmail({ to, subject, textBody, htmlBody }) {
-  const item = { channel: 'email', provider: 'console', to: String(to), subject, textBody, htmlBody: htmlBody ?? null, at: new Date().toISOString() };
+  const item = {
+    channel: 'email',
+    provider: 'console',
+    to: String(to),
+    subject,
+    textBody,
+    htmlBody: htmlBody ?? null,
+    at: new Date().toISOString(),
+  };
   outbox.push(item);
   console.log(`[email:console] to=${item.to} subject="${item.subject}"`);
   console.log(textBody || '');
@@ -95,7 +103,7 @@ async function httpSms({ to, message }) {
   return httpPost(url, headers, { to, message, type: 'sms' });
 }
 
-/** Envía un email. Devuelve { ok, status, message, provider? } � nunca lanza. */
+/** Envía un email. Devuelve { ok, status, message, provider? } � nunca lanza. */
 async function sendEmail({ to, subject, textBody, htmlBody } = {}) {
   const cleanTo = String(to ?? '').trim();
   if (!cleanTo) return { ok: false, status: 400, message: 'Destinatario de email requerido' };
@@ -109,14 +117,12 @@ async function sendEmail({ to, subject, textBody, htmlBody } = {}) {
   }
 }
 
-/** Envía un SMS. Devuelve { ok, status, message, provider? } � nunca lanza. */
+/** Envía un SMS. Devuelve { ok, status, message, provider? } � nunca lanza. */
 async function sendSms({ to, message } = {}) {
   const cleanTo = digitsOnly(to);
   if (!cleanTo) return { ok: false, status: 400, message: 'Destinatario de SMS requerido' };
   try {
-    return SMS_PROVIDER === 'http'
-      ? await httpSms({ to: cleanTo, message })
-      : consoleSms({ to: cleanTo, message });
+    return SMS_PROVIDER === 'http' ? await httpSms({ to: cleanTo, message }) : consoleSms({ to: cleanTo, message });
   } catch (error) {
     logger.error('[channels] sendSms falló:', error.message);
     return { ok: false, status: 500, message: error.message };

@@ -1,6 +1,16 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, throwError } from 'rxjs';
-import { ApiResponse, BookingRecord, Customer, NotificationItem, Payment, PaymentRequest, Reservation, UpdatePayload, CheckoutSession } from '../models/reservation.model';
+import {
+  ApiResponse,
+  BookingRecord,
+  Customer,
+  NotificationItem,
+  Payment,
+  PaymentRequest,
+  Reservation,
+  UpdatePayload,
+  CheckoutSession,
+} from '../models/reservation.model';
 import { Business } from '../models/businesses.model';
 import { AuthService } from './auth.service';
 import { ApiService } from './api.service';
@@ -44,7 +54,16 @@ export class BusinessAdminService {
     return this.api.getNotifications(businessId, bookingId);
   }
 
-  createNotification(payload: { businessId: string; customerId?: string; bookingId?: string; type?: string; channel?: string; title: string; message: string; status?: string }): Observable<ApiResponse<any>> {
+  createNotification(payload: {
+    businessId: string;
+    customerId?: string;
+    bookingId?: string;
+    type?: string;
+    channel?: string;
+    title: string;
+    message: string;
+    status?: string;
+  }): Observable<ApiResponse<any>> {
     return this.api.createNotification(payload);
   }
 
@@ -52,7 +71,9 @@ export class BusinessAdminService {
     return this.api.createPayment(payload);
   }
 
-  createCheckoutSession(payload: PaymentRequest & { successUrl?: string; cancelUrl?: string }): Observable<ApiResponse<CheckoutSession>> {
+  createCheckoutSession(
+    payload: PaymentRequest & { successUrl?: string; cancelUrl?: string }
+  ): Observable<ApiResponse<CheckoutSession>> {
     return this.api.createCheckoutSession(payload);
   }
 
@@ -69,15 +90,19 @@ export class BusinessAdminService {
   }
 
   saveProfile(negocioId: string, values: BusinessAdminProfileValues, token: string): Observable<ApiResponse> {
-    return this.api.updateBusiness(negocioId, {
-      name: String(values.name ?? '').trim(),
-      category: String(values.category ?? '').trim(),
-      description: String(values.description ?? '').trim(),
-      location: String(values.location ?? '').trim(),
-      schedule: String(values.schedule ?? '').trim(),
-      phone: String(values.phone ?? '').trim(),
-      cancellationPolicy: String(values.cancellationPolicy ?? '').trim(),
-    }, token);
+    return this.api.updateBusiness(
+      negocioId,
+      {
+        name: String(values.name ?? '').trim(),
+        category: String(values.category ?? '').trim(),
+        description: String(values.description ?? '').trim(),
+        location: String(values.location ?? '').trim(),
+        schedule: String(values.schedule ?? '').trim(),
+        phone: String(values.phone ?? '').trim(),
+        cancellationPolicy: String(values.cancellationPolicy ?? '').trim(),
+      },
+      token
+    );
   }
 
   updatePin(negocioId: string, pin: string, token: string): Observable<ApiResponse> {

@@ -16,7 +16,9 @@ async function listBookings(req, res) {
 async function createBooking(req, res) {
   try {
     const result = await bookingsService.createBooking(req.body);
-    return res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
+    return res
+      .status(result.status)
+      .json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (error) {
     return res.status(500).json({ ok: false, message: error.message });
   }

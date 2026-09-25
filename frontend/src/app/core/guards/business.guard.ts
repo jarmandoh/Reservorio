@@ -3,8 +3,8 @@ import { CanActivateFn, Router, ActivatedRouteSnapshot } from '@angular/router';
 import { AuthService } from '../services/auth.service';
 
 export const businessGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
-  const auth       = inject(AuthService);
-  const router     = inject(Router);
+  const auth = inject(AuthService);
+  const router = inject(Router);
   const businessId = route.params['businessId'] as string;
 
   if (auth.isBusinessUnlocked(businessId)) return true;

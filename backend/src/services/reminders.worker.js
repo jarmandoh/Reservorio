@@ -69,17 +69,23 @@ async function runDueReminders() {
         if (result?.ok) {
           sent += 1;
         } else {
-          logger.error(`[reminders] fallo al crear recordatorio para ${booking.booking_id}: ${result?.message ?? 'sin detalle'}`);
+          logger.error(
+            `[reminders] fallo al crear recordatorio para ${booking.booking_id}: ${result?.message ?? 'sin detalle'}`
+          );
         }
       }
 
       await client.query('COMMIT');
       return { due: rows.length, sent };
     } catch (e) {
-      try { await client.query('ROLLBACK'); } catch {}
+      try {
+        await client.query('ROLLBACK');
+      } catch {}
       throw e;
     } finally {
-      try { client.release(); } catch {}
+      try {
+        client.release();
+      } catch {}
     }
   }
 
@@ -118,7 +124,9 @@ async function runDueReminders() {
     if (result?.ok) {
       sent += 1;
     } else {
-      logger.error(`[reminders] fallo al crear recordatorio para ${booking.booking_id}: ${result?.message ?? 'sin detalle'}`);
+      logger.error(
+        `[reminders] fallo al crear recordatorio para ${booking.booking_id}: ${result?.message ?? 'sin detalle'}`
+      );
     }
   }
 

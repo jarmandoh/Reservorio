@@ -97,7 +97,7 @@ async function createNotification(payload = {}) {
     );
 
     if (customerId) {
-      // Copia externa (email/sms) â¬ fire-and-forget, nunca bloquea ni propaga errores.
+      // Copia externa (email/sms) ï¿½ fire-and-forget, nunca bloquea ni propaga errores.
       deliverExternalNotification(notification).catch(error => {
         logger.error('[notifications] envÃ­o externo fallÃ³:', error?.message ?? error);
       });
@@ -121,7 +121,11 @@ async function deliverExternalNotification(notification) {
   const rowsOf = result => (result && Array.isArray(result.rows) ? result.rows : []);
 
   try {
-    const customerRows = rowsOf(await db.query('SELECT id, name, email, phone, sms_opt_in FROM customers WHERE id = $1', [notification.customerId]));
+    const customerRows = rowsOf(
+      await db.query('SELECT id, name, email, phone, sms_opt_in FROM customers WHERE id = $1', [
+        notification.customerId,
+      ])
+    );
     const customer = customerRows[0];
     if (!customer) return;
 
@@ -131,7 +135,9 @@ async function deliverExternalNotification(notification) {
     let detail = '';
     if (bookingId) {
       try {
-        const bookingRows = rowsOf(await db.query('SELECT booking_date, slot, service_id FROM bookings WHERE id = $1', [bookingId]));
+        const bookingRows = rowsOf(
+          await db.query('SELECT booking_date, slot, service_id FROM bookings WHERE id = $1', [bookingId])
+        );
         const booking = bookingRows[0];
         if (booking) {
           detail = ` el ${String(booking.booking_date).slice(0, 10)} a las ${booking.slot}${booking.service_id ? ` (${booking.service_id})` : ''}`;
@@ -143,7 +149,7 @@ async function deliverExternalNotification(notification) {
 
     const businessRef = businessName ? ` en ${businessName}` : '';
     const subject = `${title}${businessRef}`;
-    const body = `Hola ${customer.name},\n\n${message.trim()}${detail}.\n\nPuedes consultar tu historial en ${FRONTEND_URL}/customer/history.\n\nâ¬ Reservorio`;
+    const body = `Hola ${customer.name},\n\n${message.trim()}${detail}.\n\nPuedes consultar tu historial en ${FRONTEND_URL}/customer/history.\n\nï¿½ Reservorio`;
 
     const outcome = { email: 'skipped', sms: 'skipped' };
     if (customer.email) {
@@ -157,7 +163,7 @@ async function deliverExternalNotification(notification) {
       outcome.sms = smsResult.ok ? 'sent' : 'failed';
     }
 
-    logger.info(`[notifications] externo ${type} â  email:${outcome.email} sms:${outcome.sms}`);
+    logger.info(`[notifications] externo ${type} ï¿½  email:${outcome.email} sms:${outcome.sms}`);
   } catch (error) {
     logger.error('[notifications] deliverExternalNotification ignorado:', error.message);
   }
@@ -185,4 +191,3 @@ async function sendReminderNotification(payload = {}) {
 }
 
 module.exports = { listNotifications, createNotification, sendReminderNotification, deliverExternalNotification };
-

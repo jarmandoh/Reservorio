@@ -18,15 +18,15 @@ const channels = require('./channels');
 const db = require('../db');
 const logger = require('../logger');
 
-const OTP_TTL_MS     = 10 * 60 * 1000;  // 10 min
-const MAGIC_TTL_MS   = 15 * 60 * 1000;  // 15 min
-const MAX_ATTEMPTS   = 5;
-const FRONTEND_URL   = process.env.FRONTEND_URL || 'http://localhost:4200';
-const otpDebug       = () => process.env.OTP_DEBUG === '1';
+const OTP_TTL_MS = 10 * 60 * 1000; // 10 min
+const MAGIC_TTL_MS = 15 * 60 * 1000; // 15 min
+const MAX_ATTEMPTS = 5;
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:4200';
+const otpDebug = () => process.env.OTP_DEBUG === '1';
 
 // Backoff simple por email para solicitudes OTP/magic-link (anti-spam)
 // Mantiene respuesta genérica para evitar enumeración
-const OTP_BACKOFF_MAX   = Number(process.env.OTP_MAX_REQUESTS) || 5;
+const OTP_BACKOFF_MAX = Number(process.env.OTP_MAX_REQUESTS) || 5;
 const OTP_BACKOFF_WINDOW_MS = (Number(process.env.OTP_WINDOW_MIN) || 5) * 60 * 1000;
 const emailOtpRequests = new Map();
 function cleanEmailOtpStore() {
@@ -65,7 +65,9 @@ function digitsOnly(value) {
 }
 
 function cleanEmail(value) {
-  return String(value ?? '').trim().toLowerCase();
+  return String(value ?? '')
+    .trim()
+    .toLowerCase();
 }
 
 function generateOtp() {
@@ -126,12 +128,20 @@ async function requestOtp({ email } = {}) {
   try {
     if (isEmailOtpRateLimited(clean)) {
       // Respuesta genérica para evitar enumeración
-      return { ok: true, status: 200, data: { message: 'Si el correo está registrado, recibirás un código de acceso.' } };
+      return {
+        ok: true,
+        status: 200,
+        data: { message: 'Si el correo está registrado, recibirás un código de acceso.' },
+      };
     }
     const customer = await findCustomerByEmail(clean);
     if (!customer) {
       recordEmailOtpRequest(clean);
-      return { ok: true, status: 200, data: { message: 'Si el correo está registrado, recibirás un código de acceso.' } };
+      return {
+        ok: true,
+        status: 200,
+        data: { message: 'Si el correo está registrado, recibirás un código de acceso.' },
+      };
     }
 
     recordEmailOtpRequest(clean);
@@ -199,7 +209,10 @@ async function verifyOtp({ email, code } = {}) {
         await db.query('DELETE FROM customer_login_codes WHERE id = $1', [record.id]);
         return { ok: false, status: 401, message: 'Demasiados intentos. Solicita un nuevo código.' };
       }
-      await db.query('UPDATE customer_login_codes SET attempts = $1 WHERE id = $2', [Number(record.attempts) + 1, record.id]);
+      await db.query('UPDATE customer_login_codes SET attempts = $1 WHERE id = $2', [
+        Number(record.attempts) + 1,
+        record.id,
+      ]);
       return { ok: false, status: 401, message: 'Código inválido o expirado' };
     }
 
@@ -218,12 +231,20 @@ async function requestMagicLink({ email } = {}) {
 
   try {
     if (isEmailOtpRateLimited(clean)) {
-      return { ok: true, status: 200, data: { message: 'Si el correo está registrado, recibirás un enlace de acceso.' } };
+      return {
+        ok: true,
+        status: 200,
+        data: { message: 'Si el correo está registrado, recibirás un enlace de acceso.' },
+      };
     }
     const customer = await findCustomerByEmail(clean);
     if (!customer) {
       recordEmailOtpRequest(clean);
-      return { ok: true, status: 200, data: { message: 'Si el correo está registrado, recibirás un enlace de acceso.' } };
+      return {
+        ok: true,
+        status: 200,
+        data: { message: 'Si el correo está registrado, recibirás un enlace de acceso.' },
+      };
     }
 
     recordEmailOtpRequest(clean);

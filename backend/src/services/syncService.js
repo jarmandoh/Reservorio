@@ -1,9 +1,9 @@
 'use strict';
 
 const { google } = require('googleapis');
-const db         = require('../db');
-const gsheets    = require('./googleSheets');
-const logger     = require('../logger');
+const db = require('../db');
+const gsheets = require('./googleSheets');
+const logger = require('../logger');
 const { clean } = require('../middleware/sanitize');
 
 /**
@@ -17,7 +17,7 @@ async function syncReservations(businessId) {
   );
   if (!negocio.length || !negocio[0].google_sheet_id || !negocio[0].google_access_token) return;
 
-  const auth   = await gsheets.getAuthClient(businessId);
+  const auth = await gsheets.getAuthClient(businessId);
   const sheets = google.sheets({ version: 'v4', auth });
   const sheetId = negocio[0].google_sheet_id;
 
@@ -54,19 +54,13 @@ async function syncServices(businessId) {
   );
   if (!negocio.length || !negocio[0].google_sheet_id || !negocio[0].google_access_token) return;
 
-  const auth   = await gsheets.getAuthClient(businessId);
+  const auth = await gsheets.getAuthClient(businessId);
   const sheets = google.sheets({ version: 'v4', auth });
   const sheetId = negocio[0].google_sheet_id;
 
-  const { rows } = await db.query(
-    'SELECT nombre FROM services WHERE business_id = $1 ORDER BY nombre',
-    [businessId]
-  );
+  const { rows } = await db.query('SELECT nombre FROM services WHERE business_id = $1 ORDER BY nombre', [businessId]);
 
-  const values = [
-    ['Nombre'],
-    ...rows.map(r => [r.nombre]),
-  ];
+  const values = [['Nombre'], ...rows.map(r => [r.nombre])];
 
   await sheets.spreadsheets.values.clear({
     spreadsheetId: sheetId,
@@ -93,9 +87,7 @@ async function syncAll(businessId) {
  * Registra errores pero no los propaga.
  */
 function syncInBackground(businessId, type = 'all') {
-  const fn = type === 'reservations' ? syncReservations
-           : type === 'services'     ? syncServices
-           : syncAll;
+  const fn = type === 'reservations' ? syncReservations : type === 'services' ? syncServices : syncAll;
 
   fn(businessId).catch(err => {
     logger.error(`[Sync] Error sincronizando ${type} para ${businessId}:`, err.message);
@@ -108,7 +100,7 @@ async function bulkCreateSlots(businessId, slots) {
   }
   if (!businessId) throw new Error('businessId requerido en bulkCreateSlots');
 
-  const rows = slots.map((s) => {
+  const rows = slots.map(s => {
     const franja = clean(String(s.franja ?? '').trim());
     if (!franja) throw new Error('franja requerida en cada slot');
     const disponibilidad = clean(String(s.disponibilidad ?? 'Disponible').trim()) || 'Disponible';
@@ -126,7 +118,11 @@ async function bulkCreateSlots(businessId, slots) {
     ];
   });
 
-  const placeholders = rows.map((_, i) => `($${i * 7 + 1},$${i * 7 + 2},$${i * 7 + 3},$${i * 7 + 4},$${i * 7 + 5},$${i * 7 + 6},$${i * 7 + 7})`).join(', ');
+  const placeholders = rows
+    .map(
+      (_, i) => `($${i * 7 + 1},$${i * 7 + 2},$${i * 7 + 3},$${i * 7 + 4},$${i * 7 + 5},$${i * 7 + 6},$${i * 7 + 7})`
+    )
+    .join(', ');
   const flat = rows.flat();
 
   await db.query(
@@ -134,8 +130,6 @@ async function bulkCreateSlots(businessId, slots) {
     flat
   );
   return { success: true, message: `${slots.length} slots created` };
-} 
+}
 
 module.exports = { syncReservations, syncServices, syncAll, syncInBackground, bulkCreateSlots };
-
-

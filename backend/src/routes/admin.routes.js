@@ -18,7 +18,9 @@ router.use(requireAdmin);
 router.get('/stats', async (req, res) => {
   try {
     const result = await getMarketplaceStats();
-    return res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
+    return res
+      .status(result.status)
+      .json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (error) {
     return res.status(500).json({ ok: false, message: error.message });
   }
@@ -27,7 +29,9 @@ router.get('/stats', async (req, res) => {
 router.get('/payments', async (req, res) => {
   try {
     const result = await listAdminPayments(req.query);
-    return res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
+    return res
+      .status(result.status)
+      .json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (error) {
     return res.status(500).json({ ok: false, message: error.message });
   }
@@ -36,7 +40,9 @@ router.get('/payments', async (req, res) => {
 router.get('/reviews', async (req, res) => {
   try {
     const result = await listAllReviews();
-    return res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
+    return res
+      .status(result.status)
+      .json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (error) {
     return res.status(500).json({ ok: false, message: error.message });
   }
@@ -45,7 +51,9 @@ router.get('/reviews', async (req, res) => {
 router.delete('/reviews/:id', async (req, res) => {
   try {
     const result = await deleteReview(req.params.id);
-    return res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
+    return res
+      .status(result.status)
+      .json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (error) {
     return res.status(500).json({ ok: false, message: error.message });
   }
@@ -54,7 +62,9 @@ router.delete('/reviews/:id', async (req, res) => {
 router.get('/services', async (req, res) => {
   try {
     const result = await listAllServices();
-    return res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
+    return res
+      .status(result.status)
+      .json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (error) {
     return res.status(500).json({ ok: false, message: error.message });
   }
@@ -63,7 +73,9 @@ router.get('/services', async (req, res) => {
 router.delete('/services/:serviceId', async (req, res) => {
   try {
     const result = await deleteService(req.params.serviceId);
-    return res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
+    return res
+      .status(result.status)
+      .json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (error) {
     return res.status(500).json({ ok: false, message: error.message });
   }

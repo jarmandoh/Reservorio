@@ -11,7 +11,7 @@ export interface MapCoordinates {
   imports: [],
   templateUrl: './map-modal.component.html',
   styleUrl: './map-modal.component.css',
-  standalone: true
+  standalone: true,
 })
 export class MapModalComponent {
   // Query selectors modernos usando viewChild (Signals)
@@ -30,8 +30,8 @@ export class MapModalComponent {
   // Abre el modal y levanta el mapa
   public open(initialCoords?: MapCoordinates) {
     this.dialogEl()?.nativeElement.showModal();
-    
-    // Un pequeño delay asegura que el contenedor del diálogo se renderice 
+
+    // Un pequeño delay asegura que el contenedor del diálogo se renderice
     // antes de que Leaflet intente calcular las dimensiones del mapa.
     setTimeout(() => {
       this.initMap(initialCoords);
@@ -40,9 +40,9 @@ export class MapModalComponent {
 
   // Inicializa la instancia de Leaflet
   private initMap(initialCoords?: MapCoordinates) {
-    const defaultLat = initialCoords?.lat ?? 4.7110; // Bogotá por defecto
+    const defaultLat = initialCoords?.lat ?? 4.711; // Bogotá por defecto
     const defaultLng = initialCoords?.lng ?? -74.0721;
-    
+
     if (this.map) {
       this.map.remove(); // Limpia mapas previos si existían
     }
@@ -54,7 +54,7 @@ export class MapModalComponent {
 
     // Servidor de mapas gratuito (OpenStreetMap)
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors'
+      attribution: '© OpenStreetMap contributors',
     }).addTo(this.map);
 
     // Forzar redibujado para corregir posibles cortes visuales en contenedores dinámicos
@@ -85,8 +85,8 @@ export class MapModalComponent {
           iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
           shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
           iconSize: [25, 41],
-          iconAnchor: [12, 41]
-        })
+          iconAnchor: [12, 41],
+        }),
       }).addTo(this.map);
     }
   }

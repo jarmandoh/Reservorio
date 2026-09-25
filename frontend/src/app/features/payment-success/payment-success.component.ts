@@ -17,7 +17,8 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
         <h1 class="mt-3 font-display text-3xl font-bold">¡Reserva confirmada!</h1>
 
         <p class="mt-3 text-sm text-on-surface-variant">
-          La reserva ya quedó creada y el pago ha sido confirmado. El proveedor puede ver el estado actualizado en su panel.
+          La reserva ya quedó creada y el pago ha sido confirmado. El proveedor puede ver el estado actualizado en su
+          panel.
         </p>
 
         <div class="mt-6 rounded-2xl bg-surface-container p-4 text-left text-sm">
@@ -36,7 +37,11 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
         </div>
 
         <div class="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
-          <a [routerLink]="providerId ? ['/business', providerId, 'admin'] : '/'" [queryParams]="providerId ? { bookingId: bookingId, paymentStatus: 'paid' } : null" class="btn-primary">
+          <a
+            [routerLink]="providerId ? ['/business', providerId, 'admin'] : '/'"
+            [queryParams]="providerId ? { bookingId: bookingId, paymentStatus: 'paid' } : null"
+            class="btn-primary"
+          >
             Volver al panel
           </a>
           <a routerLink="/" class="btn-secondary">Volver al inicio</a>

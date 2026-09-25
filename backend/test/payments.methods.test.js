@@ -52,13 +52,15 @@ describe('payments — más canales y confirmación manual', () => {
   test('POST /checkout con método transfer devuelve instrucciones bancarias sin pasarela', async () => {
     db.query.mockResolvedValueOnce({ rows: [insertedPayment] });
 
-    const res = await request(buildApp())
-      .post('/api/payments/checkout')
-      .send({
-        bookingId: 'b1', providerId: 'neg1', customerId: 'c1',
-        amount: 30, currency: 'EUR', method: 'transfer',
-        status: 'pending',
-      });
+    const res = await request(buildApp()).post('/api/payments/checkout').send({
+      bookingId: 'b1',
+      providerId: 'neg1',
+      customerId: 'c1',
+      amount: 30,
+      currency: 'EUR',
+      method: 'transfer',
+      status: 'pending',
+    });
 
     expect(res.status).toBe(200);
     expect(res.body.data.method).toBe('transfer');
@@ -70,12 +72,14 @@ describe('payments — más canales y confirmación manual', () => {
   test('POST /checkout con método cash devuelve instrucciones en efectivo', async () => {
     db.query.mockResolvedValueOnce({ rows: [{ ...insertedPayment, method: 'cash' }] });
 
-    const res = await request(buildApp())
-      .post('/api/payments/checkout')
-      .send({
-        bookingId: 'b1', providerId: 'neg1', customerId: 'c1',
-        amount: 30, currency: 'EUR', method: 'cash',
-      });
+    const res = await request(buildApp()).post('/api/payments/checkout').send({
+      bookingId: 'b1',
+      providerId: 'neg1',
+      customerId: 'c1',
+      amount: 30,
+      currency: 'EUR',
+      method: 'cash',
+    });
 
     expect(res.status).toBe(200);
     expect(res.body.data.method).toBe('cash');
@@ -85,12 +89,14 @@ describe('payments — más canales y confirmación manual', () => {
   test('POST /checkout con card sin Stripe devuelve flujo dev', async () => {
     db.query.mockResolvedValue({ rows: [insertedPayment] });
 
-    const res = await request(buildApp())
-      .post('/api/payments/checkout')
-      .send({
-        bookingId: 'b1', providerId: 'neg1', customerId: 'c1',
-        amount: 30, currency: 'EUR', method: 'card',
-      });
+    const res = await request(buildApp()).post('/api/payments/checkout').send({
+      bookingId: 'b1',
+      providerId: 'neg1',
+      customerId: 'c1',
+      amount: 30,
+      currency: 'EUR',
+      method: 'card',
+    });
 
     expect(res.status).toBe(200);
     expect(res.body.data.checkoutUrl).toContain('dev=1');
@@ -115,7 +121,9 @@ describe('payments — más canales y confirmación manual', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.data.status).toBe('paid');
-    expect(notificationsService.createNotification).toHaveBeenCalledWith(expect.objectContaining({ bookingId: 'b1', type: 'payment_received' }));
+    expect(notificationsService.createNotification).toHaveBeenCalledWith(
+      expect.objectContaining({ bookingId: 'b1', type: 'payment_received' })
+    );
   });
 
   test('PATCH /:id no permite que otro negocio confirme un pago ajeno', async () => {

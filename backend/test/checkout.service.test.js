@@ -21,14 +21,27 @@ describe('checkout.service', () => {
     customersService.findOrCreateCustomer.mockResolvedValue({ ok: true, status: 200, data: { id: 'c1' } });
     bookingsService.createBooking.mockResolvedValue({ ok: true, status: 201, data: { id: 'b1' } });
 
-    const res = await checkoutForBusiness('neg1', { franja: '10:00', cliente: 'Ana', telefono: '600000000', servicio: 'Corte', notas: 'n' });
+    const res = await checkoutForBusiness('neg1', {
+      franja: '10:00',
+      cliente: 'Ana',
+      telefono: '600000000',
+      servicio: 'Corte',
+      notas: 'n',
+    });
 
     expect(res.ok).toBe(true);
     expect(res.status).toBe(201);
     expect(res.data).toEqual({ bookingId: 'b1', customerId: 'c1', reservationId: 42 });
-    expect(businessesService.createReservation).toHaveBeenCalledWith('neg1', expect.objectContaining({ franja: '10:00' }));
-    expect(customersService.findOrCreateCustomer).toHaveBeenCalledWith(expect.objectContaining({ name: 'Ana', phone: '600000000' }));
-    expect(bookingsService.createBooking).toHaveBeenCalledWith(expect.objectContaining({ providerId: 'neg1', customerId: 'c1', slot: '10:00', serviceId: 'Corte' }));
+    expect(businessesService.createReservation).toHaveBeenCalledWith(
+      'neg1',
+      expect.objectContaining({ franja: '10:00' })
+    );
+    expect(customersService.findOrCreateCustomer).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'Ana', phone: '600000000' })
+    );
+    expect(bookingsService.createBooking).toHaveBeenCalledWith(
+      expect.objectContaining({ providerId: 'neg1', customerId: 'c1', slot: '10:00', serviceId: 'Corte' })
+    );
   });
 
   test('genera email guest cuando no se aporta email', async () => {

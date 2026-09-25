@@ -14,9 +14,7 @@ let adminHashPromise = null;
 function getAdminHash() {
   if (!adminHashPromise) {
     const configured = String(process.env.ADMIN_PIN_HASH || '').trim();
-    adminHashPromise = configured
-      ? Promise.resolve(configured)
-      : bcrypt.hash(String(ADMIN_PIN), 10);
+    adminHashPromise = configured ? Promise.resolve(configured) : bcrypt.hash(String(ADMIN_PIN), 10);
   }
   return adminHashPromise;
 }
@@ -44,7 +42,12 @@ async function registerOwner({ name, email, password }) {
 
   const ownerId = randomUUID();
   const passwordHash = await bcrypt.hash(passwordValue, 10);
-  await db.query('INSERT INTO owners (id, name, email, password_hash) VALUES ($1, $2, $3, $4)', [ownerId, normalizedName, normalizedEmail, passwordHash]);
+  await db.query('INSERT INTO owners (id, name, email, password_hash) VALUES ($1, $2, $3, $4)', [
+    ownerId,
+    normalizedName,
+    normalizedEmail,
+    passwordHash,
+  ]);
 
   const token = sign({ role: 'owner', ownerId }, '8h');
   return {
@@ -95,15 +98,14 @@ function digitsOnly(value) {
  * infraestructura de email/SMS). Emite JWT con rol customer.
  */
 async function loginCustomer({ email, phone } = {}) {
-  const cleanEmail = String(email ?? '').trim().toLowerCase();
+  const cleanEmail = String(email ?? '')
+    .trim()
+    .toLowerCase();
   if (!cleanEmail) {
     return { ok: false, status: 400, message: 'email requerido' };
   }
 
-  const { rows } = await db.query(
-    'SELECT id, name, email, phone FROM customers WHERE email = $1',
-    [cleanEmail]
-  );
+  const { rows } = await db.query('SELECT id, name, email, phone FROM customers WHERE email = $1', [cleanEmail]);
   if (!rows.length) {
     return { ok: false, status: 401, message: 'No encontramos un cliente con ese email y teléfono' };
   }

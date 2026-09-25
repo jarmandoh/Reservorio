@@ -47,11 +47,14 @@ describe('GDPR — consentimiento, export y borrado', () => {
     });
 
     test('crea el cliente cuando dataConsent es true y guarda la marca temporal', async () => {
-      db.query.mockResolvedValueOnce({ rows: [] });                    // existe?
+      db.query.mockResolvedValueOnce({ rows: [] }); // existe?
       db.query.mockResolvedValueOnce({ rows: [{ id: 'c1', name: 'Ana', email: 'ana@example.com', phone: '' }] }); // INSERT
 
       const res = await customersService.createCustomer({
-        name: 'Ana', email: 'ana@example.com', phone: '600123456', dataConsent: true,
+        name: 'Ana',
+        email: 'ana@example.com',
+        phone: '600123456',
+        dataConsent: true,
       });
 
       expect(res.ok).toBe(true);
@@ -74,10 +77,16 @@ describe('GDPR — consentimiento, export y borrado', () => {
     });
 
     test('registra el consentimiento cuando el cliente existente no lo tenía', async () => {
-      db.query.mockResolvedValueOnce({ rows: [{ id: 'c1', name: 'Ana', email: 'ana@example.com', phone: '', data_consent: false }] });
+      db.query.mockResolvedValueOnce({
+        rows: [{ id: 'c1', name: 'Ana', email: 'ana@example.com', phone: '', data_consent: false }],
+      });
       db.query.mockResolvedValueOnce({ rows: [] }); // UPDATE
 
-      const res = await customersService.findOrCreateCustomer({ name: 'Ana', email: 'ana@example.com', dataConsent: true });
+      const res = await customersService.findOrCreateCustomer({
+        name: 'Ana',
+        email: 'ana@example.com',
+        dataConsent: true,
+      });
 
       expect(res.ok).toBe(true);
       const update = db.query.mock.calls.find(c => String(c[0]).startsWith('UPDATE customers'));
@@ -86,12 +95,16 @@ describe('GDPR — consentimiento, export y borrado', () => {
     });
 
     test('inserta las columnas de consentimiento al crear', async () => {
-      db.query.mockResolvedValueOnce({ rows: [] });                       // no existe
-      db.query.mockResolvedValueOnce({});                                 // INSERT
+      db.query.mockResolvedValueOnce({ rows: [] }); // no existe
+      db.query.mockResolvedValueOnce({}); // INSERT
       db.query.mockResolvedValueOnce({ rows: [{ id: 'c2', name: 'Luis', email: 'luis@example.com', phone: '' }] }); // relectura
 
       const res = await customersService.findOrCreateCustomer({
-        name: 'Luis', email: 'luis@example.com', phone: '600000000', dataConsent: true, marketingConsent: false,
+        name: 'Luis',
+        email: 'luis@example.com',
+        phone: '600000000',
+        dataConsent: true,
+        marketingConsent: false,
       });
 
       expect(res.ok).toBe(true);
@@ -102,8 +115,8 @@ describe('GDPR — consentimiento, export y borrado', () => {
 
   describe('exportCustomerData', () => {
     test('devuelve perfil, bookings, pagos y notificaciones', async () => {
-      db.query.mockResolvedValueOnce({ rows: [{ id: 'c1', name: 'Ana', email: 'ana@example.com', phone: '' }] });  // perfil
-      db.query.mockResolvedValue({ rows: [] });                                                                 // bookings/payments/notifications
+      db.query.mockResolvedValueOnce({ rows: [{ id: 'c1', name: 'Ana', email: 'ana@example.com', phone: '' }] }); // perfil
+      db.query.mockResolvedValue({ rows: [] }); // bookings/payments/notifications
 
       const res = await customersService.exportCustomerData('c1');
 
@@ -119,7 +132,7 @@ describe('GDPR — consentimiento, export y borrado', () => {
   describe('deleteCustomer (derecho al olvido)', () => {
     test('anonimiza el registro e invalida los códigos de acceso', async () => {
       db.query.mockResolvedValueOnce({ rows: [{ id: 'c1' }] }); // UPDATE ... RETURNING id
-      db.query.mockResolvedValueOnce({ rows: [] });            // DELETE customer_login_codes
+      db.query.mockResolvedValueOnce({ rows: [] }); // DELETE customer_login_codes
 
       const res = await customersService.deleteCustomer('c1');
 

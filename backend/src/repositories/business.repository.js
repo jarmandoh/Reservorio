@@ -21,12 +21,17 @@ function buildBusinessWhereClauses(filters = {}) {
   const search = String(q ?? '').trim();
   if (search) {
     values.push(`%${clean(search)}%`);
-    clauses.push(`(name ILIKE $${values.length} OR description ILIKE $${values.length} OR location ILIKE $${values.length} OR category ILIKE $${values.length} OR tags ILIKE $${values.length})`);
+    clauses.push(
+      `(name ILIKE $${values.length} OR description ILIKE $${values.length} OR location ILIKE $${values.length} OR category ILIKE $${values.length} OR tags ILIKE $${values.length})`
+    );
   }
 
   const tagInput = String(tags ?? interest ?? '').trim();
   if (tagInput) {
-    const tagList = tagInput.split(',').map((t) => t.trim()).filter(Boolean);
+    const tagList = tagInput
+      .split(',')
+      .map(t => t.trim())
+      .filter(Boolean);
     for (const tag of tagList) {
       values.push(`%${clean(tag)}%`);
       clauses.push(`tags ILIKE $${values.length}`);
@@ -104,13 +109,25 @@ async function createBusiness(payload, ownerId = null) {
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)`,
     [
       id,
-      clean(name), clean(category), clean(description ?? ''), clean(location ?? ''),
-      Number(rating ?? 5.0), Number(reviews ?? 0),
+      clean(name),
+      clean(category),
+      clean(description ?? ''),
+      clean(location ?? ''),
+      Number(rating ?? 5.0),
+      Number(reviews ?? 0),
       tagsStr,
       clean(gradient ?? 'linear-gradient(135deg,#005bbf,#1a73e8)'),
-      clean(icon ?? 'store'), clean(schedule ?? ''), clean(logo ?? ''), clean(phone ?? ''),
-      clean(facebook ?? ''), clean(instagram ?? ''), clean(tiktok ?? ''), clean(whatsapp ?? ''), clean(linkedin ?? ''),
-      true, pinHash,
+      clean(icon ?? 'store'),
+      clean(schedule ?? ''),
+      clean(logo ?? ''),
+      clean(phone ?? ''),
+      clean(facebook ?? ''),
+      clean(instagram ?? ''),
+      clean(tiktok ?? ''),
+      clean(whatsapp ?? ''),
+      clean(linkedin ?? ''),
+      true,
+      pinHash,
     ]
   );
 
@@ -122,7 +139,10 @@ async function createBusiness(payload, ownerId = null) {
 }
 
 async function updateBusiness(businessId, sets, values) {
-  return db.query(`UPDATE businesses SET ${sets.join(', ')} WHERE id = $${values.length + 1} RETURNING *`, [...values, businessId]);
+  return db.query(`UPDATE businesses SET ${sets.join(', ')} WHERE id = $${values.length + 1} RETURNING *`, [
+    ...values,
+    businessId,
+  ]);
 }
 
 async function toggleBusiness(businessId) {
@@ -139,31 +159,43 @@ async function deleteBusiness(businessId) {
 
 async function listReservations(businessId, pagination = null) {
   if (pagination && pagination.paginated) {
-    return db.query(
-      'SELECT * FROM reservations WHERE business_id = $1 ORDER BY franja LIMIT $2 OFFSET $3',
-      [businessId, pagination.limit, pagination.offset]
-    );
+    return db.query('SELECT * FROM reservations WHERE business_id = $1 ORDER BY franja LIMIT $2 OFFSET $3', [
+      businessId,
+      pagination.limit,
+      pagination.offset,
+    ]);
   }
   return db.query('SELECT * FROM reservations WHERE business_id = $1 ORDER BY franja', [businessId]);
 }
 
 async function countReservations(businessId) {
-  const { rows } = await db.query('SELECT COUNT(*)::int AS total FROM reservations WHERE business_id = $1', [businessId]);
+  const { rows } = await db.query('SELECT COUNT(*)::int AS total FROM reservations WHERE business_id = $1', [
+    businessId,
+  ]);
   return Number(rows[0]?.total) || 0;
 }
 
 async function createReservation(businessId, franja, cliente, telefono, servicio, notas) {
-  return db.query(`INSERT INTO reservations (business_id, franja, disponibilidad, cliente, telefono, servicio, notas)
-     VALUES ($1,$2,'Reservado',$3,$4,$5,$6) RETURNING *`, [businessId, clean(franja), clean(cliente), clean(telefono), clean(servicio ?? ''), clean(notas ?? '')]);
+  return db.query(
+    `INSERT INTO reservations (business_id, franja, disponibilidad, cliente, telefono, servicio, notas)
+     VALUES ($1,$2,'Reservado',$3,$4,$5,$6) RETURNING *`,
+    [businessId, clean(franja), clean(cliente), clean(telefono), clean(servicio ?? ''), clean(notas ?? '')]
+  );
 }
 
 async function checkReservationSlotTaken(businessId, franja) {
-  return db.query(`SELECT id FROM reservations WHERE business_id = $1 AND franja = $2 AND disponibilidad != 'Disponible'`, [businessId, clean(franja)]);
+  return db.query(
+    `SELECT id FROM reservations WHERE business_id = $1 AND franja = $2 AND disponibilidad != 'Disponible'`,
+    [businessId, clean(franja)]
+  );
 }
 
 async function updateReservation(businessId, reservationId, disponibilidad, notas) {
-  return db.query(`UPDATE reservations SET disponibilidad = $1, notas = $2, updated_at = now()
-     WHERE id = $3 AND business_id = $4 RETURNING *`, [clean(disponibilidad), clean(notas ?? ''), reservationId, businessId]);
+  return db.query(
+    `UPDATE reservations SET disponibilidad = $1, notas = $2, updated_at = now()
+     WHERE id = $3 AND business_id = $4 RETURNING *`,
+    [clean(disponibilidad), clean(notas ?? ''), reservationId, businessId]
+  );
 }
 
 async function listServices(businessId) {
@@ -175,7 +207,10 @@ async function addService(businessId, nombre) {
 }
 
 async function removeService(businessId, nombre) {
-  return db.query('DELETE FROM services WHERE business_id = $1 AND nombre = $2', [businessId, clean(decodeURIComponent(nombre ?? ''))]);
+  return db.query('DELETE FROM services WHERE business_id = $1 AND nombre = $2', [
+    businessId,
+    clean(decodeURIComponent(nombre ?? '')),
+  ]);
 }
 
 module.exports = {

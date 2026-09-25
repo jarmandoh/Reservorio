@@ -39,7 +39,9 @@ describe('Auth API — cliente (panel de cliente)', () => {
   });
 
   test('POST /customer/login devuelve 401 si el telefono no coincide', async () => {
-    db.query.mockResolvedValueOnce({ rows: [{ id: 'c1', name: 'Ana', email: 'ana@example.com', phone: '+34 600 111 222' }] });
+    db.query.mockResolvedValueOnce({
+      rows: [{ id: 'c1', name: 'Ana', email: 'ana@example.com', phone: '+34 600 111 222' }],
+    });
 
     const res = await request(app)
       .post('/api/auth/customer/login')

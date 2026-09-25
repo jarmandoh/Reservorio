@@ -31,13 +31,28 @@ describe('Legacy routes', () => {
   });
 
   test('POST /api/reservations creates reservation without auth', async () => {
-    db.query
-      .mockResolvedValueOnce({ rows: [] })
-      .mockResolvedValueOnce({ rows: [{ id: 1, business_id: 'negocio1', franja: '09:00', cliente: 'Juan', telefono: '+1234567890', servicio: 'Corte', notas: '' }] });
+    db.query.mockResolvedValueOnce({ rows: [] }).mockResolvedValueOnce({
+      rows: [
+        {
+          id: 1,
+          business_id: 'negocio1',
+          franja: '09:00',
+          cliente: 'Juan',
+          telefono: '+1234567890',
+          servicio: 'Corte',
+          notas: '',
+        },
+      ],
+    });
 
-    const response = await request(app)
-      .post('/api/reservations')
-      .send({ businessId: 'negocio1', franja: '09:00', cliente: 'Juan', telefono: '+1234567890', servicio: 'Corte', notas: '' });
+    const response = await request(app).post('/api/reservations').send({
+      businessId: 'negocio1',
+      franja: '09:00',
+      cliente: 'Juan',
+      telefono: '+1234567890',
+      servicio: 'Corte',
+      notas: '',
+    });
 
     expect(response.status).toBe(201);
     expect(response.body.ok).toBe(true);
@@ -48,9 +63,14 @@ describe('Legacy routes', () => {
   test('POST /api/reservations rejects a duplicate occupied slot', async () => {
     db.query.mockResolvedValueOnce({ rows: [{ id: 99 }] });
 
-    const response = await request(app)
-      .post('/api/reservations')
-      .send({ businessId: 'negocio1', franja: '09:00', cliente: 'Juan', telefono: '+1234567890', servicio: 'Corte', notas: '' });
+    const response = await request(app).post('/api/reservations').send({
+      businessId: 'negocio1',
+      franja: '09:00',
+      cliente: 'Juan',
+      telefono: '+1234567890',
+      servicio: 'Corte',
+      notas: '',
+    });
 
     expect(response.status).toBe(409);
     expect(response.body.ok).toBe(false);
@@ -75,9 +95,7 @@ describe('Legacy routes', () => {
   });
 
   test('POST /api/services requires auth', async () => {
-    const response = await request(app)
-      .post('/api/services')
-      .send({ businessId: 'negocio1', nombre: 'Corte' });
+    const response = await request(app).post('/api/services').send({ businessId: 'negocio1', nombre: 'Corte' });
 
     expect(response.status).toBe(401);
     expect(response.body.ok).toBe(false);
@@ -94,6 +112,9 @@ describe('Legacy routes', () => {
 
     expect(response.status).toBe(200);
     expect(response.body.ok).toBe(true);
-    expect(db.query).toHaveBeenCalledWith('DELETE FROM services WHERE business_id = $1 AND nombre = $2', ['negocio1', 'Corte']);
+    expect(db.query).toHaveBeenCalledWith('DELETE FROM services WHERE business_id = $1 AND nombre = $2', [
+      'negocio1',
+      'Corte',
+    ]);
   });
 });

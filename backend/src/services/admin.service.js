@@ -24,9 +24,7 @@ async function getMarketplaceStats() {
   const bookings = bookingsResult.ok ? bookingsResult.data : [];
   const customers = (customersResult.ok ? customersResult.data : []).length;
   const payments = paymentsResult.ok ? paymentsResult.data : [];
-  const revenue = payments
-    .filter(p => p.status === 'paid')
-    .reduce((sum, p) => sum + Number(p.amount || 0), 0);
+  const revenue = payments.filter(p => p.status === 'paid').reduce((sum, p) => sum + Number(p.amount || 0), 0);
 
   let dbStats = null;
   if (process.env.DATABASE_URL) {

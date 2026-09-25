@@ -8,6 +8,13 @@ services:
     restart: unless-stopped
     networks:
       - reservorio-net
+    mem_limit: 256m
+    cpus: 0.5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -29,6 +36,13 @@ services:
     restart: unless-stopped
     networks:
       - reservorio-net
+    mem_limit: 512m
+    cpus: 1.0
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U reservorio -d reservorio"]
       interval: 10s
@@ -74,6 +88,13 @@ services:
     restart: unless-stopped
     networks:
       - reservorio-net
+    mem_limit: 512m
+    cpus: 1.0
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
       interval: 30s
@@ -95,6 +116,18 @@ services:
     restart: unless-stopped
     networks:
       - reservorio-net
+    mem_limit: 256m
+    cpus: 0.5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
   backup:
     image: postgres:16-alpine
@@ -113,6 +146,13 @@ services:
     restart: unless-stopped
     networks:
       - reservorio-net
+    mem_limit: 128m
+    cpus: 0.25
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     entrypoint: >
       sh -c '
       while true; do

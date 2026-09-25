@@ -1,37 +1,37 @@
-import {
-  Component, OnInit, signal, computed, effect, inject, DestroyRef,
-  viewChild
-} from '@angular/core';
+import { Component, OnInit, signal, computed, effect, inject, DestroyRef, viewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import {
-  ReactiveFormsModule, FormBuilder, Validators, AbstractControl
-} from '@angular/forms';
+import { ReactiveFormsModule, FormBuilder, Validators, AbstractControl } from '@angular/forms';
 import { Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AdminService } from '../../core/services/admin.service';
 import { ToastService } from '../../core/services/toast.service';
-import { AuthService }  from '../../core/services/auth.service';
+import { AuthService } from '../../core/services/auth.service';
 import { BadgeComponent } from '../../shared/components/badge/badge.component';
-import { Reservation, Payment, PaymentStatus, AdminStats, AdminReview, AdminServiceRecord }  from '../../core/models/reservation.model';
+import {
+  Reservation,
+  Payment,
+  PaymentStatus,
+  AdminStats,
+  AdminReview,
+  AdminServiceRecord,
+} from '../../core/models/reservation.model';
 import { Business, NewBusinessPayload } from '../../core/models/businesses.model';
 import { Categoria } from '../../core/models/categorias.model';
 import { MapModalComponent, MapCoordinates } from '../../shared/components/map-modal/map-modal.component';
 
-
-
 type AdminTab = 'panel' | 'resenas' | 'pagos' | 'reservas' | 'servicios' | 'ajustes' | 'negocios';
 
 @Component({
-    selector: 'app-admin',
-    imports: [CommonModule, ReactiveFormsModule, BadgeComponent, MapModalComponent],
-    templateUrl: './admin.component.html',
+  selector: 'app-admin',
+  imports: [CommonModule, ReactiveFormsModule, BadgeComponent, MapModalComponent],
+  templateUrl: './admin.component.html',
 })
 export class AdminComponent implements OnInit {
   private adminService = inject(AdminService);
   private toast = inject(ToastService);
-  private auth  = inject(AuthService);
+  private auth = inject(AuthService);
   private router = inject(Router);
-  private fb    = inject(FormBuilder);
+  private fb = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
 
   readonly sheetId = '1cxZR6YYFkXJy8AKGM-1AakGk9hw6AR9vTv2RHm4yUNc';
@@ -40,38 +40,38 @@ export class AdminComponent implements OnInit {
   location = signal<MapCoordinates | null>(null);
 
   readonly tabs = [
-    { id: 'panel'    as AdminTab, label: 'Panel',     icon: 'dashboard' },
-    { id: 'negocios' as AdminTab, label: 'Negocios',  icon: 'store' },
-    { id: 'resenas'  as AdminTab, label: 'Reseñas',   icon: 'rate_review' },
-    { id: 'pagos'    as AdminTab, label: 'Pagos',     icon: 'payments' },
+    { id: 'panel' as AdminTab, label: 'Panel', icon: 'dashboard' },
+    { id: 'negocios' as AdminTab, label: 'Negocios', icon: 'store' },
+    { id: 'resenas' as AdminTab, label: 'Reseñas', icon: 'rate_review' },
+    { id: 'pagos' as AdminTab, label: 'Pagos', icon: 'payments' },
   ];
 
-  readonly tab            = signal<AdminTab>('panel');
-  readonly loading        = signal(false);
+  readonly tab = signal<AdminTab>('panel');
+  readonly loading = signal(false);
   readonly servicesLoading = signal(false);
-  readonly addingService   = signal(false);
+  readonly addingService = signal(false);
   readonly deletingService = signal<string | null>(null);
-  readonly updating       = signal<number | null>(null);
-  readonly error          = signal<string | null>(null);
-  readonly reservations   = signal<Reservation[]>([]);
-  readonly services       = signal<string[]>([]);
-  readonly searchQuery    = signal('');
-  readonly filterStatus   = signal('');
-  readonly modalRow       = signal<Reservation | null>(null);
-  readonly newStatus      = signal('disponible');
-  readonly pinError       = signal<string | null>(null);
+  readonly updating = signal<number | null>(null);
+  readonly error = signal<string | null>(null);
+  readonly reservations = signal<Reservation[]>([]);
+  readonly services = signal<string[]>([]);
+  readonly searchQuery = signal('');
+  readonly filterStatus = signal('');
+  readonly modalRow = signal<Reservation | null>(null);
+  readonly newStatus = signal('disponible');
+  readonly pinError = signal<string | null>(null);
 
   // ── Panel avanzado state (#14) ─────────────────────────────────────────
   readonly adminPanelLoading = signal(false);
-  readonly adminPanelError   = signal<string | null>(null);
-  readonly adminStats        = signal<AdminStats | null>(null);
-  readonly allReviews        = signal<AdminReview[]>([]);
-  readonly allServices       = signal<AdminServiceRecord[]>([]);
-  readonly payments          = signal<Payment[]>([]);
+  readonly adminPanelError = signal<string | null>(null);
+  readonly adminStats = signal<AdminStats | null>(null);
+  readonly allReviews = signal<AdminReview[]>([]);
+  readonly allServices = signal<AdminServiceRecord[]>([]);
+  readonly payments = signal<Payment[]>([]);
   readonly adminPaymentFilter = signal<PaymentStatus | ''>('');
-  readonly deletingReviewId  = signal<number | null>(null);
+  readonly deletingReviewId = signal<number | null>(null);
   readonly deletingServiceId = signal<number | null>(null);
-  readonly paidUpdating      = signal<string | null>(null);
+  readonly paidUpdating = signal<string | null>(null);
 
   readonly panelCards = computed(() => {
     const s = this.adminStats();
@@ -85,29 +85,31 @@ export class AdminComponent implements OnInit {
     ];
   });
 
-  readonly funnelSteps = computed<{ days: number; steps: { label: string; value: number; pct: number }[] } | null>(() => {
-    const f = this.adminStats()?.funnel;
-    if (!f) return null;
-    const views = Math.max(1, f.views);
-    return {
-      days: f.days,
-      steps: [
-        { label: 'Vistas de negocio', value: f.views, pct: 100 },
-        { label: 'Reservas', value: f.bookings, pct: Math.round((f.bookings / views) * 100) },
-        { label: 'Pagos completados', value: f.paid, pct: Math.round((f.paid / views) * 100) },
-      ],
-    };
-  });
+  readonly funnelSteps = computed<{ days: number; steps: { label: string; value: number; pct: number }[] } | null>(
+    () => {
+      const f = this.adminStats()?.funnel;
+      if (!f) return null;
+      const views = Math.max(1, f.views);
+      return {
+        days: f.days,
+        steps: [
+          { label: 'Vistas de negocio', value: f.views, pct: 100 },
+          { label: 'Reservas', value: f.bookings, pct: Math.round((f.bookings / views) * 100) },
+          { label: 'Pagos completados', value: f.paid, pct: Math.round((f.paid / views) * 100) },
+        ],
+      };
+    }
+  );
 
   readonly paymentStats = computed(() => {
     const rows = this.payments();
     return {
-      total:    rows.length,
-      paid:     rows.filter(p => p.status === 'paid').length,
-      pending:  rows.filter(p => p.status === 'pending').length,
-      failed:   rows.filter(p => p.status === 'failed').length,
+      total: rows.length,
+      paid: rows.filter(p => p.status === 'paid').length,
+      pending: rows.filter(p => p.status === 'pending').length,
+      failed: rows.filter(p => p.status === 'failed').length,
       refunded: rows.filter(p => p.status === 'refunded').length,
-      revenue:  this.adminStats()?.revenue ?? 0,
+      revenue: this.adminStats()?.revenue ?? 0,
     };
   });
 
@@ -120,32 +122,39 @@ export class AdminComponent implements OnInit {
 
   statusBadgeClass(status: PaymentStatus): string {
     switch (status) {
-      case 'paid':     return 'text-success-on bg-success-container';
-      case 'pending':  return 'text-tertiary bg-amber-100';
-      case 'failed':   return 'text-error-on-container bg-error-container';
-      case 'refunded': return 'text-indigo-700 bg-indigo-100';
-      default:         return 'text-on-surface-variant bg-surface-low';
+      case 'paid':
+        return 'text-success-on bg-success-container';
+      case 'pending':
+        return 'text-tertiary bg-amber-100';
+      case 'failed':
+        return 'text-error-on-container bg-error-container';
+      case 'refunded':
+        return 'text-indigo-700 bg-indigo-100';
+      default:
+        return 'text-on-surface-variant bg-surface-low';
     }
   }
 
   // ── Negocios state ──────────────────────────────────────────────────────
-  readonly adminToken        = signal<string | null>(null);
-  readonly adminError        = signal<string | null>(null);
-  readonly businesses        = signal<Business[]>([]);
+  readonly adminToken = signal<string | null>(null);
+  readonly adminError = signal<string | null>(null);
+  readonly businesses = signal<Business[]>([]);
   readonly businessesLoading = signal(false);
-  readonly togglingBusiness  = signal<string | null>(null);
+  readonly togglingBusiness = signal<string | null>(null);
   readonly verifyingBusiness = signal<string | null>(null);
   readonly deletingBusiness = signal<string | null>(null);
-  readonly shownegocioModal      = signal(false);
-  readonly editingBusiness   = signal<Business | null>(null);
-  readonly savingBusiness    = signal(false);
+  readonly shownegocioModal = signal(false);
+  readonly editingBusiness = signal<Business | null>(null);
+  readonly savingBusiness = signal(false);
 
   readonly tagsOptions = signal<string[]>([]);
   readonly tagQuery = signal('');
   readonly matchingTagSuggestions = computed(() => {
     const query = this.tagQuery().trim().toLowerCase();
     if (!query) return [];
-    return this.tagsOptions().filter(tag => tag.toLowerCase().includes(query)).slice(0, 6);
+    return this.tagsOptions()
+      .filter(tag => tag.toLowerCase().includes(query))
+      .slice(0, 6);
   });
 
   readonly presetGradients = [
@@ -189,36 +198,36 @@ export class AdminComponent implements OnInit {
 
   readonly pinForm = this.fb.group({
     current: ['', Validators.required],
-    next:    ['', [Validators.required, Validators.minLength(4)]],
+    next: ['', [Validators.required, Validators.minLength(4)]],
   });
 
   readonly businessForm = this.fb.group({
-    name:          ['', [Validators.required, Validators.minLength(2)]],
-    category:      ['', Validators.required],
-    description:   [''],
-    location:      [''],
-    schedule:      [''],
-    phone:         [''],
-    logo:          [''],
-    tags:          [''],
-    facebook:      [''],
-    instagram:     [''],
-    tiktok:        [''],
-    whatsapp:      [''],
-    linkedin:      [''],
-    icon:          ['store'],
-    gradient:      ['linear-gradient(135deg,#005bbf,#1a73e8)'],
-    verified:      [false],
+    name: ['', [Validators.required, Validators.minLength(2)]],
+    category: ['', Validators.required],
+    description: [''],
+    location: [''],
+    schedule: [''],
+    phone: [''],
+    logo: [''],
+    tags: [''],
+    facebook: [''],
+    instagram: [''],
+    tiktok: [''],
+    whatsapp: [''],
+    linkedin: [''],
+    icon: ['store'],
+    gradient: ['linear-gradient(135deg,#005bbf,#1a73e8)'],
+    verified: [false],
     cancellationPolicy: [''],
-    pin:           [''],
+    pin: [''],
   });
 
   readonly stats = computed(() => {
     const rows = this.reservations();
-    const total      = rows.length;
-    const available  = rows.filter(r => r.disponibilidad.toLowerCase().includes('disp')).length;
-    const reserved   = rows.filter(r => r.disponibilidad.toLowerCase().includes('reserv')).length;
-    const pending    = rows.filter(r => r.disponibilidad.toLowerCase().includes('pend')).length;
+    const total = rows.length;
+    const available = rows.filter(r => r.disponibilidad.toLowerCase().includes('disp')).length;
+    const reserved = rows.filter(r => r.disponibilidad.toLowerCase().includes('reserv')).length;
+    const pending = rows.filter(r => r.disponibilidad.toLowerCase().includes('pend')).length;
     return [
       { label: 'Total', value: total },
       { label: 'Disponibles', value: available },
@@ -231,11 +240,13 @@ export class AdminComponent implements OnInit {
     let rows = this.reservations();
     const q = this.searchQuery().toLowerCase();
     const f = this.filterStatus().toLowerCase();
-    if (q) rows = rows.filter(r =>
-      r.cliente?.toLowerCase().includes(q) ||
-      r.servicio?.toLowerCase().includes(q) ||
-      r.franja?.toLowerCase().includes(q)
-    );
+    if (q)
+      rows = rows.filter(
+        r =>
+          r.cliente?.toLowerCase().includes(q) ||
+          r.servicio?.toLowerCase().includes(q) ||
+          r.franja?.toLowerCase().includes(q)
+      );
     if (f) rows = rows.filter(r => r.disponibilidad.toLowerCase().includes(f));
     return rows;
   });
@@ -244,11 +255,13 @@ export class AdminComponent implements OnInit {
     let list = this.businesses();
     const q = this.searchQuery().toLowerCase();
     const f = this.filterStatus().toLowerCase();
-    if (q) list = list.filter(b =>
-      b.name.toLowerCase().includes(q) ||
-      b.category.toLowerCase().includes(q) ||
-      (b.location ?? '').toLowerCase().includes(q)
-    );
+    if (q)
+      list = list.filter(
+        b =>
+          b.name.toLowerCase().includes(q) ||
+          b.category.toLowerCase().includes(q) ||
+          (b.location ?? '').toLowerCase().includes(q)
+      );
     if (f) list = list.filter(b => (b.active ? 'activo' : 'inactivo').includes(f));
     return list;
   });
@@ -256,7 +269,6 @@ export class AdminComponent implements OnInit {
   ngOnInit(): void {
     this.initAdminToken();
     // this.loadTags(); cargar tags cuando se abra el modal
-    
   }
 
   selectTab(id: AdminTab): void {
@@ -271,18 +283,27 @@ export class AdminComponent implements OnInit {
     if (!token) return;
     this.adminPanelLoading.set(true);
     this.adminPanelError.set(null);
-    this.adminService.getAdminStats(token).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next:  s => this.adminStats.set(s),
-      error: () => this.adminPanelError.set('No se pudieron cargar las estadísticas'),
-    });
-    this.adminService.getAdminReviews(token).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next:  rows => this.allReviews.set(rows),
-      error: () => this.adminPanelError.set('No se pudieron cargar las reseñas'),
-    });
-    this.adminService.getAdminServices(token).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next:  rows => this.allServices.set(rows),
-      error: () => this.adminPanelError.set('No se pudieron cargar los servicios'),
-    });
+    this.adminService
+      .getAdminStats(token)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: s => this.adminStats.set(s),
+        error: () => this.adminPanelError.set('No se pudieron cargar las estadísticas'),
+      });
+    this.adminService
+      .getAdminReviews(token)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: rows => this.allReviews.set(rows),
+        error: () => this.adminPanelError.set('No se pudieron cargar las reseñas'),
+      });
+    this.adminService
+      .getAdminServices(token)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: rows => this.allServices.set(rows),
+        error: () => this.adminPanelError.set('No se pudieron cargar los servicios'),
+      });
     this.loadAdminPayments();
     this.adminPanelLoading.set(false);
   }
@@ -290,10 +311,13 @@ export class AdminComponent implements OnInit {
   loadAdminPayments(): void {
     const token = this.adminToken();
     if (!token) return;
-    this.adminService.getAdminPayments(token, this.adminPaymentFilter() || undefined).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next:  rows => this.payments.set(rows),
-      error: () => this.adminPanelError.set('No se pudieron cargar los pagos'),
-    });
+    this.adminService
+      .getAdminPayments(token, this.adminPaymentFilter() || undefined)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: rows => this.payments.set(rows),
+        error: () => this.adminPanelError.set('No se pudieron cargar los pagos'),
+      });
   }
 
   setPaymentFilter(value: string): void {
@@ -305,44 +329,62 @@ export class AdminComponent implements OnInit {
     const token = this.adminToken();
     if (!token || !window.confirm('¿Eliminar esta reseña? Esta acción no se puede deshacer.')) return;
     this.deletingReviewId.set(id);
-    this.adminService.deleteAdminReview(id, token).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: () => {
-        this.allReviews.update(rows => rows.filter(r => r.id !== id));
-        const s = this.adminStats();
-        if (s) this.adminStats.set({ ...s, reviews: Math.max(0, s.reviews - 1) });
-        this.toast.success('Reseña eliminada');
-        this.deletingReviewId.set(null);
-      },
-      error: err => { this.toast.error(err.message); this.deletingReviewId.set(null); },
-    });
+    this.adminService
+      .deleteAdminReview(id, token)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.allReviews.update(rows => rows.filter(r => r.id !== id));
+          const s = this.adminStats();
+          if (s) this.adminStats.set({ ...s, reviews: Math.max(0, s.reviews - 1) });
+          this.toast.success('Reseña eliminada');
+          this.deletingReviewId.set(null);
+        },
+        error: err => {
+          this.toast.error(err.message);
+          this.deletingReviewId.set(null);
+        },
+      });
   }
 
   deleteServiceById(id: number): void {
     const token = this.adminToken();
     if (!token || !window.confirm('¿Eliminar este servicio?')) return;
     this.deletingServiceId.set(id);
-    this.adminService.deleteAdminService(id, token).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: () => {
-        this.allServices.update(rows => rows.filter(s => s.id !== id));
-        this.toast.success('Servicio eliminado');
-        this.deletingServiceId.set(null);
-      },
-      error: err => { this.toast.error(err.message); this.deletingServiceId.set(null); },
-    });
+    this.adminService
+      .deleteAdminService(id, token)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.allServices.update(rows => rows.filter(s => s.id !== id));
+          this.toast.success('Servicio eliminado');
+          this.deletingServiceId.set(null);
+        },
+        error: err => {
+          this.toast.error(err.message);
+          this.deletingServiceId.set(null);
+        },
+      });
   }
 
   setPaymentStatus(payment: Payment, status: PaymentStatus): void {
     const token = this.adminToken();
     if (!token) return;
     this.paidUpdating.set(payment.id);
-    this.adminService.updatePaymentStatus(payment.id, status, token).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: () => {
-        this.payments.update(rows => rows.map(p => p.id === payment.id ? { ...p, status } : p));
-        this.paidUpdating.set(null);
-        this.toast.success('Estado de pago actualizado');
-      },
-      error: err => { this.toast.error(err.message); this.paidUpdating.set(null); },
-    });
+    this.adminService
+      .updatePaymentStatus(payment.id, status, token)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.payments.update(rows => rows.map(p => (p.id === payment.id ? { ...p, status } : p)));
+          this.paidUpdating.set(null);
+          this.toast.success('Estado de pago actualizado');
+        },
+        error: err => {
+          this.toast.error(err.message);
+          this.paidUpdating.set(null);
+        },
+      });
   }
 
   initAdminToken(): void {
@@ -355,17 +397,22 @@ export class AdminComponent implements OnInit {
       return;
     }
 
-    this.adminService.ensureAdminToken().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: token => {
-        this.adminToken.set(token);
-        this.loadBusinesses(token);
-        this.loadAdminData();
-      },
-      error: () => {
-        this.adminError.set('No se pudo obtener el token de administrador. Verifica el PIN del servidor y vuelve a intentar.');
-        this.adminToken.set(null);
-      },
-    });
+    this.adminService
+      .ensureAdminToken()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: token => {
+          this.adminToken.set(token);
+          this.loadBusinesses(token);
+          this.loadAdminData();
+        },
+        error: () => {
+          this.adminError.set(
+            'No se pudo obtener el token de administrador. Verifica el PIN del servidor y vuelve a intentar.'
+          );
+          this.adminToken.set(null);
+        },
+      });
   }
 
   loadBusinesses(token?: string): void {
@@ -373,17 +420,28 @@ export class AdminComponent implements OnInit {
     if (!t) return;
     this.adminError.set(null);
     this.businessesLoading.set(true);
-    this.adminService.getAllBusinesses(t).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next:  list => { this.businesses.set(list); this.businessesLoading.set(false); },
-      error: ()   => { this.businessesLoading.set(false); },
-    });
+    this.adminService
+      .getAllBusinesses(t)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: list => {
+          this.businesses.set(list);
+          this.businessesLoading.set(false);
+        },
+        error: () => {
+          this.businessesLoading.set(false);
+        },
+      });
   }
 
   loadTags(): void {
-    this.adminService.getTags().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: tags => this.tagsOptions.set(tags),
-      error: err => console.warn('No se pudieron cargar tags:', err.message),
-    });
+    this.adminService
+      .getTags()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: tags => this.tagsOptions.set(tags),
+        error: err => console.warn('No se pudieron cargar tags:', err.message),
+      });
   }
 
   extractGradientColor(gradient: string, index: 0 | 1): string | null {
@@ -419,7 +477,10 @@ export class AdminComponent implements OnInit {
   }
 
   updateTagsFromSuggestion(tag: string): void {
-    const current = (this.businessForm.get('tags')?.value ?? '').split(',').map((t: string) => t.trim()).filter(Boolean);
+    const current = (this.businessForm.get('tags')?.value ?? '')
+      .split(',')
+      .map((t: string) => t.trim())
+      .filter(Boolean);
     if (!current.includes(tag)) current.push(tag);
     this.businessForm.get('tags')?.setValue(current.join(', '));
     this.tagQuery.set('');
@@ -432,12 +493,21 @@ export class AdminComponent implements OnInit {
     console.log('Categorías cargadas:', this.categorias);
     if (negocio) {
       this.businessForm.patchValue({
-        name: negocio.name, category: negocio.category, description: negocio.description,
-        location: negocio.location, schedule: negocio.schedule ?? '',
-        phone: negocio.phone ?? '', logo: negocio.logo ?? '', tags: negocio.tags?.join(', ') ?? '',
-        facebook: negocio.facebook ?? '', instagram: negocio.instagram ?? '', tiktok: negocio.tiktok ?? '',
-        whatsapp: negocio.whatsapp ?? '', linkedin: negocio.linkedin ?? '',
-        icon: negocio.icon, gradient: negocio.gradient,
+        name: negocio.name,
+        category: negocio.category,
+        description: negocio.description,
+        location: negocio.location,
+        schedule: negocio.schedule ?? '',
+        phone: negocio.phone ?? '',
+        logo: negocio.logo ?? '',
+        tags: negocio.tags?.join(', ') ?? '',
+        facebook: negocio.facebook ?? '',
+        instagram: negocio.instagram ?? '',
+        tiktok: negocio.tiktok ?? '',
+        whatsapp: negocio.whatsapp ?? '',
+        linkedin: negocio.linkedin ?? '',
+        icon: negocio.icon,
+        gradient: negocio.gradient,
         verified: !!negocio.verified,
         cancellationPolicy: negocio.cancellationPolicy ?? '',
         pin: '',
@@ -447,9 +517,15 @@ export class AdminComponent implements OnInit {
       this.businessForm.get('pin')?.clearValidators();
     } else {
       this.businessForm.reset({
-        icon: 'store', gradient: 'linear-gradient(135deg,#005bbf,#1a73e8)',
-        facebook: '', instagram: '', tiktok: '', whatsapp: '', linkedin: '',
-        verified: false, cancellationPolicy: '',
+        icon: 'store',
+        gradient: 'linear-gradient(135deg,#005bbf,#1a73e8)',
+        facebook: '',
+        instagram: '',
+        tiktok: '',
+        whatsapp: '',
+        linkedin: '',
+        verified: false,
+        cancellationPolicy: '',
       });
       this.gradientFrom.set('#005bbf');
       this.gradientTo.set('#1a73e8');
@@ -459,14 +535,19 @@ export class AdminComponent implements OnInit {
     this.shownegocioModal.set(true);
   }
 
-  closenegocioModal(): void { this.shownegocioModal.set(false); }
+  closenegocioModal(): void {
+    this.shownegocioModal.set(false);
+  }
 
   saveBusiness(): void {
     if (this.businessForm.invalid) return;
     const token = this.adminToken();
     if (!token) return;
     const v = this.businessForm.value;
-    const tagsArr = (v.tags ?? '').split(',').map((t: string) => t.trim()).filter(Boolean);
+    const tagsArr = (v.tags ?? '')
+      .split(',')
+      .map((t: string) => t.trim())
+      .filter(Boolean);
     this.savingBusiness.set(true);
 
     const scheduleValue = this.schedulePreview() || v.schedule || '';
@@ -491,37 +572,59 @@ export class AdminComponent implements OnInit {
       updates.linkedin = v.linkedin ?? '';
       updates.cancellationPolicy = v.cancellationPolicy ?? '';
       if (v.pin) updates.pin = v.pin;
-      this.adminService.updateBusiness(this.editingBusiness()!.id, updates, token).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-        next: () => {
-          this.toast.success('Negocio actualizado');
-          this.savingBusiness.set(false);
-          this.closenegocioModal();
-          this.loadBusinesses();
-          this.verifyAfterSave(this.editingBusiness()!.id, !!v.verified);
-        },
-        error: err => { this.toast.error(err.message); this.savingBusiness.set(false); },
-      });
+      this.adminService
+        .updateBusiness(this.editingBusiness()!.id, updates, token)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: () => {
+            this.toast.success('Negocio actualizado');
+            this.savingBusiness.set(false);
+            this.closenegocioModal();
+            this.loadBusinesses();
+            this.verifyAfterSave(this.editingBusiness()!.id, !!v.verified);
+          },
+          error: err => {
+            this.toast.error(err.message);
+            this.savingBusiness.set(false);
+          },
+        });
     } else {
       const payload: NewBusinessPayload = {
-        name: v.name!, category: v.category!, description: v.description ?? '',
-        location: v.location ?? '', schedule: scheduleValue, phone: v.phone ?? '',
-        logo: v.logo ?? '', tags: tagsArr, icon: v.icon!, gradient: gradientValue,
-        facebook: v.facebook ?? '', instagram: v.instagram ?? '', tiktok: v.tiktok ?? '',
-        whatsapp: v.whatsapp ?? '', linkedin: v.linkedin ?? '',
+        name: v.name!,
+        category: v.category!,
+        description: v.description ?? '',
+        location: v.location ?? '',
+        schedule: scheduleValue,
+        phone: v.phone ?? '',
+        logo: v.logo ?? '',
+        tags: tagsArr,
+        icon: v.icon!,
+        gradient: gradientValue,
+        facebook: v.facebook ?? '',
+        instagram: v.instagram ?? '',
+        tiktok: v.tiktok ?? '',
+        whatsapp: v.whatsapp ?? '',
+        linkedin: v.linkedin ?? '',
         cancellationPolicy: v.cancellationPolicy ?? '',
         pin: v.pin!,
       };
-      this.adminService.createBusiness(payload, token).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-        next: (result) => {
-          this.toast.success('Negocio creado');
-          this.savingBusiness.set(false);
-          this.closenegocioModal();
-          this.loadBusinesses();
-          const newId = result?.data?.id;
-          if (newId) this.verifyAfterSave(newId, !!v.verified);
-        },
-        error: err => { this.toast.error(err.message); this.savingBusiness.set(false); },
-      });
+      this.adminService
+        .createBusiness(payload, token)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: result => {
+            this.toast.success('Negocio creado');
+            this.savingBusiness.set(false);
+            this.closenegocioModal();
+            this.loadBusinesses();
+            const newId = result?.data?.id;
+            if (newId) this.verifyAfterSave(newId, !!v.verified);
+          },
+          error: err => {
+            this.toast.error(err.message);
+            this.savingBusiness.set(false);
+          },
+        });
     }
   }
 
@@ -529,16 +632,19 @@ export class AdminComponent implements OnInit {
     const token = this.adminToken();
     if (!token) return;
     this.togglingBusiness.set(id);
-    this.adminService.toggleBusiness(id, token).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: () => {
-        this.togglingBusiness.set(null);
-        this.loadBusinesses();
-      },
-      error: err => {
-        this.toast.error(err.message);
-        this.togglingBusiness.set(null);
-      },
-    });
+    this.adminService
+      .toggleBusiness(id, token)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.togglingBusiness.set(null);
+          this.loadBusinesses();
+        },
+        error: err => {
+          this.toast.error(err.message);
+          this.togglingBusiness.set(null);
+        },
+      });
   }
 
   verifyBusiness(id: string): void {
@@ -547,25 +653,31 @@ export class AdminComponent implements OnInit {
     const target = this.businesses().find(b => b.id === id);
     if (!target) return;
     this.verifyingBusiness.set(id);
-    this.adminService.verifyBusiness(id, !target.verified, token).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: () => {
-        this.verifyingBusiness.set(null);
-        this.loadBusinesses();
-      },
-      error: err => {
-        this.toast.error(err.message);
-        this.verifyingBusiness.set(null);
-      },
-    });
+    this.adminService
+      .verifyBusiness(id, !target.verified, token)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.verifyingBusiness.set(null);
+          this.loadBusinesses();
+        },
+        error: err => {
+          this.toast.error(err.message);
+          this.verifyingBusiness.set(null);
+        },
+      });
   }
 
   private verifyAfterSave(id: string, verified: boolean): void {
     const token = this.adminToken();
     if (!token) return;
     if (verified === this.businesses().find(b => b.id === id)?.verified) return;
-    this.adminService.verifyBusiness(id, verified, token).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      error: err => this.toast.error(err?.message ?? 'No se pudo actualizar la verificación'),
-    });
+    this.adminService
+      .verifyBusiness(id, verified, token)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        error: err => this.toast.error(err?.message ?? 'No se pudo actualizar la verificación'),
+      });
   }
 
   deleteBusiness(id: string): void {
@@ -573,34 +685,54 @@ export class AdminComponent implements OnInit {
     if (!token) return;
     if (!window.confirm('¿Eliminar este negocio? Esta acción no se puede deshacer.')) return;
     this.deletingBusiness.set(id);
-    this.adminService.deleteBusiness(id, token).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: () => {
-        this.toast.success('Negocio eliminado');
-        this.deletingBusiness.set(null);
-        this.loadBusinesses();
-      },
-      error: err => {
-        this.toast.error(err.message);
-        this.deletingBusiness.set(null);
-      },
-    });
+    this.adminService
+      .deleteBusiness(id, token)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.toast.success('Negocio eliminado');
+          this.deletingBusiness.set(null);
+          this.loadBusinesses();
+        },
+        error: err => {
+          this.toast.error(err.message);
+          this.deletingBusiness.set(null);
+        },
+      });
   }
 
   loadReservations(): void {
     this.loading.set(true);
     this.error.set(null);
-    this.adminService.getReservations().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next:  data => { this.reservations.set(data); this.loading.set(false); },
-      error: err  => { this.error.set(err.message); this.loading.set(false); },
-    });
+    this.adminService
+      .getReservations()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: data => {
+          this.reservations.set(data);
+          this.loading.set(false);
+        },
+        error: err => {
+          this.error.set(err.message);
+          this.loading.set(false);
+        },
+      });
   }
 
   loadServices(): void {
     this.servicesLoading.set(true);
-    this.adminService.getServices().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next:  data => { this.services.set(data); this.servicesLoading.set(false); },
-      error: ()   => { this.servicesLoading.set(false); },
-    });
+    this.adminService
+      .getServices()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: data => {
+          this.services.set(data);
+          this.servicesLoading.set(false);
+        },
+        error: () => {
+          this.servicesLoading.set(false);
+        },
+      });
   }
 
   refresh(): void {
@@ -622,21 +754,15 @@ export class AdminComponent implements OnInit {
     this.modalRow.set(row);
   }
 
-
-  
-
-
   abrirmodalMapa(): void {
     const currentCoords = this.location() ?? undefined;
     const mapModalInstance = this.mapModal();
 
-    if(mapModalInstance) {
+    if (mapModalInstance) {
       mapModalInstance.open(currentCoords);
     } else {
       console.error('No se pudo abrir el modal de mapa: instancia no encontrada.');
     }
-
-
 
     /* this.mapModal.coordinatesSelected.subscribe((coords) => {
       console.log('Coordenadas seleccionadas:', coords);
@@ -649,57 +775,68 @@ export class AdminComponent implements OnInit {
     console.log('Coordenadas recibidas del modal:', coords);
   }
 
-  closeModal(): void { this.modalRow.set(null); }
+  closeModal(): void {
+    this.modalRow.set(null);
+  }
 
   saveStatus(): void {
     const row = this.modalRow();
     if (!row) return;
     this.updating.set(row._rowIndex);
-    this.adminService.updateReservation({ rowIndex: row._rowIndex, disponibilidad: this.newStatus() }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: () => {
-        this.toast.success('Estado actualizado');
-        this.updating.set(null);
-        this.closeModal();
-        this.loadReservations();
-      },
-      error: err => {
-        this.toast.error(err.message);
-        this.updating.set(null);
-      },
-    });
+    this.adminService
+      .updateReservation({ rowIndex: row._rowIndex, disponibilidad: this.newStatus() })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.toast.success('Estado actualizado');
+          this.updating.set(null);
+          this.closeModal();
+          this.loadReservations();
+        },
+        error: err => {
+          this.toast.error(err.message);
+          this.updating.set(null);
+        },
+      });
   }
 
   addService(): void {
     if (this.serviceForm.invalid) return;
     const nombre = this.serviceForm.value.nombre!.trim();
     this.addingService.set(true);
-    this.adminService.createService(nombre).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: () => {
-        this.toast.success(`Servicio "${nombre}" agregado`);
-        this.serviceForm.reset();
-        this.addingService.set(false);
-        this.loadServices();
-      },
-      error: err => {
-        this.toast.error(err.message);
-        this.addingService.set(false);
-      },
-    });
+    this.adminService
+      .createService(nombre)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.toast.success(`Servicio "${nombre}" agregado`);
+          this.serviceForm.reset();
+          this.addingService.set(false);
+          this.loadServices();
+        },
+        error: err => {
+          this.toast.error(err.message);
+          this.addingService.set(false);
+        },
+      });
   }
 
   deleteService(nombre: string): void {
     this.deletingService.set(nombre);
-    this.adminService.deleteService(nombre).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: () => {
-        this.toast.success(`Servicio "${nombre}" eliminado`);
-        this.deletingService.set(null);
-        this.loadServices();
-      },
-      error: err => {
-        this.toast.error(err.message);
-        this.deletingService.set(null);
-      },
-    });
+    this.adminService
+      .deleteService(nombre)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.toast.success(`Servicio "${nombre}" eliminado`);
+          this.deletingService.set(null);
+          this.loadServices();
+        },
+        error: err => {
+          this.toast.error(err.message);
+          this.deletingService.set(null);
+        },
+      });
   }
 
   changePin(): void {
@@ -723,19 +860,26 @@ export class AdminComponent implements OnInit {
     return (e.target as HTMLInputElement | HTMLSelectElement).value;
   }
 
-
   categorias: Categoria[] = [];
   isCategoriesLoading = false;
 
   async loadCategories(): Promise<void> {
-    if(this.categorias.length > 0) return; // Ya cargadas
+    if (this.categorias.length > 0) return; // Ya cargadas
     this.isCategoriesLoading = true;
     try {
       console.log('Cargando categorías...');
-      await this.adminService.getCategories().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-        next: data => { this.categorias = data; this.isCategoriesLoading = false; },
-        error: () => { this.isCategoriesLoading = false; },
-      });
+      await this.adminService
+        .getCategories()
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: data => {
+            this.categorias = data;
+            this.isCategoriesLoading = false;
+          },
+          error: () => {
+            this.isCategoriesLoading = false;
+          },
+        });
     } catch (err) {
       console.error('Error loading categories:', err);
     } finally {

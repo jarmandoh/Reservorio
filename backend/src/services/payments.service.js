@@ -40,11 +40,23 @@ function normalizePaymentInput(payload = {}) {
   const providerId = String(payload.providerId ?? '').trim();
   const customerId = String(payload.customerId ?? '').trim();
   const amount = Number(payload.amount ?? 0);
-  const currency = String(payload.currency ?? 'EUR').trim().toUpperCase();
-  const method = String(payload.method ?? 'card').trim().toLowerCase();
+  const currency = String(payload.currency ?? 'EUR')
+    .trim()
+    .toUpperCase();
+  const method = String(payload.method ?? 'card')
+    .trim()
+    .toLowerCase();
   const status = String(payload.status ?? 'pending').trim();
 
-  return { bookingId, providerId, customerId, amount, currency, method: allowedPaymentMethods.includes(method) ? method : 'card', status };
+  return {
+    bookingId,
+    providerId,
+    customerId,
+    amount,
+    currency,
+    method: allowedPaymentMethods.includes(method) ? method : 'card',
+    status,
+  };
 }
 
 async function listPayments(filters = {}) {
@@ -182,20 +194,17 @@ async function updatePaymentStatus(id, status) {
   }
 
   try {
-    const { rows } = await db.query(
-      'UPDATE payments SET status = $1, updated_at = now() WHERE id = $2 RETURNING *',
-      [status, cleanId]
-    );
+    const { rows } = await db.query('UPDATE payments SET status = $1, updated_at = now() WHERE id = $2 RETURNING *', [
+      status,
+      cleanId,
+    ]);
     if (!rows.length) {
       return { ok: false, status: 404, message: 'Pago no encontrado' };
     }
 
     const payment = mapPayment(rows[0]);
     if (status === 'paid' && payment.bookingId) {
-      await db.query(
-        "UPDATE bookings SET status = 'confirmed', updated_at = now() WHERE id = $1",
-        [payment.bookingId]
-      );
+      await db.query("UPDATE bookings SET status = 'confirmed', updated_at = now() WHERE id = $1", [payment.bookingId]);
       await createNotification({
         businessId: payment.providerId,
         customerId: payment.customerId,
@@ -273,8 +282,14 @@ async function createCheckoutSession(payload = {}) {
     };
   }
 
-  const successUrl = String(payload.successUrl || `${process.env.FRONTEND_URL || 'http://localhost:4200'}/payment/success?bookingId=${encodeURIComponent(bookingId)}`);
-  const cancelUrl = String(payload.cancelUrl || `${process.env.FRONTEND_URL || 'http://localhost:4200'}/payment/cancel?bookingId=${encodeURIComponent(bookingId)}`);
+  const successUrl = String(
+    payload.successUrl ||
+      `${process.env.FRONTEND_URL || 'http://localhost:4200'}/payment/success?bookingId=${encodeURIComponent(bookingId)}`
+  );
+  const cancelUrl = String(
+    payload.cancelUrl ||
+      `${process.env.FRONTEND_URL || 'http://localhost:4200'}/payment/cancel?bookingId=${encodeURIComponent(bookingId)}`
+  );
 
   const paymentMethodTypes = method === 'paypal' ? ['paypal'] : ['card'];
 
@@ -282,17 +297,19 @@ async function createCheckoutSession(payload = {}) {
     try {
       const session = await stripeClient.checkout.sessions.create({
         mode: 'payment',
-        line_items: [{
-          quantity: 1,
-          price_data: {
-            currency: currency.toLowerCase(),
-            unit_amount: Math.round(amount * 100),
-            product_data: {
-              name: `Reserva ${bookingId}`,
-              description: `Pago para ${providerId} · ${method}`,
+        line_items: [
+          {
+            quantity: 1,
+            price_data: {
+              currency: currency.toLowerCase(),
+              unit_amount: Math.round(amount * 100),
+              product_data: {
+                name: `Reserva ${bookingId}`,
+                description: `Pago para ${providerId} · ${method}`,
+              },
             },
           },
-        }],
+        ],
         success_url: successUrl,
         cancel_url: cancelUrl,
         metadata: {
@@ -360,7 +377,9 @@ async function processWebhook({ rawBody, signature, event }) {
   const bookingId = String(metadata.bookingId || session.bookingId || '').trim();
   const providerId = String(metadata.providerId || '').trim();
   const customerId = String(metadata.customerId || '').trim();
-  const method = String(metadata.method || 'card').trim().toLowerCase();
+  const method = String(metadata.method || 'card')
+    .trim()
+    .toLowerCase();
   const status = session.payment_status === 'paid' ? 'paid' : 'pending';
 
   if (!bookingId || !providerId || !customerId) {
@@ -383,14 +402,12 @@ async function processWebhook({ rawBody, signature, event }) {
     logger.warn('[payments] webhook procesado sin DATABASE_URL; no se persiste');
   } else if (status === 'paid') {
     try {
-      await db.query(
-        `UPDATE payments SET status = $1, external_reference = $2, updated_at = now() WHERE id = $3`,
-        [status, String(session.payment_intent || ''), payment.id]
-      );
-      await db.query(
-        `UPDATE bookings SET status = 'confirmed', updated_at = now() WHERE id = $1`,
-        [bookingId]
-      );
+      await db.query(`UPDATE payments SET status = $1, external_reference = $2, updated_at = now() WHERE id = $3`, [
+        status,
+        String(session.payment_intent || ''),
+        payment.id,
+      ]);
+      await db.query(`UPDATE bookings SET status = 'confirmed', updated_at = now() WHERE id = $1`, [bookingId]);
       await db.query(
         `UPDATE reservations SET disponibilidad = 'Confirmado', updated_at = now()
          WHERE business_id = $1 AND franja = (SELECT slot FROM bookings WHERE id = $2)`,
@@ -418,6 +435,11 @@ async function processWebhook({ rawBody, signature, event }) {
   return { ok: true, status: 200, data: payment };
 }
 
-module.exports = { listPayments, createPayment, createCheckoutSession, processWebhook, getPayment, updatePaymentStatus };
-
-
+module.exports = {
+  listPayments,
+  createPayment,
+  createCheckoutSession,
+  processWebhook,
+  getPayment,
+  updatePaymentStatus,
+};

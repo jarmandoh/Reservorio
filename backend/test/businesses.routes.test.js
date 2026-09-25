@@ -30,11 +30,26 @@ describe('Businesses routes', () => {
 
   test('GET /api/businesses/all allows admin access', async () => {
     const token = sign({ role: 'admin' });
-    db.query.mockResolvedValueOnce({ rows: [{ id: 'negocio1', name: 'Test', category: 'Test', rating: 4.5, reviews: 10, tags: '', gradient: '', icon: '', schedule: '', logo: '', phone: '', active: true }] });
+    db.query.mockResolvedValueOnce({
+      rows: [
+        {
+          id: 'negocio1',
+          name: 'Test',
+          category: 'Test',
+          rating: 4.5,
+          reviews: 10,
+          tags: '',
+          gradient: '',
+          icon: '',
+          schedule: '',
+          logo: '',
+          phone: '',
+          active: true,
+        },
+      ],
+    });
 
-    const response = await request(app)
-      .get('/api/businesses/all')
-      .set('Authorization', `Bearer ${token}`);
+    const response = await request(app).get('/api/businesses/all').set('Authorization', `Bearer ${token}`);
 
     expect(response.status).toBe(200);
     expect(response.body.ok).toBe(true);
@@ -54,14 +69,27 @@ describe('Businesses routes', () => {
     expect(response.status).toBe(201);
     expect(response.body.ok).toBe(true);
     expect(response.body.data.nombre).toBe('Corte de cabello');
-    expect(db.query).toHaveBeenCalledWith('INSERT INTO services (business_id, nombre) VALUES ($1, $2)', ['negocio1', 'Corte de cabello']);
+    expect(db.query).toHaveBeenCalledWith('INSERT INTO services (business_id, nombre) VALUES ($1, $2)', [
+      'negocio1',
+      'Corte de cabello',
+    ]);
   });
 
   const baseRow = {
-    id: 'negocio1', name: 'Negocio', category: 'Belleza',
-    rating: 4.2, reviews: 3, tags: '', gradient: '', icon: '',
-    schedule: '', logo: '', phone: '', active: true,
-    verified: false, cancellation_policy: '',
+    id: 'negocio1',
+    name: 'Negocio',
+    category: 'Belleza',
+    rating: 4.2,
+    reviews: 3,
+    tags: '',
+    gradient: '',
+    icon: '',
+    schedule: '',
+    logo: '',
+    phone: '',
+    active: true,
+    verified: false,
+    cancellation_policy: '',
   };
 
   test('PUT /api/businesses/:id strips rating/reviews for non-admin', async () => {
@@ -101,14 +129,33 @@ describe('Businesses routes', () => {
 
     expect(response.status).toBe(200);
     expect(response.body.ok).toBe(true);
-    expect(db.query).toHaveBeenCalledWith('UPDATE businesses SET verified = $1 WHERE id = $2 RETURNING *', [true, 'negocio1']);
+    expect(db.query).toHaveBeenCalledWith('UPDATE businesses SET verified = $1 WHERE id = $2 RETURNING *', [
+      true,
+      'negocio1',
+    ]);
   });
 
   test('GET /api/businesses/:id/availability is public and hides personal data', async () => {
     db.query.mockResolvedValue({
       rows: [
-        { id: 1, franja: '10:00', disponibilidad: 'Disponible', cliente: 'Juan', telefono: '123456789', servicio: 'x', notas: '' },
-        { id: 2, franja: '11:00', disponibilidad: 'Reservado', cliente: 'Ana', telefono: '987654321', servicio: 'y', notas: '' },
+        {
+          id: 1,
+          franja: '10:00',
+          disponibilidad: 'Disponible',
+          cliente: 'Juan',
+          telefono: '123456789',
+          servicio: 'x',
+          notas: '',
+        },
+        {
+          id: 2,
+          franja: '11:00',
+          disponibilidad: 'Reservado',
+          cliente: 'Ana',
+          telefono: '987654321',
+          servicio: 'y',
+          notas: '',
+        },
       ],
     });
 

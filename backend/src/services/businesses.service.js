@@ -47,7 +47,7 @@ async function invalidateBusinessCache(businessId) {
 
 async function attachLiveRatings(rows) {
   if (!rows || !rows.length) return rows;
-  const ids = rows.map((r) => String(r.id));
+  const ids = rows.map(r => String(r.id));
   try {
     const { rows: agg } = await db.query(
       `SELECT business_id,
@@ -58,8 +58,8 @@ async function attachLiveRatings(rows) {
         GROUP BY business_id`,
       [ids]
     );
-    const byId = new Map(agg.map((a) => [String(a.business_id), a]));
-    return rows.map((row) => {
+    const byId = new Map(agg.map(a => [String(a.business_id), a]));
+    return rows.map(row => {
       const live = byId.get(String(row.id));
       if (live && Number(live.review_count) > 0) {
         return { ...row, rating: Number(live.avg_rating), reviews: Number(live.review_count) };
@@ -80,7 +80,12 @@ function safenegocio(b) {
     location: b.location,
     rating: Number(b.rating),
     reviews: b.reviews,
-    tags: b.tags ? b.tags.split(',').map((t) => t.trim()).filter(Boolean) : [],
+    tags: b.tags
+      ? b.tags
+          .split(',')
+          .map(t => t.trim())
+          .filter(Boolean)
+      : [],
     gradient: b.gradient,
     icon: b.icon,
     schedule: b.schedule,
@@ -163,24 +168,13 @@ async function authenticateBusiness(businessId, pin) {
 
 async function createBusiness(payload, ownerId = null) {
   const {
-    name, category, description, location, rating, reviews, tags,
-    gradient, icon, schedule, logo, phone,
-    facebook, instagram, tiktok, whatsapp, linkedin, pin,
-  } = payload ?? {};
-
-  const id = clean(name).toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 16) + '_' + Date.now().toString(36);
-  const pinHash = await bcrypt.hash(String(pin), 10);
-  const tagsStr = Array.isArray(tags) ? tags.join(',') : clean(tags ?? '');
-
-  await businessRepository.createBusiness({
-    id,
     name,
     category,
     description,
     location,
     rating,
     reviews,
-    tagsStr,
+    tags,
     gradient,
     icon,
     schedule,
@@ -191,8 +185,43 @@ async function createBusiness(payload, ownerId = null) {
     tiktok,
     whatsapp,
     linkedin,
-    pinHash,
-  }, ownerId);
+    pin,
+  } = payload ?? {};
+
+  const id =
+    clean(name)
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '')
+      .slice(0, 16) +
+    '_' +
+    Date.now().toString(36);
+  const pinHash = await bcrypt.hash(String(pin), 10);
+  const tagsStr = Array.isArray(tags) ? tags.join(',') : clean(tags ?? '');
+
+  await businessRepository.createBusiness(
+    {
+      id,
+      name,
+      category,
+      description,
+      location,
+      rating,
+      reviews,
+      tagsStr,
+      gradient,
+      icon,
+      schedule,
+      logo,
+      phone,
+      facebook,
+      instagram,
+      tiktok,
+      whatsapp,
+      linkedin,
+      pinHash,
+    },
+    ownerId
+  );
 
   const { rows } = await businessRepository.findBusinessById(id);
   await invalidateBusinessCache(id);
@@ -220,7 +249,22 @@ async function updateBusiness(businessId, payload) {
   const vals = [];
   let idx = 1;
 
-  const strFields = ['name', 'category', 'description', 'location', 'gradient', 'icon', 'schedule', 'logo', 'phone', 'facebook', 'instagram', 'tiktok', 'whatsapp', 'linkedin'];
+  const strFields = [
+    'name',
+    'category',
+    'description',
+    'location',
+    'gradient',
+    'icon',
+    'schedule',
+    'logo',
+    'phone',
+    'facebook',
+    'instagram',
+    'tiktok',
+    'whatsapp',
+    'linkedin',
+  ];
   for (const key of strFields) {
     if (payload?.[key] !== undefined) {
       sets.push(`${key} = $${idx++}`);
@@ -350,22 +394,30 @@ async function createReservation(businessId, payload) {
 }
 
 async function updateReservation(businessId, reservationId, payload) {
-  const result = await businessRepository.updateReservation(businessId, reservationId, payload.disponibilidad, payload?.notas ?? '');
+  const result = await businessRepository.updateReservation(
+    businessId,
+    reservationId,
+    payload.disponibilidad,
+    payload?.notas ?? ''
+  );
   if (!result.rows.length) {
     return { ok: false, status: 404, message: 'Reserva no encontrada' };
   }
   syncInBackground(businessId, 'reservations');
 
-  const estado = String(payload.disponibilidad ?? '').trim().toLowerCase();
+  const estado = String(payload.disponibilidad ?? '')
+    .trim()
+    .toLowerCase();
   if (estado === 'confirmado' || estado === 'cancelado') {
     await createNotification({
       businessId,
       type: estado === 'confirmado' ? 'booking_confirmed' : 'booking_cancelled',
       channel: 'in_app',
       title: estado === 'confirmado' ? 'Reserva confirmada' : 'Reserva cancelada',
-      message: estado === 'confirmado'
-        ? `La reserva de las ${result.rows[0].franja} fue confirmada.`
-        : `La reserva de las ${result.rows[0].franja} fue cancelada.`,
+      message:
+        estado === 'confirmado'
+          ? `La reserva de las ${result.rows[0].franja} fue confirmada.`
+          : `La reserva de las ${result.rows[0].franja} fue cancelada.`,
       status: 'queued',
     });
   }
@@ -375,7 +427,7 @@ async function updateReservation(businessId, reservationId, payload) {
 
 async function listServices(businessId) {
   const { rows } = await businessRepository.listServices(businessId);
-  return { ok: true, status: 200, data: rows.map((row) => row.nombre) };
+  return { ok: true, status: 200, data: rows.map(row => row.nombre) };
 }
 
 async function addService(businessId, nombre) {

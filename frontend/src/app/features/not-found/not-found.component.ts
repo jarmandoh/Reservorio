@@ -11,8 +11,8 @@ import { RouterLink } from '@angular/router';
         <p class="font-mono text-6xl font-bold text-primary">404</p>
         <h1 class="font-display text-2xl font-bold sm:text-3xl">Esta página no existe</h1>
         <p class="text-on-surface-variant text-sm sm:text-base max-w-md mx-auto">
-          La dirección puede estar mal escrita, el negocio ya no existe o el enlace caducó.
-          Te ayudamos a volver a donde estabas:
+          La dirección puede estar mal escrita, el negocio ya no existe o el enlace caducó. Te ayudamos a volver a donde
+          estabas:
         </p>
         <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
           <a routerLink="/" class="btn-primary">Explorar negocios</a>

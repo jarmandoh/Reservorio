@@ -43,7 +43,8 @@ export const featureRoutes: Routes = [
   },
   {
     path: 'customer/verify',
-    loadComponent: () => import('./customer-magic-verify/customer-magic-verify.component').then(m => m.CustomerMagicVerifyComponent),
+    loadComponent: () =>
+      import('./customer-magic-verify/customer-magic-verify.component').then(m => m.CustomerMagicVerifyComponent),
   },
   {
     path: 'admin',

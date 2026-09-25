@@ -14,10 +14,7 @@ describe('AuthService auth flows', () => {
     api = { loginOwner: loginOwnerSpy } as unknown as ApiService;
 
     TestBed.configureTestingModule({
-      providers: [
-        AuthService,
-        { provide: ApiService, useValue: api }
-      ]
+      providers: [AuthService, { provide: ApiService, useValue: api }],
     });
 
     service = TestBed.inject(AuthService);

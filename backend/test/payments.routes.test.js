@@ -83,18 +83,16 @@ describe('Payments API', () => {
   test('POST /api/payments/checkout creates a checkout intent in dev fallback mode', async () => {
     db.query.mockResolvedValue({ rows: [insertedPayment] });
 
-    const response = await request(app)
-      .post('/api/payments/checkout')
-      .send({
-        bookingId: 'booking-456',
-        providerId: 'negocio_1',
-        customerId: 'cliente_1',
-        amount: 120,
-        currency: 'EUR',
-        method: 'card',
-        successUrl: 'http://localhost:4200/success',
-        cancelUrl: 'http://localhost:4200/cancel',
-      });
+    const response = await request(app).post('/api/payments/checkout').send({
+      bookingId: 'booking-456',
+      providerId: 'negocio_1',
+      customerId: 'cliente_1',
+      amount: 120,
+      currency: 'EUR',
+      method: 'card',
+      successUrl: 'http://localhost:4200/success',
+      cancelUrl: 'http://localhost:4200/cancel',
+    });
 
     expect(response.status).toBe(200);
     expect(response.body.ok).toBe(true);

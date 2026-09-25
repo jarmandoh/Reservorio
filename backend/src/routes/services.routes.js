@@ -10,7 +10,12 @@ const { syncInBackground } = require('../services/syncService');
 
 const serviceCreateValidators = [
   body('businessId').trim().notEmpty().withMessage('businessId requerido'),
-  body('nombre').trim().notEmpty().withMessage('nombre requerido').isLength({ max: 100 }).withMessage('nombre demasiado largo'),
+  body('nombre')
+    .trim()
+    .notEmpty()
+    .withMessage('nombre requerido')
+    .isLength({ max: 100 })
+    .withMessage('nombre demasiado largo'),
   handleValidation,
 ];
 
@@ -38,11 +43,8 @@ router.use((_req, res, next) => {
 router.get('/', serviceQueryValidators, async (req, res) => {
   const negocioId = req.query.businessId;
   try {
-    const { rows } = await db.query(
-      'SELECT nombre FROM services WHERE business_id = $1 ORDER BY nombre',
-      [negocioId]
-    );
-    res.json({ ok: true, data: rows.map((r) => r.nombre) });
+    const { rows } = await db.query('SELECT nombre FROM services WHERE business_id = $1 ORDER BY nombre', [negocioId]);
+    res.json({ ok: true, data: rows.map(r => r.nombre) });
   } catch (err) {
     res.status(502).json({ ok: false, message: err.message });
   }
@@ -71,10 +73,7 @@ router.delete('/:nombre', requireAuth, serviceDeleteValidators, async (req, res)
   if (!canAccessBusinessId(req, res, businessId)) return;
 
   try {
-    const result = await db.query(
-      'DELETE FROM services WHERE business_id = $1 AND nombre = $2',
-      [businessId, nombre]
-    );
+    const result = await db.query('DELETE FROM services WHERE business_id = $1 AND nombre = $2', [businessId, nombre]);
     if (!result.rowCount) return res.status(404).json({ ok: false, message: 'Servicio no encontrado' });
     syncInBackground(businessId, 'services');
     res.json({ ok: true });

@@ -41,7 +41,7 @@ function initRedis() {
       redisReady = true;
       logger.info('[Redis] ready');
     });
-    redis.on('error', (err) => logger.error('[Redis] error:', err.message));
+    redis.on('error', err => logger.error('[Redis] error:', err.message));
     redis.on('close', () => {
       redisReady = false;
     });

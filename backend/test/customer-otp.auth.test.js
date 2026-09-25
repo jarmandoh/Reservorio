@@ -63,7 +63,9 @@ describe('Auth API — OTP y magic-link de cliente', () => {
       expect(res.body.ok).toBe(true);
       expect(res.body.data.delivery).toEqual({ email: 'sent', sms: 'sent' });
       expect(res.body.data.debugCode).toBeUndefined();
-      expect(channels.sendEmail).toHaveBeenCalledWith(expect.objectContaining({ to: 'ana@example.com', subject: expect.stringContaining('código') }));
+      expect(channels.sendEmail).toHaveBeenCalledWith(
+        expect.objectContaining({ to: 'ana@example.com', subject: expect.stringContaining('código') })
+      );
       expect(channels.sendSms).toHaveBeenCalledWith(expect.objectContaining({ to: CUSTOMER.phone }));
     });
 
@@ -90,14 +92,18 @@ describe('Auth API — OTP y magic-link de cliente', () => {
     test('devuelve 401 si el email no está registrado', async () => {
       db.query.mockResolvedValueOnce({ rows: [] });
 
-      const res = await request(app).post('/api/auth/customer/otp/verify').send({ email: 'nobody@example.com', code: '123456' });
+      const res = await request(app)
+        .post('/api/auth/customer/otp/verify')
+        .send({ email: 'nobody@example.com', code: '123456' });
       expect(res.status).toBe(401);
     });
 
     test('devuelve 401 con código incorrecto', async () => {
       db.query.mockResolvedValueOnce({ rows: [CUSTOMER] }).mockResolvedValueOnce({ rows: [] });
 
-      const res = await request(app).post('/api/auth/customer/otp/verify').send({ email: 'ana@example.com', code: '000000' });
+      const res = await request(app)
+        .post('/api/auth/customer/otp/verify')
+        .send({ email: 'ana@example.com', code: '000000' });
       expect(res.status).toBe(401);
     });
 
@@ -106,7 +112,11 @@ describe('Auth API — OTP y magic-link de cliente', () => {
       const storedHash = sha256('ana@example.com:123456');
       db.query
         .mockResolvedValueOnce({ rows: [CUSTOMER] })
-        .mockResolvedValueOnce({ rows: [{ id: 'x1', customer_id: 'c1', kind: 'otp', code_hash: storedHash, attempts: 0, expires_at: futureExpiry }] })
+        .mockResolvedValueOnce({
+          rows: [
+            { id: 'x1', customer_id: 'c1', kind: 'otp', code_hash: storedHash, attempts: 0, expires_at: futureExpiry },
+          ],
+        })
         .mockResolvedValueOnce({ rows: [] });
 
       const res = await request(app).post('/api/auth/customer/otp/verify').send({ email: 'ana@example.com', code });
@@ -129,7 +139,9 @@ describe('Auth API — OTP y magic-link de cliente', () => {
     test('responde genérico si el email no está registrado', async () => {
       db.query.mockResolvedValueOnce({ rows: [] });
 
-      const res = await request(app).post('/api/auth/customer/magic-link/request').send({ email: 'nobody@example.com' });
+      const res = await request(app)
+        .post('/api/auth/customer/magic-link/request')
+        .send({ email: 'nobody@example.com' });
 
       expect(res.status).toBe(200);
       expect(res.body.data.message).toContain('enlace');
@@ -155,7 +167,9 @@ describe('Auth API — OTP y magic-link de cliente', () => {
     test('devuelve 401 con token inexistente', async () => {
       db.query.mockResolvedValueOnce({ rows: [] });
 
-      const res = await request(app).post('/api/auth/customer/magic-link/verify').send({ token: 'un-token-desconocido-1234567890abc' });
+      const res = await request(app)
+        .post('/api/auth/customer/magic-link/verify')
+        .send({ token: 'un-token-desconocido-1234567890abc' });
       expect(res.status).toBe(401);
     });
 
@@ -163,7 +177,18 @@ describe('Auth API — OTP y magic-link de cliente', () => {
       const token = 'magic-token-abc123def456ghi789';
       const storedHash = sha256(token);
       db.query
-        .mockResolvedValueOnce({ rows: [{ id: 'm1', customer_id: 'c1', kind: 'magic_link', code_hash: storedHash, attempts: 0, expires_at: futureExpiry }] })
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              id: 'm1',
+              customer_id: 'c1',
+              kind: 'magic_link',
+              code_hash: storedHash,
+              attempts: 0,
+              expires_at: futureExpiry,
+            },
+          ],
+        })
         .mockResolvedValueOnce({ rows: [CUSTOMER] })
         .mockResolvedValueOnce({ rows: [] });
 

@@ -23,7 +23,13 @@ async function listReviews(businessId) {
       'SELECT id, business_id, rating, review, created_at FROM ratings WHERE business_id = $1 ORDER BY created_at DESC LIMIT 10',
       [businessId]
     );
-    const data = rows.map(r => ({ id: r.id, businessId: r.business_id, rating: r.rating, review: r.review, createdAt: r.created_at }));
+    const data = rows.map(r => ({
+      id: r.id,
+      businessId: r.business_id,
+      rating: r.rating,
+      review: r.review,
+      createdAt: r.created_at,
+    }));
     if (CACHE_ENABLED) await cache.set(cacheKey, data, CACHE_TTL_LIST);
     return { ok: true, status: 200, data };
   } catch (_error) {

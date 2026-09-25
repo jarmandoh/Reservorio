@@ -9,7 +9,7 @@ function handleValidation(req, res, next) {
   return res.status(400).json({
     ok: false,
     message: 'Validación fallida',
-    errors: errors.array().map((err) => `${err.param}: ${err.msg}`),
+    errors: errors.array().map(err => `${err.param}: ${err.msg}`),
   });
 }
 

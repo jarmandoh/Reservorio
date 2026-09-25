@@ -42,8 +42,12 @@ const businessUpdateValidators = [
 const reservationValidators = [
   body('franja').trim().notEmpty().withMessage('franja requerido'),
   body('cliente').trim().notEmpty().withMessage('cliente requerido'),
-  body('telefono').trim().notEmpty().withMessage('telefono requerido')
-    .matches(/^[0-9+\s\-]{7,15}$/).withMessage('telefono inválido'),
+  body('telefono')
+    .trim()
+    .notEmpty()
+    .withMessage('telefono requerido')
+    .matches(/^[0-9+\s\-]{7,15}$/)
+    .withMessage('telefono inválido'),
   body('servicio').optional().trim().isLength({ max: 100 }).withMessage('servicio demasiado largo'),
   body('notas').optional().trim().isLength({ max: 500 }).withMessage('notas demasiado largas'),
   handleValidation,
@@ -51,26 +55,35 @@ const reservationValidators = [
 
 const reservationUpdateValidators = [
   param('row').toInt().isInt({ min: 1 }).withMessage('ID de reserva invalido'),
-  body('disponibilidad').trim().isIn(['Disponible', 'Pendiente', 'Reservado', 'Confirmado', 'Cancelado']).withMessage('Estado no permitido'),
+  body('disponibilidad')
+    .trim()
+    .isIn(['Disponible', 'Pendiente', 'Reservado', 'Confirmado', 'Cancelado'])
+    .withMessage('Estado no permitido'),
   body('notas').optional().trim().isLength({ max: 500 }).withMessage('notas demasiado largas'),
   handleValidation,
 ];
 
 const serviceValidators = [
-  body('nombre').trim().notEmpty().withMessage('nombre requerido').isLength({ max: 100 }).withMessage('nombre demasiado largo'),
+  body('nombre')
+    .trim()
+    .notEmpty()
+    .withMessage('nombre requerido')
+    .isLength({ max: 100 })
+    .withMessage('nombre demasiado largo'),
   handleValidation,
 ];
 
-const serviceNameParamValidator = [
-  param('nombre').trim().notEmpty().withMessage('nombre requerido'),
-  handleValidation,
-];
+const serviceNameParamValidator = [param('nombre').trim().notEmpty().withMessage('nombre requerido'), handleValidation];
 
 const checkoutValidators = [
   body('franja').trim().notEmpty().withMessage('franja requerido'),
   body('cliente').trim().notEmpty().withMessage('cliente requerido'),
-  body('telefono').trim().notEmpty().withMessage('telefono requerido')
-    .matches(/^[0-9+\s\-]{7,15}$/).withMessage('telefono inválido'),
+  body('telefono')
+    .trim()
+    .notEmpty()
+    .withMessage('telefono requerido')
+    .matches(/^[0-9+\s\-]{7,15}$/)
+    .withMessage('telefono inválido'),
   body('servicio').optional().trim().isLength({ max: 100 }).withMessage('servicio demasiado largo'),
   body('notas').optional().trim().isLength({ max: 500 }).withMessage('notas demasiado largas'),
   body('email').optional().trim().isEmail().withMessage('email inválido'),
@@ -83,7 +96,9 @@ router.get('/', async (req, res) => {
     const result = await businessesService.listBusinesses(req.query);
     res.status(result.status).json({
       ok: result.ok,
-      ...(result.ok ? { data: result.data, ...(result.meta ? { meta: result.meta } : {}) } : { message: result.message }),
+      ...(result.ok
+        ? { data: result.data, ...(result.meta ? { meta: result.meta } : {}) }
+        : { message: result.message }),
     });
   } catch (e) {
     res.status(500).json({ ok: false, message: e.message });
@@ -94,7 +109,9 @@ router.get('/', async (req, res) => {
 router.get('/all', requireAdmin, async (_req, res) => {
   try {
     const result = await businessesService.listAllBusinesses();
-    res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
+    res
+      .status(result.status)
+      .json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (e) {
     res.status(500).json({ ok: false, message: e.message });
   }
@@ -104,7 +121,9 @@ router.get('/all', requireAdmin, async (_req, res) => {
 router.get('/owner', requireOwnerAuth, async (req, res) => {
   try {
     const result = await businessesService.listOwnerBusinesses(req.authPayload.ownerId);
-    res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
+    res
+      .status(result.status)
+      .json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (e) {
     res.status(500).json({ ok: false, message: e.message });
   }
@@ -117,7 +136,9 @@ router.post('/:id/auth', pinLimiter, async (req, res) => {
 
   try {
     const result = await businessesService.authenticateBusiness(req.params.id, pin);
-    return res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
+    return res
+      .status(result.status)
+      .json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (e) {
     res.status(500).json({ ok: false, message: e.message });
   }
@@ -133,7 +154,9 @@ router.post('/', requireAdminOrOwner, businessCreateValidators, async (req, res)
   }
   try {
     const result = await businessesService.createBusiness(body, ownerId);
-    res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
+    res
+      .status(result.status)
+      .json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (e) {
     res.status(500).json({ ok: false, message: e.message });
   }
@@ -148,7 +171,9 @@ router.put('/:id', requireBusinessAuth, businessUpdateValidators, async (req, re
   }
   try {
     const result = await businessesService.updateBusiness(req.params.id, body);
-    res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
+    res
+      .status(result.status)
+      .json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (e) {
     res.status(500).json({ ok: false, message: e.message });
   }
@@ -158,7 +183,9 @@ router.put('/:id', requireBusinessAuth, businessUpdateValidators, async (req, re
 router.patch('/:id/toggle', requireAdmin, async (req, res) => {
   try {
     const result = await businessesService.toggleBusiness(req.params.id);
-    res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
+    res
+      .status(result.status)
+      .json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (e) {
     res.status(500).json({ ok: false, message: e.message });
   }
@@ -168,7 +195,9 @@ router.patch('/:id/toggle', requireAdmin, async (req, res) => {
 router.patch('/:id/verify', requireAdmin, async (req, res) => {
   try {
     const result = await businessesService.setBusinessVerified(req.params.id, req.body?.verified);
-    res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
+    res
+      .status(result.status)
+      .json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (e) {
     res.status(500).json({ ok: false, message: e.message });
   }
@@ -178,7 +207,9 @@ router.patch('/:id/verify', requireAdmin, async (req, res) => {
 router.delete('/:id', requireAdmin, async (req, res) => {
   try {
     const result = await businessesService.deleteBusiness(req.params.id);
-    res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
+    res
+      .status(result.status)
+      .json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (e) {
     res.status(500).json({ ok: false, message: e.message });
   }
@@ -190,7 +221,9 @@ router.delete('/:id', requireAdmin, async (req, res) => {
 router.get('/:id/availability', async (req, res) => {
   try {
     const result = await businessesService.listAvailability(req.params.id);
-    res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
+    res
+      .status(result.status)
+      .json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (e) {
     res.status(500).json({ ok: false, message: e.message });
   }
@@ -200,7 +233,9 @@ router.get('/:id/availability', async (req, res) => {
 router.get('/:id', requireBusinessAuth, async (req, res) => {
   try {
     const result = await businessesService.getBusinessById(req.params.id);
-    res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
+    res
+      .status(result.status)
+      .json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (e) {
     res.status(500).json({ ok: false, message: e.message });
   }
@@ -212,7 +247,9 @@ router.get('/:id/reservations', requireBusinessAuth, async (req, res) => {
     const result = await businessesService.listReservations(req.params.id, req.query);
     res.status(result.status).json({
       ok: result.ok,
-      ...(result.ok ? { data: result.data, ...(result.meta ? { meta: result.meta } : {}) } : { message: result.message }),
+      ...(result.ok
+        ? { data: result.data, ...(result.meta ? { meta: result.meta } : {}) }
+        : { message: result.message }),
     });
   } catch (e) {
     res.status(500).json({ ok: false, message: e.message });
@@ -223,7 +260,9 @@ router.get('/:id/reservations', requireBusinessAuth, async (req, res) => {
 router.post(`/:id/reservations`, reservationValidators, async (req, res) => {
   try {
     const result = await businessesService.createReservation(req.params.id, req.body);
-    res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
+    res
+      .status(result.status)
+      .json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (e) {
     res.status(500).json({ ok: false, message: e.message });
   }
@@ -233,7 +272,9 @@ router.post(`/:id/reservations`, reservationValidators, async (req, res) => {
 router.post('/:id/checkout', checkoutValidators, async (req, res) => {
   try {
     const result = await checkoutService.checkoutForBusiness(req.params.id, req.body);
-    res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
+    res
+      .status(result.status)
+      .json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (e) {
     res.status(500).json({ ok: false, message: e.message });
   }
@@ -244,7 +285,9 @@ router.put('/:id/reservations/:row', requireBusinessAuth, reservationUpdateValid
   const reservaId = parseInt(req.params.row, 10);
   try {
     const result = await businessesService.updateReservation(req.params.id, reservaId, req.body);
-    res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
+    res
+      .status(result.status)
+      .json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (e) {
     res.status(500).json({ ok: false, message: e.message });
   }
@@ -256,7 +299,9 @@ router.put('/:id/reservations/:row', requireBusinessAuth, reservationUpdateValid
 router.get('/:id/services', async (req, res) => {
   try {
     const result = await businessesService.listServices(req.params.id);
-    res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
+    res
+      .status(result.status)
+      .json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (e) {
     res.status(500).json({ ok: false, message: e.message });
   }
@@ -266,7 +311,9 @@ router.get('/:id/services', async (req, res) => {
 router.post('/:id/services', requireBusinessAuth, serviceValidators, async (req, res) => {
   try {
     const result = await businessesService.addService(req.params.id, req.body?.nombre);
-    res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
+    res
+      .status(result.status)
+      .json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (e) {
     if (e.code === '23505') return res.status(409).json({ ok: false, message: 'Servicio ya existe' });
     res.status(500).json({ ok: false, message: e.message });
@@ -277,7 +324,9 @@ router.post('/:id/services', requireBusinessAuth, serviceValidators, async (req,
 router.delete('/:id/services/:nombre', requireBusinessAuth, serviceNameParamValidator, async (req, res) => {
   try {
     const result = await businessesService.removeService(req.params.id, req.params.nombre);
-    res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
+    res
+      .status(result.status)
+      .json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (e) {
     res.status(500).json({ ok: false, message: e.message });
   }

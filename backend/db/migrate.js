@@ -25,11 +25,16 @@ if (!/^postgres(ql)?:\/\//.test(DATABASE_URL)) {
   process.exit(1);
 }
 
+const ADVISORY_LOCK_ID = 727727727; // evita migraciones concurrentes con --scale backend=3
+
 async function main() {
   const client = new Client({ connectionString: DATABASE_URL });
   await client.connect();
 
   try {
+    // Lock distribuido: bloquea hasta adquirir, evita que 2 réplicas migren a la vez
+    await client.query('SELECT pg_advisory_lock($1)', [ADVISORY_LOCK_ID]);
+
     await client.query(`
       CREATE TABLE IF NOT EXISTS schema_migrations (
         name       TEXT PRIMARY KEY,
@@ -65,8 +70,13 @@ async function main() {
       }
     }
 
-    console.log(`[db:migrate] ${appliedCount === 0 ? 'sin migraciones pendientes' : `${appliedCount} migración(es) aplicada(s)`}`);
+    console.log(
+      `[db:migrate] ${appliedCount === 0 ? 'sin migraciones pendientes' : `${appliedCount} migración(es) aplicada(s)`}`
+    );
   } finally {
+    try {
+      await client.query('SELECT pg_advisory_unlock($1)', [ADVISORY_LOCK_ID]);
+    } catch {}
     await client.end();
   }
 }

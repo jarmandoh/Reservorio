@@ -24,8 +24,8 @@ El proxy de desarrollo (`angular.json`) redirige `/api/*` a `http://localhost:30
 `src/environments/environment.ts` resuelve la URL base así:
 
 ```ts
-apiUrl: window.__APP_CONFIG__?.apiUrl ?? 'http://localhost:3000/api'  // dev
-apiUrl: window.__APP_CONFIG__?.apiUrl ?? '/api'                       // prod
+apiUrl: window.__APP_CONFIG__?.apiUrl ?? 'http://localhost:3000/api'; // dev
+apiUrl: window.__APP_CONFIG__?.apiUrl ?? '/api'; // prod
 ```
 
 En Docker, `docker-compose.yml` inyecta `API_URL` en el HTML servido, lo que permite apuntar al dominio real sin recompilar.
@@ -60,29 +60,29 @@ src/app/
 
 ## Rutas
 
-| Ruta | Componente | Guard |
-|---|---|---|
-| `/` | Home | — |
-| `/booking/:businessId` | Booking | — |
-| `/login` | Login | — |
-| `/admin` | Admin | admin |
-| `/business/:businessId/login` | BusinessLogin | — |
-| `/business/:businessId/admin` | BusinessAdmin | business |
-| `/owner/business/:businessId` | BusinessAdmin | owner |
-| `/owner/register`, `/owner/login`, `/owner/dashboard` | Owner flow | dashboard: owner |
-| `/customer/login`, `/customer/history`, `/customer/verify` | Cliente | history: customer |
-| `/payment/success`, `/payment/cancel` | Pagos | — |
+| Ruta                                                       | Componente    | Guard             |
+| ---------------------------------------------------------- | ------------- | ----------------- |
+| `/`                                                        | Home          | —                 |
+| `/booking/:businessId`                                     | Booking       | —                 |
+| `/login`                                                   | Login         | —                 |
+| `/admin`                                                   | Admin         | admin             |
+| `/business/:businessId/login`                              | BusinessLogin | —                 |
+| `/business/:businessId/admin`                              | BusinessAdmin | business          |
+| `/owner/business/:businessId`                              | BusinessAdmin | owner             |
+| `/owner/register`, `/owner/login`, `/owner/dashboard`      | Owner flow    | dashboard: owner  |
+| `/customer/login`, `/customer/history`, `/customer/verify` | Cliente       | history: customer |
+| `/payment/success`, `/payment/cancel`                      | Pagos         | —                 |
 
 ## Almacenamiento de tokens (`auth.service.ts`)
 
-| Clave | Contenido | Almacenamiento |
-|---|---|---|
-| `reservorio_admin_jwt` | JWT admin global | sessionStorage |
-| `reservorio_owner_jwt` | JWT dueño | sessionStorage |
-| `negocio_jwt_<businessId>` | JWT business-admin | sessionStorage |
-| `reservorio_customer_jwt` | JWT cliente (persistente) | localStorage |
-| `reservorio_unlocked` | Flag legacy de sesión | sessionStorage |
-| `reservorio_admin_pin` | PIN legacy | localStorage |
+| Clave                      | Contenido                 | Almacenamiento |
+| -------------------------- | ------------------------- | -------------- |
+| `reservorio_admin_jwt`     | JWT admin global          | sessionStorage |
+| `reservorio_owner_jwt`     | JWT dueño                 | sessionStorage |
+| `negocio_jwt_<businessId>` | JWT business-admin        | sessionStorage |
+| `reservorio_customer_jwt`  | JWT cliente (persistente) | localStorage   |
+| `reservorio_unlocked`      | Flag legacy de sesión     | sessionStorage |
+| `reservorio_admin_pin`     | PIN legacy                | localStorage   |
 
 `isTokenValid()` verifica la expiración en el cliente decodificando el payload del JWT.
 

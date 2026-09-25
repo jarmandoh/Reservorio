@@ -7,12 +7,12 @@ import { SessionStore } from '../state/session.store';
 import { ApiService } from './api.service';
 import { StorageService } from './storage.service';
 
-const SESSION_KEY   = 'reservorio_unlocked';
-const PIN_KEY       = 'reservorio_admin_pin';
-const ADMIN_JWT     = 'reservorio_admin_jwt';
-const OWNER_JWT     = 'reservorio_owner_jwt';
-const CUSTOMER_JWT  = 'reservorio_customer_jwt';
-const DEFAULT_PIN   = '1234';
+const SESSION_KEY = 'reservorio_unlocked';
+const PIN_KEY = 'reservorio_admin_pin';
+const ADMIN_JWT = 'reservorio_admin_jwt';
+const OWNER_JWT = 'reservorio_owner_jwt';
+const CUSTOMER_JWT = 'reservorio_customer_jwt';
+const DEFAULT_PIN = '1234';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -47,8 +47,8 @@ export class AuthService {
   }
 
   changePin(current: string, next: string): boolean {
-    if (current !== this.storedPin)  return false;
-    if (!/^\d{4}$/.test(next))        return false;
+    if (current !== this.storedPin) return false;
+    if (!/^\d{4}$/.test(next)) return false;
     this.storage.setItem(PIN_KEY, next, 'local');
     return true;
   }
@@ -256,7 +256,7 @@ export class AuthService {
         if (res.data?.token) target!.apply(res.data.token);
       }),
       map(() => undefined),
-      catchError(() => of(undefined)),
+      catchError(() => of(undefined))
     );
   }
 
@@ -275,6 +275,8 @@ export class AuthService {
     try {
       const payload = this.decodeToken(token);
       return typeof payload?.['exp'] === 'number' && payload['exp'] * 1000 > Date.now();
-    } catch { return false; }
+    } catch {
+      return false;
+    }
   }
 }

@@ -19,7 +19,9 @@ const viewLimiter = rateLimit({
 router.post('/view', viewLimiter, async (req, res) => {
   try {
     const result = await analyticsService.recordView({ businessId: req.body?.businessId });
-    return res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
+    return res
+      .status(result.status)
+      .json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (error) {
     return res.status(500).json({ ok: false, message: 'Server error' });
   }

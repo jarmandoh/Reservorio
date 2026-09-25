@@ -1,12 +1,12 @@
 export interface Reservation {
-  id:             number;
-  _rowIndex:      number;
-  franja:         string;
+  id: number;
+  _rowIndex: number;
+  franja: string;
   disponibilidad: string;
-  cliente:        string;
-  telefono:       string;
-  servicio:       string;
-  notas:          string;
+  cliente: string;
+  telefono: string;
+  servicio: string;
+  notas: string;
 }
 
 export interface Customer {
@@ -39,11 +39,11 @@ export interface BookingRecord {
 }
 
 export interface BookingPayload {
-  franja:   string;
-  cliente:  string;
+  franja: string;
+  cliente: string;
   telefono: string;
   servicio: string;
-  notas:    string;
+  notas: string;
 }
 
 export interface BookingRequest {
@@ -98,29 +98,29 @@ export interface CheckoutSession {
 }
 
 export interface UpdatePayload {
-  rowIndex:       number;
+  rowIndex: number;
   disponibilidad: string;
-  notas?:         string;
+  notas?: string;
 }
 
 export interface UxTip {
-  title:       string;
+  title: string;
   description: string;
 }
 
 export type DispStatus = 'Disponible' | 'Pendiente' | 'Reservado' | 'Confirmado';
 
 export interface ApiResponse<T = unknown> {
-  ok:       boolean;
-  data?:    T;
+  ok: boolean;
+  data?: T;
   message?: string;
-  errors?:  string[];
+  errors?: string[];
 }
 
 export interface GoogleStatus {
-  linked:      boolean;
-  email:       string | null;
-  sheetId:     string | null;
+  linked: boolean;
+  email: string | null;
+  sheetId: string | null;
   tokenExpiry: string | null;
 }
 

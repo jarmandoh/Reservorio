@@ -52,15 +52,14 @@ import { RouterLink } from '@angular/router';
             <h2 class="font-semibold text-base">4. Conservación</h2>
             <p>
               Conservamos los datos mientras el negocio necesite el registro de la reserva y el comprobante asociado.
-              Tras una solicitud de supresión, tus datos personales se <strong>anonimizan</strong> de forma irreversible.
+              Tras una solicitud de supresión, tus datos personales se <strong>anonimizan</strong> de forma
+              irreversible.
             </p>
           </section>
 
           <section class="space-y-2 text-sm leading-6">
             <h2 class="font-semibold text-base">5. Contacto</h2>
-            <p>
-              Para cualquier consulta sobre privacidad puedes escribir al administrador de la plataforma.
-            </p>
+            <p>Para cualquier consulta sobre privacidad puedes escribir al administrador de la plataforma.</p>
           </section>
         </article>
       </div>

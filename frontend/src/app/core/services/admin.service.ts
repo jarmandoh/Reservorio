@@ -1,7 +1,17 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, of } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { ApiResponse, Reservation, UpdatePayload, BookingPayload, Payment, PaymentStatus, AdminStats, AdminReview, AdminServiceRecord } from '../models/reservation.model';
+import {
+  ApiResponse,
+  Reservation,
+  UpdatePayload,
+  BookingPayload,
+  Payment,
+  PaymentStatus,
+  AdminStats,
+  AdminReview,
+  AdminServiceRecord,
+} from '../models/reservation.model';
 import { Categoria } from '../models/categorias.model';
 import { Business, NewBusinessPayload } from '../models/businesses.model';
 import { AuthService } from './auth.service';
@@ -65,7 +75,11 @@ export class AdminService {
     return this.api.createBusiness(payload, token);
   }
 
-  updateBusiness(id: string, payload: Partial<NewBusinessPayload> & { pin?: string }, token: string): Observable<ApiResponse> {
+  updateBusiness(
+    id: string,
+    payload: Partial<NewBusinessPayload> & { pin?: string },
+    token: string
+  ): Observable<ApiResponse> {
     return this.api.updateBusiness(id, payload, token);
   }
 

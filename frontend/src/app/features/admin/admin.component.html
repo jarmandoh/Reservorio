@@ -1,238 +1,409 @@
 <div class="flex flex-col min-h-screen bg-surface">
+  <!-- TOP BAR -->
+  <header
+    class="sticky top-0 z-20 bg-surface-lowest border-b border-outline-variant/30 flex items-center gap-3 px-6 h-16"
+  >
+    <div
+      class="w-9 h-9 flex items-center justify-center rounded-md text-white text-base bg-gradient-to-br from-primary to-primary-container"
+    >
+      <span class="material-icons-round text-sm">admin_panel_settings</span>
+    </div>
+    <span class="font-display font-bold text-base flex-1">Panel de administración</span>
+    <button
+      class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-surface-container transition text-on-surface-variant"
+      (click)="refresh()"
+      [disabled]="loading()"
+      aria-label="Actualizar"
+    >
+      <span class="material-icons-round text-[1.1rem]" [class.animate-spin]="loading()">refresh</span>
+    </button>
+    <button class="btn-tertiary btn-sm gap-1" (click)="logout()">
+      <span class="material-icons-round text-base">logout</span>
+      Salir
+    </button>
+  </header>
 
-    <!-- TOP BAR -->
-    <header class="sticky top-0 z-20 bg-surface-lowest border-b border-outline-variant/30
-                   flex items-center gap-3 px-6 h-16">
-      <div class="w-9 h-9 flex items-center justify-center rounded-md text-white text-base bg-gradient-to-br from-primary to-primary-container">
-        <span class="material-icons-round text-sm">admin_panel_settings</span>
-      </div>
-      <span class="font-display font-bold text-base flex-1">Panel de administración</span>
-      <button class="w-9 h-9 flex items-center justify-center rounded-full
-                     hover:bg-surface-container transition text-on-surface-variant"
-              (click)="refresh()" [disabled]="loading()" aria-label="Actualizar">
-        <span class="material-icons-round text-[1.1rem]" [class.animate-spin]="loading()">refresh</span>
+  <!-- NAV TABS -->
+  <nav class="flex items-center gap-1 px-4 py-2 bg-surface-lowest border-b border-outline-variant/30 overflow-x-auto">
+    @for (t of tabs; track t.id) {
+      <button class="nav-item whitespace-nowrap" [class.active]="tab() === t.id" (click)="selectTab(t.id)">
+        <span class="material-icons-round text-[1rem]">{{ t.icon }}</span>
+        {{ t.label }}
       </button>
-      <button class="btn-tertiary btn-sm gap-1" (click)="logout()">
-        <span class="material-icons-round text-base">logout</span>
-        Salir
-      </button>
-    </header>
+    }
+  </nav>
 
-    <!-- NAV TABS -->
-    <nav class="flex items-center gap-1 px-4 py-2 bg-surface-lowest border-b border-outline-variant/30 overflow-x-auto">
-      @for (t of tabs; track t.id) {
-        <button class="nav-item whitespace-nowrap" [class.active]="tab() === t.id" (click)="selectTab(t.id)">
-          <span class="material-icons-round text-[1rem]">{{ t.icon }}</span>
-          {{ t.label }}
-        </button>
+  <!-- ══ TAB: PANEL (estadísticas) ═══════════════════════════════════════ -->
+  @if (tab() === 'panel') {
+    <div class="flex-1 p-4 sm:p-6 flex flex-col gap-5 max-w-6xl mx-auto w-full">
+      @if (adminPanelError() && !adminStats()) {
+        <div class="bg-error-container rounded-xl p-4 flex items-center gap-3 text-error-on-container">
+          <span class="material-icons-round">warning</span>
+          <p class="text-sm">{{ adminPanelError() }}</p>
+        </div>
       }
-    </nav>
 
-    <!-- ══ TAB: PANEL (estadísticas) ═══════════════════════════════════════ -->
-    @if (tab() === 'panel') {
-      <div class="flex-1 p-4 sm:p-6 flex flex-col gap-5 max-w-6xl mx-auto w-full">
-        @if (adminPanelError() && !adminStats()) {
-          <div class="bg-error-container rounded-xl p-4 flex items-center gap-3 text-error-on-container">
-            <span class="material-icons-round">warning</span>
-            <p class="text-sm">{{ adminPanelError() }}</p>
-          </div>
-        }
-
-        @if (adminPanelLoading() && !adminStats()) {
-          <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            @for (i of [1,2,3,4,5,6]; track i) {
-              <div class="skeleton h-24 rounded-2xl"></div>
-            }
-          </div>
-        } @else {
-          <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            @for (card of panelCards(); track card.label) {
-              <div class="card flex flex-col gap-2">
-                <div class="flex items-center justify-between gap-2">
-                  <p class="text-[11px] uppercase tracking-widest text-outline font-semibold">{{ card.label }}</p>
-                  <span class="material-icons-round text-outline-variant text-[1.1rem]">{{ card.icon }}</span>
-                </div>
-                <p class="font-display font-bold text-2xl text-on-surface">{{ card.value }}</p>
+      @if (adminPanelLoading() && !adminStats()) {
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          @for (i of [1, 2, 3, 4, 5, 6]; track i) {
+            <div class="skeleton h-24 rounded-2xl"></div>
+          }
+        </div>
+      } @else {
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          @for (card of panelCards(); track card.label) {
+            <div class="card flex flex-col gap-2">
+              <div class="flex items-center justify-between gap-2">
+                <p class="text-[11px] uppercase tracking-widest text-outline font-semibold">{{ card.label }}</p>
+                <span class="material-icons-round text-outline-variant text-[1.1rem]">{{ card.icon }}</span>
               </div>
-            }
-          </div>
+              <p class="font-display font-bold text-2xl text-on-surface">{{ card.value }}</p>
+            </div>
+          }
+        </div>
 
-          @if (adminStats(); as s) {
-            <div class="card p-0 overflow-hidden">
-              <div class="px-5 py-4 border-b border-outline-variant/30">
-                <h3 class="font-display font-semibold text-on-surface">Actividad general</h3>
+        @if (adminStats(); as s) {
+          <div class="card p-0 overflow-hidden">
+            <div class="px-5 py-4 border-b border-outline-variant/30">
+              <h3 class="font-display font-semibold text-on-surface">Actividad general</h3>
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 p-5 text-sm">
+              <div>
+                <p class="text-outline text-[11px] uppercase tracking-widest font-semibold">Negocios activos</p>
+                <p class="font-display font-bold text-xl text-success mt-1">{{ s.activeBusinesses }}</p>
               </div>
-              <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 p-5 text-sm">
-                <div>
-                  <p class="text-outline text-[11px] uppercase tracking-widest font-semibold">Negocios activos</p>
-                  <p class="font-display font-bold text-xl text-success mt-1">{{ s.activeBusinesses }}</p>
-                </div>
-                <div>
-                  <p class="text-outline text-[11px] uppercase tracking-widest font-semibold">Verificados</p>
-                  <p class="font-display font-bold text-xl text-primary mt-1">{{ s.verifiedBusinesses }}</p>
-                </div>
-                <div>
-                  <p class="text-outline text-[11px] uppercase tracking-widest font-semibold">Reservas confirmadas</p>
-                  <p class="font-display font-bold text-xl text-on-surface mt-1">{{ s.confirmedBookings }}</p>
-                </div>
-                <div>
-                  <p class="text-outline text-[11px] uppercase tracking-widest font-semibold">Valoración media</p>
-                  <p class="font-display font-bold text-xl text-on-surface mt-1">{{ s.averageRating }} <span class="material-icons-round text-yellow-400 text-[1rem] align-middle">star</span></p>
-                </div>
+              <div>
+                <p class="text-outline text-[11px] uppercase tracking-widest font-semibold">Verificados</p>
+                <p class="font-display font-bold text-xl text-primary mt-1">{{ s.verifiedBusinesses }}</p>
+              </div>
+              <div>
+                <p class="text-outline text-[11px] uppercase tracking-widest font-semibold">Reservas confirmadas</p>
+                <p class="font-display font-bold text-xl text-on-surface mt-1">{{ s.confirmedBookings }}</p>
+              </div>
+              <div>
+                <p class="text-outline text-[11px] uppercase tracking-widest font-semibold">Valoración media</p>
+                <p class="font-display font-bold text-xl text-on-surface mt-1">
+                  {{ s.averageRating }}
+                  <span class="material-icons-round text-yellow-400 text-[1rem] align-middle">star</span>
+                </p>
               </div>
             </div>
+          </div>
 
-            @if (funnelSteps(); as funnel) {
-              <div class="card p-0 overflow-hidden">
-                <div class="px-5 py-4 border-b border-outline-variant/30">
-                  <h3 class="font-display font-semibold text-on-surface">Embudo de conversión</h3>
-                  <p class="text-xs text-on-surface-variant mt-0.5">Últimos {{ funnel.days }} días: de vista de negocio a reserva y a pago</p>
-                </div>
-                <div class="flex flex-col gap-4 p-5">
-                  @for (step of funnel.steps; track step.label) {
-                    <div>
-                      <div class="flex items-center justify-between gap-2 text-sm">
-                        <span class="text-on-surface-variant">{{ step.label }}</span>
-                        <span class="font-semibold text-on-surface">
-                          {{ step.value }}
-                          <span class="text-xs font-normal text-on-surface-variant">({{ step.pct }}%)</span>
-                        </span>
-                      </div>
-                      <div class="mt-2 h-2.5 rounded-full bg-surface-low overflow-hidden">
-                        <div class="h-full rounded-full bg-gradient-to-r from-primary to-success transition-all"
-                             [style.width.%]="step.pct"></div>
-                      </div>
-                    </div>
-                  }
-                </div>
+          @if (funnelSteps(); as funnel) {
+            <div class="card p-0 overflow-hidden">
+              <div class="px-5 py-4 border-b border-outline-variant/30">
+                <h3 class="font-display font-semibold text-on-surface">Embudo de conversión</h3>
+                <p class="text-xs text-on-surface-variant mt-0.5">
+                  Últimos {{ funnel.days }} días: de vista de negocio a reserva y a pago
+                </p>
               </div>
-            }
+              <div class="flex flex-col gap-4 p-5">
+                @for (step of funnel.steps; track step.label) {
+                  <div>
+                    <div class="flex items-center justify-between gap-2 text-sm">
+                      <span class="text-on-surface-variant">{{ step.label }}</span>
+                      <span class="font-semibold text-on-surface">
+                        {{ step.value }}
+                        <span class="text-xs font-normal text-on-surface-variant">({{ step.pct }}%)</span>
+                      </span>
+                    </div>
+                    <div class="mt-2 h-2.5 rounded-full bg-surface-low overflow-hidden">
+                      <div
+                        class="h-full rounded-full bg-gradient-to-r from-primary to-success transition-all"
+                        [style.width.%]="step.pct"
+                      ></div>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
           }
         }
-      </div>
-    }
+      }
+    </div>
+  }
 
-    <!-- ══ TAB: RESEÑAS (moderación) ═══════════════════════════════════════ -->
-    @if (tab() === 'resenas') {
-      <div class="flex-1 p-4 sm:p-6 flex flex-col gap-4 max-w-6xl mx-auto w-full">
-        @if (adminPanelLoading() && !allReviews().length) {
-          <div class="flex flex-col gap-2">
-            @for (i of [1,2,3]; track i) {
-              <div class="skeleton h-24 rounded-2xl"></div>
-            }
-          </div>
-        } @else if (!allReviews().length) {
-          <div class="flex flex-col items-center justify-center gap-3 py-16 text-center">
-            <span class="material-icons-round text-[3.5rem] text-outline-variant">rate_review</span>
-            <h3 class="font-display font-semibold text-xl">Sin reseñas</h3>
-            <p class="text-sm text-on-surface-variant">Las reseñas de los clientes aparecerán aquí.</p>
-          </div>
-        } @else {
-          <div class="flex flex-col gap-3">
-            @for (review of allReviews(); track review.id) {
-              <div class="rounded-2xl border border-outline-variant/30 bg-white p-4 flex flex-col sm:flex-row sm:items-center gap-3">
-                <div class="flex-1 min-w-0">
-                  <div class="flex items-center gap-2 mb-1 flex-wrap">
-                    <span class="material-icons-round text-yellow-400 text-[0.9rem]">star</span>
-                    <span class="text-sm font-bold text-on-surface">{{ review.rating }}.0</span>
-                    <span class="text-sm font-medium text-on-surface truncate">{{ review.businessName }}</span>
-                  </div>
-                  <p class="text-sm text-on-surface">{{ review.review || 'Reseña sin texto.' }}</p>
-                  <p class="text-xs text-on-surface-variant mt-1">{{ review.createdAt | date:'short' }}</p>
+  <!-- ══ TAB: RESEÑAS (moderación) ═══════════════════════════════════════ -->
+  @if (tab() === 'resenas') {
+    <div class="flex-1 p-4 sm:p-6 flex flex-col gap-4 max-w-6xl mx-auto w-full">
+      @if (adminPanelLoading() && !allReviews().length) {
+        <div class="flex flex-col gap-2">
+          @for (i of [1, 2, 3]; track i) {
+            <div class="skeleton h-24 rounded-2xl"></div>
+          }
+        </div>
+      } @else if (!allReviews().length) {
+        <div class="flex flex-col items-center justify-center gap-3 py-16 text-center">
+          <span class="material-icons-round text-[3.5rem] text-outline-variant">rate_review</span>
+          <h3 class="font-display font-semibold text-xl">Sin reseñas</h3>
+          <p class="text-sm text-on-surface-variant">Las reseñas de los clientes aparecerán aquí.</p>
+        </div>
+      } @else {
+        <div class="flex flex-col gap-3">
+          @for (review of allReviews(); track review.id) {
+            <div
+              class="rounded-2xl border border-outline-variant/30 bg-white p-4 flex flex-col sm:flex-row sm:items-center gap-3"
+            >
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-1 flex-wrap">
+                  <span class="material-icons-round text-yellow-400 text-[0.9rem]">star</span>
+                  <span class="text-sm font-bold text-on-surface">{{ review.rating }}.0</span>
+                  <span class="text-sm font-medium text-on-surface truncate">{{ review.businessName }}</span>
                 </div>
-                <button class="btn-danger btn-sm gap-1 flex-shrink-0"
-                        [disabled]="deletingReviewId() === review.id"
-                        (click)="deleteReview(review.id)">
-                  <span class="material-icons-round text-[0.875rem]">delete</span>
-                  Eliminar
-                </button>
+                <p class="text-sm text-on-surface">{{ review.review || 'Reseña sin texto.' }}</p>
+                <p class="text-xs text-on-surface-variant mt-1">{{ review.createdAt | date: 'short' }}</p>
               </div>
-            }
+              <button
+                class="btn-danger btn-sm gap-1 flex-shrink-0"
+                [disabled]="deletingReviewId() === review.id"
+                (click)="deleteReview(review.id)"
+              >
+                <span class="material-icons-round text-[0.875rem]">delete</span>
+                Eliminar
+              </button>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+
+  <!-- ══ TAB: PAGOS ════════════════════════════════════════════════════ -->
+  @if (tab() === 'pagos') {
+    <div class="flex-1 p-4 sm:p-6 flex flex-col gap-5 max-w-6xl mx-auto w-full">
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div class="card flex flex-col gap-1.5">
+          <p class="text-[11px] uppercase tracking-widest text-outline font-semibold">Total</p>
+          <p class="font-display font-bold text-2xl text-on-surface">{{ paymentStats().total }}</p>
+        </div>
+        <div class="card flex flex-col gap-1.5">
+          <p class="text-[11px] uppercase tracking-widest text-outline font-semibold">Cobrados</p>
+          <p class="font-display font-bold text-2xl text-success">{{ paymentStats().paid }}</p>
+        </div>
+        <div class="card flex flex-col gap-1.5">
+          <p class="text-[11px] uppercase tracking-widest text-outline font-semibold">Pendientes</p>
+          <p class="font-display font-bold text-2xl text-tertiary">{{ paymentStats().pending }}</p>
+        </div>
+        <div class="card flex flex-col gap-1.5">
+          <p class="text-[11px] uppercase tracking-widest text-outline font-semibold">Ingresos</p>
+          <p class="font-display font-bold text-2xl text-info">{{ paymentStats().revenue }} €</p>
+        </div>
+      </div>
+
+      <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+        <select
+          class="form-select sm:w-56"
+          [value]="adminPaymentFilter()"
+          (change)="setPaymentFilter(getInputValue($event))"
+        >
+          <option value="">Todos los estados</option>
+          <option value="pending">Pendientes</option>
+          <option value="paid">Cobrados</option>
+          <option value="failed">Fallidos</option>
+          <option value="refunded">Reembolsados</option>
+        </select>
+        <button class="btn-tertiary btn-sm gap-1" (click)="loadAdminPayments()">
+          <span class="material-icons-round text-base">refresh</span>
+          Recargar
+        </button>
+      </div>
+
+      @if (!filteredPayments().length) {
+        <div class="flex flex-col items-center justify-center gap-4 py-16 text-center">
+          <span class="material-icons-round text-[3.5rem] text-outline-variant">payments</span>
+          <h3 class="font-display font-semibold text-xl">Sin pagos</h3>
+          <p class="text-sm text-on-surface-variant">Aún no hay movimientos de pago.</p>
+        </div>
+      } @else {
+        <div class="hidden sm:block card p-0 overflow-hidden">
+          <table class="w-full text-sm text-left">
+            <thead>
+              <tr
+                class="border-b border-outline-variant/30 text-[11px] uppercase tracking-wider text-outline bg-surface-low"
+              >
+                <th class="px-5 py-3">Fecha</th>
+                <th class="px-5 py-3">Método</th>
+                <th class="px-5 py-3">Importe</th>
+                <th class="px-5 py-3">Estado</th>
+                <th class="px-5 py-3">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (payment of filteredPayments(); track payment.id) {
+                <tr class="border-b border-outline-variant/20 hover:bg-surface-low transition">
+                  <td class="px-5 py-3.5">{{ payment.createdAt | date: 'short' }}</td>
+                  <td class="px-5 py-3.5 capitalize">{{ payment.method }}</td>
+                  <td class="px-5 py-3.5 font-display font-semibold">{{ payment.amount }} €</td>
+                  <td class="px-5 py-3.5">
+                    <span
+                      class="rounded-full px-2.5 py-1 text-xs font-semibold {{ statusBadgeClass(payment.status) }}"
+                      >{{ payment.status }}</span
+                    >
+                  </td>
+                  <td class="px-5 py-3.5">
+                    @if (payment.status === 'pending') {
+                      <button
+                        class="btn-primary btn-sm gap-1"
+                        [disabled]="paidUpdating() === payment.id"
+                        (click)="setPaymentStatus(payment, 'paid')"
+                      >
+                        <span class="material-icons-round text-[0.875rem]">check</span>
+                        Marcar cobrado
+                      </button>
+                    }
+                    @if (payment.status === 'paid') {
+                      <button
+                        class="btn-tertiary btn-sm gap-1"
+                        [disabled]="paidUpdating() === payment.id"
+                        (click)="setPaymentStatus(payment, 'refunded')"
+                      >
+                        <span class="material-icons-round text-[0.875rem]">reply</span>
+                        Reembolsar
+                      </button>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <div class="flex flex-col gap-3 sm:hidden">
+          @for (payment of filteredPayments(); track payment.id) {
+            <div class="rounded-2xl border border-outline-variant/30 bg-white p-4 flex flex-col gap-2">
+              <div class="flex items-center justify-between gap-2">
+                <span class="font-display font-bold text-lg">{{ payment.amount }} €</span>
+                <span class="rounded-full px-2.5 py-1 text-xs font-semibold {{ statusBadgeClass(payment.status) }}">{{
+                  payment.status
+                }}</span>
+              </div>
+              <p class="text-sm text-on-surface-variant capitalize">
+                {{ payment.method }} · {{ payment.createdAt | date: 'short' }}
+              </p>
+              @if (payment.status === 'pending') {
+                <button
+                  class="btn-primary btn-sm gap-1"
+                  [disabled]="paidUpdating() === payment.id"
+                  (click)="setPaymentStatus(payment, 'paid')"
+                >
+                  <span class="material-icons-round text-[0.875rem]">check</span> Marcar cobrado
+                </button>
+              }
+              @if (payment.status === 'paid') {
+                <button
+                  class="btn-tertiary btn-sm gap-1"
+                  [disabled]="paidUpdating() === payment.id"
+                  (click)="setPaymentStatus(payment, 'refunded')"
+                >
+                  <span class="material-icons-round text-[0.875rem]">reply</span> Reembolsar
+                </button>
+              }
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+
+  <!-- ══ TAB: RESERVAS ═══════════════════════════════════════════ -->
+  @if (tab() === 'reservas') {
+    <div class="flex-1 p-4 sm:p-6 flex flex-col gap-5 max-w-6xl mx-auto w-full">
+      <!-- Stats -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        @for (s of stats(); track s.label) {
+          <div class="card flex flex-col gap-1.5">
+            <p class="text-[11px] uppercase tracking-widest text-outline font-semibold">{{ s.label }}</p>
+            <p class="font-display font-bold text-2xl text-on-surface">{{ s.value }}</p>
           </div>
         }
       </div>
-    }
 
-    <!-- ══ TAB: PAGOS ════════════════════════════════════════════════════ -->
-    @if (tab() === 'pagos') {
-      <div class="flex-1 p-4 sm:p-6 flex flex-col gap-5 max-w-6xl mx-auto w-full">
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div class="card flex flex-col gap-1.5">
-            <p class="text-[11px] uppercase tracking-widest text-outline font-semibold">Total</p>
-            <p class="font-display font-bold text-2xl text-on-surface">{{ paymentStats().total }}</p>
-          </div>
-          <div class="card flex flex-col gap-1.5">
-            <p class="text-[11px] uppercase tracking-widest text-outline font-semibold">Cobrados</p>
-            <p class="font-display font-bold text-2xl text-success">{{ paymentStats().paid }}</p>
-          </div>
-          <div class="card flex flex-col gap-1.5">
-            <p class="text-[11px] uppercase tracking-widest text-outline font-semibold">Pendientes</p>
-            <p class="font-display font-bold text-2xl text-tertiary">{{ paymentStats().pending }}</p>
-          </div>
-          <div class="card flex flex-col gap-1.5">
-            <p class="text-[11px] uppercase tracking-widest text-outline font-semibold">Ingresos</p>
-            <p class="font-display font-bold text-2xl text-info">{{ paymentStats().revenue }} €</p>
-          </div>
+      <!-- Search + filter -->
+      <div class="flex flex-col sm:flex-row gap-3">
+        <div class="relative flex-1">
+          <span
+            class="material-icons-round absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[1.1rem] pointer-events-none"
+            >search</span
+          >
+          <input
+            type="search"
+            class="form-input pl-10"
+            placeholder="Buscar cliente, servicio…"
+            [value]="searchQuery()"
+            (input)="searchQuery.set(getInputValue($event))"
+          />
         </div>
+        <select class="form-select sm:w-48" [value]="filterStatus()" (change)="filterStatus.set(getInputValue($event))">
+          <option value="">Todos</option>
+          <option value="disponible">Disponibles</option>
+          <option value="pendiente">Pendientes</option>
+          <option value="reservado">Reservados</option>
+          <option value="confirmado">Confirmados</option>
+        </select>
+      </div>
 
-        <div class="flex flex-col sm:flex-row sm:items-center gap-3">
-          <select class="form-select sm:w-56"
-                  [value]="adminPaymentFilter()"
-                  (change)="setPaymentFilter(getInputValue($event))">
-            <option value="">Todos los estados</option>
-            <option value="pending">Pendientes</option>
-            <option value="paid">Cobrados</option>
-            <option value="failed">Fallidos</option>
-            <option value="refunded">Reembolsados</option>
-          </select>
-          <button class="btn-tertiary btn-sm gap-1" (click)="loadAdminPayments()">
-            <span class="material-icons-round text-base">refresh</span>
-            Recargar
-          </button>
+      <!-- Error -->
+      @if (error() && !loading()) {
+        <div class="bg-error-container rounded-xl p-4 flex items-center gap-3 text-error-on-container">
+          <span class="material-icons-round">warning</span>
+          <p class="text-sm">{{ error() }}</p>
         </div>
+      }
 
-        @if (!filteredPayments().length) {
+      <!-- Skeleton -->
+      @if (loading()) {
+        <div class="flex flex-col gap-2">
+          @for (i of [1, 2, 3, 4]; track i) {
+            <div class="skeleton h-14 rounded-xl"></div>
+          }
+        </div>
+      }
+
+      <!-- Table (desktop) / Cards (mobile) -->
+      @if (!loading() && !error()) {
+        @if (!filteredRows().length) {
           <div class="flex flex-col items-center justify-center gap-4 py-16 text-center">
-            <span class="material-icons-round text-[3.5rem] text-outline-variant">payments</span>
-            <h3 class="font-display font-semibold text-xl">Sin pagos</h3>
-            <p class="text-sm text-on-surface-variant">Aún no hay movimientos de pago.</p>
+            <span class="material-icons-round text-[3.5rem] text-outline-variant">event_busy</span>
+            <h3 class="font-display font-semibold text-xl">Sin resultados</h3>
+            <p class="text-sm text-on-surface-variant">Ajusta los filtros o recarga los datos.</p>
           </div>
         } @else {
+          <!-- Desktop table -->
           <div class="hidden sm:block card p-0 overflow-hidden">
             <table class="w-full text-sm text-left">
               <thead>
-                <tr class="border-b border-outline-variant/30 text-[11px] uppercase tracking-wider text-outline bg-surface-low">
-                  <th class="px-5 py-3">Fecha</th>
-                  <th class="px-5 py-3">Método</th>
-                  <th class="px-5 py-3">Importe</th>
+                <tr
+                  class="border-b border-outline-variant/30 text-[11px] uppercase tracking-wider text-outline bg-surface-low"
+                >
+                  <th class="px-5 py-3">Franja</th>
                   <th class="px-5 py-3">Estado</th>
-                  <th class="px-5 py-3">Acciones</th>
+                  <th class="px-5 py-3">Cliente</th>
+                  <th class="px-5 py-3">Teléfono</th>
+                  <th class="px-5 py-3">Servicio</th>
+                  <th class="px-5 py-3">Notas</th>
+                  <th class="px-5 py-3">Acción</th>
                 </tr>
               </thead>
               <tbody>
-                @for (payment of filteredPayments(); track payment.id) {
+                @for (row of filteredRows(); track row._rowIndex) {
                   <tr class="border-b border-outline-variant/20 hover:bg-surface-low transition">
-                    <td class="px-5 py-3.5">{{ payment.createdAt | date:'short' }}</td>
-                    <td class="px-5 py-3.5 capitalize">{{ payment.method }}</td>
-                    <td class="px-5 py-3.5 font-display font-semibold">{{ payment.amount }} €</td>
+                    <td class="px-5 py-3.5 font-display font-semibold">{{ row.franja }}</td>
+                    <td class="px-5 py-3.5"><app-badge [status]="row.disponibilidad" /></td>
+                    <td class="px-5 py-3.5">{{ row.cliente || '—' }}</td>
+                    <td class="px-5 py-3.5">{{ row.telefono || '—' }}</td>
                     <td class="px-5 py-3.5">
-                      <span class="rounded-full px-2.5 py-1 text-xs font-semibold {{ statusBadgeClass(payment.status) }}">{{ payment.status }}</span>
+                      <span class="service-tag">{{ row.servicio || '—' }}</span>
                     </td>
+                    <td class="px-5 py-3.5 text-on-surface-variant max-w-[160px] truncate">{{ row.notas || '—' }}</td>
                     <td class="px-5 py-3.5">
-                      @if (payment.status === 'pending') {
-                        <button class="btn-primary btn-sm gap-1"
-                                [disabled]="paidUpdating() === payment.id"
-                                (click)="setPaymentStatus(payment, 'paid')">
-                          <span class="material-icons-round text-[0.875rem]">check</span>
-                          Marcar cobrado
-                        </button>
-                      }
-                      @if (payment.status === 'paid') {
-                        <button class="btn-tertiary btn-sm gap-1"
-                                [disabled]="paidUpdating() === payment.id"
-                                (click)="setPaymentStatus(payment, 'refunded')">
-                          <span class="material-icons-round text-[0.875rem]">reply</span>
-                          Reembolsar
+                      @if (!isFreeSlot(row)) {
+                        <button
+                          class="btn-primary btn-sm gap-1"
+                          [disabled]="updating() === row._rowIndex"
+                          (click)="openModal(row)"
+                        >
+                          <span class="material-icons-round text-[0.875rem]">edit</span>
                         </button>
                       }
                     </td>
@@ -242,707 +413,690 @@
             </table>
           </div>
 
+          <!-- Mobile cards -->
           <div class="flex flex-col gap-3 sm:hidden">
-            @for (payment of filteredPayments(); track payment.id) {
-              <div class="rounded-2xl border border-outline-variant/30 bg-white p-4 flex flex-col gap-2">
-                <div class="flex items-center justify-between gap-2">
-                  <span class="font-display font-bold text-lg">{{ payment.amount }} €</span>
-                  <span class="rounded-full px-2.5 py-1 text-xs font-semibold {{ statusBadgeClass(payment.status) }}">{{ payment.status }}</span>
+            @for (row of filteredRows(); track row._rowIndex) {
+              <div class="card flex flex-col gap-2">
+                <div class="flex items-center justify-between">
+                  <span class="font-display font-bold text-lg">{{ row.franja }}</span>
+                  <app-badge [status]="row.disponibilidad" />
                 </div>
-                <p class="text-sm text-on-surface-variant capitalize">{{ payment.method }} · {{ payment.createdAt | date:'short' }}</p>
-                @if (payment.status === 'pending') {
-                  <button class="btn-primary btn-sm gap-1"
-                          [disabled]="paidUpdating() === payment.id"
-                          (click)="setPaymentStatus(payment, 'paid')">
-                    <span class="material-icons-round text-[0.875rem]">check</span> Marcar cobrado
-                  </button>
+                @if (row.cliente) {
+                  <p class="text-sm text-on-surface-variant">
+                    <span class="font-semibold text-on-surface">{{ row.cliente }}</span>
+                    @if (row.telefono) {
+                      · {{ row.telefono }}
+                    }
+                  </p>
                 }
-                @if (payment.status === 'paid') {
-                  <button class="btn-tertiary btn-sm gap-1"
-                          [disabled]="paidUpdating() === payment.id"
-                          (click)="setPaymentStatus(payment, 'refunded')">
-                    <span class="material-icons-round text-[0.875rem]">reply</span> Reembolsar
+                @if (row.servicio) {
+                  <span class="service-tag self-start">{{ row.servicio }}</span>
+                }
+                @if (row.notas) {
+                  <p class="text-xs text-on-surface-variant">{{ row.notas }}</p>
+                }
+                @if (!isFreeSlot(row)) {
+                  <button class="btn-secondary btn-sm self-end gap-1 mt-1" (click)="openModal(row)">
+                    <span class="material-icons-round text-[0.875rem]">edit</span>
+                    Cambiar estado
                   </button>
                 }
               </div>
             }
           </div>
         }
+      }
+    </div>
+  }
+
+  <!-- ══ TAB: SERVICIOS ══════════════════════════════════════════ -->
+  @if (tab() === 'servicios') {
+    <div class="flex-1 p-4 sm:p-6 flex flex-col gap-6 max-w-xl mx-auto w-full">
+      <div>
+        <h2 class="font-display font-semibold text-[1.375rem]">Servicios</h2>
+        <p class="text-sm text-on-surface-variant mt-1">Administra la lista de servicios disponibles.</p>
       </div>
-    }
 
-    <!-- ══ TAB: RESERVAS ═══════════════════════════════════════════ -->
-    @if (tab() === 'reservas') {
-      <div class="flex-1 p-4 sm:p-6 flex flex-col gap-5 max-w-6xl mx-auto w-full">
-
-        <!-- Stats -->
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          @for (s of stats(); track s.label) {
-            <div class="card flex flex-col gap-1.5">
-              <p class="text-[11px] uppercase tracking-widest text-outline font-semibold">{{ s.label }}</p>
-              <p class="font-display font-bold text-2xl text-on-surface">{{ s.value }}</p>
-            </div>
-          }
-        </div>
-
-        <!-- Search + filter -->
-        <div class="flex flex-col sm:flex-row gap-3">
-          <div class="relative flex-1">
-            <span class="material-icons-round absolute left-3 top-1/2 -translate-y-1/2
-                         text-outline text-[1.1rem] pointer-events-none">search</span>
-            <input type="search" class="form-input pl-10"
-                   placeholder="Buscar cliente, servicio…"
-                   [value]="searchQuery()"
-                   (input)="searchQuery.set(getInputValue($event))" />
+      <!-- Add service form -->
+      <form [formGroup]="serviceForm" (ngSubmit)="addService()" class="card flex flex-col gap-4">
+        <p class="section-label">Nuevo servicio</p>
+        <div class="flex flex-col sm:flex-row gap-3 items-start sm:items-end">
+          <div class="flex-1 w-full">
+            <label class="form-label" for="svcNombre">Nombre del servicio</label>
+            <input
+              id="svcNombre"
+              type="text"
+              class="form-input"
+              placeholder="Ej. Corte de cabello"
+              formControlName="nombre"
+              autocomplete="off"
+            />
           </div>
-          <select class="form-select sm:w-48"
-                  [value]="filterStatus()"
-                  (change)="filterStatus.set(getInputValue($event))">
-            <option value="">Todos</option>
-            <option value="disponible">Disponibles</option>
-            <option value="pendiente">Pendientes</option>
-            <option value="reservado">Reservados</option>
-            <option value="confirmado">Confirmados</option>
-          </select>
-        </div>
-
-        <!-- Error -->
-        @if (error() && !loading()) {
-          <div class="bg-error-container rounded-xl p-4 flex items-center gap-3 text-error-on-container">
-            <span class="material-icons-round">warning</span>
-            <p class="text-sm">{{ error() }}</p>
-          </div>
-        }
-
-        <!-- Skeleton -->
-        @if (loading()) {
-          <div class="flex flex-col gap-2">
-            @for (i of [1,2,3,4]; track i) {
-              <div class="skeleton h-14 rounded-xl"></div>
+          <button
+            type="submit"
+            class="flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold text-white transition disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap w-full sm:w-auto flex-shrink-0 bg-gradient-to-br from-primary to-primary-container"
+            [disabled]="serviceForm.invalid || addingService()"
+          >
+            @if (addingService()) {
+              <span class="material-icons-round text-base animate-spin">refresh</span>
+              Guardando…
+            } @else {
+              <span class="material-icons-round text-base">add_circle</span>
+              Agregar servicio
             }
-          </div>
-        }
-
-        <!-- Table (desktop) / Cards (mobile) -->
-        @if (!loading() && !error()) {
-          @if (!filteredRows().length) {
-            <div class="flex flex-col items-center justify-center gap-4 py-16 text-center">
-              <span class="material-icons-round text-[3.5rem] text-outline-variant">event_busy</span>
-              <h3 class="font-display font-semibold text-xl">Sin resultados</h3>
-              <p class="text-sm text-on-surface-variant">Ajusta los filtros o recarga los datos.</p>
-            </div>
-          } @else {
-            <!-- Desktop table -->
-            <div class="hidden sm:block card p-0 overflow-hidden">
-              <table class="w-full text-sm text-left">
-                <thead>
-                  <tr class="border-b border-outline-variant/30 text-[11px] uppercase tracking-wider
-                              text-outline bg-surface-low">
-                    <th class="px-5 py-3">Franja</th>
-                    <th class="px-5 py-3">Estado</th>
-                    <th class="px-5 py-3">Cliente</th>
-                    <th class="px-5 py-3">Teléfono</th>
-                    <th class="px-5 py-3">Servicio</th>
-                    <th class="px-5 py-3">Notas</th>
-                    <th class="px-5 py-3">Acción</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (row of filteredRows(); track row._rowIndex) {
-                    <tr class="border-b border-outline-variant/20 hover:bg-surface-low transition">
-                      <td class="px-5 py-3.5 font-display font-semibold">{{ row.franja }}</td>
-                      <td class="px-5 py-3.5"><app-badge [status]="row.disponibilidad" /></td>
-                      <td class="px-5 py-3.5">{{ row.cliente || '—' }}</td>
-                      <td class="px-5 py-3.5">{{ row.telefono || '—' }}</td>
-                      <td class="px-5 py-3.5"><span class="service-tag">{{ row.servicio || '—' }}</span></td>
-                      <td class="px-5 py-3.5 text-on-surface-variant max-w-[160px] truncate">{{ row.notas || '—' }}</td>
-                      <td class="px-5 py-3.5">
-                        @if (!isFreeSlot(row)) {
-                          <button class="btn-primary btn-sm gap-1"
-                                  [disabled]="updating() === row._rowIndex"
-                                  (click)="openModal(row)">
-                            <span class="material-icons-round text-[0.875rem]">edit</span>
-                          </button>
-                        }
-                      </td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            </div>
-
-            <!-- Mobile cards -->
-            <div class="flex flex-col gap-3 sm:hidden">
-              @for (row of filteredRows(); track row._rowIndex) {
-                <div class="card flex flex-col gap-2">
-                  <div class="flex items-center justify-between">
-                    <span class="font-display font-bold text-lg">{{ row.franja }}</span>
-                    <app-badge [status]="row.disponibilidad" />
-                  </div>
-                  @if (row.cliente) {
-                    <p class="text-sm text-on-surface-variant">
-                      <span class="font-semibold text-on-surface">{{ row.cliente }}</span>
-                      @if (row.telefono) { · {{ row.telefono }} }
-                    </p>
-                  }
-                  @if (row.servicio) {
-                    <span class="service-tag self-start">{{ row.servicio }}</span>
-                  }
-                  @if (row.notas) {
-                    <p class="text-xs text-on-surface-variant">{{ row.notas }}</p>
-                  }
-                  @if (!isFreeSlot(row)) {
-                    <button class="btn-secondary btn-sm self-end gap-1 mt-1" (click)="openModal(row)">
-                      <span class="material-icons-round text-[0.875rem]">edit</span>
-                      Cambiar estado
-                    </button>
-                  }
-                </div>
-              }
-            </div>
-          }
-        }
-      </div>
-    }
-
-    <!-- ══ TAB: SERVICIOS ══════════════════════════════════════════ -->
-    @if (tab() === 'servicios') {
-      <div class="flex-1 p-4 sm:p-6 flex flex-col gap-6 max-w-xl mx-auto w-full">
-
-        <div>
-          <h2 class="font-display font-semibold text-[1.375rem]">Servicios</h2>
-          <p class="text-sm text-on-surface-variant mt-1">Administra la lista de servicios disponibles.</p>
-        </div>
-
-        <!-- Add service form -->
-        <form [formGroup]="serviceForm" (ngSubmit)="addService()" class="card flex flex-col gap-4">
-          <p class="section-label">Nuevo servicio</p>
-          <div class="flex flex-col sm:flex-row gap-3 items-start sm:items-end">
-            <div class="flex-1 w-full">
-              <label class="form-label" for="svcNombre">Nombre del servicio</label>
-              <input id="svcNombre" type="text" class="form-input"
-                     placeholder="Ej. Corte de cabello"
-                     formControlName="nombre"
-                     autocomplete="off" />
-            </div>
-            <button type="submit"
-                        class="flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold
-                               text-white transition disabled:opacity-40 disabled:cursor-not-allowed
-                               whitespace-nowrap w-full sm:w-auto flex-shrink-0 bg-gradient-to-br from-primary to-primary-container"
-                        [disabled]="serviceForm.invalid || addingService()">
-              @if (addingService()) {
-                <span class="material-icons-round text-base animate-spin">refresh</span>
-                Guardando…
-              } @else {
-                <span class="material-icons-round text-base">add_circle</span>
-                Agregar servicio
-              }
-            </button>
-          </div>
-        </form>
-
-        <!-- Services list -->
-        @if (servicesLoading()) {
-          <div class="flex flex-col gap-2">
-            <div class="skeleton h-14 rounded-xl"></div>
-            <div class="skeleton h-14 rounded-xl"></div>
-            <div class="skeleton h-14 rounded-xl"></div>
-          </div>
-        }
-        @if (!servicesLoading()) {
-          @if (!services().length) {
-            <div class="flex flex-col items-center justify-center gap-4 py-14 text-center">
-              <div class="w-16 h-16 rounded-full flex items-center justify-center bg-surface-container">
-                <span class="material-icons-round text-3xl text-outline">category</span>
-              </div>
-              <div>
-                <h3 class="font-display font-semibold text-base">Sin servicios aún</h3>
-                <p class="text-sm mt-1 text-outline">Agrega el primero usando el formulario de arriba.</p>
-              </div>
-            </div>
-          } @else {
-            <div>
-              <p class="section-label">{{ services().length }} servicio{{ services().length !== 1 ? 's' : '' }} registrado{{ services().length !== 1 ? 's' : '' }}</p>
-              <div class="flex flex-col gap-2">
-                @for (svc of services(); track svc; let i = $index) {
-<div class="flex items-center gap-4 px-5 py-4 rounded-xl transition bg-surface-lowest shadow-card">
-                    <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 bg-primary-fixed">
-                      <span class="material-icons-round text-[1.1rem] text-primary">spa</span>
-                    </div>
-                    <span class="font-medium flex-1">{{ svc }}</span>
-                    <button
-                        class="w-9 h-9 rounded-lg flex items-center justify-center transition bg-error-container text-error-on-container
-                               disabled:opacity-40 disabled:cursor-not-allowed"
-                        (click)="deleteService(svc)"
-                      [disabled]="deletingService() === svc"
-                      [attr.aria-label]="'Eliminar ' + svc">
-                      @if (deletingService() === svc) {
-                        <span class="material-icons-round text-base animate-spin">refresh</span>
-                      } @else {
-                        <span class="material-icons-round text-base">delete_outline</span>
-                      }
-                    </button>
-                  </div>
-                }
-              </div>
-            </div>
-          }
-        }
-      </div>
-    }
-
-    <!-- ══ TAB: NEGOCIOS ══════════════════════════════════════════ -->
-    @if (tab() === 'negocios') {
-      <div class="flex-1 p-4 sm:p-6 flex flex-col gap-5 max-w-4xl mx-auto w-full">
-
-        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 class="font-display font-semibold text-[1.375rem]">Negocios</h2>
-            <p class="text-sm text-on-surface-variant mt-1">Gestiona el listado, el estado y los datos principales de cada negocio.</p>
-          </div>
-          <button class="btn-primary btn-sm gap-1.5" (click)="opennegocioModal(null)" [disabled]="!adminToken()">
-            <span class="material-icons-round text-base">add</span>
-            Nuevo
           </button>
         </div>
+      </form>
 
-        <div class="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto]">
-          <div class="relative">
-            <span class="material-icons-round absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[1.1rem] pointer-events-none">search</span>
-            <input type="search" class="form-input pl-10 w-full"
-                   placeholder="Buscar negocio, categoría o ubicación…"
-                   [value]="searchQuery()"
-                   (input)="searchQuery.set(getInputValue($event))" />
-          </div>
-          <select class="form-select w-full sm:w-64"
-                  [value]="filterStatus()"
-                  (change)="filterStatus.set(getInputValue($event))">
-            <option value="">Todos los estados</option>
-            <option value="activo">Activo</option>
-            <option value="inactivo">Inactivo</option>
-          </select>
+      <!-- Services list -->
+      @if (servicesLoading()) {
+        <div class="flex flex-col gap-2">
+          <div class="skeleton h-14 rounded-xl"></div>
+          <div class="skeleton h-14 rounded-xl"></div>
+          <div class="skeleton h-14 rounded-xl"></div>
         </div>
-
-        @if (!adminToken()) {
-<div class="flex flex-col gap-3 p-4 rounded-xl text-sm bg-amber-50 text-amber-800 border border-amber-300">
-            <span class="material-icons-round text-base mt-0.5">warning</span>
-            <div class="flex-1">
-              <p class="font-semibold">No se obtuvo el token de administrador</p>
-              <p class="mt-0.5 opacity-80">
-                {{ adminError() ?? 'Verifica que el PIN local coincida con ADMIN_PIN en el servidor.' }}
-              </p>
+      }
+      @if (!servicesLoading()) {
+        @if (!services().length) {
+          <div class="flex flex-col items-center justify-center gap-4 py-14 text-center">
+            <div class="w-16 h-16 rounded-full flex items-center justify-center bg-surface-container">
+              <span class="material-icons-round text-3xl text-outline">category</span>
             </div>
-            <button class="btn-secondary btn-sm" (click)="initAdminToken()">
-              Reintentar
-            </button>
-          </div>
-        }
-
-        @if (businessesLoading()) {
-          <div class="flex flex-col gap-3">
-            @for (i of [1,2,3]; track i) { <div class="skeleton h-20 rounded-2xl"></div> }
-          </div>
-        }
-
-        @if (!businessesLoading()) {
-          @if (!filteredBusinesses().length) {
-            <div class="flex flex-col items-center justify-center gap-4 py-16 text-center">
-              <span class="material-icons-round text-[3.5rem] text-outline-variant">search_off</span>
-              <h3 class="font-display font-semibold text-xl">Sin resultados</h3>
-              <p class="text-sm text-on-surface-variant">Ajusta los filtros o borra la búsqueda para ver negocios.</p>
+            <div>
+              <h3 class="font-display font-semibold text-base">Sin servicios aún</h3>
+              <p class="text-sm mt-1 text-outline">Agrega el primero usando el formulario de arriba.</p>
             </div>
-          } @else {
-            <div class="flex flex-col gap-3">
-              @for (negocio of filteredBusinesses(); track negocio.id) {
-                <div class="card flex items-center gap-4">
-                  <div class="w-12 h-12 rounded-xl overflow-hidden flex items-center justify-center flex-shrink-0 bg-surface-muted">
-                    @if (negocio.logo) {
-                      <img src="{{ negocio.logo }}" alt="Logo de {{ negocio.name }}" class="w-full h-full object-cover" />
+          </div>
+        } @else {
+          <div>
+            <p class="section-label">
+              {{ services().length }} servicio{{ services().length !== 1 ? 's' : '' }} registrado{{
+                services().length !== 1 ? 's' : ''
+              }}
+            </p>
+            <div class="flex flex-col gap-2">
+              @for (svc of services(); track svc; let i = $index) {
+                <div class="flex items-center gap-4 px-5 py-4 rounded-xl transition bg-surface-lowest shadow-card">
+                  <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 bg-primary-fixed">
+                    <span class="material-icons-round text-[1.1rem] text-primary">spa</span>
+                  </div>
+                  <span class="font-medium flex-1">{{ svc }}</span>
+                  <button
+                    class="w-9 h-9 rounded-lg flex items-center justify-center transition bg-error-container text-error-on-container disabled:opacity-40 disabled:cursor-not-allowed"
+                    (click)="deleteService(svc)"
+                    [disabled]="deletingService() === svc"
+                    [attr.aria-label]="'Eliminar ' + svc"
+                  >
+                    @if (deletingService() === svc) {
+                      <span class="material-icons-round text-base animate-spin">refresh</span>
                     } @else {
-                      <span class="material-icons-round text-xl text-outline">store</span>
+                      <span class="material-icons-round text-base">delete_outline</span>
                     }
-                  </div>
-                  <div class="flex-1 min-w-0">
-                    <div class="flex items-center gap-2 flex-wrap">
-                      <h3 class="font-display font-bold text-base truncate">{{ negocio.name }}</h3>
-                      @if (negocio.verified) {
-<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-success-container text-success-on">
-                          <span class="material-icons-round text-[12px]">verified</span>
-                          Verificado
-                        </span>
-                      }
-                      <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold"
-                            [class.bg-success-container]="negocio.active"
-                            [class.text-success-on]="negocio.active"
-                            [class.bg-surface-high]="!negocio.active"
-                            [class.text-outline]="!negocio.active">
-                        {{ negocio.active ? 'Activo' : 'Inactivo' }}
-                      </span>
-                    </div>
-                    <p class="text-xs text-on-surface-variant truncate mt-0.5">
-                      {{ negocio.category }} · {{ negocio.location || 'Sin ubicación' }}
-                    </p>
-                  </div>
-                  <div class="flex items-center gap-2 flex-shrink-0">
-<button class="w-9 h-9 flex items-center justify-center rounded-lg transition bg-primary-fixed text-primary"
-                        (click)="opennegocioModal(negocio)" [disabled]="!adminToken()"
-                            aria-label="Editar {{ negocio.name }}">
-                      <span class="material-icons-round text-base">edit</span>
-                    </button>
-                    <button class="w-9 h-9 flex items-center justify-center rounded-lg transition disabled:opacity-40"
-                            [class.bg-error-container]="negocio.active"
-                            [class.text-error-on-container]="negocio.active"
-                            [class.bg-success-container]="!negocio.active"
-                            [class.text-success-on]="!negocio.active"
-                            (click)="toggleBusiness(negocio.id)"
-                            [disabled]="togglingBusiness() === negocio.id || !adminToken()"
-                            [attr.aria-label]="negocio.active ? 'Desactivar negocio' : 'Activar negocio'">
-                      @if (togglingBusiness() === negocio.id) {
-                        <span class="material-icons-round text-base animate-spin">refresh</span>
-                      } @else {
-                        <span class="material-icons-round text-base">{{ negocio.active ? 'visibility_off' : 'visibility' }}</span>
-                      }
-                    </button>
-                    <button class="w-9 h-9 flex items-center justify-center rounded-lg transition disabled:opacity-40"
-                            [class.bg-success-container]="negocio.verified"
-                            [class.text-success-on]="negocio.verified"
-                            [class.bg-surface-container]="!negocio.verified"
-                            [class.text-outline]="!negocio.verified"
-                            (click)="verifyBusiness(negocio.id)"
-                            [disabled]="verifyingBusiness() === negocio.id || !adminToken()"
-                            [attr.aria-label]="(negocio.verified ? 'Desmarcar como verificad' : 'Marcar como verificado') + ' ' + negocio.name"
-                            [attr.title]="negocio.verified ? 'Verificado: quitar marca' : 'Sin verificar: marcar como verificado'">
-                      @if (verifyingBusiness() === negocio.id) {
-                        <span class="material-icons-round text-base animate-spin">refresh</span>
-                      } @else {
-                        <span class="material-icons-round text-base">{{ negocio.verified ? 'verified' : 'verified_user' }}</span>
-                      }
-                    </button>
-                    <button class="w-9 h-9 flex items-center justify-center rounded-lg transition bg-error-container text-error-on-container disabled:opacity-40"
-                            (click)="deleteBusiness(negocio.id)"
-                            [disabled]="deletingBusiness() === negocio.id || !adminToken()"
-                            aria-label="Eliminar {{ negocio.name }}">
-                      @if (deletingBusiness() === negocio.id) {
-                        <span class="material-icons-round text-base animate-spin">refresh</span>
-                      } @else {
-                        <span class="material-icons-round text-base">delete_outline</span>
-                      }
-                    </button>
-                  </div>
+                  </button>
                 </div>
               }
             </div>
-          }
+          </div>
         }
-      </div>
-    }
+      }
+    </div>
+  }
 
-    <!-- ══ TAB: AJUSTES ════════════════════════════════════════════ -->
-    @if (tab() === 'ajustes') {
-      <div class="flex-1 p-4 sm:p-6 flex flex-col gap-6 max-w-xl mx-auto w-full">
-
+  <!-- ══ TAB: NEGOCIOS ══════════════════════════════════════════ -->
+  @if (tab() === 'negocios') {
+    <div class="flex-1 p-4 sm:p-6 flex flex-col gap-5 max-w-4xl mx-auto w-full">
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 class="font-display font-semibold text-[1.375rem]">Ajustes</h2>
-          <p class="text-sm text-on-surface-variant mt-1">Configura la conexión y seguridad.</p>
-        </div>
-
-        <!-- Sheet info -->
-        <div class="card flex flex-col gap-2">
-          <p class="section-label">Google Sheets</p>
-          <p class="text-xs text-on-surface-variant">ID de la hoja activa:</p>
-          <code class="bg-surface-low rounded-md px-3 py-2 text-xs break-all font-mono text-primary">
-            {{ sheetId }}
-          </code>
-          <p class="text-xs text-on-surface-variant mt-1">
-            Asegúrate de que la hoja tenga permisos de "Cualquier persona con el enlace puede ver".
+          <h2 class="font-display font-semibold text-[1.375rem]">Negocios</h2>
+          <p class="text-sm text-on-surface-variant mt-1">
+            Gestiona el listado, el estado y los datos principales de cada negocio.
           </p>
         </div>
+        <button class="btn-primary btn-sm gap-1.5" (click)="opennegocioModal(null)" [disabled]="!adminToken()">
+          <span class="material-icons-round text-base">add</span>
+          Nuevo
+        </button>
+      </div>
 
-        <!-- PIN change -->
-        <form [formGroup]="pinForm" (ngSubmit)="changePin()" class="card flex flex-col gap-4">
-          <p class="section-label">Cambiar PIN de administrador</p>
-          <div>
-            <label class="form-label" for="currentPin">PIN actual</label>
-            <input id="currentPin" type="password" class="form-input" inputmode="numeric"
-                   maxlength="8" formControlName="current" placeholder="••••" />
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto]">
+        <div class="relative">
+          <span
+            class="material-icons-round absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[1.1rem] pointer-events-none"
+            >search</span
+          >
+          <input
+            type="search"
+            class="form-input pl-10 w-full"
+            placeholder="Buscar negocio, categoría o ubicación…"
+            [value]="searchQuery()"
+            (input)="searchQuery.set(getInputValue($event))"
+          />
+        </div>
+        <select
+          class="form-select w-full sm:w-64"
+          [value]="filterStatus()"
+          (change)="filterStatus.set(getInputValue($event))"
+        >
+          <option value="">Todos los estados</option>
+          <option value="activo">Activo</option>
+          <option value="inactivo">Inactivo</option>
+        </select>
+      </div>
+
+      @if (!adminToken()) {
+        <div class="flex flex-col gap-3 p-4 rounded-xl text-sm bg-amber-50 text-amber-800 border border-amber-300">
+          <span class="material-icons-round text-base mt-0.5">warning</span>
+          <div class="flex-1">
+            <p class="font-semibold">No se obtuvo el token de administrador</p>
+            <p class="mt-0.5 opacity-80">
+              {{ adminError() ?? 'Verifica que el PIN local coincida con ADMIN_PIN en el servidor.' }}
+            </p>
           </div>
-          <div>
-            <label class="form-label" for="newPin">Nuevo PIN</label>
-            <input id="newPin" type="password" class="form-input" inputmode="numeric"
-                   maxlength="8" formControlName="next" placeholder="••••" />
-            @if (pinError()) {
-              <p class="text-xs text-error mt-1">{{ pinError() }}</p>
+          <button class="btn-secondary btn-sm" (click)="initAdminToken()">Reintentar</button>
+        </div>
+      }
+
+      @if (businessesLoading()) {
+        <div class="flex flex-col gap-3">
+          @for (i of [1, 2, 3]; track i) {
+            <div class="skeleton h-20 rounded-2xl"></div>
+          }
+        </div>
+      }
+
+      @if (!businessesLoading()) {
+        @if (!filteredBusinesses().length) {
+          <div class="flex flex-col items-center justify-center gap-4 py-16 text-center">
+            <span class="material-icons-round text-[3.5rem] text-outline-variant">search_off</span>
+            <h3 class="font-display font-semibold text-xl">Sin resultados</h3>
+            <p class="text-sm text-on-surface-variant">Ajusta los filtros o borra la búsqueda para ver negocios.</p>
+          </div>
+        } @else {
+          <div class="flex flex-col gap-3">
+            @for (negocio of filteredBusinesses(); track negocio.id) {
+              <div class="card flex items-center gap-4">
+                <div
+                  class="w-12 h-12 rounded-xl overflow-hidden flex items-center justify-center flex-shrink-0 bg-surface-muted"
+                >
+                  @if (negocio.logo) {
+                    <img src="{{ negocio.logo }}" alt="Logo de {{ negocio.name }}" class="w-full h-full object-cover" />
+                  } @else {
+                    <span class="material-icons-round text-xl text-outline">store</span>
+                  }
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <h3 class="font-display font-bold text-base truncate">{{ negocio.name }}</h3>
+                    @if (negocio.verified) {
+                      <span
+                        class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-success-container text-success-on"
+                      >
+                        <span class="material-icons-round text-[12px]">verified</span>
+                        Verificado
+                      </span>
+                    }
+                    <span
+                      class="px-2 py-0.5 rounded-full text-[11px] font-semibold"
+                      [class.bg-success-container]="negocio.active"
+                      [class.text-success-on]="negocio.active"
+                      [class.bg-surface-high]="!negocio.active"
+                      [class.text-outline]="!negocio.active"
+                    >
+                      {{ negocio.active ? 'Activo' : 'Inactivo' }}
+                    </span>
+                  </div>
+                  <p class="text-xs text-on-surface-variant truncate mt-0.5">
+                    {{ negocio.category }} · {{ negocio.location || 'Sin ubicación' }}
+                  </p>
+                </div>
+                <div class="flex items-center gap-2 flex-shrink-0">
+                  <button
+                    class="w-9 h-9 flex items-center justify-center rounded-lg transition bg-primary-fixed text-primary"
+                    (click)="opennegocioModal(negocio)"
+                    [disabled]="!adminToken()"
+                    aria-label="Editar {{ negocio.name }}"
+                  >
+                    <span class="material-icons-round text-base">edit</span>
+                  </button>
+                  <button
+                    class="w-9 h-9 flex items-center justify-center rounded-lg transition disabled:opacity-40"
+                    [class.bg-error-container]="negocio.active"
+                    [class.text-error-on-container]="negocio.active"
+                    [class.bg-success-container]="!negocio.active"
+                    [class.text-success-on]="!negocio.active"
+                    (click)="toggleBusiness(negocio.id)"
+                    [disabled]="togglingBusiness() === negocio.id || !adminToken()"
+                    [attr.aria-label]="negocio.active ? 'Desactivar negocio' : 'Activar negocio'"
+                  >
+                    @if (togglingBusiness() === negocio.id) {
+                      <span class="material-icons-round text-base animate-spin">refresh</span>
+                    } @else {
+                      <span class="material-icons-round text-base">{{
+                        negocio.active ? 'visibility_off' : 'visibility'
+                      }}</span>
+                    }
+                  </button>
+                  <button
+                    class="w-9 h-9 flex items-center justify-center rounded-lg transition disabled:opacity-40"
+                    [class.bg-success-container]="negocio.verified"
+                    [class.text-success-on]="negocio.verified"
+                    [class.bg-surface-container]="!negocio.verified"
+                    [class.text-outline]="!negocio.verified"
+                    (click)="verifyBusiness(negocio.id)"
+                    [disabled]="verifyingBusiness() === negocio.id || !adminToken()"
+                    [attr.aria-label]="
+                      (negocio.verified ? 'Desmarcar como verificad' : 'Marcar como verificado') + ' ' + negocio.name
+                    "
+                    [attr.title]="
+                      negocio.verified ? 'Verificado: quitar marca' : 'Sin verificar: marcar como verificado'
+                    "
+                  >
+                    @if (verifyingBusiness() === negocio.id) {
+                      <span class="material-icons-round text-base animate-spin">refresh</span>
+                    } @else {
+                      <span class="material-icons-round text-base">{{
+                        negocio.verified ? 'verified' : 'verified_user'
+                      }}</span>
+                    }
+                  </button>
+                  <button
+                    class="w-9 h-9 flex items-center justify-center rounded-lg transition bg-error-container text-error-on-container disabled:opacity-40"
+                    (click)="deleteBusiness(negocio.id)"
+                    [disabled]="deletingBusiness() === negocio.id || !adminToken()"
+                    aria-label="Eliminar {{ negocio.name }}"
+                  >
+                    @if (deletingBusiness() === negocio.id) {
+                      <span class="material-icons-round text-base animate-spin">refresh</span>
+                    } @else {
+                      <span class="material-icons-round text-base">delete_outline</span>
+                    }
+                  </button>
+                </div>
+              </div>
             }
           </div>
-          <button type="submit" class="btn-primary btn-sm self-end"
-                  [disabled]="pinForm.invalid">
-            Guardar PIN
-          </button>
-        </form>
+        }
+      }
+    </div>
+  }
 
+  <!-- ══ TAB: AJUSTES ════════════════════════════════════════════ -->
+  @if (tab() === 'ajustes') {
+    <div class="flex-1 p-4 sm:p-6 flex flex-col gap-6 max-w-xl mx-auto w-full">
+      <div>
+        <h2 class="font-display font-semibold text-[1.375rem]">Ajustes</h2>
+        <p class="text-sm text-on-surface-variant mt-1">Configura la conexión y seguridad.</p>
       </div>
-    }
 
-    <!-- ══ MODAL: Negocio ══════════════════════════════════════════ -->
-    @if (shownegocioModal()) {
-      <div class="fixed inset-0 z-40 flex items-end sm:items-center justify-center p-4 sm:p-6
-                  bg-black/40 backdrop-blur-sm animate-fade-in">
-        <div class="w-full max-w-lg bg-surface-lowest rounded-t-2xl sm:rounded-2xl flex flex-col
-                    shadow-soft max-h-[92dvh] animate-sheet-up"
-             (click)="$event.stopPropagation()">
+      <!-- Sheet info -->
+      <div class="card flex flex-col gap-2">
+        <p class="section-label">Google Sheets</p>
+        <p class="text-xs text-on-surface-variant">ID de la hoja activa:</p>
+        <code class="bg-surface-low rounded-md px-3 py-2 text-xs break-all font-mono text-primary">
+          {{ sheetId }}
+        </code>
+        <p class="text-xs text-on-surface-variant mt-1">
+          Asegúrate de que la hoja tenga permisos de "Cualquier persona con el enlace puede ver".
+        </p>
+      </div>
 
-          <div class="flex items-center justify-between p-5 border-b border-outline-variant/20 flex-shrink-0">
-            <h3 class="font-display font-semibold text-lg">
-              {{ editingBusiness() ? 'Editar negocio' : 'Nuevo negocio' }}
-            </h3>
-            <button class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-surface-container"
-                    (click)="closenegocioModal()">
-              <span class="material-icons-round text-on-surface-variant">close</span>
-            </button>
-          </div>
-          <button (click)="abrirmodalMapa()">Ubicar negocio</button>
-          <div class="overflow-y-auto flex-1 p-5">
-            <form [formGroup]="businessForm" class="flex flex-col gap-4">
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label class="form-label">Nombre *</label>
-                  <input type="text" class="form-input" formControlName="name" />
-                </div>
-                <div>
-                  <label class="form-label">Categoría *</label>
-                  <select class="form-select" formControlName="category" autocomplete="">
-                    <option value="" disabled>Selecciona una categoría</option>
-                    @if (isCategoriesLoading) {
-                      <option disabled>Cargando categorías...</option>
-                    } @else {
-                      @for (cat of categorias; track cat.id) {
-                        <option value="{{ cat.name }}">{{ cat.name }}</option>
-                      }
-                    }
-                  </select>
-                  <!-- <input type="text" class="form-input" formControlName="category"
-                         placeholder="Ej. Salud & Bienestar" /> -->
-                </div>
+      <!-- PIN change -->
+      <form [formGroup]="pinForm" (ngSubmit)="changePin()" class="card flex flex-col gap-4">
+        <p class="section-label">Cambiar PIN de administrador</p>
+        <div>
+          <label class="form-label" for="currentPin">PIN actual</label>
+          <input
+            id="currentPin"
+            type="password"
+            class="form-input"
+            inputmode="numeric"
+            maxlength="8"
+            formControlName="current"
+            placeholder="••••"
+          />
+        </div>
+        <div>
+          <label class="form-label" for="newPin">Nuevo PIN</label>
+          <input
+            id="newPin"
+            type="password"
+            class="form-input"
+            inputmode="numeric"
+            maxlength="8"
+            formControlName="next"
+            placeholder="••••"
+          />
+          @if (pinError()) {
+            <p class="text-xs text-error mt-1">{{ pinError() }}</p>
+          }
+        </div>
+        <button type="submit" class="btn-primary btn-sm self-end" [disabled]="pinForm.invalid">Guardar PIN</button>
+      </form>
+    </div>
+  }
+
+  <!-- ══ MODAL: Negocio ══════════════════════════════════════════ -->
+  @if (shownegocioModal()) {
+    <div
+      class="fixed inset-0 z-40 flex items-end sm:items-center justify-center p-4 sm:p-6 bg-black/40 backdrop-blur-sm animate-fade-in"
+    >
+      <div
+        class="w-full max-w-lg bg-surface-lowest rounded-t-2xl sm:rounded-2xl flex flex-col shadow-soft max-h-[92dvh] animate-sheet-up"
+        (click)="$event.stopPropagation()"
+      >
+        <div class="flex items-center justify-between p-5 border-b border-outline-variant/20 flex-shrink-0">
+          <h3 class="font-display font-semibold text-lg">
+            {{ editingBusiness() ? 'Editar negocio' : 'Nuevo negocio' }}
+          </h3>
+          <button
+            class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-surface-container"
+            (click)="closenegocioModal()"
+          >
+            <span class="material-icons-round text-on-surface-variant">close</span>
+          </button>
+        </div>
+        <button (click)="abrirmodalMapa()">Ubicar negocio</button>
+        <div class="overflow-y-auto flex-1 p-5">
+          <form [formGroup]="businessForm" class="flex flex-col gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="form-label">Nombre *</label>
+                <input type="text" class="form-input" formControlName="name" />
               </div>
               <div>
-                <label class="form-label">Descripción</label>
-                <textarea class="form-textarea" formControlName="description" rows="2"></textarea>
-              </div>
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label class="form-label">Dirección</label>
-                  <input type="text" class="form-input" formControlName="location" />
-                  @if (locationMapUrl()) {
-                    <a class="text-sm text-primary mt-2 inline-block hover:underline"
-                       href="{{ locationMapUrl() }}" target="_blank" rel="noreferrer noopener">
-                      Ver en el mapa
-                    </a>
-                  }
-                </div>
-                <div>
-                  <label class="form-label">Teléfono</label>
-                  <input type="tel" class="form-input" formControlName="phone" />
-                </div>
-              </div>
-              <div class="grid grid-cols-1 gap-3">
-                <label class="form-label">Horario</label>
-                <div class="grid grid-cols-7 gap-2">
-                  @for (day of daysOfWeek; track day.id) {
-                    <button type="button" class="rounded-full px-3 py-2 text-xs font-semibold transition"
-                            [class.bg-primary]="selectedDays().includes(day.id)"
-                            [class.text-white]="selectedDays().includes(day.id)"
-                            [class.bg-surface-container]="!selectedDays().includes(day.id)"
-                            [class.text-on-surface]="!selectedDays().includes(day.id)"
-                            (click)="toggleScheduleDay(day.id)">
-                      {{ day.label }}
-                    </button>
-                  }
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                  <div>
-                    <label class="form-label">Apertura</label>
-                    <input type="time" class="form-input" [value]="openTime()"
-                           (input)="openTime.set(getInputValue($event))" />
-                  </div>
-                  <div>
-                    <label class="form-label">Cierre</label>
-                    <input type="time" class="form-input" [value]="closeTime()"
-                           (input)="closeTime.set(getInputValue($event))" />
-                  </div>
-                </div>
-                <p class="text-sm text-on-surface-variant">Horario generado: <span class="font-semibold">{{ schedulePreview() || 'No definido' }}</span></p>
-                <input type="hidden" formControlName="schedule" />
-              </div>
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label class="form-label">Logo (URL)</label>
-                  <input type="url" class="form-input" formControlName="logo"
-                         placeholder="https://..." (input)="onLogoChange()" />
-                </div>
-                <div class="flex flex-col gap-2">
-                  <label class="form-label">Vista previa del logo</label>
-                  @if (logoPreview()) {
-                    <div class="rounded-xl overflow-hidden border border-outline-variant/20 w-full h-28 bg-surface-muted">
-                      <img src="{{ logoPreview() }}" alt="Vista previa del logo" class="w-full h-full object-contain" />
-                    </div>
+                <label class="form-label">Categoría *</label>
+                <select class="form-select" formControlName="category" autocomplete="">
+                  <option value="" disabled>Selecciona una categoría</option>
+                  @if (isCategoriesLoading) {
+                    <option disabled>Cargando categorías...</option>
                   } @else {
-                    <div class="rounded-xl border border-outline-variant/20 w-full h-28 bg-surface-muted flex items-center justify-center text-on-surface-variant">
-                      URL de logo vacía
-                    </div>
-                  }
-                </div>
-              </div>
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label class="form-label">Facebook</label>
-                  <input type="url" class="form-input" formControlName="facebook" placeholder="https://facebook.com/..." />
-                </div>
-                <div>
-                  <label class="form-label">Instagram</label>
-                  <input type="url" class="form-input" formControlName="instagram" placeholder="https://instagram.com/..." />
-                </div>
-                <div>
-                  <label class="form-label">TikTok</label>
-                  <input type="url" class="form-input" formControlName="tiktok" placeholder="https://tiktok.com/@..." />
-                </div>
-                <div>
-                  <label class="form-label">WhatsApp</label>
-                  <input type="text" class="form-input" formControlName="whatsapp" placeholder="+5493412345678" />
-                </div>
-                <div>
-                  <label class="form-label">LinkedIn</label>
-                  <input type="url" class="form-input" formControlName="linkedin" placeholder="https://linkedin.com/..." />
-                </div>
-              </div>
-              <div>
-                <label class="form-label">Tags</label>
-                <input type="text" class="form-input" formControlName="tags"
-                       placeholder="Consultas, Online"
-                       (input)="tagQuery.set(getInputValue($event))" />
-                @if (matchingTagSuggestions().length) {
-                  <div class="border border-outline-variant/20 rounded-xl bg-surface-low p-2 mt-2 grid gap-2">
-                    @for (tag of matchingTagSuggestions(); track tag) {
-                      <button type="button" class="text-sm text-on-surface hover:text-primary text-left"
-                              (click)="updateTagsFromSuggestion(tag)">
-                        {{ tag }}
-                      </button>
+                    @for (cat of categorias; track cat.id) {
+                      <option value="{{ cat.name }}">{{ cat.name }}</option>
                     }
-                  </div>
+                  }
+                </select>
+                <!-- <input type="text" class="form-input" formControlName="category"
+                         placeholder="Ej. Salud & Bienestar" /> -->
+              </div>
+            </div>
+            <div>
+              <label class="form-label">Descripción</label>
+              <textarea class="form-textarea" formControlName="description" rows="2"></textarea>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="form-label">Dirección</label>
+                <input type="text" class="form-input" formControlName="location" />
+                @if (locationMapUrl()) {
+                  <a
+                    class="text-sm text-primary mt-2 inline-block hover:underline"
+                    href="{{ locationMapUrl() }}"
+                    target="_blank"
+                    rel="noreferrer noopener"
+                  >
+                    Ver en el mapa
+                  </a>
                 }
               </div>
               <div>
-                <label class="form-label">Gradiente</label>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label class="form-label text-xs">Color 1</label>
-                    <input type="color" class="w-full h-12 rounded-xl border border-outline-variant/20"
-                           [value]="gradientFrom()"
-                           (input)="gradientFrom.set(getInputValue($event)); updateGradientValue()" />
-                  </div>
-                  <div>
-                    <label class="form-label text-xs">Color 2</label>
-                    <input type="color" class="w-full h-12 rounded-xl border border-outline-variant/20"
-                           [value]="gradientTo()"
-                           (input)="gradientTo.set(getInputValue($event)); updateGradientValue()" />
-                  </div>
+                <label class="form-label">Teléfono</label>
+                <input type="tel" class="form-input" formControlName="phone" />
+              </div>
+            </div>
+            <div class="grid grid-cols-1 gap-3">
+              <label class="form-label">Horario</label>
+              <div class="grid grid-cols-7 gap-2">
+                @for (day of daysOfWeek; track day.id) {
+                  <button
+                    type="button"
+                    class="rounded-full px-3 py-2 text-xs font-semibold transition"
+                    [class.bg-primary]="selectedDays().includes(day.id)"
+                    [class.text-white]="selectedDays().includes(day.id)"
+                    [class.bg-surface-container]="!selectedDays().includes(day.id)"
+                    [class.text-on-surface]="!selectedDays().includes(day.id)"
+                    (click)="toggleScheduleDay(day.id)"
+                  >
+                    {{ day.label }}
+                  </button>
+                }
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="form-label">Apertura</label>
+                  <input
+                    type="time"
+                    class="form-input"
+                    [value]="openTime()"
+                    (input)="openTime.set(getInputValue($event))"
+                  />
                 </div>
-                <div class="flex flex-wrap gap-2 mt-3">
-                  @for (preset of presetGradients; track preset.name) {
-                    <button type="button" class="rounded-full px-3 py-2 text-xs font-semibold border border-outline-variant/20"
-                            (click)="applyPresetGradient(preset.from, preset.to)">
-                      {{ preset.name }}
+                <div>
+                  <label class="form-label">Cierre</label>
+                  <input
+                    type="time"
+                    class="form-input"
+                    [value]="closeTime()"
+                    (input)="closeTime.set(getInputValue($event))"
+                  />
+                </div>
+              </div>
+              <p class="text-sm text-on-surface-variant">
+                Horario generado: <span class="font-semibold">{{ schedulePreview() || 'No definido' }}</span>
+              </p>
+              <input type="hidden" formControlName="schedule" />
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="form-label">Logo (URL)</label>
+                <input
+                  type="url"
+                  class="form-input"
+                  formControlName="logo"
+                  placeholder="https://..."
+                  (input)="onLogoChange()"
+                />
+              </div>
+              <div class="flex flex-col gap-2">
+                <label class="form-label">Vista previa del logo</label>
+                @if (logoPreview()) {
+                  <div class="rounded-xl overflow-hidden border border-outline-variant/20 w-full h-28 bg-surface-muted">
+                    <img src="{{ logoPreview() }}" alt="Vista previa del logo" class="w-full h-full object-contain" />
+                  </div>
+                } @else {
+                  <div
+                    class="rounded-xl border border-outline-variant/20 w-full h-28 bg-surface-muted flex items-center justify-center text-on-surface-variant"
+                  >
+                    URL de logo vacía
+                  </div>
+                }
+              </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="form-label">Facebook</label>
+                <input
+                  type="url"
+                  class="form-input"
+                  formControlName="facebook"
+                  placeholder="https://facebook.com/..."
+                />
+              </div>
+              <div>
+                <label class="form-label">Instagram</label>
+                <input
+                  type="url"
+                  class="form-input"
+                  formControlName="instagram"
+                  placeholder="https://instagram.com/..."
+                />
+              </div>
+              <div>
+                <label class="form-label">TikTok</label>
+                <input type="url" class="form-input" formControlName="tiktok" placeholder="https://tiktok.com/@..." />
+              </div>
+              <div>
+                <label class="form-label">WhatsApp</label>
+                <input type="text" class="form-input" formControlName="whatsapp" placeholder="+5493412345678" />
+              </div>
+              <div>
+                <label class="form-label">LinkedIn</label>
+                <input
+                  type="url"
+                  class="form-input"
+                  formControlName="linkedin"
+                  placeholder="https://linkedin.com/..."
+                />
+              </div>
+            </div>
+            <div>
+              <label class="form-label">Tags</label>
+              <input
+                type="text"
+                class="form-input"
+                formControlName="tags"
+                placeholder="Consultas, Online"
+                (input)="tagQuery.set(getInputValue($event))"
+              />
+              @if (matchingTagSuggestions().length) {
+                <div class="border border-outline-variant/20 rounded-xl bg-surface-low p-2 mt-2 grid gap-2">
+                  @for (tag of matchingTagSuggestions(); track tag) {
+                    <button
+                      type="button"
+                      class="text-sm text-on-surface hover:text-primary text-left"
+                      (click)="updateTagsFromSuggestion(tag)"
+                    >
+                      {{ tag }}
                     </button>
                   }
                 </div>
-                <div class="mt-3 rounded-xl h-16 border border-outline-variant/20"
-                     [style.background]="gradientPreview()"></div>
-                <input type="hidden" formControlName="gradient" />
-              </div>
-              <div>
-                <label class="form-label">
-                  {{ editingBusiness() ? 'Nuevo PIN (vacío = sin cambio)' : 'PIN de acceso *' }}
-                </label>
-                <input type="password" class="form-input" formControlName="pin"
-                       inputmode="numeric" placeholder="••••" />
-              </div>
-            </form>
-          </div>
-
-          <div class="p-5 border-t border-outline-variant/20 flex gap-3 flex-shrink-0">
-            <button class="btn-secondary flex-1" (click)="closenegocioModal()">Cancelar</button>
-            <button class="btn-primary flex-1"
-                    [disabled]="businessForm.invalid || savingBusiness()"
-                    (click)="saveBusiness()">
-              @if (savingBusiness()) {
-                <span class="material-icons-round text-base animate-spin">refresh</span>
-                Guardando…
-              } @else {
-                Guardar
               }
-            </button>
-          </div>
+            </div>
+            <div>
+              <label class="form-label">Gradiente</label>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label class="form-label text-xs">Color 1</label>
+                  <input
+                    type="color"
+                    class="w-full h-12 rounded-xl border border-outline-variant/20"
+                    [value]="gradientFrom()"
+                    (input)="gradientFrom.set(getInputValue($event)); updateGradientValue()"
+                  />
+                </div>
+                <div>
+                  <label class="form-label text-xs">Color 2</label>
+                  <input
+                    type="color"
+                    class="w-full h-12 rounded-xl border border-outline-variant/20"
+                    [value]="gradientTo()"
+                    (input)="gradientTo.set(getInputValue($event)); updateGradientValue()"
+                  />
+                </div>
+              </div>
+              <div class="flex flex-wrap gap-2 mt-3">
+                @for (preset of presetGradients; track preset.name) {
+                  <button
+                    type="button"
+                    class="rounded-full px-3 py-2 text-xs font-semibold border border-outline-variant/20"
+                    (click)="applyPresetGradient(preset.from, preset.to)"
+                  >
+                    {{ preset.name }}
+                  </button>
+                }
+              </div>
+              <div
+                class="mt-3 rounded-xl h-16 border border-outline-variant/20"
+                [style.background]="gradientPreview()"
+              ></div>
+              <input type="hidden" formControlName="gradient" />
+            </div>
+            <div>
+              <label class="form-label">
+                {{ editingBusiness() ? 'Nuevo PIN (vacío = sin cambio)' : 'PIN de acceso *' }}
+              </label>
+              <input type="password" class="form-input" formControlName="pin" inputmode="numeric" placeholder="••••" />
+            </div>
+          </form>
+        </div>
+
+        <div class="p-5 border-t border-outline-variant/20 flex gap-3 flex-shrink-0">
+          <button class="btn-secondary flex-1" (click)="closenegocioModal()">Cancelar</button>
+          <button
+            class="btn-primary flex-1"
+            [disabled]="businessForm.invalid || savingBusiness()"
+            (click)="saveBusiness()"
+          >
+            @if (savingBusiness()) {
+              <span class="material-icons-round text-base animate-spin">refresh</span>
+              Guardando…
+            } @else {
+              Guardar
+            }
+          </button>
         </div>
       </div>
-    }
+    </div>
+  }
 
-    <!-- ══ MODAL: Cambiar estado ════════════════════════════════════ -->
-    @if (modalRow()) {
-      <div class="fixed inset-0 z-30 flex items-end sm:items-center justify-center p-4 sm:p-6
-                  bg-black/40 backdrop-blur-sm animate-fade-in">
-        <div class="w-full max-w-md bg-surface-lowest rounded-t-2xl sm:rounded-2xl p-6
-                    flex flex-col gap-5 shadow-soft animate-sheet-up"
-             (click)="$event.stopPropagation()">
-          <div class="flex items-center justify-between">
-            <h3 class="font-display font-semibold text-lg">Actualizar reserva</h3>
-            <button class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-surface-container"
-                    (click)="closeModal()">
-              <span class="material-icons-round text-on-surface-variant">close</span>
-            </button>
+  <!-- ══ MODAL: Cambiar estado ════════════════════════════════════ -->
+  @if (modalRow()) {
+    <div
+      class="fixed inset-0 z-30 flex items-end sm:items-center justify-center p-4 sm:p-6 bg-black/40 backdrop-blur-sm animate-fade-in"
+    >
+      <div
+        class="w-full max-w-md bg-surface-lowest rounded-t-2xl sm:rounded-2xl p-6 flex flex-col gap-5 shadow-soft animate-sheet-up"
+        (click)="$event.stopPropagation()"
+      >
+        <div class="flex items-center justify-between">
+          <h3 class="font-display font-semibold text-lg">Actualizar reserva</h3>
+          <button
+            class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-surface-container"
+            (click)="closeModal()"
+          >
+            <span class="material-icons-round text-on-surface-variant">close</span>
+          </button>
+        </div>
+
+        <!-- Resumen -->
+        <div class="bg-surface-low rounded-xl p-4 flex flex-col gap-2 text-sm">
+          <div class="flex justify-between">
+            <span class="text-on-surface-variant">Franja</span>
+            <span class="font-semibold font-display">{{ modalRow()!.franja }}</span>
           </div>
-
-          <!-- Resumen -->
-          <div class="bg-surface-low rounded-xl p-4 flex flex-col gap-2 text-sm">
-            <div class="flex justify-between">
-              <span class="text-on-surface-variant">Franja</span>
-              <span class="font-semibold font-display">{{ modalRow()!.franja }}</span>
-            </div>
-            <div class="flex justify-between">
-              <span class="text-on-surface-variant">Cliente</span>
-              <span>{{ modalRow()!.cliente || '—' }}</span>
-            </div>
-            <div class="flex justify-between items-center">
-              <span class="text-on-surface-variant">Estado actual</span>
-              <app-badge [status]="modalRow()!.disponibilidad" />
-            </div>
+          <div class="flex justify-between">
+            <span class="text-on-surface-variant">Cliente</span>
+            <span>{{ modalRow()!.cliente || '—' }}</span>
           </div>
-
-          <div>
-            <label class="form-label">Nuevo estado</label>
-            <select class="form-select" [value]="newStatus()" (change)="newStatus.set(getInputValue($event))">
-              <option value="disponible">Disponible</option>
-              <option value="pendiente">Pendiente</option>
-              <option value="reservado">Reservado</option>
-              <option value="confirmado">Confirmado</option>
-            </select>
-          </div>
-
-          <div class="flex gap-3">
-            <button class="btn-secondary flex-1" (click)="closeModal()">Cancelar</button>
-            <button class="btn-primary flex-1" [disabled]="updating() !== null"
-                    (click)="saveStatus()">
-              @if (updating() !== null) {
-                <span class="material-icons-round text-base animate-spin">refresh</span>
-                Guardando…
-              } @else {
-                Guardar
-              }
-            </button>
+          <div class="flex justify-between items-center">
+            <span class="text-on-surface-variant">Estado actual</span>
+            <app-badge [status]="modalRow()!.disponibilidad" />
           </div>
         </div>
-      </div>
-    }
 
-    <app-map-modal 
-        #mapModal 
-        (coordinatesSelected)="onCoordinatesSelected($event)" />
-  </div>
+        <div>
+          <label class="form-label">Nuevo estado</label>
+          <select class="form-select" [value]="newStatus()" (change)="newStatus.set(getInputValue($event))">
+            <option value="disponible">Disponible</option>
+            <option value="pendiente">Pendiente</option>
+            <option value="reservado">Reservado</option>
+            <option value="confirmado">Confirmado</option>
+          </select>
+        </div>
+
+        <div class="flex gap-3">
+          <button class="btn-secondary flex-1" (click)="closeModal()">Cancelar</button>
+          <button class="btn-primary flex-1" [disabled]="updating() !== null" (click)="saveStatus()">
+            @if (updating() !== null) {
+              <span class="material-icons-round text-base animate-spin">refresh</span>
+              Guardando…
+            } @else {
+              Guardar
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <app-map-modal #mapModal (coordinatesSelected)="onCoordinatesSelected($event)" />
+</div>

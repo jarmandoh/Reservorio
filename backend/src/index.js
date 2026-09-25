@@ -4,14 +4,15 @@ const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 const { randomUUID } = require('crypto');
-const express        = require('express');
-const cors           = require('cors');
-const helmet         = require('helmet');
-const rateLimit      = require('express-rate-limit');
-const db             = require('./db');
-const logger         = require('./logger');
-const cache          = require('./cache');
-const promClient     = require('prom-client');
+const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
+const compression = require('compression');
+const rateLimit = require('express-rate-limit');
+const db = require('./db');
+const logger = require('./logger');
+const cache = require('./cache');
+const promClient = require('prom-client');
 
 // ── Prometheus registry ──────────────────────────────────────────────────────
 const promRegistry = new promClient.Registry();
@@ -32,26 +33,25 @@ const httpRequestDuration = new promClient.Histogram({
   registers: [promRegistry],
 });
 
-
-const reservations      = require('./routes/reservations.routes');
-const services          = require('./routes/services.routes');
-const businesses        = require('./routes/businesses.routes');
-const providers         = require('./routes/providers.routes');
-const auth              = require('./routes/auth.routes');
-const googleOAuth       = require('./routes/google.routes');
-const uxRoutes          = require('./routes/ux.routes');
-const categoriesRoutes  = require('./routes/categories.routes');
-const tagsRoutes        = require('./routes/tags.routes');
-const customersRoutes   = require('./routes/customers.routes');
-const bookingsRoutes    = require('./routes/bookings.routes');
-const paymentsRoutes    = require('./routes/payments.routes');
+const reservations = require('./routes/reservations.routes');
+const services = require('./routes/services.routes');
+const businesses = require('./routes/businesses.routes');
+const providers = require('./routes/providers.routes');
+const auth = require('./routes/auth.routes');
+const googleOAuth = require('./routes/google.routes');
+const uxRoutes = require('./routes/ux.routes');
+const categoriesRoutes = require('./routes/categories.routes');
+const tagsRoutes = require('./routes/tags.routes');
+const customersRoutes = require('./routes/customers.routes');
+const bookingsRoutes = require('./routes/bookings.routes');
+const paymentsRoutes = require('./routes/payments.routes');
 const notificationsRoutes = require('./routes/notifications.routes');
-const ratingsRoutes     = require('./routes/ratings.routes');
-const adminRoutes       = require('./routes/admin.routes');
-const analyticsRoutes   = require('./routes/analytics.routes');
+const ratingsRoutes = require('./routes/ratings.routes');
+const adminRoutes = require('./routes/admin.routes');
+const analyticsRoutes = require('./routes/analytics.routes');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
 
-const app  = express();
+const app = express();
 const PORT = process.env.PORT || 3000;
 const appMetrics = {
   startTime: Date.now(),
@@ -91,10 +91,17 @@ function validateRuntimeConfig() {
     const adminPin = String(process.env.ADMIN_PIN ?? '');
     const hasAdminHash = /^\$2[aby]\$/.test(String(process.env.ADMIN_PIN_HASH ?? '').trim());
     if (!hasAdminHash && (!adminPin || adminPin === '1234' || adminPin.length < 6)) {
-      throw new Error('ADMIN_PIN debe configurarse con una clave segura (≠ 1234, ≥ 6 caracteres) o definirse ADMIN_PIN_HASH (bcrypt) en producción');
+      throw new Error(
+        'ADMIN_PIN debe configurarse con una clave segura (≠ 1234, ≥ 6 caracteres) o definirse ADMIN_PIN_HASH (bcrypt) en producción'
+      );
     }
 
-    if (!process.env.CORS_ORIGINS || !process.env.CORS_ORIGINS.split(',').map(v => v.trim()).filter(Boolean).length) {
+    if (
+      !process.env.CORS_ORIGINS ||
+      !process.env.CORS_ORIGINS.split(',')
+        .map(v => v.trim())
+        .filter(Boolean).length
+    ) {
       throw new Error('CORS_ORIGINS debe contener al menos un origen válido en producción');
     }
 
@@ -104,7 +111,9 @@ function validateRuntimeConfig() {
     }
 
     if (String(process.env.OTP_DEBUG ?? '').toLowerCase() === '1') {
-      logger.warn('OTP_DEBUG=1 está ACTIVO en producción: los códigos one-time se exponen en las respuestas. Desactívalo.');
+      logger.warn(
+        'OTP_DEBUG=1 está ACTIVO en producción: los códigos one-time se exponen en las respuestas. Desactívalo.'
+      );
     }
   }
 
@@ -120,23 +129,39 @@ if (String(trustProxy) !== '0') {
 }
 
 // ── Security headers ────────────────────────────────────────────────────────
-app.use(helmet({
-  crossOriginResourcePolicy: { policy: 'cross-origin' },
-}));
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  })
+);
+
+// ── Compresión gzip/deflate (ahorra ~70% en JSON, cacheado por nginx también) ──
+app.use(
+  compression({
+    filter: (req, res) => {
+      if (req.headers['x-no-compression']) return false;
+      return compression.filter(req, res);
+    },
+    threshold: 1024, // solo >1kb
+  })
+);
 
 // ── CORS ────────────────────────────────────────────────────────────────────
 const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:4200,http://localhost:3000')
-  .split(',').map(o => o.trim());
+  .split(',')
+  .map(o => o.trim());
 
-app.use(cors({
-  origin: (origin, cb) => {
-    // Permitir requests sin origen (eg. Postman, Docker health checks)
-    if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
-    cb(new Error(`CORS: origen no permitido → ${origin}`));
-  },
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-}));
+app.use(
+  cors({
+    origin: (origin, cb) => {
+      // Permitir requests sin origen (eg. Postman, Docker health checks)
+      if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+      cb(new Error(`CORS: origen no permitido → ${origin}`));
+    },
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  })
+);
 
 // ── Rate limiting ────────────────────────────────────────────────────────────
 const rateLimitMax = Number.isInteger(Number(process.env.RATE_LIMIT_MAX)) ? Number(process.env.RATE_LIMIT_MAX) : 60;
@@ -176,7 +201,7 @@ app.use('/api/', limiter);
 
 // ── Body parsing ─────────────────────────────────────────────────────────────
 app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
-app.use(express.json({ limit: '10kb' }));
+app.use(express.json({ limit: process.env.JSON_LIMIT || '100kb' }));
 
 // ── Request tracing + counters + logging estructurado ───────────────────────
 app.use((req, res, next) => {
@@ -195,20 +220,26 @@ app.use((req, res, next) => {
 
     // Prometheus
     try {
-      const route = (req.route && req.route.path) ? `${req.baseUrl || ''}${req.route.path}` : (req.path || req.originalUrl.split('?')[0]);
+      const route =
+        req.route && req.route.path
+          ? `${req.baseUrl || ''}${req.route.path}`
+          : req.path || req.originalUrl.split('?')[0];
       const labels = { method: req.method, route, status: String(res.statusCode) };
       httpRequestsTotal.inc(labels);
       httpRequestDuration.observe(labels, durationMs / 1000);
     } catch {}
 
     const level = res.statusCode >= 500 ? 'error' : res.statusCode >= 400 ? 'warn' : 'info';
-    logger[level]({
-      requestId: req.requestId,
-      method: req.method,
-      url: req.originalUrl,
-      status: res.statusCode,
-      durationMs: Math.round(durationMs * 10) / 10,
-    }, 'http request');
+    logger[level](
+      {
+        requestId: req.requestId,
+        method: req.method,
+        url: req.originalUrl,
+        status: res.statusCode,
+        durationMs: Math.round(durationMs * 10) / 10,
+      },
+      'http request'
+    );
   });
 
   next();
@@ -216,21 +247,21 @@ app.use((req, res, next) => {
 
 // ── Routes ───────────────────────────────────────────────────────────────────
 app.use('/api/reservations', reservations);
-app.use('/api/services',     services);
-app.use('/api/businesses',   businesses);
-app.use('/api/providers',    providers);
-app.use('/api/customers',    customersRoutes);
-app.use('/api/bookings',     bookingsRoutes);
-app.use('/api/payments',     paymentsRoutes);
+app.use('/api/services', services);
+app.use('/api/businesses', businesses);
+app.use('/api/providers', providers);
+app.use('/api/customers', customersRoutes);
+app.use('/api/bookings', bookingsRoutes);
+app.use('/api/payments', paymentsRoutes);
 app.use('/api/notifications', notificationsRoutes);
-app.use('/api/ratings',      ratingsRoutes);
-app.use('/api/admin',        adminRoutes);
-app.use('/api/auth',         auth);
-app.use('/api/google',       googleOAuth);
-app.use('/api/categories',   categoriesRoutes);
-app.use('/api/tags',         tagsRoutes);
-app.use('/api/ux-tips',      uxRoutes);
-app.use('/api/analytics',    analyticsRoutes);
+app.use('/api/ratings', ratingsRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/auth', auth);
+app.use('/api/google', googleOAuth);
+app.use('/api/categories', categoriesRoutes);
+app.use('/api/tags', tagsRoutes);
+app.use('/api/ux-tips', uxRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 // ── Health check ─────────────────────────────────────────────────────────────
 app.get('/health', async (_req, res) => {
@@ -317,7 +348,9 @@ function setupGracefulShutdown(server) {
     logger.info(`[shutdown] ${signal} recibido, cerrando...`);
 
     if (reminderIntervalRef) {
-      try { clearInterval(reminderIntervalRef); } catch {}
+      try {
+        clearInterval(reminderIntervalRef);
+      } catch {}
       reminderIntervalRef = null;
     }
 
@@ -348,11 +381,11 @@ function setupGracefulShutdown(server) {
 
   process.on('SIGTERM', () => shutdown('SIGTERM'));
   process.on('SIGINT', () => shutdown('SIGINT'));
-  process.on('uncaughtException', (err) => {
+  process.on('uncaughtException', err => {
     logger.error('[uncaughtException]', err?.stack || err?.message || err);
     shutdown('uncaughtException');
   });
-  process.on('unhandledRejection', (reason) => {
+  process.on('unhandledRejection', reason => {
     logger.error('[unhandledRejection]', reason);
   });
 }
@@ -361,8 +394,8 @@ function startServer() {
   const server = app.listen(PORT, async () => {
     logger.info(`[reservorio-api] corriendo en http://localhost:${PORT}`);
     if (!process.env.DATABASE_URL) logger.warn('[WARN] DATABASE_URL no configurado en .env');
-    if (!process.env.ADMIN_PIN)    logger.warn('[WARN] ADMIN_PIN no configurado — usando "1234" por defecto');
-    if (!process.env.JWT_SECRET)   logger.warn('[WARN] JWT_SECRET no configurado — usando secreto inseguro');
+    if (!process.env.ADMIN_PIN) logger.warn('[WARN] ADMIN_PIN no configurado — usando "1234" por defecto');
+    if (!process.env.JWT_SECRET) logger.warn('[WARN] JWT_SECRET no configurado — usando secreto inseguro');
     if (process.env.OTP_DEBUG === '1' && (process.env.NODE_ENV || 'development') === 'production') {
       logger.warn('[WARN] OTP_DEBUG=1 está activo en producción — los códigos de acceso se exponen en la respuesta');
     }
@@ -378,7 +411,10 @@ function startServer() {
     if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
       logger.warn('[WARN] GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET no configurados — OAuth deshabilitado');
     }
-    if (process.env.GOOGLE_CLIENT_ID && (!process.env.GOOGLE_TOKENS_KEY || process.env.GOOGLE_TOKENS_KEY.length !== 64)) {
+    if (
+      process.env.GOOGLE_CLIENT_ID &&
+      (!process.env.GOOGLE_TOKENS_KEY || process.env.GOOGLE_TOKENS_KEY.length !== 64)
+    ) {
       logger.warn('[WARN] GOOGLE_TOKENS_KEY ausente o inválida (requiere 64 chars hex) — cifrado de tokens fallará');
     }
 

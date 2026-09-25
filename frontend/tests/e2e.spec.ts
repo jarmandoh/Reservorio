@@ -156,7 +156,11 @@ test.describe('Reserva y administración', () => {
     await page.getByRole('button', { name: 'Reservas' }).click();
     await expect(page.getByRole('cell', { name: 'E2E Usuario' })).toBeVisible({ timeout: 10000 });
 
-    await page.getByRole('row', { name: /E2E Usuario/ }).first().getByRole('button', { name: 'Editar' }).click();
+    await page
+      .getByRole('row', { name: /E2E Usuario/ })
+      .first()
+      .getByRole('button', { name: 'Editar' })
+      .click();
     await expect(page.locator('text=Actualizar reserva')).toBeVisible();
 
     await page.locator('.fixed select.form-select').selectOption('Confirmado');

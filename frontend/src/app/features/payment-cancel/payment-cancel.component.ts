@@ -17,7 +17,8 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
         <h1 class="mt-3 font-display text-3xl font-bold">La reserva sigue creada</h1>
 
         <p class="mt-3 text-sm text-on-surface-variant">
-          El proceso de pago se interrumpió y no se ha cobrado ningún importe. La reserva sigue en estado pendiente y puedes intentarlo otra vez cuando quieras.
+          El proceso de pago se interrumpió y no se ha cobrado ningún importe. La reserva sigue en estado pendiente y
+          puedes intentarlo otra vez cuando quieras.
         </p>
 
         <div class="mt-6 rounded-2xl bg-surface-container p-4 text-left text-sm">
@@ -36,7 +37,11 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
         </div>
 
         <div class="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
-          <a [routerLink]="providerId ? ['/business', providerId, 'admin'] : '/'" [queryParams]="providerId ? { bookingId: bookingId, paymentStatus: 'cancelled' } : null" class="btn-primary">
+          <a
+            [routerLink]="providerId ? ['/business', providerId, 'admin'] : '/'"
+            [queryParams]="providerId ? { bookingId: bookingId, paymentStatus: 'cancelled' } : null"
+            class="btn-primary"
+          >
             Volver al panel
           </a>
           <a routerLink="/" class="btn-secondary">Volver al inicio</a>

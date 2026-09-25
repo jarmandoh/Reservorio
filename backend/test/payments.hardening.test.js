@@ -25,7 +25,12 @@ describe('payments.service — no degradación silenciosa', () => {
     db.query.mockRejectedValue(new Error('boom'));
 
     const res = await payments.createPayment({
-      bookingId: 'b1', providerId: 'neg1', customerId: 'c1', amount: 10, method: 'card', status: 'pending',
+      bookingId: 'b1',
+      providerId: 'neg1',
+      customerId: 'c1',
+      amount: 10,
+      method: 'card',
+      status: 'pending',
     });
 
     expect(res.ok).toBe(false);
@@ -37,7 +42,12 @@ describe('payments.service — no degradación silenciosa', () => {
     db.query.mockRejectedValue(new Error('boom'));
 
     const res = await payments.createPayment({
-      bookingId: 'b2', providerId: 'neg1', customerId: 'c1', amount: 10, method: 'card', status: 'pending',
+      bookingId: 'b2',
+      providerId: 'neg1',
+      customerId: 'c1',
+      amount: 10,
+      method: 'card',
+      status: 'pending',
     });
 
     expect(res.ok).toBe(false);

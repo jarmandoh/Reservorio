@@ -12,7 +12,9 @@ import { FormGroup, ReactiveFormsModule } from '@angular/forms';
         <ng-content select="[header]"></ng-content>
 
         @if (errorMessage) {
-          <div class="flex gap-3 p-4 rounded-xl text-sm bg-error-container text-error-on-container border border-error/40">
+          <div
+            class="flex gap-3 p-4 rounded-xl text-sm bg-error-container text-error-on-container border border-error/40"
+          >
             <span class="material-icons-round text-base mt-0.5">error_outline</span>
             <p>{{ errorMessage }}</p>
           </div>
@@ -32,13 +34,21 @@ import { FormGroup, ReactiveFormsModule } from '@angular/forms';
         </form>
 
         @if (footerLabel) {
-          <button type="button" class="text-sm text-on-surface-variant hover:text-primary transition" (click)="footerAction.emit()">
+          <button
+            type="button"
+            class="text-sm text-on-surface-variant hover:text-primary transition"
+            (click)="footerAction.emit()"
+          >
             {{ footerLabel }}
           </button>
         }
 
         @if (backLabel) {
-          <button type="button" class="flex items-center justify-center gap-1.5 text-sm text-on-surface-variant hover:text-primary transition" (click)="backAction.emit()">
+          <button
+            type="button"
+            class="flex items-center justify-center gap-1.5 text-sm text-on-surface-variant hover:text-primary transition"
+            (click)="backAction.emit()"
+          >
             <span class="material-icons-round text-base">arrow_back</span>
             {{ backLabel }}
           </button>

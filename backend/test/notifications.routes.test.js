@@ -37,9 +37,7 @@ describe('Notifications routes', () => {
       ],
     });
 
-    const response = await request(app)
-      .get('/api/notifications')
-      .query({ businessId: 'negocio1' });
+    const response = await request(app).get('/api/notifications').query({ businessId: 'negocio1' });
 
     expect(response.status).toBe(200);
     expect(response.body.ok).toBe(true);

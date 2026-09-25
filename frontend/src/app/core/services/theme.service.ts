@@ -20,7 +20,9 @@ export class ThemeService {
       root.style.colorScheme = theme;
       try {
         localStorage.setItem(STORAGE_KEY, theme);
-      } catch { /* almacenamiento no disponible */ }
+      } catch {
+        /* almacenamiento no disponible */
+      }
     });
   }
 
@@ -32,7 +34,9 @@ export class ThemeService {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored === 'dark' || stored === 'light') return stored;
-    } catch { /* almacenamiento no disponible */ }
+    } catch {
+      /* almacenamiento no disponible */
+    }
 
     if (typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches) {
       return 'dark';

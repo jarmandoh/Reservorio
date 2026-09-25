@@ -37,12 +37,14 @@ const TO: gsap.TweenVars[] = [
   { opacity: 1, scale: 1, filter: 'blur(0px)', duration: 0.52, ease: 'power3.out' },
 ];
 
-function rand(len: number) { return Math.floor(Math.random() * len); }
+function rand(len: number) {
+  return Math.floor(Math.random() * len);
+}
 
 @Component({
-    selector: 'app-root',
-    imports: [RouterOutlet, ToastComponent],
-    template: `
+  selector: 'app-root',
+  imports: [RouterOutlet, ToastComponent],
+  template: `
     <div #pageHost>
       <router-outlet />
     </div>
@@ -53,7 +55,8 @@ function rand(len: number) { return Math.floor(Math.random() * len); }
       class="fixed bottom-4 right-4 z-40 flex h-11 w-11 items-center justify-center rounded-full text-white shadow-soft transition active:scale-95"
       style="background: linear-gradient(135deg, #005bbf 0%, #1a73e8 100%);"
       [attr.aria-label]="themeService.isDark() ? 'Activar tema claro' : 'Activar tema oscuro'"
-      (click)="themeService.toggle()">
+      (click)="themeService.toggle()"
+    >
       <span class="material-icons-round">{{ themeService.isDark() ? 'light_mode' : 'dark_mode' }}</span>
     </button>
 
@@ -64,10 +67,10 @@ function rand(len: number) { return Math.floor(Math.random() * len); }
         <button type="button">Esperando conexión…</button>
       </div>
     }
-  `
+  `,
 })
 export class AppComponent implements OnInit {
-@ViewChild('pageHost', { static: true }) pageHost!: ElementRef<HTMLDivElement>;
+  @ViewChild('pageHost', { static: true }) pageHost!: ElementRef<HTMLDivElement>;
   private router = inject(Router);
   private offlineService = inject(OfflineService);
   private readonly auth = inject(AuthService);
@@ -111,7 +114,9 @@ export class AppComponent implements OnInit {
           requestAnimationFrame(() =>
             gsap.to(el, {
               ...TO[i],
-              onComplete: () => { gsap.set(el, { clearProps: 'all' }); },
+              onComplete: () => {
+                gsap.set(el, { clearProps: 'all' });
+              },
             })
           );
         }

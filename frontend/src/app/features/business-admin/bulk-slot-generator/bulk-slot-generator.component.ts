@@ -8,7 +8,10 @@ import { ToastService } from '../../../core/services/toast.service';
   templateUrl: 'bulk-slot-generator.component.html',
 })
 export class BulkSlotGeneratorComponent {
-  constructor(private api: ApiService, private toast: ToastService) {}
+  constructor(
+    private api: ApiService,
+    private toast: ToastService
+  ) {}
 
   form = new FormGroup({
     name: new FormControl(''),

@@ -60,7 +60,13 @@ describe('channels — capa de email/SMS', () => {
 
   test('http email envía POST JSON al webhook con cabeceras', async () => {
     const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValue({ ok: true, status: 200 });
-    const channels = loadChannels({ EMAIL_PROVIDER: 'http', EMAIL_WEBHOOK_URL: 'https://mail.example.com/send', EMAIL_WEBHOOK_HEADERS: '{"X-Custom":"1"}', EMAIL_WEBHOOK_TOKEN: 'tok123', EMAIL_FROM: 'no-reply@reservorio.app' });
+    const channels = loadChannels({
+      EMAIL_PROVIDER: 'http',
+      EMAIL_WEBHOOK_URL: 'https://mail.example.com/send',
+      EMAIL_WEBHOOK_HEADERS: '{"X-Custom":"1"}',
+      EMAIL_WEBHOOK_TOKEN: 'tok123',
+      EMAIL_FROM: 'no-reply@reservorio.app',
+    });
 
     const result = await channels.sendEmail({ to: 'client@example.com', subject: 'Asunto', textBody: 'Texto' });
 
@@ -68,9 +74,18 @@ describe('channels — capa de email/SMS', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, options] = fetchMock.mock.calls[0];
     expect(url).toBe('https://mail.example.com/send');
-    expect(options.headers).toMatchObject({ 'content-type': 'application/json', 'X-Custom': '1', Authorization: 'Bearer tok123' });
+    expect(options.headers).toMatchObject({
+      'content-type': 'application/json',
+      'X-Custom': '1',
+      Authorization: 'Bearer tok123',
+    });
     const body = JSON.parse(options.body);
-    expect(body).toMatchObject({ from: 'no-reply@reservorio.app', to: 'client@example.com', subject: 'Asunto', text: 'Texto' });
+    expect(body).toMatchObject({
+      from: 'no-reply@reservorio.app',
+      to: 'client@example.com',
+      subject: 'Asunto',
+      text: 'Texto',
+    });
   });
 
   test('http email devuelve fallo cuando el proveedor responde error', async () => {

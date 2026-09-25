@@ -1,6 +1,6 @@
 'use strict';
 
-const jwt    = require('jsonwebtoken');
+const jwt = require('jsonwebtoken');
 const logger = require('../logger');
 const SECRET = process.env.JWT_SECRET || 'reservorio_dev_secret_change_me';
 

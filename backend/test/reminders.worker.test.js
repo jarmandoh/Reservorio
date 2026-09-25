@@ -12,7 +12,7 @@ const db = require('../src/db');
 const notificationsService = require('../src/services/notifications.service');
 const { runDueReminders, startReminderWorker } = require('../src/services/reminders.worker');
 
-const dueBooking = (id) => ({
+const dueBooking = id => ({
   booking_id: `booking-${id}`,
   business_id: `negocio-${id}`,
   customer_id: `cliente-${id}`,

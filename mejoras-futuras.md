@@ -89,6 +89,14 @@ Documento vivo: cada mejora marcada con ✅ indica trabajo completado y verifica
 - [x] **Observabilidad Prometheus** ✅ — `prom-client@15.1` (`backend/package.json:37`), registry `reservorio_` + `collectDefaultMetrics` (`backend/src/index.js:13`), histogram `reservorio_http_request_duration_seconds` y counter `reservorio_http_requests_total` etiquetados por `method/route/status` (`backend/src/index.js:182`). `GET /metrics` sirve Prometheus si `Accept: text/plain` o `?format=prometheus` (`backend/src/index.js:258`), JSON si no.
 - [x] **TLS externo con Caddy** ✅ — `Caddyfile:1` reverse_proxy `frontend:80` con `header` HSTS y `encode gzip`, TLS automático Let's Encrypt. `docker-compose.prod.yml:1` overlay añade servicio `caddy:2-alpine` en `:80/:443`, `FRONTEND_HOST` desde env, y quita `ports` del `frontend` interno. `.env.production.example:48` añade `FRONTEND_HOST`. Documentado en `DEPLOY.md:25`.
 
+### Escalabilidad P2 (operación y calidad)
+
+- [x] **HTTP interceptor centralizado** ✅ — `frontend/src/app/core/interceptors/http.interceptor.ts:1` `authInterceptor` (inyecta `Authorization: Bearer` desde `StorageService` — prioriza `negocio_jwt_<id>` si URL contiene `/businesses/<id>`, luego `admin`/`owner`/`customer`, evita circular con `AuthService`, añade `X-Request-Id`; `errorInterceptor` toastea `401`/`429`/`5xx`). `frontend/src/app/app.config.ts:1` `provideHttpClient(withInterceptors([authInterceptor, errorInterceptor]))`. Verificado: `ng build` OK, E2E 4/4 PASS.
+- [x] **Compresión + límites** ✅ — `compression@1.8` (`backend/package.json:36`, `backend/src/index.js:11` `app.use(compression({threshold:1024}))` tras `helmet` y `express.json({limit: JSON_LIMIT||'100kb'})` (`backend/src/index.js:179`). Env `JSON_LIMIT` documentado en `.env.production.example:43` y `backend/.env.example:14`.
+- [x] **Advisory lock en migraciones** ✅ — `backend/db/migrate.js:27` `ADVISORY_LOCK_ID=727727727`, `SELECT pg_advisory_lock($1)` antes de `CREATE TABLE schema_migrations` y `SELECT pg_advisory_unlock($1)` en `finally`; evita `scale backend=3` concurrente.
+- [x] **Recursos y logging driver** ✅ — `docker-compose.yml:2` cada servicio con `mem_limit`/`cpus` (`redis 256m/0.5`, `db 512m/1.0`, `backend 512m/1.0`, `frontend 256m/0.5`, `backup 128m/0.25`) y `logging: json-file max-size 10m max-file 3`. `frontend` healthcheck `http://localhost/` en vez de `/health`.
+- [x] **CI hardening** ✅ — `.github/workflows/ci.yml:3` `concurrency: cancel-in-progress` + `permissions: contents:read`, job `lint:1` `prettier --check` (`frontend format:check`), jobs `backend`/`frontend` con `docker build -t reservorio-*:ci` smoke.
+
 ---
 
 ## Prioridad recomendada

@@ -86,10 +86,10 @@ async function canAccessBusiness(req, res) {
 
   if (payload.role === 'owner') {
     try {
-      const { rows } = await db.query(
-        'SELECT 1 FROM business_owners WHERE business_id = $1 AND owner_id = $2',
-        [req.params.id, payload.ownerId]
-      );
+      const { rows } = await db.query('SELECT 1 FROM business_owners WHERE business_id = $1 AND owner_id = $2', [
+        req.params.id,
+        payload.ownerId,
+      ]);
       if (rows.length) return true;
     } catch (e) {
       res.status(500).json({ ok: false, message: e.message });

@@ -88,12 +88,12 @@ Siempre se usan **parámetros posicionales** (`$1`, `$2`...) — nunca interpola
 
 ### Middleware de sanitización (`sanitize.js`)
 
-| Función | Propósito |
-|---|---|
-| `clean(val, maxLen)` | Elimina `< > " ' \`` del input y trunca a `maxLen` (defecto 500) |
-| `isValidPhone(phone)` | Valida formato: solo dígitos, `+`, espacios y guiones, 7–15 chars |
-| `validateReservation` | Express middleware para `POST /reservations` — valida y sanitiza el body |
-| `validateUpdate` | Express middleware para `PUT /reservations/:id` — valida estado y rowIndex |
+| Función               | Propósito                                                                  |
+| --------------------- | -------------------------------------------------------------------------- |
+| `clean(val, maxLen)`  | Elimina `< > " ' \`` del input y trunca a `maxLen` (defecto 500)           |
+| `isValidPhone(phone)` | Valida formato: solo dígitos, `+`, espacios y guiones, 7–15 chars          |
+| `validateReservation` | Express middleware para `POST /reservations` — valida y sanitiza el body   |
+| `validateUpdate`      | Express middleware para `PUT /reservations/:id` — valida estado y rowIndex |
 
 ### Autenticación (`jwt.js`)
 
@@ -205,35 +205,35 @@ src/app/
 
 ### Rutas del frontend
 
-| Ruta | Componente | Guard |
-|---|---|---|
-| `/` | Home | — |
-| `/booking/:businessId` | Booking | — |
-| `/login` | Login (admin global) | — |
-| `/admin` | Admin | `adminGuard` |
-| `/business/:businessId/login` | BusinessLogin | — |
-| `/business/:businessId/admin` | BusinessAdmin | `businessGuard` |
-| `/owner/business/:businessId` | BusinessAdmin | `ownerGuard` |
-| `/owner/register` | OwnerRegister | — |
-| `/owner/login` | OwnerLogin | — |
-| `/owner/dashboard` | OwnerDashboard | `ownerGuard` |
-| `/customer/login` | CustomerLogin | — |
-| `/customer/history` | CustomerHistory | `customerGuard` |
-| `/customer/verify` | CustomerMagicVerify | — |
-| `/payment/success` · `/payment/cancel` | PaymentSuccess/Cancel | — |
+| Ruta                                   | Componente            | Guard           |
+| -------------------------------------- | --------------------- | --------------- |
+| `/`                                    | Home                  | —               |
+| `/booking/:businessId`                 | Booking               | —               |
+| `/login`                               | Login (admin global)  | —               |
+| `/admin`                               | Admin                 | `adminGuard`    |
+| `/business/:businessId/login`          | BusinessLogin         | —               |
+| `/business/:businessId/admin`          | BusinessAdmin         | `businessGuard` |
+| `/owner/business/:businessId`          | BusinessAdmin         | `ownerGuard`    |
+| `/owner/register`                      | OwnerRegister         | —               |
+| `/owner/login`                         | OwnerLogin            | —               |
+| `/owner/dashboard`                     | OwnerDashboard        | `ownerGuard`    |
+| `/customer/login`                      | CustomerLogin         | —               |
+| `/customer/history`                    | CustomerHistory       | `customerGuard` |
+| `/customer/verify`                     | CustomerMagicVerify   | —               |
+| `/payment/success` · `/payment/cancel` | PaymentSuccess/Cancel | —               |
 
 ### `AuthService` — almacenamiento de tokens
 
 Los tokens de admin, dueño y negocio viven en `sessionStorage`; el de cliente en `localStorage` (la sesión "Mi cuenta" persiste):
 
-| Clave | Contenido | Almacenamiento |
-|---|---|---|
-| `reservorio_admin_jwt` | JWT del administrador global | sessionStorage |
-| `reservorio_owner_jwt` | JWT del dueño | sessionStorage |
+| Clave                      | Contenido                             | Almacenamiento |
+| -------------------------- | ------------------------------------- | -------------- |
+| `reservorio_admin_jwt`     | JWT del administrador global          | sessionStorage |
+| `reservorio_owner_jwt`     | JWT del dueño                         | sessionStorage |
 | `negocio_jwt_<businessId>` | JWT del administrador de cada negocio | sessionStorage |
-| `reservorio_customer_jwt` | JWT del cliente | localStorage |
-| `reservorio_unlocked` | Flag legacy de sesión (`"1"`) | sessionStorage |
-| `reservorio_admin_pin` | PIN legacy | localStorage |
+| `reservorio_customer_jwt`  | JWT del cliente                       | localStorage   |
+| `reservorio_unlocked`      | Flag legacy de sesión (`"1"`)         | sessionStorage |
+| `reservorio_admin_pin`     | PIN legacy                            | localStorage   |
 
 `isTokenValid()` decodifica el payload del JWT en el cliente y compara `exp` con `Date.now()`.
 

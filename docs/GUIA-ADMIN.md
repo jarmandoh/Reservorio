@@ -23,23 +23,23 @@ Una vez dentro, verás el panel con dos secciones principales: **Reservaciones**
 
 Al entrar al panel verás todas las reservaciones de tu negocio en una tabla con las siguientes columnas:
 
-| Columna | Descripción |
-|---|---|
-| **Franja horaria** | Hora o bloque de tiempo reservado |
-| **Estado** | Estado actual de la reservación |
-| **Cliente** | Nombre de quien realizó la reserva |
-| **Teléfono** | Número de contacto del cliente |
-| **Servicio** | Servicio solicitado |
-| **Notas** | Observaciones adicionales del cliente |
+| Columna            | Descripción                           |
+| ------------------ | ------------------------------------- |
+| **Franja horaria** | Hora o bloque de tiempo reservado     |
+| **Estado**         | Estado actual de la reservación       |
+| **Cliente**        | Nombre de quien realizó la reserva    |
+| **Teléfono**       | Número de contacto del cliente        |
+| **Servicio**       | Servicio solicitado                   |
+| **Notas**          | Observaciones adicionales del cliente |
 
 ### Estados de una reservación
 
-| Estado | Significado |
-|---|---|
+| Estado         | Significado                                              |
+| -------------- | -------------------------------------------------------- |
 | **Disponible** | La franja está libre, puede ser reservada por un cliente |
-| **Pendiente** | El cliente hizo la reserva pero aún no fue confirmada |
-| **Reservado** | La franja está ocupada |
-| **Confirmado** | La reservación fue confirmada por el administrador |
+| **Pendiente**  | El cliente hizo la reserva pero aún no fue confirmada    |
+| **Reservado**  | La franja está ocupada                                   |
+| **Confirmado** | La reservación fue confirmada por el administrador       |
 
 ### Confirmar una reservación
 

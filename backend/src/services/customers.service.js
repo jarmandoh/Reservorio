@@ -47,7 +47,9 @@ async function listCustomers(query = {}) {
 
 async function createCustomer(payload = {}) {
   const name = String(payload.name ?? '').trim();
-  const email = String(payload.email ?? '').trim().toLowerCase();
+  const email = String(payload.email ?? '')
+    .trim()
+    .toLowerCase();
   const phone = String(payload.phone ?? '').trim();
   const dataConsent = payload.dataConsent === true;
   const marketingConsent = payload.marketingConsent === true;
@@ -96,7 +98,9 @@ async function createCustomer(payload = {}) {
 
 async function findOrCreateCustomer({ name, email, phone, dataConsent, marketingConsent } = {}) {
   const cleanName = String(name ?? '').trim();
-  const cleanEmail = String(email ?? '').trim().toLowerCase();
+  const cleanEmail = String(email ?? '')
+    .trim()
+    .toLowerCase();
   const cleanPhone = String(phone ?? '').trim();
   const hasConsent = dataConsent === true;
 
@@ -134,10 +138,9 @@ async function findOrCreateCustomer({ name, email, phone, dataConsent, marketing
     if (existing.rows.length) {
       // Consentimiento renovado (RGPD): guardamos la aceptación si aún no consta.
       if (hasConsent && existing.rows[0].data_consent !== true) {
-        await db.query(
-          `UPDATE customers SET data_consent = true, consent_at = now() WHERE id = $1`,
-          [existing.rows[0].id]
-        );
+        await db.query(`UPDATE customers SET data_consent = true, consent_at = now() WHERE id = $1`, [
+          existing.rows[0].id,
+        ]);
       }
       return { ok: true, status: 200, data: existing.rows[0], created: false };
     }
@@ -150,7 +153,9 @@ async function findOrCreateCustomer({ name, email, phone, dataConsent, marketing
       [id, cleanName, cleanEmail, cleanPhone, hasConsent, hasConsent ? new Date() : null, marketingConsent === true]
     );
 
-    const { rows } = await db.query('SELECT id, name, email, phone, created_at FROM customers WHERE email = $1', [cleanEmail]);
+    const { rows } = await db.query('SELECT id, name, email, phone, created_at FROM customers WHERE email = $1', [
+      cleanEmail,
+    ]);
     return { ok: true, status: 201, data: rows[0], created: true };
   } catch (error) {
     return { ok: false, status: 500, message: error.message };
@@ -158,7 +163,9 @@ async function findOrCreateCustomer({ name, email, phone, dataConsent, marketing
 }
 
 async function findCustomerByEmail(email) {
-  const cleanEmail = String(email ?? '').trim().toLowerCase();
+  const cleanEmail = String(email ?? '')
+    .trim()
+    .toLowerCase();
   if (!cleanEmail) {
     return { ok: false, status: 400, message: 'email requerido' };
   }
@@ -171,7 +178,9 @@ async function findCustomerByEmail(email) {
   }
 
   try {
-    const { rows } = await db.query('SELECT id, name, email, phone, created_at FROM customers WHERE email = $1', [cleanEmail]);
+    const { rows } = await db.query('SELECT id, name, email, phone, created_at FROM customers WHERE email = $1', [
+      cleanEmail,
+    ]);
     if (!rows.length) {
       return { ok: false, status: 404, message: 'No hay historial asociado a ese email' };
     }
@@ -195,10 +204,9 @@ async function getCustomerProfile(customerId) {
   }
 
   try {
-    const { rows } = await db.query(
-      'SELECT id, name, email, phone, created_at FROM customers WHERE id = $1',
-      [cleanId]
-    );
+    const { rows } = await db.query('SELECT id, name, email, phone, created_at FROM customers WHERE id = $1', [
+      cleanId,
+    ]);
     if (!rows.length) {
       return { ok: false, status: 404, message: 'Cliente no encontrado' };
     }
@@ -222,9 +230,7 @@ async function getCustomerHistory(customerId, query = {}) {
     }
     const bookingsResult = await listBookings();
     const bookingsSource = bookingsResult.ok ? bookingsResult.data : [];
-    let bookings = bookingsSource
-      .filter(b => b.customerId === cleanId)
-      .map(b => ({ ...b, businessName: '' }));
+    let bookings = bookingsSource.filter(b => b.customerId === cleanId).map(b => ({ ...b, businessName: '' }));
     const total = bookings.length;
     if (paginated) {
       bookings = bookings.slice(offset, offset + limit);
@@ -302,10 +308,7 @@ async function getCustomerHistory(customerId, query = {}) {
     };
 
     if (paginated) {
-      const count = await db.query(
-        'SELECT COUNT(*)::int AS total FROM bookings WHERE customer_id = $1',
-        [cleanId]
-      );
+      const count = await db.query('SELECT COUNT(*)::int AS total FROM bookings WHERE customer_id = $1', [cleanId]);
       result.meta = { total: Number(count.rows[0]?.total) || 0, page, pageSize };
     }
 

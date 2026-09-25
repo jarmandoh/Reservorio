@@ -4,7 +4,14 @@ const express = require('express');
 const { body } = require('express-validator');
 const { handleValidation } = require('../middleware/validation');
 const { requireAuth, canAccessBusinessId } = require('../middleware/auth');
-const { listPayments, createPayment, createCheckoutSession, processWebhook, getPayment, updatePaymentStatus } = require('../services/payments.service');
+const {
+  listPayments,
+  createPayment,
+  createCheckoutSession,
+  processWebhook,
+  getPayment,
+  updatePaymentStatus,
+} = require('../services/payments.service');
 
 const router = express.Router();
 
@@ -28,7 +35,10 @@ const checkoutValidators = [
   body('amount').isFloat({ min: 0 }).withMessage('amount inválido'),
   body('currency').optional().trim().isLength({ min: 3, max: 3 }).withMessage('currency inválido'),
   body('method').optional().isIn(allowedPaymentMethods).withMessage('method inválido'),
-  body('successUrl').optional().isURL({ require_protocol: true, require_tld: false }).withMessage('successUrl inválida'),
+  body('successUrl')
+    .optional()
+    .isURL({ require_protocol: true, require_tld: false })
+    .withMessage('successUrl inválida'),
   body('cancelUrl').optional().isURL({ require_protocol: true, require_tld: false }).withMessage('cancelUrl inválida'),
   handleValidation,
 ];
@@ -47,7 +57,9 @@ router.get('/', async (req, res) => {
 router.post('/', paymentValidators, async (req, res) => {
   try {
     const result = await createPayment(req.body);
-    return res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
+    return res
+      .status(result.status)
+      .json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (error) {
     return res.status(500).json({ ok: false, message: error.message });
   }
@@ -56,7 +68,9 @@ router.post('/', paymentValidators, async (req, res) => {
 router.post('/checkout', checkoutValidators, async (req, res) => {
   try {
     const result = await createCheckoutSession(req.body);
-    return res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
+    return res
+      .status(result.status)
+      .json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (error) {
     return res.status(500).json({ ok: false, message: error.message });
   }
@@ -71,7 +85,9 @@ router.post('/webhook', async (req, res) => {
       event: req.body && !Buffer.isBuffer(req.body) ? req.body : null,
     });
 
-    return res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
+    return res
+      .status(result.status)
+      .json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (error) {
     return res.status(500).json({ ok: false, message: error.message });
   }
@@ -94,7 +110,9 @@ router.patch('/:id', requireAuth, async (req, res) => {
     if (!canAccessBusinessId(req, res, found.data.providerId)) return;
 
     const result = await updatePaymentStatus(id, status);
-    return res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
+    return res
+      .status(result.status)
+      .json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (error) {
     return res.status(500).json({ ok: false, message: error.message });
   }

@@ -1,6 +1,6 @@
 ﻿'use strict';
 
-const express  = require('express');
+const express = require('express');
 const { body, param, query } = require('express-validator');
 const { validateReservation, validateUpdate, clean } = require('../middleware/sanitize');
 const { requireAuth, canAccessBusinessId } = require('../middleware/auth');
@@ -14,14 +14,21 @@ const reservationCreateValidators = [
   body('businessId').trim().notEmpty().withMessage('businessId requerido'),
   body('franja').trim().notEmpty().withMessage('franja requerido'),
   body('cliente').trim().notEmpty().withMessage('cliente requerido'),
-  body('telefono').trim().notEmpty().withMessage('telefono requerido')
-    .matches(/^[0-9+\s\-]{7,15}$/).withMessage('telefono inválido'),
+  body('telefono')
+    .trim()
+    .notEmpty()
+    .withMessage('telefono requerido')
+    .matches(/^[0-9+\s\-]{7,15}$/)
+    .withMessage('telefono inválido'),
   handleValidation,
 ];
 
 const reservationUpdateValidators = [
   param('id').toInt().isInt({ min: 1 }).withMessage('ID invalido'),
-  body('disponibilidad').trim().isIn(['Disponible', 'Pendiente', 'Reservado', 'Confirmado', 'Cancelado']).withMessage('Estado no permitido'),
+  body('disponibilidad')
+    .trim()
+    .isIn(['Disponible', 'Pendiente', 'Reservado', 'Confirmado', 'Cancelado'])
+    .withMessage('Estado no permitido'),
   body('notas').optional().trim().isLength({ max: 500 }).withMessage('notas demasiado largas'),
   handleValidation,
 ];
@@ -43,10 +50,7 @@ router.use((_req, res, next) => {
 router.get('/', requireAuth, reservationListValidators, async (req, res) => {
   const negocioId = req.query.businessId;
   try {
-    const { rows } = await db.query(
-      'SELECT * FROM reservations WHERE business_id = $1 ORDER BY franja',
-      [negocioId]
-    );
+    const { rows } = await db.query('SELECT * FROM reservations WHERE business_id = $1 ORDER BY franja', [negocioId]);
     res.json({ ok: true, data: rows });
   } catch (err) {
     res.status(500).json({ ok: false, message: err.message });
@@ -66,8 +70,7 @@ router.post('/', reservationCreateValidators, validateReservation, async (req, r
     const { rows } = await db.query(
       `INSERT INTO reservations (business_id, franja, disponibilidad, cliente, telefono, servicio, notas)
        VALUES ($1,$2,'Reservado',$3,$4,$5,$6) RETURNING *`,
-      [businessId, clean(franja), clean(cliente), clean(telefono),
-       clean(servicio ?? ''), clean(notas ?? '')]
+      [businessId, clean(franja), clean(cliente), clean(telefono), clean(servicio ?? ''), clean(notas ?? '')]
     );
     syncInBackground(businessId, 'reservations');
     res.status(201).json({ ok: true, data: rows[0] });

@@ -41,7 +41,11 @@ describe('customers — historial y recuerdo por email', () => {
   });
 
   test('GET /email/:email resuelve el cliente por email', async () => {
-    db.query.mockResolvedValueOnce({ rows: [{ id: 'c1', name: 'Ana', email: 'ana@example.com', phone: '600123456', created_at: new Date().toISOString() }] });
+    db.query.mockResolvedValueOnce({
+      rows: [
+        { id: 'c1', name: 'Ana', email: 'ana@example.com', phone: '600123456', created_at: new Date().toISOString() },
+      ],
+    });
 
     const res = await request(buildApp()).get('/api/customers/email/ana@example.com');
 
@@ -59,28 +63,36 @@ describe('customers — historial y recuerdo por email', () => {
 
   test('GET /:id/history devuelve el cliente y sus reservas con nombre del negocio y pago', async () => {
     db.query
-      .mockResolvedValueOnce({ rows: [{ id: 'c1', name: 'Ana', email: 'ana@example.com', phone: '600123456', created_at: new Date().toISOString() }] })
       .mockResolvedValueOnce({
-        rows: [{
-          id: 'b1',
-          provider_id: 'neg1',
-          business_name: 'Barbería Norte',
-          service_id: 'Corte',
-          date: new Date().toISOString().slice(0, 10),
-          slot: '10:30',
-          status: 'confirmed',
-          notes: '',
-          created_at: new Date().toISOString(),
-        }],
+        rows: [
+          { id: 'c1', name: 'Ana', email: 'ana@example.com', phone: '600123456', created_at: new Date().toISOString() },
+        ],
       })
       .mockResolvedValueOnce({
-        rows: [{
-          booking_id: 'b1',
-          amount: 1500,
-          currency: 'EUR',
-          method: 'card',
-          status: 'paid',
-        }],
+        rows: [
+          {
+            id: 'b1',
+            provider_id: 'neg1',
+            business_name: 'Barbería Norte',
+            service_id: 'Corte',
+            date: new Date().toISOString().slice(0, 10),
+            slot: '10:30',
+            status: 'confirmed',
+            notes: '',
+            created_at: new Date().toISOString(),
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            booking_id: 'b1',
+            amount: 1500,
+            currency: 'EUR',
+            method: 'card',
+            status: 'paid',
+          },
+        ],
       });
 
     const res = await request(buildApp())
@@ -121,7 +133,11 @@ describe('customers — historial y recuerdo por email', () => {
   });
 
   test('GET /me devuelve el perfil del cliente autenticado', async () => {
-    db.query.mockResolvedValueOnce({ rows: [{ id: 'c1', name: 'Ana', email: 'ana@example.com', phone: '600123456', created_at: new Date().toISOString() }] });
+    db.query.mockResolvedValueOnce({
+      rows: [
+        { id: 'c1', name: 'Ana', email: 'ana@example.com', phone: '600123456', created_at: new Date().toISOString() },
+      ],
+    });
 
     const res = await request(buildApp())
       .get('/api/customers/me')
@@ -142,7 +158,17 @@ describe('customers — historial y recuerdo por email', () => {
     delete process.env.DATABASE_URL;
     bookingsService.listBookings.mockResolvedValue({
       ok: true,
-      data: [{ id: 'booking-1', customerId: 'cliente1', providerId: 'neg1', serviceId: 'Corte', date: '2026-09-01', slot: '09:00', status: 'confirmed' }],
+      data: [
+        {
+          id: 'booking-1',
+          customerId: 'cliente1',
+          providerId: 'neg1',
+          serviceId: 'Corte',
+          date: '2026-09-01',
+          slot: '09:00',
+          status: 'confirmed',
+        },
+      ],
     });
 
     const res = await request(buildApp())

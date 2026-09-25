@@ -16,10 +16,11 @@ async function recordView({ businessId } = {}) {
   }
 
   try {
-    await db.query(
-      'INSERT INTO analytics_events (id, event_type, business_id) VALUES ($1, $2, $3)',
-      [randomUUID(), 'view', cleanBusinessId]
-    );
+    await db.query('INSERT INTO analytics_events (id, event_type, business_id) VALUES ($1, $2, $3)', [
+      randomUUID(),
+      'view',
+      cleanBusinessId,
+    ]);
     return { ok: true, status: 201, data: { accepted: true } };
   } catch (error) {
     return { ok: false, status: 500, message: error.message };

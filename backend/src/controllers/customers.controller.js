@@ -16,7 +16,9 @@ async function listCustomers(req, res) {
 async function createCustomer(req, res) {
   try {
     const result = await customersService.createCustomer(req.body);
-    return res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
+    return res
+      .status(result.status)
+      .json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (error) {
     return res.status(500).json({ ok: false, message: error.message });
   }
@@ -25,7 +27,9 @@ async function createCustomer(req, res) {
 async function findCustomerByEmail(req, res) {
   try {
     const result = await customersService.findCustomerByEmail(req.params.email);
-    return res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
+    return res
+      .status(result.status)
+      .json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (error) {
     return res.status(500).json({ ok: false, message: error.message });
   }
@@ -48,7 +52,9 @@ async function getCustomerHistory(req, res) {
 async function getCustomerProfile(req, res) {
   try {
     const result = await customersService.getCustomerProfile(req.customerId);
-    return res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
+    return res
+      .status(result.status)
+      .json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (error) {
     return res.status(500).json({ ok: false, message: error.message });
   }
@@ -60,7 +66,9 @@ async function exportCustomerData(req, res) {
       return res.status(403).json({ ok: false, message: 'Sin acceso a estos datos' });
     }
     const result = await customersService.exportCustomerData(req.params.id);
-    return res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
+    return res
+      .status(result.status)
+      .json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (error) {
     return res.status(500).json({ ok: false, message: error.message });
   }
@@ -72,10 +80,20 @@ async function deleteCustomer(req, res) {
       return res.status(403).json({ ok: false, message: 'Sin acceso a estos datos' });
     }
     const result = await customersService.deleteCustomer(req.params.id);
-    return res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
+    return res
+      .status(result.status)
+      .json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
   } catch (error) {
     return res.status(500).json({ ok: false, message: error.message });
   }
 }
 
-module.exports = { listCustomers, createCustomer, findCustomerByEmail, getCustomerHistory, getCustomerProfile, exportCustomerData, deleteCustomer };
+module.exports = {
+  listCustomers,
+  createCustomer,
+  findCustomerByEmail,
+  getCustomerHistory,
+  getCustomerProfile,
+  exportCustomerData,
+  deleteCustomer,
+};

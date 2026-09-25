@@ -20,7 +20,13 @@ async function checkoutForBusiness(businessId, payload = {}) {
     return { ok: false, status: 400, message: 'franja, cliente y telefono son requeridos' };
   }
 
-  const reservationResult = await businessesService.createReservation(businessId, { franja, cliente, telefono, servicio, notas });
+  const reservationResult = await businessesService.createReservation(businessId, {
+    franja,
+    cliente,
+    telefono,
+    servicio,
+    notas,
+  });
   if (!reservationResult.ok) {
     return reservationResult;
   }

@@ -26,7 +26,7 @@ describe('OwnerBusinessService', () => {
         OwnerBusinessService,
         { provide: AuthService, useValue: auth },
         { provide: BusinessService, useValue: businessService },
-      ]
+      ],
     });
 
     service = TestBed.inject(OwnerBusinessService);
@@ -36,28 +36,33 @@ describe('OwnerBusinessService', () => {
     auth.getOwnerToken.mockReturnValue('owner-token');
     businessService.createBusiness.mockReturnValue(of({ ok: true } as any));
 
-    service.saveBusiness({
-      name: 'Mi negocio',
-      category: 'Gastronomía',
-      description: 'Un lugar genial',
-      location: 'Centro',
-      phone: '555',
-      logo: '',
-      tags: 'café, brunch',
-      facebook: '',
-      instagram: '',
-      tiktok: '',
-      whatsapp: '',
-      linkedin: '',
-      pin: '1234'
-    }, null).subscribe();
+    service
+      .saveBusiness(
+        {
+          name: 'Mi negocio',
+          category: 'Gastronomía',
+          description: 'Un lugar genial',
+          location: 'Centro',
+          phone: '555',
+          logo: '',
+          tags: 'café, brunch',
+          facebook: '',
+          instagram: '',
+          tiktok: '',
+          whatsapp: '',
+          linkedin: '',
+          pin: '1234',
+        },
+        null
+      )
+      .subscribe();
 
     expect(businessService.createBusiness).toHaveBeenCalledWith(
       expect.objectContaining({
         name: 'Mi negocio',
         category: 'Gastronomía',
         tags: ['café', 'brunch'],
-        pin: '1234'
+        pin: '1234',
       }),
       'owner-token'
     );

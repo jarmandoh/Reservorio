@@ -5,12 +5,14 @@ const db = require('../db');
 const { encrypt, decrypt } = require('../utils/crypto');
 const logger = require('../logger');
 
-const CLIENT_ID     = process.env.GOOGLE_CLIENT_ID;
+const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
-const REDIRECT_URI  = process.env.GOOGLE_REDIRECT_URI;
+const REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI;
 
 if (!CLIENT_ID || !CLIENT_SECRET || !REDIRECT_URI) {
-  logger.warn('[WARN] Variables de Google OAuth no configuradas (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI).');
+  logger.warn(
+    '[WARN] Variables de Google OAuth no configuradas (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI).'
+  );
 }
 
 const SCOPES = [
@@ -19,7 +21,7 @@ const SCOPES = [
   'https://www.googleapis.com/auth/userinfo.email',
 ];
 
-// â¬â¬ Helpers â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬
+// ï¿½ï¿½ï¿½ï¿½ Helpers ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
 /**
  * Crea un OAuth2Client base (sin tokens).
@@ -30,7 +32,7 @@ function createOAuth2Client() {
 
 /**
  * Genera la URL de consentimiento OAuth.
- * @param {string} state â¬ JWT firmado con businessId (protecciÃ³n CSRF)
+ * @param {string} state ï¿½ JWT firmado con businessId (protecciÃ³n CSRF)
  */
 function getAuthUrl(state) {
   const client = createOAuth2Client();
@@ -98,14 +100,14 @@ async function getAuthClient(businessId) {
   const negocio = rows[0];
   if (!negocio.google_access_token) throw new Error('Google no vinculado a este negocio.');
 
-  const accessToken  = decrypt(negocio.google_access_token);
+  const accessToken = decrypt(negocio.google_access_token);
   const refreshToken = negocio.google_refresh_token ? decrypt(negocio.google_refresh_token) : null;
 
   const client = createOAuth2Client();
   client.setCredentials({
-    access_token:  accessToken,
+    access_token: accessToken,
     refresh_token: refreshToken,
-    expiry_date:   negocio.google_token_expiry ? new Date(negocio.google_token_expiry).getTime() : null,
+    expiry_date: negocio.google_token_expiry ? new Date(negocio.google_token_expiry).getTime() : null,
   });
 
   // Auto-refresh si expirÃ³
@@ -136,16 +138,15 @@ async function getAuthClient(businessId) {
  * Revoca tokens y limpia columnas Google del negocio.
  */
 async function disconnect(businessId) {
-  const { rows } = await db.query(
-    'SELECT google_access_token FROM businesses WHERE id = $1',
-    [businessId]
-  );
+  const { rows } = await db.query('SELECT google_access_token FROM businesses WHERE id = $1', [businessId]);
   if (rows.length && rows[0].google_access_token) {
     try {
       const token = decrypt(rows[0].google_access_token);
       const client = createOAuth2Client();
       await client.revokeToken(token);
-    } catch (_) { /* token ya expirado/revocado â¬ ignorar */ }
+    } catch (_) {
+      /* token ya expirado/revocado ï¿½ ignorar */
+    }
   }
   await db.query(
     `UPDATE businesses
@@ -163,7 +164,7 @@ async function disconnect(businessId) {
  * Lee datos de la spreadsheet vinculada.
  */
 async function readSheet(businessId, range) {
-  const auth   = await getAuthClient(businessId);
+  const auth = await getAuthClient(businessId);
   const sheets = google.sheets({ version: 'v4', auth });
   const { rows } = await db.query('SELECT google_sheet_id FROM businesses WHERE id = $1', [businessId]);
   const sheetId = rows[0]?.google_sheet_id;
@@ -180,7 +181,7 @@ async function readSheet(businessId, range) {
  * Escribe datos en la spreadsheet vinculada.
  */
 async function writeSheet(businessId, range, values) {
-  const auth   = await getAuthClient(businessId);
+  const auth = await getAuthClient(businessId);
   const sheets = google.sheets({ version: 'v4', auth });
   const { rows } = await db.query('SELECT google_sheet_id FROM businesses WHERE id = $1', [businessId]);
   const sheetId = rows[0]?.google_sheet_id;
@@ -199,39 +200,47 @@ async function writeSheet(businessId, range, values) {
  * y la vincula al negocio.
  */
 async function createTemplateSheet(businessId, businessName) {
-  const auth   = await getAuthClient(businessId);
+  const auth = await getAuthClient(businessId);
   const sheets = google.sheets({ version: 'v4', auth });
 
   const res = await sheets.spreadsheets.create({
     requestBody: {
-      properties: { title: `${businessName} â¬ Reservorio` },
+      properties: { title: `${businessName} ï¿½ Reservorio` },
       sheets: [
         {
           properties: { title: 'Reservas' },
-          data: [{
-            startRow: 0, startColumn: 0,
-            rowData: [{
-              values: [
-                { userEnteredValue: { stringValue: 'Franja' } },
-                { userEnteredValue: { stringValue: 'Disponibilidad' } },
-                { userEnteredValue: { stringValue: 'Cliente' } },
-                { userEnteredValue: { stringValue: 'TelÃ©fono' } },
-                { userEnteredValue: { stringValue: 'Servicio' } },
-                { userEnteredValue: { stringValue: 'Notas' } },
+          data: [
+            {
+              startRow: 0,
+              startColumn: 0,
+              rowData: [
+                {
+                  values: [
+                    { userEnteredValue: { stringValue: 'Franja' } },
+                    { userEnteredValue: { stringValue: 'Disponibilidad' } },
+                    { userEnteredValue: { stringValue: 'Cliente' } },
+                    { userEnteredValue: { stringValue: 'TelÃ©fono' } },
+                    { userEnteredValue: { stringValue: 'Servicio' } },
+                    { userEnteredValue: { stringValue: 'Notas' } },
+                  ],
+                },
               ],
-            }],
-          }],
+            },
+          ],
         },
         {
           properties: { title: 'Servicios' },
-          data: [{
-            startRow: 0, startColumn: 0,
-            rowData: [{
-              values: [
-                { userEnteredValue: { stringValue: 'Nombre' } },
+          data: [
+            {
+              startRow: 0,
+              startColumn: 0,
+              rowData: [
+                {
+                  values: [{ userEnteredValue: { stringValue: 'Nombre' } }],
+                },
               ],
-            }],
-          }],
+            },
+          ],
         },
       ],
     },
@@ -253,4 +262,3 @@ module.exports = {
   writeSheet,
   createTemplateSheet,
 };
-

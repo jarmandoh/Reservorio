@@ -15,8 +15,7 @@ process.env.JWT_SECRET = 'test-secret';
 // (booking confirmado + notificación persistida).
 
 const RUN_INTEGRATION =
-  process.env.RUN_INTEGRATION === '1' &&
-  /^postgres(ql)?:\/\//.test(process.env.DATABASE_URL || '');
+  process.env.RUN_INTEGRATION === '1' && /^postgres(ql)?:\/\//.test(process.env.DATABASE_URL || '');
 
 const request = require('supertest');
 const express = require('express');
@@ -48,14 +47,18 @@ async function resetDb() {
 }
 
 async function seed() {
-  await db.query(
-    'INSERT INTO businesses (id, name, category, pin_hash) VALUES ($1, $2, $3, $4)',
-    [BUSINESS_ID, 'Negocio IT', 'Tecnología', '$2a$10$sin-usar-en-tests']
-  );
-  await db.query(
-    'INSERT INTO customers (id, name, email, phone) VALUES ($1, $2, $3, $4)',
-    [CUSTOMER_ID, 'Cliente IT', 'cliente@it.test', '600000000']
-  );
+  await db.query('INSERT INTO businesses (id, name, category, pin_hash) VALUES ($1, $2, $3, $4)', [
+    BUSINESS_ID,
+    'Negocio IT',
+    'Tecnología',
+    '$2a$10$sin-usar-en-tests',
+  ]);
+  await db.query('INSERT INTO customers (id, name, email, phone) VALUES ($1, $2, $3, $4)', [
+    CUSTOMER_ID,
+    'Cliente IT',
+    'cliente@it.test',
+    '600000000',
+  ]);
 }
 
 const bookingPayload = {
@@ -101,11 +104,13 @@ maybeDescribe('Integración con PostgreSQL real', () => {
     const first = await request(app).post('/api/bookings').send(bookingPayload);
     expect(first.status).toBe(201);
 
-    const second = await request(app).post('/api/bookings').send({
-      ...bookingPayload,
-      customerId: 'cliente-it',
-      notes: 'segunda petición en la misma franja',
-    });
+    const second = await request(app)
+      .post('/api/bookings')
+      .send({
+        ...bookingPayload,
+        customerId: 'cliente-it',
+        notes: 'segunda petición en la misma franja',
+      });
 
     expect(second.status).toBe(409);
     expect(second.body.ok).toBe(false);
@@ -138,16 +143,11 @@ maybeDescribe('Integración con PostgreSQL real', () => {
     expect(confirm.status).toBe(200);
     expect(confirm.body.data.status).toBe('paid');
 
-    const bookingRow = await db.query(
-      'SELECT status FROM bookings WHERE id = $1',
-      [bookingId]
-    );
+    const bookingRow = await db.query('SELECT status FROM bookings WHERE id = $1', [bookingId]);
     expect(bookingRow.rows[0].status).toBe('confirmed');
 
-    const notifications = await request(app)
-      .get('/api/notifications')
-      .query({ businessId: BUSINESS_ID, bookingId });
+    const notifications = await request(app).get('/api/notifications').query({ businessId: BUSINESS_ID, bookingId });
 
-    expect(notifications.body.data.some((n) => n.type === 'payment_received')).toBe(true);
+    expect(notifications.body.data.some(n => n.type === 'payment_received')).toBe(true);
   });
 });

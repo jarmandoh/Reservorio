@@ -55,17 +55,20 @@ export class OwnerLoginComponent {
     this.error.set(null);
 
     const { email, password } = this.form.value;
-    this.auth.loginOwner(email!, password!).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: () => {
-        this.loading.set(false);
-        this.router.navigate(['/owner/dashboard']);
-      },
-      error: err => {
-        const message = err instanceof Error ? err.message : 'Credenciales inválidas.';
-        this.error.set(message);
-        this.loading.set(false);
-      },
-    });
+    this.auth
+      .loginOwner(email!, password!)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.loading.set(false);
+          this.router.navigate(['/owner/dashboard']);
+        },
+        error: err => {
+          const message = err instanceof Error ? err.message : 'Credenciales inválidas.';
+          this.error.set(message);
+          this.loading.set(false);
+        },
+      });
   }
 
   goRegister(): void {

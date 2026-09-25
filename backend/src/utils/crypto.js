@@ -20,7 +20,7 @@ function getKey() {
  */
 function encrypt(plaintext) {
   const key = getKey();
-  const iv  = crypto.randomBytes(IV_LENGTH);
+  const iv = crypto.randomBytes(IV_LENGTH);
   const cipher = crypto.createCipheriv(ALGORITHM, key, iv, { authTagLength: TAG_LENGTH });
 
   let encrypted = cipher.update(plaintext, 'utf8', 'hex');
@@ -37,7 +37,7 @@ function decrypt(encoded) {
   const key = getKey();
   const [ivHex, tagHex, ciphertext] = encoded.split(':');
 
-  const iv  = Buffer.from(ivHex, 'hex');
+  const iv = Buffer.from(ivHex, 'hex');
   const tag = Buffer.from(tagHex, 'hex');
   const decipher = crypto.createDecipheriv(ALGORITHM, key, iv, { authTagLength: TAG_LENGTH });
   decipher.setAuthTag(tag);

@@ -1,16 +1,16 @@
 'use strict';
 
-const express          = require('express');
-const rateLimit        = require('express-rate-limit');
+const express = require('express');
+const rateLimit = require('express-rate-limit');
 const { sign, verify } = require('../middleware/jwt');
-const db               = require('../db');
-const gsheets          = require('../services/googleSheets');
-const { syncAll }      = require('../services/syncService');
-const logger           = require('../logger');
+const db = require('../db');
+const gsheets = require('../services/googleSheets');
+const { syncAll } = require('../services/syncService');
+const logger = require('../logger');
 
 const router = express.Router();
 
-// â¬â¬ Rate limiter especÃ­fico para OAuth (mÃ¡s estricto) â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬
+// ï¿½ï¿½ï¿½ï¿½ Rate limiter especÃ­fico para OAuth (mÃ¡s estricto) ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 const oauthLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
@@ -27,14 +27,14 @@ const syncLimiter = rateLimit({
   message: { ok: false, message: 'Demasiadas sincronizaciones, intÃ©ntalo mÃ¡s tarde.' },
 });
 
-// â¬â¬ ValidaciÃ³n de formatos â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬
+// ï¿½ï¿½ï¿½ï¿½ ValidaciÃ³n de formatos ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 const SHEET_ID_RE = /^[a-zA-Z0-9_-]{20,60}$/;
 
 function isValidSheetId(id) {
   return typeof id === 'string' && SHEET_ID_RE.test(id);
 }
 
-// â¬â¬ Auth middleware (reutiliza lÃ³gica de businesses.routes) â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬â¬
+// ï¿½ï¿½ï¿½ï¿½ Auth middleware (reutiliza lÃ³gica de businesses.routes) ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
 function requireAnyAuth(req, res, next) {
   const hdr = req.headers.authorization;
@@ -42,7 +42,9 @@ function requireAnyAuth(req, res, next) {
   try {
     req.authPayload = verify(hdr.slice(7));
     next();
-  } catch { res.status(401).json({ ok: false, message: 'Token invalido o expirado' }); }
+  } catch {
+    res.status(401).json({ ok: false, message: 'Token invalido o expirado' });
+  }
 }
 
 function canAccessBusiness(req, res) {
@@ -53,7 +55,7 @@ function canAccessBusiness(req, res) {
   return false;
 }
 
-// â"â" ROUTES â"â"â"â"â"â"â"â"â"â"â"â"â"â"â"â"â"â"â"â"â"â"â"â"â"â"â"â"â"â"â"â"â"â"â"â"â"â"â"â"â"â"â"â"â"â"â"â"â"â"â"â"â"â"â"â"â"â"â"â"â"â"â"â"
+// ï¿½"ï¿½ï¿½"ï¿½ ROUTES ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½ï¿½"ï¿½
 
 /**
  * GET /api/google/start/:businessId
@@ -65,7 +67,7 @@ router.get('/start/:businessId', oauthLimiter, requireAnyAuth, (req, res) => {
 
   // state = JWT firmado con businessId + timestamp (CSRF protection, 10 min)
   const state = sign({ businessId: req.params.businessId, purpose: 'google_oauth' }, '10m');
-  const url   = gsheets.getAuthUrl(state);
+  const url = gsheets.getAuthUrl(state);
   res.json({ ok: true, url });
 });
 
@@ -106,12 +108,12 @@ router.get('/callback', oauthLimiter, async (req, res) => {
   try {
     // Intercambiar code por tokens
     const tokens = await gsheets.exchangeCode(code);
-    const email  = await gsheets.getUserEmail(tokens.access_token);
+    const email = await gsheets.getUserEmail(tokens.access_token);
 
     // Guardar tokens cifrados
     await gsheets.saveTokens(businessId, tokens, email);
 
-    // Redirigir al frontend â¬ usar el ID de la BD (no del state) para evitar inyecciÃ³n en URL
+    // Redirigir al frontend ï¿½ usar el ID de la BD (no del state) para evitar inyecciÃ³n en URL
     const safeId = rows[0].id.replace(/[^a-zA-Z0-9_-]/g, '');
     const frontendUrl = (process.env.CORS_ORIGINS || 'http://localhost:4200').split(',')[0].trim();
     res.redirect(`${frontendUrl}/business/${encodeURIComponent(safeId)}/admin?google=linked`);
@@ -139,15 +141,15 @@ router.get('/status/:businessId', requireAnyAuth, async (req, res) => {
     res.json({
       ok: true,
       data: {
-        linked:     !!negocio.google_email,
-        email:      negocio.google_email || null,
-        sheetId:    negocio.google_sheet_id || null,
+        linked: !!negocio.google_email,
+        email: negocio.google_email || null,
+        sheetId: negocio.google_sheet_id || null,
         tokenExpiry: negocio.google_token_expiry || null,
       },
     });
-  } catch (e) { 
+  } catch (e) {
     logger.error('[Google] Error status:', e.message);
-    res.status(500).json({ ok: false, message: 'Error al consultar estado de Google.' }); 
+    res.status(500).json({ ok: false, message: 'Error al consultar estado de Google.' });
   }
 });
 
@@ -206,7 +208,7 @@ router.post('/link-sheet/:businessId', requireAnyAuth, async (req, res) => {
   try {
     // Verificar que podemos acceder a la sheet
     const { google } = require('googleapis');
-    const auth   = await gsheets.getAuthClient(req.params.businessId);
+    const auth = await gsheets.getAuthClient(req.params.businessId);
     const sheets = google.sheets({ version: 'v4', auth });
     await sheets.spreadsheets.get({ spreadsheetId: sheetId });
 
@@ -214,7 +216,9 @@ router.post('/link-sheet/:businessId', requireAnyAuth, async (req, res) => {
     res.json({ ok: true, message: 'Spreadsheet vinculada.' });
   } catch (e) {
     if (e.code === 404 || e.code === 403) {
-      return res.status(400).json({ ok: false, message: 'No se puede acceder a esa spreadsheet. Verifica el ID y permisos.' });
+      return res
+        .status(400)
+        .json({ ok: false, message: 'No se puede acceder a esa spreadsheet. Verifica el ID y permisos.' });
     }
     logger.error('[Google] Error link-sheet:', e.message);
     res.status(500).json({ ok: false, message: 'Error al vincular spreadsheet.' });
@@ -223,16 +227,15 @@ router.post('/link-sheet/:businessId', requireAnyAuth, async (req, res) => {
 
 /**
  * POST /api/google/sync/:businessId
- * SincronizaciÃ³n manual: vuelca reservas + servicios de PG â  Google Sheets.
+ * SincronizaciÃ³n manual: vuelca reservas + servicios de PG ï¿½  Google Sheets.
  */
 router.post('/sync/:businessId', syncLimiter, requireAnyAuth, async (req, res) => {
   if (!canAccessBusiness(req, res)) return;
 
   try {
-    const { rows } = await db.query(
-      'SELECT google_sheet_id, google_access_token FROM businesses WHERE id = $1',
-      [req.params.businessId]
-    );
+    const { rows } = await db.query('SELECT google_sheet_id, google_access_token FROM businesses WHERE id = $1', [
+      req.params.businessId,
+    ]);
     if (!rows.length) return res.status(404).json({ ok: false, message: 'Negocio no encontrado.' });
     if (!rows[0].google_access_token) return res.status(400).json({ ok: false, message: 'Google no vinculado.' });
     if (!rows[0].google_sheet_id) return res.status(400).json({ ok: false, message: 'No hay spreadsheet vinculada.' });
@@ -246,4 +249,3 @@ router.post('/sync/:businessId', syncLimiter, requireAnyAuth, async (req, res) =
 });
 
 module.exports = router;
-

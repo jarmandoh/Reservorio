@@ -62,7 +62,22 @@ describe('Paginación en listados (endpoints)', () => {
 
   test('GET /api/bookings?page=1&pageSize=5 incluye meta y LIMIT/OFFSET', async () => {
     db.query
-      .mockResolvedValueOnce({ rows: [{ id: 'b1', provider_id: 'neg1', customer_id: 'c1', service_id: 's1', booking_date: '2026-09-01', slot: '10:00', status: 'pending', notes: '', created_at: new Date().toISOString(), updated_at: null }] })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: 'b1',
+            provider_id: 'neg1',
+            customer_id: 'c1',
+            service_id: 's1',
+            booking_date: '2026-09-01',
+            slot: '10:00',
+            status: 'pending',
+            notes: '',
+            created_at: new Date().toISOString(),
+            updated_at: null,
+          },
+        ],
+      })
       .mockResolvedValueOnce({ rows: [{ total: 42 }] });
 
     const res = await request(app).get('/api/bookings?page=1&pageSize=5');
@@ -81,9 +96,7 @@ describe('Paginación en listados (endpoints)', () => {
   });
 
   test('GET /api/payments?page=2&pageSize=10 con providerId filtra y pagina', async () => {
-    db.query
-      .mockResolvedValueOnce({ rows: [] })
-      .mockResolvedValueOnce({ rows: [{ total: 7 }] });
+    db.query.mockResolvedValueOnce({ rows: [] }).mockResolvedValueOnce({ rows: [{ total: 7 }] });
 
     const res = await request(app).get('/api/payments?providerId=neg1&page=2&pageSize=10');
     expect(res.status).toBe(200);
@@ -93,7 +106,20 @@ describe('Paginación en listados (endpoints)', () => {
   });
 
   test('GET /api/payments sin parámetros conserva el contrato actual', async () => {
-    db.query.mockResolvedValue({ rows: [{ id: 'pay-1', booking_id: 'b1', provider_id: 'neg1', customer_id: 'c1', amount: 10, currency: 'EUR', method: 'card', status: 'paid' }] });
+    db.query.mockResolvedValue({
+      rows: [
+        {
+          id: 'pay-1',
+          booking_id: 'b1',
+          provider_id: 'neg1',
+          customer_id: 'c1',
+          amount: 10,
+          currency: 'EUR',
+          method: 'card',
+          status: 'paid',
+        },
+      ],
+    });
     const res = await request(app).get('/api/payments');
     expect(res.status).toBe(200);
     expect(res.body.meta).toBeUndefined();
@@ -102,7 +128,9 @@ describe('Paginación en listados (endpoints)', () => {
 
   test('GET /api/customers?page=1&pageSize=5 incluye meta', async () => {
     db.query
-      .mockResolvedValueOnce({ rows: [{ id: 'c1', name: 'Ana', email: 'a@example.com', phone: '', created_at: new Date().toISOString() }] })
+      .mockResolvedValueOnce({
+        rows: [{ id: 'c1', name: 'Ana', email: 'a@example.com', phone: '', created_at: new Date().toISOString() }],
+      })
       .mockResolvedValueOnce({ rows: [{ total: 3 }] });
 
     const res = await request(app).get('/api/customers?page=1&pageSize=5');

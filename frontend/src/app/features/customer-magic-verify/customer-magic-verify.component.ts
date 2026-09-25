@@ -52,16 +52,19 @@ export class CustomerMagicVerifyComponent implements OnInit {
     }
 
     this.loading.set(true);
-    this.auth.redeemCustomerMagicLink(token).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: () => {
-        this.loading.set(false);
-        this.router.navigate(['/customer/history']);
-      },
-      error: err => {
-        this.loading.set(false);
-        this.error.set(err instanceof Error ? err.message : 'El enlace no pudo validarse.');
-      },
-    });
+    this.auth
+      .redeemCustomerMagicLink(token)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.loading.set(false);
+          this.router.navigate(['/customer/history']);
+        },
+        error: err => {
+          this.loading.set(false);
+          this.error.set(err instanceof Error ? err.message : 'El enlace no pudo validarse.');
+        },
+      });
   }
 
   retry(): void {

@@ -23,16 +23,12 @@ describe('GET /api/ratings/:businessId', () => {
 
 describe('POST /api/ratings/:businessId', () => {
   it('should require rating between 1-5', async () => {
-    const res = await request(app)
-      .post('/api/ratings/test-business')
-      .send({ rating: 6, review: 'Great' });
+    const res = await request(app).post('/api/ratings/test-business').send({ rating: 6, review: 'Great' });
     expect(res.status).toBe(400);
   });
 
   it('should accept valid rating and review', async () => {
-    const res = await request(app)
-      .post('/api/ratings/test-business')
-      .send({ rating: 5, review: 'Excelente' });
+    const res = await request(app).post('/api/ratings/test-business').send({ rating: 5, review: 'Excelente' });
     expect(res.status).toBe(404);
   });
 });

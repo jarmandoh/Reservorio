@@ -61,7 +61,9 @@ describe('Auth API — POST /api/auth/refresh (renovación de sesión)', () => {
   });
 
   test('reemite owner preservando su identidad', async () => {
-    const response = await request(app).post('/api/auth/refresh').send({ token: freshToken('owner') });
+    const response = await request(app)
+      .post('/api/auth/refresh')
+      .send({ token: freshToken('owner') });
     expect(response.status).toBe(200);
 
     const decoded = JSON.parse(Buffer.from(response.body.data.token.split('.')[1], 'base64').toString());
@@ -70,7 +72,9 @@ describe('Auth API — POST /api/auth/refresh (renovación de sesión)', () => {
   });
 
   test('reemite customer preservando su identidad', async () => {
-    const response = await request(app).post('/api/auth/refresh').send({ token: freshToken('customer') });
+    const response = await request(app)
+      .post('/api/auth/refresh')
+      .send({ token: freshToken('customer') });
     expect(response.status).toBe(200);
 
     const decoded = JSON.parse(Buffer.from(response.body.data.token.split('.')[1], 'base64').toString());

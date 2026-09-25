@@ -59,16 +59,18 @@ describe('admin.routes — panel avanzado', () => {
 
   test('GET /stats devuelve agregados del marketplace', async () => {
     db.query.mockResolvedValueOnce({
-      rows: [{
-        businesses: 3,
-        active_businesses: 2,
-        verified_businesses: 1,
-        bookings: 12,
-        confirmed_bookings: 4,
-        reservations: 20,
-        reviews: 7,
-        average_rating: 4.2,
-      }],
+      rows: [
+        {
+          businesses: 3,
+          active_businesses: 2,
+          verified_businesses: 1,
+          bookings: 12,
+          confirmed_bookings: 4,
+          reservations: 20,
+          reviews: 7,
+          average_rating: 4.2,
+        },
+      ],
     });
 
     const res = await request(buildApp()).get('/api/admin/stats').set('Authorization', `Bearer ${adminToken()}`);
@@ -82,14 +84,16 @@ describe('admin.routes — panel avanzado', () => {
 
   test('GET /reviews lista con nombre del negocio', async () => {
     db.query.mockResolvedValueOnce({
-      rows: [{
-        id: 1,
-        business_id: 'neg1',
-        business_name: 'Barbería Norte',
-        rating: 5,
-        review: 'Excepcional',
-        created_at: new Date().toISOString(),
-      }],
+      rows: [
+        {
+          id: 1,
+          business_id: 'neg1',
+          business_name: 'Barbería Norte',
+          rating: 5,
+          review: 'Excepcional',
+          created_at: new Date().toISOString(),
+        },
+      ],
     });
 
     const res = await request(buildApp()).get('/api/admin/reviews').set('Authorization', `Bearer ${adminToken()}`);
@@ -111,7 +115,9 @@ describe('admin.routes — panel avanzado', () => {
   test('DELETE /services/:serviceId elimina el servicio', async () => {
     db.query.mockResolvedValueOnce({ rows: [{ id: 4 }] });
 
-    const res = await request(buildApp()).delete('/api/admin/services/4').set('Authorization', `Bearer ${adminToken()}`);
+    const res = await request(buildApp())
+      .delete('/api/admin/services/4')
+      .set('Authorization', `Bearer ${adminToken()}`);
 
     expect(res.status).toBe(200);
     expect(db.query).toHaveBeenCalledWith(expect.stringContaining('DELETE FROM services'), [4]);
@@ -127,7 +133,9 @@ describe('admin.routes — panel avanzado', () => {
       ],
     });
 
-    const res = await request(buildApp()).get('/api/admin/payments?status=pending').set('Authorization', `Bearer ${adminToken()}`);
+    const res = await request(buildApp())
+      .get('/api/admin/payments?status=pending')
+      .set('Authorization', `Bearer ${adminToken()}`);
 
     expect(res.status).toBe(200);
     expect(res.body.data.map(p => p.id)).toEqual(['p2', 'p3']);

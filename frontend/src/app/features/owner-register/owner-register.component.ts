@@ -61,17 +61,20 @@ export class OwnerRegisterComponent {
 
     const { name, email, password } = this.form.value;
     const payload = { name: name ?? '', email: email ?? '', password: password ?? '' };
-    this.auth.registerOwner(payload).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: () => {
-        this.loading.set(false);
-        this.router.navigate(['/owner/dashboard']);
-      },
-      error: err => {
-        const message = err instanceof Error ? err.message : 'No se pudo crear la cuenta.';
-        this.error.set(message);
-        this.loading.set(false);
-      },
-    });
+    this.auth
+      .registerOwner(payload)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.loading.set(false);
+          this.router.navigate(['/owner/dashboard']);
+        },
+        error: err => {
+          const message = err instanceof Error ? err.message : 'No se pudo crear la cuenta.';
+          this.error.set(message);
+          this.loading.set(false);
+        },
+      });
   }
 
   goLogin(): void {

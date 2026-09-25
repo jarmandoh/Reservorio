@@ -14,7 +14,7 @@ const pool = new Pool({
   // el pool local sigue funcionando; documentado en .env.production.example
 });
 
-pool.on('error', (err) => {
+pool.on('error', err => {
   logger.error('[DB] Error inesperado en cliente idle:', err.message);
 });
 

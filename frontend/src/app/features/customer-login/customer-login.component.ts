@@ -59,12 +59,19 @@ type AuthMode = 'credentials' | 'otp';
       @if (mode() === 'credentials') {
         <div>
           <label class="form-label" for="phone">Teléfono</label>
-          <input id="phone" type="tel" class="form-input w-full" formControlName="phone" placeholder="Ej. 600 123 456" />
+          <input
+            id="phone"
+            type="tel"
+            class="form-input w-full"
+            formControlName="phone"
+            placeholder="Ej. 600 123 456"
+          />
         </div>
         <p class="text-xs text-on-surface-variant mt-1">
           ¿No lo recuerdas?
-          <button type="button" class="text-primary font-semibold underline" (click)="sendMagicLink()">Recibe un enlace por
-            correo</button>
+          <button type="button" class="text-primary font-semibold underline" (click)="sendMagicLink()">
+            Recibe un enlace por correo
+          </button>
         </p>
       }
 
@@ -107,7 +114,10 @@ export class CustomerLoginComponent implements OnInit {
   readonly form = this.fb.group({
     email: ['', [Validators.required, Validators.email]],
     phone: ['', [Validators.required, Validators.minLength(7)]],
-    code: [{ value: '', disabled: true }, [Validators.minLength(4), Validators.maxLength(8), Validators.pattern(/^\d{4,8}$/)]],
+    code: [
+      { value: '', disabled: true },
+      [Validators.minLength(4), Validators.maxLength(8), Validators.pattern(/^\d{4,8}$/)],
+    ],
   });
 
   get submitLabel(): string {
@@ -163,16 +173,19 @@ export class CustomerLoginComponent implements OnInit {
       this.loading.set(true);
       this.error.set(null);
       this.notice.set(null);
-      this.auth.loginCustomer(email, phone).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-        next: () => {
-          this.loading.set(false);
-          this.router.navigate(['/customer/history']);
-        },
-        error: err => {
-          this.loading.set(false);
-          this.error.set(err instanceof Error ? err.message : 'No encontramos un cliente con ese email y teléfono.');
-        },
-      });
+      this.auth
+        .loginCustomer(email, phone)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: () => {
+            this.loading.set(false);
+            this.router.navigate(['/customer/history']);
+          },
+          error: err => {
+            this.loading.set(false);
+            this.error.set(err instanceof Error ? err.message : 'No encontramos un cliente con ese email y teléfono.');
+          },
+        });
       return;
     }
 
@@ -184,22 +197,25 @@ export class CustomerLoginComponent implements OnInit {
       this.loading.set(true);
       this.error.set(null);
       this.notice.set(null);
-      this.auth.requestCustomerOtp(email).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-        next: res => {
-          this.loading.set(false);
-          this.codeRequested.set(true);
-          this.form.controls.code.enable();
-          this.notice.set(res.data?.message ?? 'Revisa tu correo electrónico.');
-          if (res.data?.debugCode) {
-            this.form.controls.code.setValue(res.data.debugCode);
-            this.notice.set(`${this.notice()} (depuración: ${res.data.debugCode})`);
-          }
-        },
-        error: err => {
-          this.loading.set(false);
-          this.error.set(err instanceof Error ? err.message : 'No pudimos enviar el código. Inténtalo otra vez.');
-        },
-      });
+      this.auth
+        .requestCustomerOtp(email)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: res => {
+            this.loading.set(false);
+            this.codeRequested.set(true);
+            this.form.controls.code.enable();
+            this.notice.set(res.data?.message ?? 'Revisa tu correo electrónico.');
+            if (res.data?.debugCode) {
+              this.form.controls.code.setValue(res.data.debugCode);
+              this.notice.set(`${this.notice()} (depuración: ${res.data.debugCode})`);
+            }
+          },
+          error: err => {
+            this.loading.set(false);
+            this.error.set(err instanceof Error ? err.message : 'No pudimos enviar el código. Inténtalo otra vez.');
+          },
+        });
       return;
     }
 
@@ -210,16 +226,19 @@ export class CustomerLoginComponent implements OnInit {
     }
     this.loading.set(true);
     this.error.set(null);
-    this.auth.loginCustomerWithOtp(email, code).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: () => {
-        this.loading.set(false);
-        this.router.navigate(['/customer/history']);
-      },
-      error: err => {
-        this.loading.set(false);
-        this.error.set(err instanceof Error ? err.message : 'Código inválido o expirado.');
-      },
-    });
+    this.auth
+      .loginCustomerWithOtp(email, code)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.loading.set(false);
+          this.router.navigate(['/customer/history']);
+        },
+        error: err => {
+          this.loading.set(false);
+          this.error.set(err instanceof Error ? err.message : 'Código inválido o expirado.');
+        },
+      });
   }
 
   sendMagicLink(): void {
@@ -231,29 +250,35 @@ export class CustomerLoginComponent implements OnInit {
     this.loading.set(true);
     this.error.set(null);
     this.notice.set(null);
-    this.auth.requestCustomerMagicLink(email).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: res => {
-        if (res.data?.debugToken) {
-          this.auth.redeemCustomerMagicLink(res.data.debugToken).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-            next: () => {
-              this.loading.set(false);
-              this.router.navigate(['/customer/history']);
-            },
-            error: err => {
-              this.loading.set(false);
-              this.error.set(err instanceof Error ? err.message : 'El enlace no pudo validarse.');
-            },
-          });
-          return;
-        }
-        this.loading.set(false);
-        this.notice.set(res.data?.message ?? 'Revisa tu correo electrónico; el enlace te traerá de vuelta.');
-      },
-      error: err => {
-        this.loading.set(false);
-        this.error.set(err instanceof Error ? err.message : 'No pudimos enviar el enlace. Inténtalo otra vez.');
-      },
-    });
+    this.auth
+      .requestCustomerMagicLink(email)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: res => {
+          if (res.data?.debugToken) {
+            this.auth
+              .redeemCustomerMagicLink(res.data.debugToken)
+              .pipe(takeUntilDestroyed(this.destroyRef))
+              .subscribe({
+                next: () => {
+                  this.loading.set(false);
+                  this.router.navigate(['/customer/history']);
+                },
+                error: err => {
+                  this.loading.set(false);
+                  this.error.set(err instanceof Error ? err.message : 'El enlace no pudo validarse.');
+                },
+              });
+            return;
+          }
+          this.loading.set(false);
+          this.notice.set(res.data?.message ?? 'Revisa tu correo electrónico; el enlace te traerá de vuelta.');
+        },
+        error: err => {
+          this.loading.set(false);
+          this.error.set(err instanceof Error ? err.message : 'No pudimos enviar el enlace. Inténtalo otra vez.');
+        },
+      });
   }
 
   goHome(): void {

@@ -20,7 +20,11 @@ export class BusinessService {
     return this.api.createBusiness(payload, token);
   }
 
-  updateBusiness(id: string, payload: Partial<NewBusinessPayload> & { pin?: string }, token: string): Observable<ApiResponse> {
+  updateBusiness(
+    id: string,
+    payload: Partial<NewBusinessPayload> & { pin?: string },
+    token: string
+  ): Observable<ApiResponse> {
     return this.api.updateBusiness(id, payload, token);
   }
 

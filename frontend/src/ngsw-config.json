@@ -38,11 +38,5 @@
       }
     }
   ],
-  "navigationUrls": [
-    "/**",
-    "!/api/**",
-    "!/oauth/**",
-    "!/payment/success",
-    "!/payment/cancel"
-  ]
+  "navigationUrls": ["/**", "!/api/**", "!/oauth/**", "!/payment/success", "!/payment/cancel"]
 }

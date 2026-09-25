@@ -12,12 +12,12 @@ La mayoría de los endpoints requieren un JWT en la cabecera:
 Authorization: Bearer <token>
 ```
 
-| Rol | Obtención | Expiración |
-|---|---|---|
-| `admin` | `POST /api/auth/admin` | 2 h |
-| `owner` | `POST /api/auth/owner/register` / `owner/login` | 8 h |
-| `business-admin` | `POST /api/businesses/:id/auth` | 8 h |
-| `customer` | `POST /api/auth/customer/login`, OTP o magic-link | 8 h |
+| Rol              | Obtención                                         | Expiración |
+| ---------------- | ------------------------------------------------- | ---------- |
+| `admin`          | `POST /api/auth/admin`                            | 2 h        |
+| `owner`          | `POST /api/auth/owner/register` / `owner/login`   | 8 h        |
+| `business-admin` | `POST /api/businesses/:id/auth`                   | 8 h        |
+| `customer`       | `POST /api/auth/customer/login`, OTP o magic-link | 8 h        |
 
 ### Formato de respuesta
 
@@ -30,17 +30,17 @@ Authorization: Bearer <token>
 
 ### Códigos de estado HTTP
 
-| Código | Significado |
-|---|---|
-| 200 / 201 | OK / Recurso creado |
-| 400 | Validación de entrada fallida |
-| 401 | No autenticado / credenciales inválidas / token expirado |
-| 403 | Autenticado pero sin permiso para el recurso |
-| 404 | Recurso no encontrado |
-| 409 | Conflicto (p. ej., email ya registrado) |
-| 422 | Regla de negocio (p. ej., franja ya ocupada) |
-| 429 | Rate limit excedido |
-| 500 | Error interno |
+| Código    | Significado                                              |
+| --------- | -------------------------------------------------------- |
+| 200 / 201 | OK / Recurso creado                                      |
+| 400       | Validación de entrada fallida                            |
+| 401       | No autenticado / credenciales inválidas / token expirado |
+| 403       | Autenticado pero sin permiso para el recurso             |
+| 404       | Recurso no encontrado                                    |
+| 409       | Conflicto (p. ej., email ya registrado)                  |
+| 422       | Regla de negocio (p. ej., franja ya ocupada)             |
+| 429       | Rate limit excedido                                      |
+| 500       | Error interno                                            |
 
 ### Rate limits (por IP)
 
@@ -174,9 +174,17 @@ Requiere **admin** u **owner**. Crea un negocio.
 
 ```json
 {
-  "name": "Cancha Central", "category": "Deportes", "pin": "5678",
-  "description": "...", "location": "...", "phone": "...", "schedule": "...",
-  "tags": "cancha,tenis", "rating": 4.5, "reviews": 12, "cancellationPolicy": "..."
+  "name": "Cancha Central",
+  "category": "Deportes",
+  "pin": "5678",
+  "description": "...",
+  "location": "...",
+  "phone": "...",
+  "schedule": "...",
+  "tags": "cancha,tenis",
+  "rating": 4.5,
+  "reviews": 12,
+  "cancellationPolicy": "..."
 }
 ```
 
@@ -244,9 +252,15 @@ Registra una reserva en el checkout del negocio (crea `booking` + `payment`):
 
 ```json
 {
-  "franja": "10:00", "cliente": "Juan", "telefono": "600111222",
-  "servicio": "Corte", "notas": "", "email": "juan@correo.com",
-  "amount": 20, "currency": "EUR", "method": "card"
+  "franja": "10:00",
+  "cliente": "Juan",
+  "telefono": "600111222",
+  "servicio": "Corte",
+  "notas": "",
+  "email": "juan@correo.com",
+  "amount": 20,
+  "currency": "EUR",
+  "method": "card"
 }
 ```
 
@@ -347,8 +361,13 @@ Público. Registra un pago:
 
 ```json
 {
-  "bookingId": "...", "providerId": "...", "customerId": "...",
-  "amount": 20, "currency": "EUR", "method": "card", "status": "pending"
+  "bookingId": "...",
+  "providerId": "...",
+  "customerId": "...",
+  "amount": 20,
+  "currency": "EUR",
+  "method": "card",
+  "status": "pending"
 }
 ```
 
@@ -428,12 +447,12 @@ Requieren cualquier token (`requireAnyAuth`): `start`, `callback`, `status`, `di
 
 Todos requieren **admin**:
 
-| Endpoint | Descripción |
-|---|---|
-| `GET /api/admin/stats` | Métricas globales (incluye `funnel: { views, bookings, paid, days }` — embudo de conversión de los últimos 30 días) |
-| `GET /api/admin/payments` | Pagos del sistema |
-| `GET /api/admin/reviews` · `DELETE /api/admin/reviews/:id` | Moderación de reseñas |
-| `GET /api/admin/services` · `DELETE /api/admin/services/:serviceId` | Moderación de servicios |
+| Endpoint                                                            | Descripción                                                                                                         |
+| ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `GET /api/admin/stats`                                              | Métricas globales (incluye `funnel: { views, bookings, paid, days }` — embudo de conversión de los últimos 30 días) |
+| `GET /api/admin/payments`                                           | Pagos del sistema                                                                                                   |
+| `GET /api/admin/reviews` · `DELETE /api/admin/reviews/:id`          | Moderación de reseñas                                                                                               |
+| `GET /api/admin/services` · `DELETE /api/admin/services/:serviceId` | Moderación de servicios                                                                                             |
 
 ---
 
@@ -455,13 +474,13 @@ Los eventos se guardan en `analytics_events`; si la base no está disponible, se
 
 Compatibilidad con el cliente anterior. Prefijo `/api`:
 
-| Endpoint | Notas |
-|---|---|
-| `GET /api/reservations?businessId=` | Lista de reservaciones (requiere auth) |
-| `POST /api/reservations` | Crea una reservación |
-| `PUT /api/reservations/:id` | Actualiza franja/estado (requiere auth) |
-| `GET /api/services?businessId=` · `POST /api/services` (auth) · `DELETE /api/services/:nombre` (auth) | Servicios legacy |
-| `GET /api/providers...` | Alias de `/api/businesses` (mismo router) |
+| Endpoint                                                                                              | Notas                                     |
+| ----------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| `GET /api/reservations?businessId=`                                                                   | Lista de reservaciones (requiere auth)    |
+| `POST /api/reservations`                                                                              | Crea una reservación                      |
+| `PUT /api/reservations/:id`                                                                           | Actualiza franja/estado (requiere auth)   |
+| `GET /api/services?businessId=` · `POST /api/services` (auth) · `DELETE /api/services/:nombre` (auth) | Servicios legacy                          |
+| `GET /api/providers...`                                                                               | Alias de `/api/businesses` (mismo router) |
 
 ---
 

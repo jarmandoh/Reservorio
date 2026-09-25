@@ -34,9 +34,7 @@ describe('Bookings routes', () => {
       .mockResolvedValueOnce({ rows: [{ id: 'customer1' }] })
       .mockRejectedValueOnce({ code: '23505', message: 'duplicate key value violates unique constraint' });
 
-    const response = await request(app)
-      .post('/api/bookings')
-      .send(bookingPayload);
+    const response = await request(app).post('/api/bookings').send(bookingPayload);
 
     expect(response.status).toBe(409);
     expect(response.body.ok).toBe(false);
@@ -47,7 +45,22 @@ describe('Bookings routes', () => {
     db.query
       .mockResolvedValueOnce({ rows: [{ id: 'provider1' }] })
       .mockResolvedValueOnce({ rows: [{ id: 'customer1' }] })
-      .mockResolvedValueOnce({ rows: [{ id: 'booking-1', provider_id: 'provider1', customer_id: 'customer1', service_id: 'Corte', booking_date: '2026-09-30', slot: '10:00', status: 'pending', notes: '', created_at: new Date(), updated_at: new Date() }] })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: 'booking-1',
+            provider_id: 'provider1',
+            customer_id: 'customer1',
+            service_id: 'Corte',
+            booking_date: '2026-09-30',
+            slot: '10:00',
+            status: 'pending',
+            notes: '',
+            created_at: new Date(),
+            updated_at: new Date(),
+          },
+        ],
+      })
       .mockResolvedValueOnce({ rows: [] });
 
     const response = await request(app)

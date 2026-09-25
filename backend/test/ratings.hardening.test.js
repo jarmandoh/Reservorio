@@ -20,9 +20,7 @@ describe('POST /api/ratings/:businessId hardening', () => {
   test('returns 404 when the business does not exist', async () => {
     db.query.mockResolvedValue({ rows: [] });
 
-    const response = await request(app)
-      .post('/api/ratings/no-existe')
-      .send({ rating: 5, review: 'Excelente' });
+    const response = await request(app).post('/api/ratings/no-existe').send({ rating: 5, review: 'Excelente' });
 
     expect(response.status).toBe(404);
     expect(response.body.ok).toBe(false);
@@ -33,9 +31,7 @@ describe('POST /api/ratings/:businessId hardening', () => {
 
     const statuses = [];
     for (let i = 0; i < 6; i += 1) {
-      const response = await request(app)
-        .post('/api/ratings/negocio1')
-        .send({ rating: 5, review: 'Genial' });
+      const response = await request(app).post('/api/ratings/negocio1').send({ rating: 5, review: 'Genial' });
       statuses.push(response.status);
     }
 

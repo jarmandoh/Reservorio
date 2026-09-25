@@ -117,4 +117,3 @@ async function createBooking(payload = {}) {
 }
 
 module.exports = { listBookings, createBooking };
-
