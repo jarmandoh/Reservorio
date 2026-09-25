@@ -50,6 +50,7 @@ async function ensureServiceExists(request: APIRequestContext, adminToken: strin
 
 async function ensureAvailableSlot(request: APIRequestContext, adminToken: string) {
   const response = await request.post(`${API_BASE}/api/businesses/${businessId}/reservations`, {
+    headers: { Authorization: `Bearer ${adminToken}` },
     data: {
       franja: setupSlotTime,
       cliente: 'E2E Slot',
@@ -74,17 +75,50 @@ async function ensureAvailableSlot(request: APIRequestContext, adminToken: strin
   expect(updateResponse.ok()).toBeTruthy();
 }
 
+const E2E_CUSTOMER_EMAIL = `e2e-${Date.now()}@reservorio.test`;
+const E2E_CUSTOMER_PHONE = '+573001234567';
+const E2E_CUSTOMER_NAME = 'E2E Usuario';
+
+async function ensureE2ECustomer(request: APIRequestContext): Promise<string> {
+  // Crea cliente si no existe (ignora 409) y loguea para obtener JWT
+  await request.post(`${API_BASE}/api/customers`, {
+    data: {
+      name: E2E_CUSTOMER_NAME,
+      email: E2E_CUSTOMER_EMAIL,
+      phone: E2E_CUSTOMER_PHONE,
+      dataConsent: true,
+      marketingConsent: false,
+    },
+  });
+
+  const loginRes = await request.post(`${API_BASE}/api/auth/customer/login`, {
+    data: { email: E2E_CUSTOMER_EMAIL, phone: E2E_CUSTOMER_PHONE },
+  });
+  expect(loginRes.ok()).toBeTruthy();
+  const body = await loginRes.json();
+  return body.data.token as string;
+}
+
+async function loginCustomerOnPage(page: import('@playwright/test').Page, token: string) {
+  await page.goto('/');
+  await page.evaluate(t => localStorage.setItem('reservorio_customer_jwt', t), token);
+}
+
 test.describe.configure({ mode: 'serial' });
+
+let customerToken = '';
 
 test.beforeAll(async ({ request }) => {
   const adminToken = await getAdminToken(request);
   await createBusinessIfNeeded(request, adminToken);
   await ensureServiceExists(request, adminToken);
   await ensureAvailableSlot(request, adminToken);
+  customerToken = await ensureE2ECustomer(request);
 });
 
 test.describe('Reserva y administración', () => {
   test('flujo de reserva muestra validación y confirma reserva', async ({ page }) => {
+    await loginCustomerOnPage(page, customerToken);
     await page.goto(`/booking/${businessId}`);
     await expect(page.getByRole('heading', { name: 'Elige tu servicio' })).toBeVisible();
 
@@ -138,6 +172,7 @@ test.describe('Reserva y administración', () => {
 
   test('flujo de administración actualiza estado de reserva', async ({ page, request }) => {
     const reservationResponse = await request.post(`${API_BASE}/api/businesses/${businessId}/reservations`, {
+      headers: { Authorization: `Bearer ${customerToken}` },
       data: {
         franja: '10:00',
         cliente: 'E2E Usuario',

@@ -14,7 +14,8 @@ const bookingsService = require('./bookings.service');
  * iniciar la sesión de pago, de modo que el payment quede referenciado a filas reales.
  */
 async function checkoutForBusiness(businessId, payload = {}) {
-  const { franja, cliente, telefono, servicio, notas, email, dataConsent, marketingConsent } = payload ?? {};
+  const { franja, cliente, telefono, servicio, notas, email, dataConsent, marketingConsent, _customerId } =
+    payload ?? {};
 
   if (!franja || !cliente || !telefono) {
     return { ok: false, status: 400, message: 'franja, cliente y telefono son requeridos' };
@@ -31,18 +32,29 @@ async function checkoutForBusiness(businessId, payload = {}) {
     return reservationResult;
   }
 
-  const customerResult = await customersService.findOrCreateCustomer({
-    name: cliente,
-    email: String(email ?? '').trim() || `guest-${reservationResult.data.id}-${Date.now()}@reservando.local`,
-    phone: telefono,
-    dataConsent,
-    marketingConsent,
-  });
-  if (!customerResult.ok) {
-    return customerResult;
+  // Si viene customerId autenticado (requireCustomer), úsalo directamente; si no, fallback guest
+  let customerId = String(_customerId ?? '').trim();
+  let customerResult;
+  if (customerId) {
+    // Verifica que exista (evita token manipulado con id inexistente)
+    const { rows } = await require('../db').query('SELECT id FROM customers WHERE id = $1', [customerId]);
+    if (!rows.length) {
+      return { ok: false, status: 401, message: 'Cliente autenticado no encontrado' };
+    }
+    customerResult = { ok: true, data: { id: customerId } };
+  } else {
+    customerResult = await customersService.findOrCreateCustomer({
+      name: cliente,
+      email: String(email ?? '').trim() || `guest-${reservationResult.data.id}-${Date.now()}@reservando.local`,
+      phone: telefono,
+      dataConsent,
+      marketingConsent,
+    });
+    if (!customerResult.ok) {
+      return customerResult;
+    }
+    customerId = customerResult.data.id;
   }
-
-  const customerId = customerResult.data.id;
 
   const bookingResult = await bookingsService.createBooking({
     providerId: businessId,

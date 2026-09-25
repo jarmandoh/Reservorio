@@ -199,16 +199,20 @@ describe('Businesses routes', () => {
   });
 
   test('POST /api/businesses/:id/checkout rejects missing telefono', async () => {
+    const token = sign({ role: 'customer', customerId: 'c1' });
     const response = await request(app)
       .post('/api/businesses/negocio1/checkout')
+      .set('Authorization', `Bearer ${token}`)
       .send({ franja: '10:00', cliente: 'Ana' });
 
     expect(response.status).toBe(400);
   });
 
   test('POST /api/businesses/:id/checkout rejects invalid email', async () => {
+    const token = sign({ role: 'customer', customerId: 'c1' });
     const response = await request(app)
       .post('/api/businesses/negocio1/checkout')
+      .set('Authorization', `Bearer ${token}`)
       .send({ franja: '10:00', cliente: 'Ana', telefono: '600000000', email: 'no-es-email' });
 
     expect(response.status).toBe(400);

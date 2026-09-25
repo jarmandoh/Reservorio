@@ -4,7 +4,14 @@ const express = require('express');
 const rateLimit = require('express-rate-limit');
 const { body, param } = require('express-validator');
 const { clean } = require('../middleware/sanitize');
-const { requireAdmin, requireAdminOrOwner, requireOwnerAuth, requireBusinessAuth } = require('../middleware/auth');
+const {
+  requireAdmin,
+  requireAdminOrOwner,
+  requireOwnerAuth,
+  requireBusinessAuth,
+  requireCustomer,
+  requireAuth,
+} = require('../middleware/auth');
 const { handleValidation } = require('../middleware/validation');
 const businessesService = require('../services/businesses.service');
 const checkoutService = require('../services/checkout.service');
@@ -256,10 +263,16 @@ router.get('/:id/reservations', requireBusinessAuth, async (req, res) => {
   }
 });
 
-// POST /api/businesses/:id/reservations
-router.post(`/:id/reservations`, reservationValidators, async (req, res) => {
+// POST /api/businesses/:id/reservations — requiere cliente registrado (o admin/business para setup de slots)
+router.post(`/:id/reservations`, requireAuth, reservationValidators, async (req, res) => {
   try {
-    const result = await businessesService.createReservation(req.params.id, req.body);
+    const isCustomer = req.authPayload.role === 'customer';
+    if (!isCustomer && !['admin', 'business-admin', 'owner'].includes(req.authPayload.role)) {
+      return res.status(403).json({ ok: false, message: 'Requiere rol cliente o negocio' });
+    }
+    // Solo clientes necesitan estar registrados; admin/business pueden crear slots de prueba
+    const body = isCustomer ? { ...req.body, _customerId: req.authPayload.customerId } : req.body;
+    const result = await businessesService.createReservation(req.params.id, body);
     res
       .status(result.status)
       .json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
@@ -268,10 +281,11 @@ router.post(`/:id/reservations`, reservationValidators, async (req, res) => {
   }
 });
 
-// POST /api/businesses/:id/checkout  -> prepara checkout del kiosk: reserva legacy + customer + booking reales
-router.post('/:id/checkout', checkoutValidators, async (req, res) => {
+// POST /api/businesses/:id/checkout  -> requiere cliente registrado; reserva + customer + booking reales
+router.post('/:id/checkout', requireCustomer, checkoutValidators, async (req, res) => {
   try {
-    const result = await checkoutService.checkoutForBusiness(req.params.id, req.body);
+    const payload = { ...req.body, _customerId: req.customerId, _customerEmail: req.authPayload?.email };
+    const result = await checkoutService.checkoutForBusiness(req.params.id, payload);
     res
       .status(result.status)
       .json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });

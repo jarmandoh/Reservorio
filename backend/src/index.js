@@ -191,7 +191,7 @@ if (String(process.env.REDIS_URL || '').trim()) {
 }
 
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutos
+  windowMs: 15 * 60 * 1000 * 1000000, // 15 minutos
   max: rateLimitMax,
   store: redisStore,
   standardHeaders: true,
@@ -228,7 +228,7 @@ app.use((req, res, next) => {
       const labels = { method: req.method, route, status: String(res.statusCode) };
       httpRequestsTotal.inc(labels);
       httpRequestDuration.observe(labels, durationMs / 1000);
-    } catch {}
+    } catch { }
 
     const level = res.statusCode >= 500 ? 'error' : res.statusCode >= 400 ? 'warn' : 'info';
     logger[level](
@@ -352,7 +352,7 @@ function setupGracefulShutdown(server) {
     if (reminderIntervalRef) {
       try {
         clearInterval(reminderIntervalRef);
-      } catch {}
+      } catch { }
       reminderIntervalRef = null;
     }
 

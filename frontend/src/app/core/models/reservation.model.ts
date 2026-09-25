@@ -23,6 +23,8 @@ export interface CustomerPayload {
   name: string;
   email: string;
   phone?: string;
+  dataConsent?: boolean;
+  marketingConsent?: boolean;
 }
 
 export interface BookingRecord {

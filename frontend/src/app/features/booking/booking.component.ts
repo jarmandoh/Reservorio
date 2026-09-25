@@ -9,6 +9,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ApiService } from '../../core/services/api.service';
 import { ToastService } from '../../core/services/toast.service';
 import { RealtimeService } from '../../core/services/realtime.service';
+import { AuthService } from '../../core/services/auth.service';
 import { DEFAULT_CURRENCY, formatCurrency } from '../../core/config/currency';
 import { Reservation, PaymentMethod, CheckoutInstructions } from '../../core/models/reservation.model';
 import { Business, Review, RatingStats } from '../../core/models/businesses.model';
@@ -527,6 +528,36 @@ interface ConfirmedBooking {
                         </div>
                       </div>
 
+                      @if (!isCustomerAuthenticated()) {
+                        <div
+                          class="rounded-2xl border border-amber-200 bg-amber-50 p-4 flex flex-col gap-3"
+                        >
+                          <div class="flex items-start gap-3">
+                            <span class="material-icons-round text-amber-600">lock</span>
+                            <div class="flex-1">
+                              <p class="text-sm font-semibold text-amber-900">Debes estar registrado para reservar</p>
+                              <p class="text-xs text-amber-700 mt-1">
+                                Inicia sesión o crea tu cuenta para confirmar esta reserva. Tus datos se precargarán.
+                              </p>
+                            </div>
+                          </div>
+                          <div class="flex flex-col sm:flex-row gap-2">
+                            <a
+                              routerLink="/customer/login"
+                              [queryParams]="{ redirect: '/booking/' + businessId }"
+                              class="btn-primary btn-sm flex-1 text-center"
+                              >Iniciar sesión</a
+                            >
+                            <a
+                              routerLink="/customer/login"
+                              [queryParams]="{ redirect: '/booking/' + businessId }"
+                              class="btn-secondary btn-sm flex-1 text-center"
+                              >Crear cuenta</a
+                            >
+                          </div>
+                        </div>
+                      }
+
                       <form [formGroup]="bookingForm" class="flex flex-col gap-3" (ngSubmit)="submit()">
                         <div>
                           <label class="form-label" for="cliente">Tu nombre</label>
@@ -837,6 +868,7 @@ export class BookingComponent implements OnInit, OnDestroy {
   private api = inject(ApiService);
   private toast = inject(ToastService);
   private realtime = inject(RealtimeService);
+  private auth = inject(AuthService);
   private title = inject(Title);
   readonly Math = Math;
   private fb = inject(FormBuilder);
@@ -878,6 +910,7 @@ export class BookingComponent implements OnInit, OnDestroy {
   );
   readonly dueAmount = computed(() => (this.depositActive() ? Math.round(this.baseAmount() * 0.3) : this.baseAmount()));
   readonly formatCurrency = formatCurrency;
+  readonly isCustomerAuthenticated = computed(() => this.auth.isCustomerUnlocked());
   readonly paymentLabel = computed(() => {
     if (this.paymentLoading()) return '';
     switch (this.paymentMethod()) {
@@ -934,7 +967,7 @@ export class BookingComponent implements OnInit, OnDestroy {
   readonly canProceed = computed(() => {
     if (this.step() === 1) return !!this.selectedService();
     if (this.step() === 2) return !!this.selectedSlot();
-    if (this.step() === 3) return this.bookingFormValid();
+    if (this.step() === 3) return this.bookingFormValid() && this.isCustomerAuthenticated();
     return false;
   });
 
@@ -973,6 +1006,25 @@ export class BookingComponent implements OnInit, OnDestroy {
     this.loadRatingStats();
     this.startPolling();
     this.setupRealtime();
+    this.prefillFromCustomer();
+  }
+
+  private prefillFromCustomer(): void {
+    if (!this.isCustomerAuthenticated()) return;
+    const token = this.auth.getCustomerToken();
+    const payload = this.auth.getCustomerPayload();
+    const customerId = (payload?.customerId as string) ?? null;
+    if (!token || !customerId) return;
+    this.api
+      .getCustomerMe(token)
+      .pipe(takeUntilDestroyed(this.destroyRef), catchError(() => of(null)))
+      .subscribe(customer => {
+        if (!customer) return;
+        const patch: Record<string, string> = {};
+        if (customer.name && !this.bookingForm.get('cliente')?.value) patch['cliente'] = customer.name;
+        if (customer.phone && !this.bookingForm.get('telefono')?.value) patch['telefono'] = customer.phone;
+        if (Object.keys(patch).length) this.bookingForm.patchValue(patch);
+      });
   }
 
   private setupRealtime(): void {
@@ -1246,6 +1298,11 @@ export class BookingComponent implements OnInit, OnDestroy {
     if (s === 1 && this.selectedService()) {
       this.goToStep(2);
     } else if (s === 2 && this.selectedSlot()) {
+      if (!this.isCustomerAuthenticated()) {
+        this.toast.error('Debes iniciar sesión para reservar. Redirigiendo...');
+        this.router.navigate(['/customer/login'], { queryParams: { redirect: `/booking/${this.businessId}` } });
+        return;
+      }
       this.goToStep(3);
     } else if (s === 3) {
       this.submit();
@@ -1277,6 +1334,11 @@ export class BookingComponent implements OnInit, OnDestroy {
   }
 
   submit(): void {
+    if (!this.isCustomerAuthenticated()) {
+      this.toast.error('Debes estar registrado para hacer una reserva.');
+      this.router.navigate(['/customer/login'], { queryParams: { redirect: `/booking/${this.businessId}` } });
+      return;
+    }
     this.bookingForm.markAllAsTouched();
     if (this.bookingForm.invalid || !this.selectedSlot() || !this.selectedService()) return;
 
