@@ -4,9 +4,10 @@ const { google } = require('googleapis');
 const db         = require('../db');
 const gsheets    = require('./googleSheets');
 const logger     = require('../logger');
+const { clean } = require('../middleware/sanitize');
 
 /**
- * Sincroniza TODAS las reservas de un negocio: PG â  Google Sheets.
+ * Sincroniza TODAS las reservas de un negocio: PG ï¿½  Google Sheets.
  * Sobreescribe la hoja "Reservas" completa (cabecera + datos).
  */
 async function syncReservations(businessId) {
@@ -44,7 +45,7 @@ async function syncReservations(businessId) {
 }
 
 /**
- * Sincroniza TODOS los servicios de un negocio: PG â  Google Sheets.
+ * Sincroniza TODOS los servicios de un negocio: PG ï¿½  Google Sheets.
  */
 async function syncServices(businessId) {
   const { rows: negocio } = await db.query(
@@ -102,9 +103,36 @@ function syncInBackground(businessId, type = 'all') {
 }
 
 async function bulkCreateSlots(businessId, slots) {
-  const values = slots.map(s => `('${s.franja}', ${s.disponibilidad}, ${s.cliente ? `'${s.cliente}'` : 'NULL'}, ${s.telefono ? `'${s.telefono}'` : 'NULL'}, ${s.servicio ? `'${s.servicio}'` : 'NULL'}, ${s.notas ? `'${s.notas}'` : 'NULL'}, ${businessId})`).join(', ');  
-  const query = `INSERT INTO reservations (franja, disponibilidad, cliente, telefono, servicio, notas, business_id) VALUES ${values}`;
-  await db.query(query);
+  if (!Array.isArray(slots) || !slots.length) {
+    return { success: true, message: '0 slots created' };
+  }
+  if (!businessId) throw new Error('businessId requerido en bulkCreateSlots');
+
+  const rows = slots.map((s) => {
+    const franja = clean(String(s.franja ?? '').trim());
+    if (!franja) throw new Error('franja requerida en cada slot');
+    const disponibilidad = clean(String(s.disponibilidad ?? 'Disponible').trim()) || 'Disponible';
+    // validar enum
+    const allowed = new Set(['Disponible', 'Pendiente', 'Reservado', 'Confirmado', 'Cancelado']);
+    if (!allowed.has(disponibilidad)) throw new Error(`disponibilidad no permitida: ${disponibilidad}`);
+    return [
+      franja,
+      disponibilidad,
+      s.cliente ? clean(String(s.cliente)) : null,
+      s.telefono ? clean(String(s.telefono)) : null,
+      s.servicio ? clean(String(s.servicio)) : null,
+      s.notas ? clean(String(s.notas)) : null,
+      businessId,
+    ];
+  });
+
+  const placeholders = rows.map((_, i) => `($${i * 7 + 1},$${i * 7 + 2},$${i * 7 + 3},$${i * 7 + 4},$${i * 7 + 5},$${i * 7 + 6},$${i * 7 + 7})`).join(', ');
+  const flat = rows.flat();
+
+  await db.query(
+    `INSERT INTO reservations (franja, disponibilidad, cliente, telefono, servicio, notas, business_id) VALUES ${placeholders}`,
+    flat
+  );
   return { success: true, message: `${slots.length} slots created` };
 } 
 

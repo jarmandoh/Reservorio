@@ -54,12 +54,13 @@ El backend debe responder con `ok: true` y la base de datos en estado `connected
 
 ## 4. Seguridad recomendada
 
-- Usa HTTPS con un reverse proxy o CDN real.
+- Usa HTTPS con el overlay TLS: `docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.production up -d` (Caddy en `:80/:443` con Let's Encrypt automático; requiere `FRONTEND_HOST` y DNS apuntando al host, ver `Caddyfile:1` y `docker-compose.prod.yml:1`). Alternativa: reverse proxy/CDN externo.
 - Mantén `CORS_ORIGINS` limitado a dominios reales.
-- No expongas la base de datos directamente al público.
-- Cambia el valor por defecto de `ADMIN_PIN` antes del despliegue (o usa `ADMIN_PIN_HASH`, comparación bcrypt).
+- No expongas la base de datos directamente al público (`127.0.0.1:5432` solo en `docker-compose.yml:13`).
+- Cambia el valor por defecto de `ADMIN_PIN` antes del despliegue (o usa `ADMIN_PIN_HASH`, comparación bcrypt). Genera con `node backend/scripts/generate-secrets.mjs` y haz `chmod 600 backend/.env`.
 - Verifica que `OTP_DEBUG` no esté activo y que los webhooks de email/SMS usen token Bearer.
-- Revisa periódicamente los logs del backend y del contenedor.
+- `POST /api/notifications` y `POST /api/notifications/reminder` requieren `Authorization: Bearer` desde P1 (`backend/src/routes/notifications.routes.js:31`), y `POST /api/businesses/:id/reservations` valida paginación `?page=&pageSize=` (`backend/src/routes/businesses.routes.js:81`).
+- Revisa periódicamente los logs del backend y del contenedor. Métricas Prometheus en `GET /metrics?format=prometheus` o `Accept: text/plain` (`backend/src/index.js:258`, `reservorio_http_requests_total`).
 
 ## 5. Actualizaciones
 

@@ -11,6 +11,26 @@ const rateLimit      = require('express-rate-limit');
 const db             = require('./db');
 const logger         = require('./logger');
 const cache          = require('./cache');
+const promClient     = require('prom-client');
+
+// ── Prometheus registry ──────────────────────────────────────────────────────
+const promRegistry = new promClient.Registry();
+promClient.collectDefaultMetrics({ register: promRegistry, prefix: 'reservorio_' });
+
+const httpRequestsTotal = new promClient.Counter({
+  name: 'reservorio_http_requests_total',
+  help: 'Total de peticiones HTTP',
+  labelNames: ['method', 'route', 'status'],
+  registers: [promRegistry],
+});
+
+const httpRequestDuration = new promClient.Histogram({
+  name: 'reservorio_http_request_duration_seconds',
+  help: 'Duración de peticiones HTTP en segundos',
+  labelNames: ['method', 'route', 'status'],
+  buckets: [0.05, 0.1, 0.3, 0.5, 1, 2.5, 5],
+  registers: [promRegistry],
+});
 
 
 const reservations      = require('./routes/reservations.routes');
@@ -173,6 +193,14 @@ app.use((req, res, next) => {
     latencySamples.push({ ts: Date.now(), ms: durationMs });
     if (latencySamples.length > MAX_LATENCY_SAMPLES) latencySamples.shift();
 
+    // Prometheus
+    try {
+      const route = (req.route && req.route.path) ? `${req.baseUrl || ''}${req.route.path}` : (req.path || req.originalUrl.split('?')[0]);
+      const labels = { method: req.method, route, status: String(res.statusCode) };
+      httpRequestsTotal.inc(labels);
+      httpRequestDuration.observe(labels, durationMs / 1000);
+    } catch {}
+
     const level = res.statusCode >= 500 ? 'error' : res.statusCode >= 400 ? 'warn' : 'info';
     logger[level]({
       requestId: req.requestId,
@@ -227,7 +255,20 @@ app.get('/health', async (_req, res) => {
   }
 });
 
-app.get('/metrics', (_req, res) => {
+app.get('/metrics', async (req, res) => {
+  // Prometheus exposition si el cliente lo pide (Grafana / Prometheus)
+  const accept = String(req.headers.accept || '');
+  const wantsProm = accept.includes('text/plain') || String(req.query.format || '').toLowerCase() === 'prometheus';
+  if (wantsProm) {
+    try {
+      res.set('Content-Type', promRegistry.contentType);
+      return res.send(await promRegistry.metrics());
+    } catch (e) {
+      logger.error('[metrics] prom error:', e.message);
+      // fallback a JSON
+    }
+  }
+
   const memory = process.memoryUsage();
 
   const now = Date.now();

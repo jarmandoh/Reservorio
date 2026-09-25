@@ -3,7 +3,7 @@
 const db = require('../db');
 const { clean } = require('../middleware/sanitize');
 
-async function listBusinesses(filters = {}) {
+function buildBusinessWhereClauses(filters = {}) {
   const { q, category, tags, location, interest } = filters;
   const values = [];
   const clauses = ['active = true'];
@@ -33,8 +33,25 @@ async function listBusinesses(filters = {}) {
     }
   }
 
-  const query = `SELECT * FROM businesses WHERE ${clauses.join(' AND ')} ORDER BY name`;
+  return { clauses, values };
+}
+
+async function listBusinesses(filters = {}, pagination = null) {
+  const { clauses, values } = buildBusinessWhereClauses(filters);
+
+  let query = `SELECT * FROM businesses WHERE ${clauses.join(' AND ')} ORDER BY name`;
+  if (pagination && pagination.paginated) {
+    query += ` LIMIT $${values.length + 1} OFFSET $${values.length + 2}`;
+    values.push(pagination.limit, pagination.offset);
+  }
   return db.query(query, values);
+}
+
+async function countBusinesses(filters = {}) {
+  const { clauses, values } = buildBusinessWhereClauses(filters);
+  const query = `SELECT COUNT(*)::int AS total FROM businesses WHERE ${clauses.join(' AND ')}`;
+  const { rows } = await db.query(query, values);
+  return Number(rows[0]?.total) || 0;
 }
 
 async function listAllBusinesses() {
@@ -120,8 +137,19 @@ async function deleteBusiness(businessId) {
   return db.query('DELETE FROM businesses WHERE id = $1 RETURNING *', [businessId]);
 }
 
-async function listReservations(businessId) {
+async function listReservations(businessId, pagination = null) {
+  if (pagination && pagination.paginated) {
+    return db.query(
+      'SELECT * FROM reservations WHERE business_id = $1 ORDER BY franja LIMIT $2 OFFSET $3',
+      [businessId, pagination.limit, pagination.offset]
+    );
+  }
   return db.query('SELECT * FROM reservations WHERE business_id = $1 ORDER BY franja', [businessId]);
+}
+
+async function countReservations(businessId) {
+  const { rows } = await db.query('SELECT COUNT(*)::int AS total FROM reservations WHERE business_id = $1', [businessId]);
+  return Number(rows[0]?.total) || 0;
 }
 
 async function createReservation(businessId, franja, cliente, telefono, servicio, notas) {
@@ -152,6 +180,7 @@ async function removeService(businessId, nombre) {
 
 module.exports = {
   listBusinesses,
+  countBusinesses,
   listAllBusinesses,
   listOwnerBusinesses,
   findBusinessById,
@@ -162,6 +191,7 @@ module.exports = {
   setBusinessVerified,
   deleteBusiness,
   listReservations,
+  countReservations,
   createReservation,
   checkReservationSlotTaken,
   updateReservation,

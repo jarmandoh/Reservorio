@@ -3,6 +3,7 @@
 const express = require('express');
 const { body, query } = require('express-validator');
 const { handleValidation } = require('../middleware/validation');
+const { requireAuth } = require('../middleware/auth');
 const { listNotifications, createNotification, sendReminderNotification } = require('../services/notifications.service');
 
 const router = express.Router();
@@ -28,7 +29,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.post('/', notificationValidators, async (req, res) => {
+router.post('/', requireAuth, notificationValidators, async (req, res) => {
   try {
     const result = await createNotification(req.body);
     return res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
@@ -37,7 +38,7 @@ router.post('/', notificationValidators, async (req, res) => {
   }
 });
 
-router.post('/reminder', async (req, res) => {
+router.post('/reminder', requireAuth, async (req, res) => {
   try {
     const result = await sendReminderNotification(req.body);
     return res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });

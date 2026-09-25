@@ -77,11 +77,14 @@ const checkoutValidators = [
   handleValidation,
 ];
 
-// GET /api/businesses  -> activos, publico, con filtros de busqueda y etiquetas
+// GET /api/businesses  -> activos, publico, con filtros de busqueda y etiquetas. Soporta paginación ?page=&pageSize=
 router.get('/', async (req, res) => {
   try {
     const result = await businessesService.listBusinesses(req.query);
-    res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
+    res.status(result.status).json({
+      ok: result.ok,
+      ...(result.ok ? { data: result.data, ...(result.meta ? { meta: result.meta } : {}) } : { message: result.message }),
+    });
   } catch (e) {
     res.status(500).json({ ok: false, message: e.message });
   }
@@ -203,11 +206,14 @@ router.get('/:id', requireBusinessAuth, async (req, res) => {
   }
 });
 
-// GET /api/businesses/:id/reservations
+// GET /api/businesses/:id/reservations — paginable con ?page=&pageSize=
 router.get('/:id/reservations', requireBusinessAuth, async (req, res) => {
   try {
-    const result = await businessesService.listReservations(req.params.id);
-    res.status(result.status).json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
+    const result = await businessesService.listReservations(req.params.id, req.query);
+    res.status(result.status).json({
+      ok: result.ok,
+      ...(result.ok ? { data: result.data, ...(result.meta ? { meta: result.meta } : {}) } : { message: result.message }),
+    });
   } catch (e) {
     res.status(500).json({ ok: false, message: e.message });
   }

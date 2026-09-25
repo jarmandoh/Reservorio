@@ -1,0 +1,40 @@
+# Overlay de producción con TLS automático vía Caddy (Let's Encrypt)
+# Uso:
+#   1. Copia .env.production.example → .env.production y ajusta FRONTEND_URL=https://tu-dominio.com
+#   2. Exporta FRONTEND_HOST (sin https://): export FRONTEND_HOST=$(echo $FRONTEND_URL | sed -E 's|https?://||;s|/.*||')
+#      o define FRONTEND_HOST directamente en .env.production
+#   3. Levanta: docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.production up --build -d
+# Requiere puertos 80 y 443 abiertos y DNS apuntando al host.
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: reservorio-caddy
+    ports:
+      - "80:80"
+      - "80:80/udp"  # http3 opcional
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      # Define FRONTEND_HOST=tu-dominio.com (sin https://) en .env.production.
+      # Si solo tienes FRONTEND_URL, exporta antes: FRONTEND_HOST=$(echo $FRONTEND_URL | sed -E 's|https?://||;s|/.*||')
+      FRONTEND_HOST: ${FRONTEND_HOST}
+    depends_on:
+      frontend:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - reservorio-net
+
+  # En producción el frontend no se expone directo al host; solo Caddy (443) es público.
+  # Este override quita el mapeo 80:80 del frontend y lo deja solo en la red interna.
+  frontend:
+    ports: []  # Caddy es el único entrypoint público; nginx sigue en frontend:80 interno
+
+volumes:
+  caddy_data:
+  caddy_config:

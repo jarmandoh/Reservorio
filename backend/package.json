@@ -36,6 +36,7 @@
     "jsonwebtoken": "^9.0.3",
     "pg": "^8.13.3",
     "pino": "^10.3.1",
+    "prom-client": "^15.1.0",
     "rate-limit-redis": "^4.2.0"
   },
   "devDependencies": {

@@ -8,6 +8,7 @@ const { createNotification } = require('./notifications.service');
 const businessRepository = require('../repositories/business.repository');
 const db = require('../db');
 const cache = require('../cache');
+const { parsePagination } = require('../utils/pagination');
 
 const CACHE_TTL_SECONDS = parseInt(process.env.CACHE_TTL_SECONDS || '60', 10);
 const CACHE_ENABLED = process.env.NODE_ENV !== 'test' && String(process.env.CACHE_DISABLED || '').toLowerCase() !== '1';
@@ -95,15 +96,22 @@ function safenegocio(b) {
 }
 
 async function listBusinesses(filters = {}) {
+  const pagination = parsePagination(filters);
   const key = businessListCacheKey(filters);
-  if (CACHE_ENABLED) {
+  // No cachear cuando hay paginación activa para no duplicar lógica de invalidación por página;
+  // el pre-caché P0 ya evitaba thundering en listas grandes, la paginación reduce el costo.
+  if (CACHE_ENABLED && !pagination.paginated) {
     const cached = await cache.get(key);
     if (cached) return { ok: true, status: 200, data: cached };
   }
-  const { rows } = await businessRepository.listBusinesses(filters);
+  const { rows } = await businessRepository.listBusinesses(filters, pagination.paginated ? pagination : null);
   const live = await attachLiveRatings(rows);
   const data = live.map(safenegocio);
-  if (CACHE_ENABLED) await cache.set(key, data, CACHE_TTL_SECONDS);
+  if (CACHE_ENABLED && !pagination.paginated) await cache.set(key, data, CACHE_TTL_SECONDS);
+  if (pagination.paginated) {
+    const total = await businessRepository.countBusinesses(filters);
+    return { ok: true, status: 200, data, meta: { total, page: pagination.page, pageSize: pagination.pageSize } };
+  }
   return { ok: true, status: 200, data };
 }
 
@@ -286,8 +294,13 @@ async function deleteBusiness(businessId) {
   return { ok: true, status: 200, data: safenegocio(result.rows[0]) };
 }
 
-async function listReservations(businessId) {
-  const { rows } = await businessRepository.listReservations(businessId);
+async function listReservations(businessId, query = {}) {
+  const pagination = parsePagination(query);
+  const { rows } = await businessRepository.listReservations(businessId, pagination.paginated ? pagination : null);
+  if (pagination.paginated) {
+    const total = await businessRepository.countReservations(businessId);
+    return { ok: true, status: 200, data: rows, meta: { total, page: pagination.page, pageSize: pagination.pageSize } };
+  }
   return { ok: true, status: 200, data: rows };
 }
 

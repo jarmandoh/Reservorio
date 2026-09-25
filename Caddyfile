@@ -1,0 +1,37 @@
+# Caddy — TLS automático (Let's Encrypt) para Reservorio
+# Uso: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# Requiere FRONTEND_HOST (ej. tu-dominio.com) o FRONTEND_URL=https://tu-dominio.com
+# Caddy obtiene y renueva certificados automáticamente vía ACME (puerto 80/443 abiertos).
+
+{$FRONTEND_HOST} {
+	# Redirige www → apex si configuras ambos en FRONTEND_HOST="tu-dominio.com,www.tu-dominio.com"
+	# handle @www { host www.{$FRONTEND_HOST} }
+	# redir https://{$FRONTEND_HOST}{uri}
+
+	# Headers de seguridad (complemento a los de nginx interno)
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		X-Frame-Options "SAMEORIGIN"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+
+	# Proxy al frontend (nginx interno en :80, que ya hace /api → backend:3000)
+	reverse_proxy frontend:80 {
+		header_up X-Forwarded-Host {host}
+		header_up X-Real-IP {remote}
+		header_up X-Forwarded-For {remote}
+		header_up X-Forwarded-Proto {scheme}
+	}
+
+	log {
+		output stdout
+		format json
+	}
+
+	encode gzip
+}
+
+# Fallback: si FRONTEND_HOST no está definido, usar FRONTEND_URL host
+# Caddy resuelve {$FRONTEND_HOST} desde env; si usas FRONTEND_URL=https://ejemplo.com,
+# exporta FRONTEND_HOST=$(echo $FRONTEND_URL | sed -E 's|https?://||;s|/.*||') antes de `docker compose`
