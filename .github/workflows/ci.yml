@@ -116,6 +116,7 @@ jobs:
       PLAYWRIGHT_ADMIN_PIN: '1234'
       PLAYWRIGHT_BUSINESS_PIN: '1234'
       PLAYWRIGHT_API_URL: http://127.0.0.1:3000
+      RATE_LIMIT_MAX: '10000'
     steps:
       - uses: actions/checkout@v4
 

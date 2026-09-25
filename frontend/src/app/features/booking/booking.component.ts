@@ -734,6 +734,7 @@ export class BookingComponent implements OnInit, OnDestroy {
     notas:       [''],
     dataConsent: [false, [Validators.requiredTrue]],
   });
+  readonly bookingFormValid = signal(true);
 
   readonly reviewForm = this.fb.group({
     rating:  [0, [Validators.required, Validators.min(1), Validators.max(5)]],
@@ -743,7 +744,7 @@ export class BookingComponent implements OnInit, OnDestroy {
   readonly canProceed = computed(() => {
     if (this.step() === 1) return !!this.selectedService();
     if (this.step() === 2) return !!this.selectedSlot();
-    if (this.step() === 3) return this.bookingForm.valid;
+    if (this.step() === 3) return this.bookingFormValid();
     return false;
   });
 
@@ -756,6 +757,9 @@ export class BookingComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.businessId = this.route.snapshot.params['businessId'] ?? '';
+    this.bookingForm.statusChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.bookingFormValid.set(this.bookingForm.valid));
     this.loadLastBooking();
     // Load business info
     this.api.getBusinesses().pipe(catchError(() => of([])), takeUntilDestroyed(this.destroyRef)).subscribe(list => {

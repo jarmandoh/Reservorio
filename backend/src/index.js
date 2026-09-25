@@ -110,9 +110,13 @@ app.use(cors({
 }));
 
 // ── Rate limiting ────────────────────────────────────────────────────────────
+const rateLimitMax = Number.isInteger(Number(process.env.RATE_LIMIT_MAX)) ? Number(process.env.RATE_LIMIT_MAX) : 60;
+if (!Number.isInteger(rateLimitMax) || rateLimitMax < 60) {
+  throw new Error('RATE_LIMIT_MAX debe ser un entero >= 60');
+}
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 60,
+  max: rateLimitMax,
   standardHeaders: true,
   legacyHeaders: false,
   message: { ok: false, message: 'Demasiadas peticiones, inténtalo más tarde.' },

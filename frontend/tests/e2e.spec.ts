@@ -89,7 +89,7 @@ test.describe('Reserva y administración', () => {
     await expect(page.getByRole('heading', { name: 'Elige tu servicio' })).toBeVisible();
 
     await expect(page.locator('text=No se pudieron cargar los servicios')).toHaveCount(0, { timeout: 20000 });
-    const serviceCard = page.locator('button.rounded-2xl:has-text("Disponible para agendar en linea")').first();
+    const serviceCard = page.locator('button.rounded-2xl:has-text("Disponible")').first();
     await expect(serviceCard).toBeVisible({ timeout: 20000 });
 
     await serviceCard.click();
@@ -103,21 +103,23 @@ test.describe('Reserva y administración', () => {
     await expect(page.getByRole('button', { name: 'Continuar con tus datos' })).toBeEnabled();
     await page.getByRole('button', { name: 'Continuar con tus datos' }).click();
 
-    await expect(page.getByLabel('Nombre completo')).toBeVisible();
+    await expect(page.getByLabel('Tu nombre')).toBeVisible();
     await page.fill('#cliente', 'Ana Garcia');
     await page.fill('#telefono', 'invalid');
-    await page.getByRole('button', { name: 'Confirmar reserva' }).click();
-    await expect(page.locator('text=Telefono invalido')).toBeVisible();
+    await expect(page.locator('text=7-15 dígitos')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Confirmar reserva' })).toBeDisabled();
 
+    await page.check('#dataConsent');
     await page.fill('#telefono', '+573001234567');
+    await expect(page.getByRole('button', { name: 'Confirmar reserva' })).toBeEnabled();
     await page.getByRole('button', { name: 'Confirmar reserva' }).click();
-    await expect(page.locator('text=Solicitud enviada')).toBeVisible({ timeout: 10000 });
-    await expect(page.locator('text=Resumen final')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: 'Reserva registrada' })).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('text=Estado de la reserva')).toBeVisible({ timeout: 10000 });
   });
 
   test('flujo de administración de negocio permite login y agregar servicio', async ({ page }) => {
     await page.goto(`/business/${businessId}/login`);
-    await expect(page.locator('text=Acceso de negocio')).toBeVisible();
+    await expect(page.getByLabel('PIN de acceso')).toBeVisible();
 
     await page.fill('input[formcontrolname="pin"]', businessPin);
     await page.getByRole('button', { name: 'Entrar' }).click();
@@ -135,9 +137,8 @@ test.describe('Reserva y administración', () => {
   });
 
   test('flujo de administración actualiza estado de reserva', async ({ page, request }) => {
-    const reservationResponse = await request.post('http://localhost:3000/api/reservations', {
+    const reservationResponse = await request.post(`${API_BASE}/api/businesses/${businessId}/reservations`, {
       data: {
-        businessId,
         franja: '10:00',
         cliente: 'E2E Usuario',
         telefono: '+573001234567',
@@ -153,15 +154,15 @@ test.describe('Reserva y administración', () => {
     await expect(page).toHaveURL(new RegExp(`/business/${businessId}/admin`));
 
     await page.getByRole('button', { name: 'Reservas' }).click();
-    await expect(page.locator('text=E2E Usuario')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('cell', { name: 'E2E Usuario' })).toBeVisible({ timeout: 10000 });
 
-    await page.getByRole('button', { name: 'Editar' }).click();
+    await page.getByRole('row', { name: /E2E Usuario/ }).first().getByRole('button', { name: 'Editar' }).click();
     await expect(page.locator('text=Actualizar reserva')).toBeVisible();
 
-    await page.selectOption('select.form-select', 'Confirmado');
+    await page.locator('.fixed select.form-select').selectOption('Confirmado');
     await page.getByRole('button', { name: 'Guardar' }).click();
     await expect(page.locator('text=Estado actualizado')).toBeVisible({ timeout: 10000 });
-    await expect(page.locator('text=Confirmado')).toBeVisible();
+    await expect(page.getByRole('cell', { name: 'Confirmado' })).toBeVisible();
   });
 
   test('flujo de administración agrega y elimina un servicio', async ({ page }) => {
@@ -179,11 +180,10 @@ test.describe('Reserva y administración', () => {
     await page.getByRole('button', { name: 'Agregar' }).click();
     await expect(page.locator(`text=${deleteServiceName}`)).toBeVisible({ timeout: 10000 });
 
-    const serviceRow = page.locator(`text=${deleteServiceName}`).first();
+    const serviceRow = page.locator('.card', { hasText: deleteServiceName });
     await expect(serviceRow).toBeVisible();
 
-    const deleteButton = serviceRow.locator('xpath=ancestor::div//button:has-text("delete_outline")');
-    await deleteButton.click();
+    await serviceRow.getByRole('button').click();
     await expect(page.locator(`text=${deleteServiceName}`)).toHaveCount(0, { timeout: 10000 });
   });
 });

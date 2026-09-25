@@ -2,9 +2,12 @@ import http from 'node:http';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
-const root = path.resolve('dist/frontend');
+const root = path.resolve('dist/frontend/browser');
 const port = Number(process.env.PORT || 4200);
 const fallback = 'index.html';
+const apiUrl = process.env.API_URL || '/api';
+
+const configScript = `<script>window.__APP_CONFIG__ = window.__APP_CONFIG__ || {}; window.__APP_CONFIG__.apiUrl = ${JSON.stringify(apiUrl)};</script>`;
 
 const mime = {
   '.html': 'text/html; charset=utf-8',
@@ -34,11 +37,27 @@ const server = http.createServer(async (req, res) => {
       filePath = path.join(root, fallback);
     }
 
+    const isHtml = filePath === path.join(root, fallback) || path.extname(filePath).toLowerCase() === '.html';
+    let content = await fs.readFile(filePath);
+
+    if (isHtml) {
+      let html = content.toString('utf8');
+      if (html.includes('</head>')) {
+        html = html.replace('</head>', `${configScript}\n  </head>`);
+      } else {
+        html = `${configScript}\n${html}`;
+      }
+      content = Buffer.from(html, 'utf8');
+    }
+
     const ext = path.extname(filePath).toLowerCase();
     res.writeHead(200, { 'Content-Type': mime[ext] || 'application/octet-stream' });
-    res.end(await fs.readFile(filePath));
+    res.end(content);
   } catch (err) {
-    res.writeHead(500);
+    if (err) {
+      console.error('serve-dist error:', err.message);
+    }
+    if (!res.headersSent) res.writeHead(500);
     res.end(String(err));
   }
 });
