@@ -7,6 +7,42 @@ const { syncInBackground } = require('./syncService');
 const { createNotification } = require('./notifications.service');
 const businessRepository = require('../repositories/business.repository');
 const db = require('../db');
+const cache = require('../cache');
+
+const CACHE_TTL_SECONDS = parseInt(process.env.CACHE_TTL_SECONDS || '60', 10);
+const CACHE_ENABLED = process.env.NODE_ENV !== 'test' && String(process.env.CACHE_DISABLED || '').toLowerCase() !== '1';
+
+function stableStringify(obj) {
+  if (!obj || typeof obj !== 'object') return String(obj ?? '');
+  const keys = Object.keys(obj).sort();
+  const sorted = {};
+  for (const k of keys) sorted[k] = obj[k];
+  return JSON.stringify(sorted);
+}
+
+function businessListCacheKey(filters) {
+  const raw = stableStringify(filters || {});
+  // Evita keys gigantes: hash simple si es muy largo
+  if (raw.length > 200) {
+    const { createHash } = require('crypto');
+    return `biz:list:${createHash('sha256').update(raw).digest('hex').slice(0, 16)}`;
+  }
+  return `biz:list:${raw}`;
+}
+
+async function invalidateBusinessCache(businessId) {
+  // Invalida listados y detalle. No bloquea la respuesta si falla.
+  try {
+    await cache.delByPrefix('biz:list:');
+    await cache.delByPrefix('biz:listAll');
+    await cache.delByPrefix('biz:owner:');
+    if (businessId) {
+      await cache.del(`biz:detail:${businessId}`);
+      await cache.del(`ratings:avg:${businessId}`);
+      await cache.delByPrefix(`ratings:list:${businessId}`);
+    }
+  } catch {}
+}
 
 async function attachLiveRatings(rows) {
   if (!rows || !rows.length) return rows;
@@ -59,21 +95,42 @@ function safenegocio(b) {
 }
 
 async function listBusinesses(filters = {}) {
+  const key = businessListCacheKey(filters);
+  if (CACHE_ENABLED) {
+    const cached = await cache.get(key);
+    if (cached) return { ok: true, status: 200, data: cached };
+  }
   const { rows } = await businessRepository.listBusinesses(filters);
   const live = await attachLiveRatings(rows);
-  return { ok: true, status: 200, data: live.map(safenegocio) };
+  const data = live.map(safenegocio);
+  if (CACHE_ENABLED) await cache.set(key, data, CACHE_TTL_SECONDS);
+  return { ok: true, status: 200, data };
 }
 
 async function listAllBusinesses() {
+  const key = 'biz:listAll:all';
+  if (CACHE_ENABLED) {
+    const cached = await cache.get(key);
+    if (cached) return { ok: true, status: 200, data: cached };
+  }
   const { rows } = await businessRepository.listAllBusinesses();
   const live = await attachLiveRatings(rows);
-  return { ok: true, status: 200, data: live.map(safenegocio) };
+  const data = live.map(safenegocio);
+  if (CACHE_ENABLED) await cache.set(key, data, CACHE_TTL_SECONDS);
+  return { ok: true, status: 200, data };
 }
 
 async function listOwnerBusinesses(ownerId) {
+  const key = `biz:owner:${String(ownerId)}`;
+  if (CACHE_ENABLED) {
+    const cached = await cache.get(key);
+    if (cached) return { ok: true, status: 200, data: cached };
+  }
   const { rows } = await businessRepository.listOwnerBusinesses(ownerId);
   const live = await attachLiveRatings(rows);
-  return { ok: true, status: 200, data: live.map(safenegocio) };
+  const data = live.map(safenegocio);
+  if (CACHE_ENABLED) await cache.set(key, data, CACHE_TTL_SECONDS);
+  return { ok: true, status: 200, data };
 }
 
 async function authenticateBusiness(businessId, pin) {
@@ -130,16 +187,24 @@ async function createBusiness(payload, ownerId = null) {
   }, ownerId);
 
   const { rows } = await businessRepository.findBusinessById(id);
+  await invalidateBusinessCache(id);
   return { ok: true, status: 201, data: safenegocio(rows[0]) };
 }
 
 async function getBusinessById(businessId) {
+  const key = `biz:detail:${businessId}`;
+  if (CACHE_ENABLED) {
+    const cached = await cache.get(key);
+    if (cached) return { ok: true, status: 200, data: cached };
+  }
   const { rows } = await businessRepository.findBusinessById(businessId);
   if (!rows.length) {
     return { ok: false, status: 404, message: 'Negocio no encontrado' };
   }
   const live = await attachLiveRatings(rows);
-  return { ok: true, status: 200, data: safenegocio(live[0]) };
+  const data = safenegocio(live[0]);
+  if (CACHE_ENABLED) await cache.set(key, data, CACHE_TTL_SECONDS);
+  return { ok: true, status: 200, data };
 }
 
 async function updateBusiness(businessId, payload) {
@@ -190,6 +255,7 @@ async function updateBusiness(businessId, payload) {
     return { ok: false, status: 404, message: 'Negocio no encontrado' };
   }
 
+  await invalidateBusinessCache(businessId);
   return { ok: true, status: 200, data: safenegocio(result.rows[0]) };
 }
 
@@ -198,6 +264,7 @@ async function toggleBusiness(businessId) {
   if (!result.rows.length) {
     return { ok: false, status: 404, message: 'Negocio no encontrado' };
   }
+  await invalidateBusinessCache(businessId);
   return { ok: true, status: 200, data: safenegocio(result.rows[0]) };
 }
 
@@ -206,6 +273,7 @@ async function setBusinessVerified(businessId, verified) {
   if (!result.rows.length) {
     return { ok: false, status: 404, message: 'Negocio no encontrado' };
   }
+  await invalidateBusinessCache(businessId);
   return { ok: true, status: 200, data: safenegocio(result.rows[0]) };
 }
 
@@ -214,6 +282,7 @@ async function deleteBusiness(businessId) {
   if (!result.rows.length) {
     return { ok: false, status: 404, message: 'Negocio no encontrado' };
   }
+  await invalidateBusinessCache(businessId);
   return { ok: true, status: 200, data: safenegocio(result.rows[0]) };
 }
 

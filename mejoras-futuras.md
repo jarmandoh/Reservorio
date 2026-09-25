@@ -74,6 +74,13 @@ Documento vivo: cada mejora marcada con ✅ indica trabajo completado y verifica
 - [x] **Página 404 personalizada** ✅ — `NotFoundComponent` reemplaza el wildcard `redirectTo`, con enlaces útiles (inicio, acceso negocios, admin) y lexía monográfica.
 - [x] **Limpieza de deuda menor** ✅ — `.editorconfig` raíz, `.vscode/extensions.json` + `settings.json` (whitelisted en `.gitignore`), Prettier 3 como devDep + `.prettierrc`/`.prettierignore` + scripts `format:check`/`format:fix` en frontend, gancho `.githooks/pre-commit` (prettier --check sobre staged; activar con `git config core.hooksPath .githooks`), y eliminada dependencia sin uso `node-fetch` del backend (se usa el `fetch` global de Node 22).
 
+### Escalabilidad P0 (estabilidad y fundamento distribuido)
+
+- [x] **Redis para rate-limit distribuido y caché** ✅ — `ioredis@5.11` + `rate-limit-redis@4.3` (`backend/package.json:36`, `backend/src/cache.js`). Rate-limit global usa `RedisStore` si `REDIS_URL` está definido (`backend/src/index.js:112`), fallback a `MemoryStore`. Caché de `listBusinesses`/`listAll`/`listOwner`/`getBusinessById` (`backend/src/services/businesses.service.js:7`) y `ratings:list/avg` (`backend/src/services/ratings.service.js:4`) TTL 60/30s, invalida en mutaciones. Servicio `redis:7-alpine` en `docker-compose.yml:2` (128 MB LRU, healthcheck `redis-cli ping`, volumen `redisdata`). Verificado: backend 31/31 suites 150 tests PASS, frontend `ng build` OK, E2E 4/4 PASS.
+- [x] **Pool de Postgres tuneado y PgBouncer-ready** ✅ — `backend/src/db.js:6` parametrizado vía `PG_POOL_MAX` (20), `PG_POOL_IDLE_TIMEOUT`, `PG_POOL_CONNECTION_TIMEOUT`, `PG_STATEMENT_TIMEOUT`, `PG_QUERY_TIMEOUT`. Documentado en `.env.production.example:17` y `docker-compose.yml:28`. Compatible con PgBouncer transaction pooling.
+- [x] **Worker distribuido sin duplicados** ✅ — `backend/src/services/reminders.worker.js:23` usa `SELECT ... FOR UPDATE OF b SKIP LOCKED` dentro de transacción cuando `NODE_ENV !== test` y `db.connect` disponible; `SKIP LOCKED` evita que N réplicas reclamen la misma reserva. Fallback sin `FOR UPDATE` en tests para no romper mocks. Verificado en `test/reminders.worker.test.js`.
+- [x] **Trust proxy + graceful shutdown** ✅ — `app.set('trust proxy', TRUST_PROXY)` (`backend/src/index.js:93`) para `X-Forwarded-For` correcto tras nginx. `setupGracefulShutdown` (`backend/src/index.js:268`) captura `SIGTERM`/`SIGINT`/`uncaughtException`, cierra `server.close()` → `pool.end()` → `cache.quit()` con timeout 10s. `TRUST_PROXY` documentado en `.env.production.example`.
+
 ---
 
 ## Prioridad recomendada

@@ -10,6 +10,7 @@ const helmet         = require('helmet');
 const rateLimit      = require('express-rate-limit');
 const db             = require('./db');
 const logger         = require('./logger');
+const cache          = require('./cache');
 
 
 const reservations      = require('./routes/reservations.routes');
@@ -90,6 +91,14 @@ function validateRuntimeConfig() {
   return true;
 }
 
+// ── Trust proxy (necesario tras nginx para X-Forwarded-For correcto) ───────────
+// TRUST_PROXY=0 desactiva, 1 es el default (un salto: nginx). Acepta número o IP.
+const trustProxy = process.env.TRUST_PROXY ?? '1';
+if (String(trustProxy) !== '0') {
+  const val = /^\d+$/.test(String(trustProxy)) ? parseInt(String(trustProxy), 10) : String(trustProxy);
+  app.set('trust proxy', val);
+}
+
 // ── Security headers ────────────────────────────────────────────────────────
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
@@ -114,9 +123,31 @@ const rateLimitMax = Number.isInteger(Number(process.env.RATE_LIMIT_MAX)) ? Numb
 if (!Number.isInteger(rateLimitMax) || rateLimitMax < 60) {
   throw new Error('RATE_LIMIT_MAX debe ser un entero >= 60');
 }
+
+// Store distribuido: Redis si REDIS_URL está definido, MemoryStore (default) si no.
+let redisStore;
+if (String(process.env.REDIS_URL || '').trim()) {
+  try {
+    // eslint-disable-next-line import/no-extraneous-dependencies, global-require
+    const { RedisStore } = require('rate-limit-redis');
+    const client = cache.getRedisClient() || cache.initRedis();
+    if (client) {
+      redisStore = new RedisStore({
+        // rate-limit-redis v4 usa sendCommand; compat con ioredis
+        sendCommand: (...args) => client.call(...args),
+        prefix: 'rl:global:',
+      });
+      logger.info('[rate-limit] usando RedisStore distribuido');
+    }
+  } catch (e) {
+    logger.warn('[rate-limit] RedisStore no disponible, fallback a MemoryStore:', e.message);
+  }
+}
+
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
   max: rateLimitMax,
+  store: redisStore,
   standardHeaders: true,
   legacyHeaders: false,
   message: { ok: false, message: 'Demasiadas peticiones, inténtalo más tarde.' },
@@ -234,6 +265,57 @@ app.use(notFound);
 // ── Global error handler ──────────────────────────────────────────────────────
 app.use(errorHandler);
 
+let reminderIntervalRef = null;
+
+function setupGracefulShutdown(server) {
+  let shuttingDown = false;
+
+  async function shutdown(signal) {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    logger.info(`[shutdown] ${signal} recibido, cerrando...`);
+
+    if (reminderIntervalRef) {
+      try { clearInterval(reminderIntervalRef); } catch {}
+      reminderIntervalRef = null;
+    }
+
+    // Dejar de aceptar conexiones nuevas
+    server.close(async () => {
+      logger.info('[shutdown] servidor HTTP cerrado');
+      try {
+        await db.end();
+        logger.info('[shutdown] pool de DB cerrado');
+      } catch (e) {
+        logger.error('[shutdown] error al cerrar pool:', e.message);
+      }
+      try {
+        await cache.quit();
+        logger.info('[shutdown] cache/redis cerrado');
+      } catch (e) {
+        logger.error('[shutdown] error al cerrar cache:', e.message);
+      }
+      process.exit(0);
+    });
+
+    // Fallback: forzar salida si no cierra en 10s
+    setTimeout(() => {
+      logger.error('[shutdown] timeout, forzando salida');
+      process.exit(1);
+    }, 10000).unref();
+  }
+
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
+  process.on('uncaughtException', (err) => {
+    logger.error('[uncaughtException]', err?.stack || err?.message || err);
+    shutdown('uncaughtException');
+  });
+  process.on('unhandledRejection', (reason) => {
+    logger.error('[unhandledRejection]', reason);
+  });
+}
+
 function startServer() {
   const server = app.listen(PORT, async () => {
     logger.info(`[reservorio-api] corriendo en http://localhost:${PORT}`);
@@ -247,7 +329,7 @@ function startServer() {
     // Worker de recordatorios (opt-in; no corre en tests)
     if (process.env.ENABLE_REMINDER_WORKER === '1') {
       const { startReminderWorker } = require('./services/reminders.worker');
-      startReminderWorker();
+      reminderIntervalRef = startReminderWorker();
       logger.info('[reminders] worker de recordatorios habilitado');
     }
 
@@ -259,6 +341,11 @@ function startServer() {
       logger.warn('[WARN] GOOGLE_TOKENS_KEY ausente o inválida (requiere 64 chars hex) — cifrado de tokens fallará');
     }
 
+    if (process.env.REDIS_URL) {
+      logger.info('[Redis] REDIS_URL configurado, intentando conectar...');
+      cache.initRedis();
+    }
+
     try {
       await db.query('SELECT 1');
       logger.info('[DB] Conexion a PostgreSQL establecida');
@@ -266,6 +353,8 @@ function startServer() {
       logger.error('[DB] No se pudo conectar a PostgreSQL:', e.message);
     }
   });
+
+  setupGracefulShutdown(server);
 
   return server;
 }
@@ -275,4 +364,4 @@ if (require.main === module) {
   startServer();
 }
 
-module.exports = { app, startServer, validateRuntimeConfig };
+module.exports = { app, startServer, validateRuntimeConfig, setupGracefulShutdown };

@@ -32,8 +32,14 @@ docker compose --env-file .env.production up --build -d
 
 Esto levanta:
 - PostgreSQL
-- Backend
+- Redis (caché y rate-limit distribuido, 128 MB LRU)
+- Backend (pool Pg tuneado, trust proxy, graceful shutdown)
 - Frontend servido con Nginx
+
+> **Redis**: si `REDIS_URL` se deja vacío el backend hace fallback a memoria (sin distribución).
+> En `docker-compose.yml` ya está cableado como `redis://redis:6379`. Para PgBouncer
+> en modo transaction apunta `DATABASE_URL` al puerto de PgBouncer y deja
+> `PG_POOL_MAX`/`PG_STATEMENT_TIMEOUT` como en `.env.production.example`.
 
 > **Migraciones**: el contenedor backend ejecuta `node db/migrate.js` antes de arrancar, así que sobre un volumen PostgreSQL ya existente se aplican automáticamente los cambios de schema en orden (registrados en `schema_migrations`). Haz siempre backup antes de un despliegue con migraciones.
 

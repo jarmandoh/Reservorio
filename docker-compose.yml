@@ -1,4 +1,19 @@
 services:
+  redis:
+    image: redis:7-alpine
+    container_name: reservorio-redis
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru"]
+    volumes:
+      - redisdata:/data
+    restart: unless-stopped
+    networks:
+      - reservorio-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
   db:
     image: postgres:16-alpine
     container_name: reservorio-db
@@ -29,10 +44,17 @@ services:
     environment:
       PORT: 3000
       NODE_ENV: production
-      DATABASE_URL: postgres://reservorio:reservorio_pass@db:5432/reservorio
+      DATABASE_URL: ${DATABASE_URL:-postgres://reservorio:reservorio_pass@db:5432/reservorio}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
       JWT_SECRET: ${JWT_SECRET:-cambia_este_valor_por_una_clave_larga_y_segura}
       ADMIN_PIN: ${ADMIN_PIN:-1234}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:4200,http://localhost:80}
+      TRUST_PROXY: ${TRUST_PROXY:-1}
+      # Pool tuning (PgBouncer compatible)
+      PG_POOL_MAX: ${PG_POOL_MAX:-20}
+      PG_POOL_IDLE_TIMEOUT: ${PG_POOL_IDLE_TIMEOUT:-10000}
+      PG_STATEMENT_TIMEOUT: ${PG_STATEMENT_TIMEOUT:-10000}
+      CACHE_TTL_SECONDS: ${CACHE_TTL_SECONDS:-60}
       # Google OAuth (configurar en .env o aquí)
       # GOOGLE_CLIENT_ID: ""
       # GOOGLE_CLIENT_SECRET: ""
@@ -41,6 +63,8 @@ services:
     ports:
       - "127.0.0.1:3000:3000"
     depends_on:
+      redis:
+        condition: service_healthy
       db:
         condition: service_healthy
     restart: unless-stopped
@@ -100,3 +124,4 @@ networks:
 
 volumes:
   pgdata:
+  redisdata:

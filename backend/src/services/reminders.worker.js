@@ -21,6 +21,69 @@ const WINDOW_HOURS = Number(process.env.REMINDER_WINDOW_HOURS) || 24;
 const INTERVAL_MINUTES = Number(process.env.REMINDER_INTERVAL_MINUTES) || 60;
 
 async function runDueReminders() {
+  // En producción usa SELECT ... FOR UPDATE SKIP LOCKED para que N réplicas no dupliquen recordatorios.
+  // En tests (NODE_ENV=test) mantiene el path simple de un único db.query para no romper mocks.
+  const isTest = process.env.NODE_ENV === 'test';
+  const canUseTx = !isTest && typeof db.connect === 'function';
+
+  if (canUseTx) {
+    const client = await db.connect();
+    let rows = [];
+    try {
+      await client.query('BEGIN');
+      const result = await client.query(
+        `SELECT b.id AS booking_id,
+                b.provider_id AS business_id,
+                b.customer_id,
+                b.booking_date,
+                b.slot
+           FROM bookings b
+          WHERE b.status IN ('pending', 'confirmed')
+            AND (b.booking_date::timestamp + b.slot::time) > NOW()
+            AND (b.booking_date::timestamp + b.slot::time) <= NOW() + $1::interval
+            AND NOT EXISTS (
+                  SELECT 1
+                    FROM notifications n
+                   WHERE n.booking_id = b.id
+                     AND n.type = 'reminder'
+                     AND n.status IN ('queued', 'sent')
+                )
+          ORDER BY b.booking_date, b.slot
+          FOR UPDATE OF b SKIP LOCKED`,
+        [`${WINDOW_HOURS} hours`]
+      );
+      rows = result.rows;
+
+      let sent = 0;
+      for (const booking of rows) {
+        // Mientras la tx está abierta, las filas de bookings quedan bloqueadas (SKIP LOCKED),
+        // así que una segunda réplica no las verá. El INSERT va por pool (fuera de la tx) pero
+        // está protegido por el lock de la fila de bookings.
+        // eslint-disable-next-line no-await-in-loop
+        const result = await notificationsService.sendReminderNotification({
+          businessId: booking.business_id,
+          customerId: booking.customer_id,
+          bookingId: booking.booking_id,
+        });
+
+        if (result?.ok) {
+          sent += 1;
+        } else {
+          logger.error(`[reminders] fallo al crear recordatorio para ${booking.booking_id}: ${result?.message ?? 'sin detalle'}`);
+        }
+      }
+
+      await client.query('COMMIT');
+      return { due: rows.length, sent };
+    } catch (e) {
+      try { await client.query('ROLLBACK'); } catch {}
+      throw e;
+    } finally {
+      try { client.release(); } catch {}
+    }
+  }
+
+  // Fallback / test path: single query sin lock distribuido
   const { rows } = await db.query(
     `SELECT b.id AS booking_id,
             b.provider_id AS business_id,
@@ -45,6 +108,7 @@ async function runDueReminders() {
   let sent = 0;
   for (const booking of rows) {
     // sendReminderNotification valida businessId/bookingId y exige customerId.
+    // eslint-disable-next-line no-await-in-loop
     const result = await notificationsService.sendReminderNotification({
       businessId: booking.business_id,
       customerId: booking.customer_id,
