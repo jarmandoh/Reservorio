@@ -6,6 +6,10 @@ const { body } = require('express-validator');
 const ratingsRoutes = require('../src/routes/ratings.routes');
 const { handleValidation } = require('../src/middleware/validation');
 
+jest.mock('../src/db', () => ({
+  query: jest.fn().mockResolvedValue({ rows: [] }),
+}));
+
 const app = express();
 app.use(express.json());
 app.use('/api/ratings', ratingsRoutes);
@@ -29,7 +33,7 @@ describe('POST /api/ratings/:businessId', () => {
     const res = await request(app)
       .post('/api/ratings/test-business')
       .send({ rating: 5, review: 'Excelente' });
-    expect([400, 500]).toContain(res.status);
+    expect(res.status).toBe(404);
   });
 });
 
