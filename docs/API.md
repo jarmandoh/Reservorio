@@ -258,11 +258,12 @@ Registra una reserva en el checkout del negocio (crea `booking` + `payment`):
   "servicio": "Corte",
   "notas": "",
   "email": "juan@correo.com",
-  "amount": 20,
-  "currency": "EUR",
+  "amount": 50000,
+  "currency": "COP",
   "method": "card"
 }
 ```
+> Moneda por defecto: `COP` (peso colombiano). Extensible vía `DEFAULT_CURRENCY` y `SUPPORTED_CURRENCIES` (`COP,USD,EUR,MXN,BRL,ARS,CLP,PEN`). El validador rechaza códigos no soportados.
 
 ### `GET /api/businesses/:id/services`
 
@@ -364,12 +365,14 @@ Público. Registra un pago:
   "bookingId": "...",
   "providerId": "...",
   "customerId": "...",
-  "amount": 20,
-  "currency": "EUR",
+  "amount": 50000,
+  "currency": "COP",
   "method": "card",
   "status": "pending"
 }
 ```
+
+> `currency` por defecto `COP`; soporta `USD,EUR,MXN,BRL,ARS,CLP,PEN` (configurable).
 
 Métodos: `card | paypal | transfer | cash`.
 

@@ -5,6 +5,7 @@ const db = require('../db');
 const { createNotification } = require('./notifications.service');
 const { parsePagination } = require('../utils/pagination');
 const logger = require('../logger');
+const { DEFAULT_CURRENCY, normalizeCurrency } = require('../config/currency');
 
 let stripeClient = null;
 
@@ -26,7 +27,7 @@ function mapPayment(row) {
     providerId: row.provider_id ?? row.providerId,
     customerId: row.customer_id ?? row.customerId,
     amount: Number(row.amount ?? 0),
-    currency: row.currency ?? 'EUR',
+    currency: row.currency ?? DEFAULT_CURRENCY,
     method: row.method ?? 'card',
     status: row.status ?? 'pending',
     createdAt: row.created_at ?? row.createdAt,
@@ -40,9 +41,7 @@ function normalizePaymentInput(payload = {}) {
   const providerId = String(payload.providerId ?? '').trim();
   const customerId = String(payload.customerId ?? '').trim();
   const amount = Number(payload.amount ?? 0);
-  const currency = String(payload.currency ?? 'EUR')
-    .trim()
-    .toUpperCase();
+  const currency = normalizeCurrency(payload.currency);
   const method = String(payload.method ?? 'card')
     .trim()
     .toLowerCase();
@@ -151,11 +150,11 @@ async function createPayment(payload = {}) {
 
 function getTransferInstructions(bookingId) {
   return {
-    beneficiary: process.env.TRANSFER_BENEFICIARY || 'Reservorio S.L.',
-    iban: process.env.TRANSFER_IBAN || 'ES00 0000 0000 0000 0000 0000',
-    bank: process.env.TRANSFER_BANK || 'Reservorio Bank',
+    beneficiary: process.env.TRANSFER_BENEFICIARY || 'Reservorio S.A.S.',
+    iban: process.env.TRANSFER_IBAN || 'CO00 0000 0000 0000 0000 0000',
+    bank: process.env.TRANSFER_BANK || 'Bancolombia',
     reference: bookingId,
-    currency: 'EUR',
+    currency: DEFAULT_CURRENCY,
   };
 }
 
@@ -392,7 +391,7 @@ async function processWebhook({ rawBody, signature, event }) {
     providerId,
     customerId,
     amount: Number((session.amount_total || 0) / 100) || 0,
-    currency: String(session.currency || 'EUR').toUpperCase(),
+    currency: normalizeCurrency(session.currency),
     method: allowedPaymentMethods.includes(method) ? method : 'card',
     status,
     createdAt: new Date().toISOString(),

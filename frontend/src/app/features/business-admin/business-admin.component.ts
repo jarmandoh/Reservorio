@@ -10,6 +10,7 @@ import { BusinessAdminService } from '../../core/services/business-admin.service
 import { ToastService } from '../../core/services/toast.service';
 import { RealtimeService } from '../../core/services/realtime.service';
 import { BadgeComponent } from '../../shared/components/badge/badge.component';
+import { DEFAULT_CURRENCY, formatCurrency } from '../../core/config/currency';
 import {
   BookingRecord,
   Customer,
@@ -170,7 +171,7 @@ type negocioTab = 'reservas' | 'servicios' | 'perfil' | 'google';
                   checkoutBooking() ? 'Listo' : 'Sin reserva'
                 }}</span>
               </div>
-              <p class="font-display text-3xl font-bold">{{ paymentAmount() }}€</p>
+              <p class="font-display text-3xl font-bold">{{ formatCurrency(paymentAmount()) }}</p>
               <p class="text-sm text-on-surface-variant">
                 {{
                   checkoutBooking()
@@ -804,6 +805,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
   private businessAdminService = inject(BusinessAdminService);
   private realtime = inject(RealtimeService);
   private readonly destroyRef = inject(DestroyRef);
+  readonly formatCurrency = formatCurrency;
 
   readonly tabs: { id: negocioTab; label: string; icon: string }[] = [
     { id: 'reservas', label: 'Reservas', icon: 'event_note' },
@@ -1268,7 +1270,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
       providerId: this.negocioId,
       customerId: this.route.snapshot.queryParamMap.get('customerId') ?? '',
       amount: this.paymentAmount(),
-      currency: 'EUR',
+      currency: DEFAULT_CURRENCY,
       method: 'card',
       status: normalized as 'paid' | 'pending' | 'failed',
       createdAt: new Date().toISOString(),
@@ -1299,7 +1301,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
         providerId: booking.providerId,
         customerId: booking.customerId,
         amount: this.paymentAmount(),
-        currency: 'EUR',
+        currency: DEFAULT_CURRENCY,
         method: 'card',
         status: 'pending',
         successUrl,
@@ -1318,7 +1320,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
                 providerId: booking.providerId,
                 customerId: booking.customerId,
                 amount: this.paymentAmount(),
-                currency: 'EUR',
+                currency: DEFAULT_CURRENCY,
                 method: 'card',
                 status: 'pending',
                 createdAt: new Date().toISOString(),

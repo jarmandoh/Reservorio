@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { formatCurrency } from '../../core/config/currency';
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
@@ -285,9 +286,7 @@ export class CustomerHistoryComponent implements OnInit {
   paymentLabel(b: CustomerHistoryBooking): string {
     const amount =
       b.paymentAmount != null
-        ? new Intl.NumberFormat('es-ES', { style: 'currency', currency: b.paymentCurrency ?? 'EUR' }).format(
-            b.paymentAmount
-          )
+        ? formatCurrency(b.paymentAmount, b.paymentCurrency ?? undefined)
         : '';
     const status =
       b.paymentStatus === 'paid'

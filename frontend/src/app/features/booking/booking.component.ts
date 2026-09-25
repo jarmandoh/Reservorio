@@ -9,6 +9,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ApiService } from '../../core/services/api.service';
 import { ToastService } from '../../core/services/toast.service';
 import { RealtimeService } from '../../core/services/realtime.service';
+import { DEFAULT_CURRENCY, formatCurrency } from '../../core/config/currency';
 import { Reservation, PaymentMethod, CheckoutInstructions } from '../../core/models/reservation.model';
 import { Business, Review, RatingStats } from '../../core/models/businesses.model';
 
@@ -676,7 +677,7 @@ interface ConfirmedBooking {
                             >
                           </span>
                           <span class="text-sm font-bold text-primary">{{
-                            depositActive() ? dueAmount() + ' €' : '—'
+                            depositActive() ? formatCurrency(dueAmount()) : '—'
                           }}</span>
                         </label>
 
@@ -684,7 +685,7 @@ interface ConfirmedBooking {
                           class="mt-4 flex items-center justify-between gap-3 rounded-xl border border-primary/15 bg-brand-soft-high px-3 py-2.5 text-sm"
                         >
                           <span class="text-on-surface-variant">Importe de hoy</span>
-                          <span class="font-display text-lg font-bold text-primary">{{ dueAmount() }} €</span>
+                          <span class="font-display text-lg font-bold text-primary">{{ formatCurrency(dueAmount()) }}</span>
                         </div>
                       </div>
 
@@ -876,6 +877,7 @@ export class BookingComponent implements OnInit, OnDestroy {
     this.confirmed() ? this.serviceMeta(this.confirmed()!.servicio).priceNumber : 0
   );
   readonly dueAmount = computed(() => (this.depositActive() ? Math.round(this.baseAmount() * 0.3) : this.baseAmount()));
+  readonly formatCurrency = formatCurrency;
   readonly paymentLabel = computed(() => {
     if (this.paymentLoading()) return '';
     switch (this.paymentMethod()) {
@@ -886,7 +888,7 @@ export class BookingComponent implements OnInit, OnDestroy {
       case 'cash':
         return 'Confirmar pago en efectivo';
       default:
-        return this.depositActive() ? `Pagar anticipo (${this.dueAmount()} €)` : 'Pagar';
+        return this.depositActive() ? `Pagar anticipo (${formatCurrency(this.dueAmount())})` : 'Pagar';
     }
   });
   readonly bookingSteps = [
@@ -1176,60 +1178,60 @@ export class BookingComponent implements OnInit, OnDestroy {
       lowercase.includes('pedi')
     ) {
       return {
-        price: '39€',
+        price: formatCurrency(39000),
         duration: '45 min',
         availability: 'Hoy',
         summary: 'Tratamiento completo con cuidado personalizado.',
         tag: 'popular',
         durationMinutes: 45,
-        priceNumber: 39,
+        priceNumber: 39000,
       };
     }
 
     if (lowercase.includes('corte') || lowercase.includes('barba') || lowercase.includes('peinado')) {
       return {
-        price: '28€',
+        price: formatCurrency(28000),
         duration: '30 min',
         availability: '2 huecos',
         summary: 'Tiempos rápidos para una cita eficiente.',
         tag: 'quick',
         durationMinutes: 30,
-        priceNumber: 28,
+        priceNumber: 28000,
       };
     }
 
     if (lowercase.includes('maquillaje') || lowercase.includes('celebr') || lowercase.includes('evento')) {
       return {
-        price: '95€',
+        price: formatCurrency(95000),
         duration: '75 min',
         availability: 'Agotado',
         summary: 'Servicio premium para eventos y finishing touch.',
         tag: 'premium',
         durationMinutes: 75,
-        priceNumber: 95,
+        priceNumber: 95000,
       };
     }
 
     if (lowercase.includes('depil') || lowercase.includes('laser')) {
       return {
-        price: '54€',
+        price: formatCurrency(54000),
         duration: '50 min',
         availability: 'Hoy',
         summary: 'Ideal para rutinas de mantenimiento y confort.',
         tag: 'popular',
         durationMinutes: 50,
-        priceNumber: 54,
+        priceNumber: 54000,
       };
     }
 
     return {
-      price: '49€',
+      price: formatCurrency(49000),
       duration: '60 min',
       availability: 'Disponible',
       summary: 'Servicio de consulta y atención personalizada.',
       tag: 'popular',
       durationMinutes: 60,
-      priceNumber: 49,
+      priceNumber: 49000,
     };
   }
 
@@ -1342,7 +1344,7 @@ export class BookingComponent implements OnInit, OnDestroy {
         providerId,
         customerId,
         amount,
-        currency: 'EUR',
+        currency: DEFAULT_CURRENCY,
         method,
         status: 'pending',
         successUrl,

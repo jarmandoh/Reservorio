@@ -7,6 +7,7 @@ import { AdminService } from '../../core/services/admin.service';
 import { ToastService } from '../../core/services/toast.service';
 import { AuthService } from '../../core/services/auth.service';
 import { BadgeComponent } from '../../shared/components/badge/badge.component';
+import { formatCurrency } from '../../core/config/currency';
 import {
   Reservation,
   Payment,
@@ -81,7 +82,7 @@ export class AdminComponent implements OnInit {
       { label: 'Reservas', value: s?.bookings ?? 0, icon: 'event_available' },
       { label: 'Reseñas', value: s?.reviews ?? 0, icon: 'rate_review' },
       { label: 'Cobrados', value: s?.paidPayments ?? 0, icon: 'payments' },
-      { label: 'Ingresos', value: (s?.revenue ?? 0) + ' €', icon: 'euro' },
+      { label: 'Ingresos', value: formatCurrency(s?.revenue ?? 0), icon: 'payments' },
     ];
   });
 

@@ -118,7 +118,7 @@ CREATE TABLE IF NOT EXISTS payments (
   provider_id        TEXT NOT NULL REFERENCES businesses(id) ON DELETE RESTRICT,
   customer_id        TEXT NOT NULL REFERENCES customers(id) ON DELETE RESTRICT,
   amount             NUMERIC(10,2) NOT NULL CHECK (amount > 0),
-  currency           TEXT NOT NULL DEFAULT 'EUR',
+  currency           TEXT NOT NULL DEFAULT 'COP',
   method             TEXT NOT NULL DEFAULT 'card' CHECK (method IN ('card', 'paypal', 'transfer', 'cash')),
   status             TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'paid', 'failed', 'refunded')),
   external_reference TEXT NOT NULL DEFAULT '',

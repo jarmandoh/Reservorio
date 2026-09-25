@@ -157,7 +157,7 @@ bookings              id TEXT PK · provider_id FK CASCADE · customer_id FK CAS
                       -- Índice único parcial: una reserva activa por slot/día/negocio
 
 payments              id TEXT PK · booking_id FK CASCADE · provider_id · customer_id · amount ·
-                      currency (EUR) · method (card|paypal|transfer|cash) · status
+                      currency (COP por defecto, extensible vía SUPPORTED_CURRENCIES) · method (card|paypal|transfer|cash) · status
                       (pending|paid|failed|refunded) · external_reference · created_at · updated_at
 
 notifications         id TEXT PK · business_id FK CASCADE · customer_id · booking_id · type ·
