@@ -6,8 +6,15 @@ export const adminGuard: CanActivateFn = () => {
   const auth = inject(AuthService);
   const router = inject(Router);
 
-  if (auth.isUnlocked()) return true;
+  // Si el token es inválido o expirado, cierra la sesión y redirige al home;
+  // si nunca hubo sesión, redirige al login para permitir autenticarse.
+  const purged = auth.purgeInvalidTokens();
+  const hasJwt = !!auth.getAdminToken();
+  const hasLegacy = auth.isUnlocked();
 
-  router.navigate(['/login']);
+  if (hasJwt || hasLegacy) return true;
+
+  if (purged.length > 0) router.navigate(['/']);
+  else router.navigate(['/login']);
   return false;
 };

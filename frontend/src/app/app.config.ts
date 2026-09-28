@@ -1,5 +1,5 @@
 import { ApplicationConfig, isDevMode } from '@angular/core';
-import { provideRouter } from '@angular/router';
+import { provideRouter, withPreloading, PreloadAllModules, withInMemoryScrolling, withViewTransitions, withComponentInputBinding } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 // Para modo zoneless experimental (Angular 22+): descomenta la línea siguiente,
 // elimina `zone.js` de `polyfills` en `angular.json:50` y añade
@@ -13,7 +13,13 @@ import { authInterceptor, errorInterceptor } from './core/interceptors/http.inte
 
 export const appConfig: ApplicationConfig = {
   providers: [
-    provideRouter(routes),
+    provideRouter(
+      routes,
+      withComponentInputBinding(),
+      withPreloading(PreloadAllModules),
+      withInMemoryScrolling({ scrollPositionRestoration: 'top', anchorScrolling: 'enabled' }),
+      withViewTransitions()
+    ),
     provideHttpClient(withInterceptors([authInterceptor, errorInterceptor])),
     // provideZonelessChangeDetection(), // <- activa zoneless (P3) cuando se quite zone.js
     provideServiceWorker('ngsw-worker.js', {

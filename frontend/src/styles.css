@@ -1,22 +1,22 @@
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
-@import url('https://fonts.googleapis.com/icon?family=Material+Icons+Round');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /* ── Base ─────────────────────────────────────────────────────────────────── */
+/* Evita CLS por FOIT: usa fallback system mientras carga Manrope/Inter */
 @layer base {
   html {
     @apply antialiased;
   }
   body {
     background: linear-gradient(180deg, #f7f9ff 0%, #eef5ff 100%);
-    font-family: 'Inter', sans-serif;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
     color: #181c20;
     overflow-x: hidden;
     -webkit-tap-highlight-color: transparent;
     -webkit-font-smoothing: antialiased;
+    /* content-visibility auto para secciones bajo el pliegue (reduce CLS + LCP) */
+    text-rendering: optimizeLegibility;
   }
 
   /* Ocultar scrollbar manteniendo scroll funcional */
@@ -125,6 +125,8 @@
     @apply rounded-xl p-5;
     background-color: #ffffff;
     box-shadow: 0 2px 8px rgba(24, 28, 32, 0.04);
+    content-visibility: auto;
+    contain-intrinsic-size: 200px;
   }
   .card-flat {
     @apply rounded-xl p-5;
@@ -177,6 +179,7 @@
     background: linear-gradient(90deg, #f1f4fa 25%, #ebeef4 50%, #f1f4fa 75%);
     background-size: 400% 100%;
     animation: shimmer 1.4s linear infinite;
+    content-visibility: auto;
   }
 
   .section-label {

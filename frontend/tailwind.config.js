@@ -3,7 +3,14 @@ const defaultTheme = require('tailwindcss/defaultTheme');
 
 module.exports = {
   darkMode: 'class',
+  // Tailwind v3 en Angular: usa pipeline compilado, NO browser runtime (@tailwindcss/browser). Ver SKILL.md.
+  future: { hoverOnlyWhenSupported: true },
   content: ['./src/**/*.{html,ts}'],
+  // Safelist para clases dinámicas críticas (evita purgado agresivo sin generar CSS innecesario)
+  safelist: [
+    { pattern: /bg-(green|amber|blue|rose)-(50|100)/ },
+    { pattern: /text-(green|amber|blue|rose)-(700|800|900)/ },
+  ],
   theme: {
     extend: {
       fontFamily: {

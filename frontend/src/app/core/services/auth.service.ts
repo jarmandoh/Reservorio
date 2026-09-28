@@ -12,6 +12,7 @@ const PIN_KEY = 'reservorio_admin_pin';
 const ADMIN_JWT = 'reservorio_admin_jwt';
 const OWNER_JWT = 'reservorio_owner_jwt';
 const CUSTOMER_JWT = 'reservorio_customer_jwt';
+const BUSINESS_PREFIX = 'negocio_jwt_';
 const DEFAULT_PIN = '1234';
 
 @Injectable({ providedIn: 'root' })
@@ -40,10 +41,73 @@ export class AuthService {
   }
 
   logout(): void {
+    this.clearAllAuthTokens();
     this.storage.removeItem(SESSION_KEY);
+    this._unlocked.set(false);
+  }
+
+  /** Cierra todas las sesiones JWT (admin, owner, customer, business) y resetea el store. */
+  clearAllAuthTokens(): void {
     this.storage.removeItem(ADMIN_JWT);
+    this.storage.removeItem(OWNER_JWT);
+    this.storage.removeItem(CUSTOMER_JWT, 'local');
+    this.clearAllBusinessTokens();
     this._unlocked.set(false);
     this.sessionStore.reset();
+  }
+
+  /** Elimina todos los tokens de negocio (`negocio_jwt_*`) expirados o no. */
+  clearAllBusinessTokens(): void {
+    try {
+      const toRemove: string[] = [];
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i);
+        if (key?.startsWith(BUSINESS_PREFIX)) toRemove.push(key);
+      }
+      toRemove.forEach(k => this.storage.removeItem(k));
+    } catch {
+      // SSR / storage no disponible
+    }
+  }
+
+  /**
+   * Recorre todos los tokens almacenados y elimina los inválidos o expirados.
+   * Cierra la sesión correspondiente a cada token expirado.
+   * Retorna la lista de claves purgadas (útil para debug/tests).
+   */
+  purgeInvalidTokens(): string[] {
+    const purged: string[] = [];
+
+    const check = (key: string, storage: 'local' | 'session', clearer: () => void) => {
+      const token = this.storage.getItem(key, storage);
+      if (token && !this.isTokenValid(token)) {
+        clearer();
+        purged.push(key);
+      }
+    };
+
+    check(ADMIN_JWT, 'session', () => this.clearAdminToken());
+    check(OWNER_JWT, 'session', () => this.clearOwnerToken());
+    check(CUSTOMER_JWT, 'local', () => this.clearCustomerToken());
+
+    try {
+      const keys: string[] = [];
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const k = sessionStorage.key(i);
+        if (k?.startsWith(BUSINESS_PREFIX)) keys.push(k!);
+      }
+      keys.forEach(k => {
+        const token = this.storage.getItem(k);
+        if (token && !this.isTokenValid(token)) {
+          this.storage.removeItem(k);
+          purged.push(k);
+        }
+      });
+    } catch {
+      // storage no disponible
+    }
+
+    return purged;
   }
 
   changePin(current: string, next: string): boolean {
@@ -151,7 +215,12 @@ export class AuthService {
 
   getAdminToken(): string | null {
     const token = this.storage.getItem(ADMIN_JWT);
-    return this.isTokenValid(token) ? token : null;
+    if (!token) return null;
+    if (!this.isTokenValid(token)) {
+      this.clearAdminToken();
+      return null;
+    }
+    return token;
   }
 
   setAdminToken(token: string): void {
@@ -162,13 +231,23 @@ export class AuthService {
 
   clearAdminToken(): void {
     this.storage.removeItem(ADMIN_JWT);
+    this.storage.removeItem(SESSION_KEY);
+    this._unlocked.set(false);
     this.sessionStore.setAdminAuthenticated(false);
-    this.sessionStore.setAuthenticated(false);
+    // Si no queda ningún otro token (incluyendo business), resetea autenticación general
+    if (!this.hasAnyValidToken()) {
+      this.sessionStore.setAuthenticated(false);
+    }
   }
 
   getOwnerToken(): string | null {
     const token = this.storage.getItem(OWNER_JWT);
-    return this.isTokenValid(token) ? token : null;
+    if (!token) return null;
+    if (!this.isTokenValid(token)) {
+      this.clearOwnerToken();
+      return null;
+    }
+    return token;
   }
 
   setOwnerToken(token: string): void {
@@ -180,7 +259,9 @@ export class AuthService {
   clearOwnerToken(): void {
     this.storage.removeItem(OWNER_JWT);
     this.sessionStore.setOwnerAuthenticated(false);
-    this.sessionStore.setAuthenticated(false);
+    if (!this.hasAnyValidToken()) {
+      this.sessionStore.setAuthenticated(false);
+    }
   }
 
   getOwnerPayload(): { ownerId?: string; role?: string; [key: string]: unknown } | null {
@@ -191,7 +272,12 @@ export class AuthService {
 
   getCustomerToken(): string | null {
     const token = this.storage.getItem(CUSTOMER_JWT, 'local');
-    return this.isTokenValid(token) ? token : null;
+    if (!token) return null;
+    if (!this.isTokenValid(token)) {
+      this.clearCustomerToken();
+      return null;
+    }
+    return token;
   }
 
   setCustomerToken(token: string): void {
@@ -201,6 +287,9 @@ export class AuthService {
 
   clearCustomerToken(): void {
     this.storage.removeItem(CUSTOMER_JWT, 'local');
+    if (!this.hasAnyValidToken()) {
+      this.sessionStore.setAuthenticated(false);
+    }
   }
 
   getCustomerPayload(): { customerId?: string; role?: string; [key: string]: unknown } | null {
@@ -210,73 +299,132 @@ export class AuthService {
   // ── Business JWT ──────────────────────────────────────────────────────
 
   getBusinessToken(businessId: string): string | null {
-    const token = this.storage.getItem(`negocio_jwt_${businessId}`);
-    return this.isTokenValid(token) ? token : null;
+    const token = this.storage.getItem(`${BUSINESS_PREFIX}${businessId}`);
+    if (!token) return null;
+    if (!this.isTokenValid(token)) {
+      this.clearBusinessToken(businessId);
+      return null;
+    }
+    return token;
   }
 
   setBusinessToken(businessId: string, token: string): void {
-    this.storage.setItem(`negocio_jwt_${businessId}`, token);
+    this.storage.setItem(`${BUSINESS_PREFIX}${businessId}`, token);
     this.sessionStore.setAuthenticated(true);
   }
 
   clearBusinessToken(businessId: string): void {
-    this.storage.removeItem(`negocio_jwt_${businessId}`);
+    this.storage.removeItem(`${BUSINESS_PREFIX}${businessId}`);
+    if (!this.hasAnyValidToken()) {
+      this.sessionStore.setAuthenticated(false);
+    }
   }
 
   isBusinessUnlocked(businessId: string): boolean {
     return !!this.getBusinessToken(businessId);
   }
 
-  // ── JWT helper ────────────────────────────────────────────────────────
+  // ── JWT helpers ───────────────────────────────────────────────────────
 
   /**
    * Renueva la sesión activa (admin, owner o customer) vía POST /auth/refresh.
    * El backend solo reemite si el token expiró dentro de la ventana de gracia,
    * por lo que una sesión activa nunca se corta mientras se use la app.
-   * Silencioso: si falla (red, sesión irreparable), se conserva el token actual.
+   * Si el refresh falla con 401 (token inválido o gracia expirada), cierra la sesión.
    */
   refreshSession(): Observable<void> {
     const admin = this.storage.getItem(ADMIN_JWT);
     const owner = this.storage.getItem(OWNER_JWT);
     const customer = this.storage.getItem(CUSTOMER_JWT, 'local');
 
-    let target: { token: string; apply: (t: string) => void } | null = null;
+    let target: { token: string; apply: (t: string) => void; clear: () => void } | null = null;
     if (admin) {
-      target = { token: admin, apply: t => this.setAdminToken(t) };
+      target = { token: admin, apply: t => this.setAdminToken(t), clear: () => this.clearAdminToken() };
     } else if (owner) {
-      target = { token: owner, apply: t => this.setOwnerToken(t) };
+      target = { token: owner, apply: t => this.setOwnerToken(t), clear: () => this.clearOwnerToken() };
     } else if (customer) {
-      target = { token: customer, apply: t => this.setCustomerToken(t) };
+      target = { token: customer, apply: t => this.setCustomerToken(t), clear: () => this.clearCustomerToken() };
     }
 
     if (!target) return of(undefined);
+
+    // Si el token ya es inválido localmente, cierra sesión sin llamar al backend
+    if (!this.isTokenValid(target.token)) {
+      const isWithinGrace = this.isWithinGracePeriod(target.token);
+      if (!isWithinGrace) {
+        target.clear();
+        return of(undefined);
+      }
+      // Dentro de gracia: intenta refresh aun expirado
+    }
 
     return this.api.refreshToken(target.token).pipe(
       tap(res => {
         if (res.data?.token) target!.apply(res.data.token);
       }),
       map(() => undefined),
-      catchError(() => of(undefined))
+      catchError(err => {
+        // Error 401 del refresh implica sesión irreparable -> cerrar sesión
+        const msg = err instanceof Error ? err.message : String(err);
+        const isUnauthorized = msg.toLowerCase().includes('token') || msg.toLowerCase().includes('sesión') || msg.toLowerCase().includes('expirada');
+        if (isUnauthorized) {
+          target!.clear();
+        }
+        return of(undefined);
+      })
     );
   }
 
-  private decodeToken(token: string | null): { [key: string]: unknown } | null {
+  decodeToken(token: string | null): { [key: string]: unknown } | null {
     if (!token) return null;
     try {
-      const [, payload] = token.split('.');
-      return JSON.parse(atob(payload));
+      const parts = token.split('.');
+      if (parts.length !== 3) return null;
+      const payload = parts[1];
+      // Maneja base64url y padding
+      const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+      const padded = base64.padEnd(base64.length + (4 - (base64.length % 4)) % 4, '=');
+      return JSON.parse(atob(padded));
     } catch {
       return null;
     }
   }
 
-  private isTokenValid(token: string | null): boolean {
+  isTokenValid(token: string | null): boolean {
     if (!token) return false;
     try {
       const payload = this.decodeToken(token);
-      return typeof payload?.['exp'] === 'number' && payload['exp'] * 1000 > Date.now();
+      if (!payload || typeof payload['exp'] !== 'number') return false;
+      return payload['exp'] * 1000 > Date.now();
     } catch {
       return false;
     }
+  }
+
+  /** Verifica si el token expirado aún está dentro de la ventana de gracia para refresh. */
+  private isWithinGracePeriod(token: string | null): boolean {
+    const payload = this.decodeToken(token);
+    if (!payload || typeof payload['exp'] !== 'number') return false;
+    const expMs = payload['exp'] * 1000;
+    const graceMs = 6 * 60 * 60 * 1000; // 6h por defecto, igual que backend
+    return Date.now() <= expMs + graceMs;
+  }
+
+  private hasAnyValidToken(): boolean {
+    if (this.isTokenValid(this.storage.getItem(ADMIN_JWT))) return true;
+    if (this.isTokenValid(this.storage.getItem(OWNER_JWT))) return true;
+    if (this.isTokenValid(this.storage.getItem(CUSTOMER_JWT, 'local'))) return true;
+    try {
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const k = sessionStorage.key(i);
+        if (k?.startsWith(BUSINESS_PREFIX)) {
+          const t = this.storage.getItem(k!);
+          if (this.isTokenValid(t)) return true;
+        }
+      }
+    } catch {
+      // storage no disponible
+    }
+    return false;
   }
 }

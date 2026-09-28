@@ -6,8 +6,12 @@ export const customerGuard: CanActivateFn = () => {
   const auth = inject(AuthService);
   const router = inject(Router);
 
+  // Token inválido o expirado -> cierra sesión y redirige al home;
+  // sin sesión previa -> redirige al login de cliente.
+  const purged = auth.purgeInvalidTokens();
   if (auth.isCustomerUnlocked()) return true;
 
-  router.navigate(['/customer/login']);
+  if (purged.length > 0) router.navigate(['/']);
+  else router.navigate(['/customer/login']);
   return false;
 };

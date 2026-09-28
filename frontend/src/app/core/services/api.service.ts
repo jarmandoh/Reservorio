@@ -193,6 +193,13 @@ export class ApiService {
     );
   }
 
+  getOwnerMe(token: string): Observable<Owner> {
+    return this.http.get<ApiResponse<Owner>>(`${this.base}/auth/owner/me`, this.authHeader(token)).pipe(
+      map(r => r.data!),
+      catchError(this.handleError)
+    );
+  }
+
   getBusinessById(businessId: string, token: string): Observable<Business> {
     const request$ = this.http
       .get<ApiResponse<Business>>(`${this.base}/businesses/${businessId}`, this.authHeader(token))

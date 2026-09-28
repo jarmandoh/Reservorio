@@ -7,8 +7,12 @@ export const businessGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
   const router = inject(Router);
   const businessId = route.params['businessId'] as string;
 
+  // Token inválido o expirado -> cierra sesión y redirige al home;
+  // sin sesión previa -> redirige al login del negocio para permitir autenticarse.
+  const purged = auth.purgeInvalidTokens();
   if (auth.isBusinessUnlocked(businessId)) return true;
 
-  router.navigate(['/business', businessId, 'login']);
+  if (purged.length > 0) router.navigate(['/']);
+  else router.navigate(['/business', businessId, 'login']);
   return false;
 };

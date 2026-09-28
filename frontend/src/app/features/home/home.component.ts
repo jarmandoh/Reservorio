@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, AfterViewInit, signal, computed, inject, ElementRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewInit, signal, computed, inject, ElementRef, ChangeDetectionStrategy, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -6,6 +6,7 @@ import { Title, Meta } from '@angular/platform-browser';
 import { Subscription } from 'rxjs';
 import { catchError, of } from 'rxjs';
 import { ApiService } from '../../core/services/api.service';
+import { AuthService } from '../../core/services/auth.service';
 import { Business } from '../../core/models/businesses.model';
 import gsap from 'gsap';
 
@@ -33,6 +34,7 @@ const CATEGORIES = ['Todos', 'Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci
 
 @Component({
   selector: 'app-home',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, FormsModule],
   template: `
     <div class="min-h-screen bg-surface flex flex-col">
@@ -54,14 +56,72 @@ const CATEGORIES = ['Todos', 'Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci
               <span class="font-display font-bold text-lg tracking-tight">Resérvame</span>
             </div>
             <div class="flex items-center gap-2">
-              <button
-                class="g-nav-btn flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition"
-                style="background:rgba(255,255,255,.15);backdrop-filter:blur(8px)"
-                (click)="goCustomer()"
-              >
-                <span class="material-icons-round text-base">account_circle</span>
-                <span class="hidden sm:inline">Mi cuenta</span>
-              </button>
+              <div class="relative">
+                @if (accountDisplayName()) {
+                  <button
+                    class="g-nav-btn flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition max-w-[180px]"
+                    style="background:rgba(255,255,255,.15);backdrop-filter:blur(8px)"
+                    (click)="goAccount()"
+                    [attr.aria-label]="'Cuenta de ' + accountDisplayName()"
+                    title="{{ accountDisplayName() }}"
+                  >
+                    <span class="material-icons-round text-base">account_circle</span>
+                    <span class="hidden sm:inline truncate">{{ accountDisplayName() }}</span>
+                  </button>
+                } @else {
+                  <button
+                    class="g-nav-btn flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition"
+                    style="background:rgba(255,255,255,.15);backdrop-filter:blur(8px)"
+                    (click)="toggleAccountMenu($event)"
+                    [attr.aria-expanded]="showAccountMenu()"
+                    aria-haspopup="true"
+                    aria-label="Mi cuenta"
+                  >
+                    <span class="material-icons-round text-base">account_circle</span>
+                    <span class="hidden sm:inline">Mi cuenta</span>
+                    <span class="material-icons-round text-sm">{{ showAccountMenu() ? 'expand_less' : 'expand_more' }}</span>
+                  </button>
+                  @if (showAccountMenu()) {
+                    <div class="absolute right-0 mt-2 w-60 rounded-2xl bg-white shadow-soft border border-outline-variant/30 py-1 z-20 overflow-hidden">
+                      <button
+                        type="button"
+                        class="flex items-center gap-3 w-full px-4 py-3 text-sm text-left text-on-surface hover:bg-surface-low transition"
+                        (click)="goCustomerLogin()"
+                      >
+                        <span class="material-icons-round text-base text-primary">person</span>
+                        <span class="flex flex-col items-start">
+                          <span class="font-semibold">Usuario</span>
+                          <span class="text-xs text-on-surface-variant">Historial y reservas</span>
+                        </span>
+                      </button>
+                      <div class="mx-2 border-t border-outline-variant/20"></div>
+                      <button
+                        type="button"
+                        class="flex items-center gap-3 w-full px-4 py-3 text-sm text-left text-on-surface hover:bg-surface-low transition"
+                        (click)="goOwnerLogin()"
+                      >
+                        <span class="material-icons-round text-base text-primary">store</span>
+                        <span class="flex flex-col items-start">
+                          <span class="font-semibold">Negocio</span>
+                          <span class="text-xs text-on-surface-variant">Panel de negocio</span>
+                        </span>
+                      </button>
+                      <div class="mx-2 border-t border-outline-variant/20"></div>
+                      <button
+                        type="button"
+                        class="flex items-center gap-3 w-full px-4 py-3 text-sm text-left text-on-surface hover:bg-surface-low transition"
+                        (click)="goCreateAccount()"
+                      >
+                        <span class="material-icons-round text-base text-primary">person_add</span>
+                        <span class="flex flex-col items-start">
+                          <span class="font-semibold">Crear cuenta</span>
+                          <span class="text-xs text-on-surface-variant">Usuario o negocio</span>
+                        </span>
+                      </button>
+                    </div>
+                  }
+                }
+              </div>
               <button
                 class="g-nav-btn flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition"
                 style="background:rgba(255,255,255,.15);backdrop-filter:blur(8px)"
@@ -355,6 +415,7 @@ const CATEGORIES = ['Todos', 'Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci
 export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   private api = inject(ApiService);
   private router = inject(Router);
+  private auth = inject(AuthService);
   private sub?: Subscription;
   private elRef = inject(ElementRef);
   private title = inject(Title);
@@ -364,6 +425,13 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
 
   /** Intervalo de refresco en ms (30 seg) */
   private readonly POLL_MS = 30_000;
+
+  // ── Cuenta: dropdown y nombre cuando está logueado ────────────────────
+  readonly showAccountMenu = signal(false);
+  readonly customerName = signal<string | null>(null);
+  readonly ownerName = signal<string | null>(null);
+  readonly businessName = signal<string | null>(null);
+  readonly accountDisplayName = computed(() => this.customerName() || this.ownerName() || this.businessName());
 
   businesses: Business[] = [];
   categories = CATEGORIES;
@@ -414,6 +482,70 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
     });
     this.meta.updateTag({ property: 'og:type', content: 'website' });
     this.loadBusinesses();
+    this.loadAccountName();
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    const target = event.target as HTMLElement;
+    if (!target.closest('.relative')) {
+      this.showAccountMenu.set(false);
+    }
+  }
+
+  private loadAccountName(): void {
+    this.customerName.set(null);
+    this.ownerName.set(null);
+    this.businessName.set(null);
+
+    if (this.auth.isCustomerUnlocked()) {
+      const token = this.auth.getCustomerToken();
+      if (token) {
+        this.api.getCustomerMe(token).pipe(catchError(() => of(null))).subscribe(customer => {
+          if (customer?.name) this.customerName.set(customer.name);
+          else {
+            const payload = this.auth.decodeToken(token) as { customerId?: string } | null;
+            this.customerName.set(payload?.customerId ? 'Usuario' : 'Mi cuenta');
+          }
+        });
+      }
+    } else if (this.auth.isOwnerUnlocked()) {
+      const token = this.auth.getOwnerToken();
+      if (token) {
+        this.api.getOwnerMe(token).pipe(catchError(() => of(null))).subscribe(owner => {
+          if (owner?.name) this.ownerName.set(owner.name);
+          else this.ownerName.set('Negocio');
+        });
+      }
+    } else {
+      // Busca token de negocio (business-admin)
+      try {
+        let businessId: string | null = null;
+        for (let i = 0; i < sessionStorage.length; i++) {
+          const k = sessionStorage.key(i);
+          if (k?.startsWith('negocio_jwt_')) {
+            const bid = k.replace('negocio_jwt_', '');
+            if (this.auth.isBusinessUnlocked(bid)) {
+              businessId = bid;
+              break;
+            }
+          }
+        }
+        if (businessId) {
+          const known = this.businesses.find(b => b.id === businessId);
+          if (known) this.businessName.set(known.name);
+          else {
+            this.businessName.set('Negocio');
+            this.api.getBusinesses().pipe(catchError(() => of([]))).subscribe(list => {
+              const found = list.find(b => b.id === businessId);
+              if (found) this.businessName.set(found.name);
+            });
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
   }
 
   loadBusinesses(): void {
@@ -431,6 +563,24 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
         this.businesses = list.length ? list : [...FALLBACK_BUSINESSES];
         this.negocioLoading.set(false);
         this.loading.set(false);
+        // Si hay sesión de negocio con nombre genérico, actualiza con el nombre real
+        if (this.businessName() === 'Negocio') {
+          try {
+            for (let i = 0; i < sessionStorage.length; i++) {
+              const k = sessionStorage.key(i);
+              if (k?.startsWith('negocio_jwt_')) {
+                const bid = k.replace('negocio_jwt_', '');
+                if (this.auth.isBusinessUnlocked(bid)) {
+                  const found = this.businesses.find(b => b.id === bid);
+                  if (found) this.businessName.set(found.name);
+                  break;
+                }
+              }
+            }
+          } catch {
+            // ignore
+          }
+        }
         setTimeout(() => this.animateCards(), 50);
       });
   }
@@ -491,5 +641,52 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
 
   goCustomer(): void {
     this.router.navigate(['/customer/history']);
+  }
+
+  // ── Dropdown Mi cuenta ──────────────────────────────────────────────
+
+  toggleAccountMenu(event: MouseEvent): void {
+    event.stopPropagation();
+    this.showAccountMenu.update(v => !v);
+  }
+
+  goCustomerLogin(): void {
+    this.showAccountMenu.set(false);
+    this.router.navigate(['/customer/login']);
+  }
+
+  goOwnerLogin(): void {
+    this.showAccountMenu.set(false);
+    this.router.navigate(['/owner/login']);
+  }
+
+  goCreateAccount(): void {
+    this.showAccountMenu.set(false);
+    this.router.navigate(['/account/create']);
+  }
+
+  goAccount(): void {
+    // Redirige al panel correspondiente según la sesión activa
+    if (this.customerName()) {
+      this.router.navigate(['/customer/history']);
+    } else if (this.ownerName()) {
+      this.router.navigate(['/owner/dashboard']);
+    } else if (this.businessName()) {
+      try {
+        for (let i = 0; i < sessionStorage.length; i++) {
+          const k = sessionStorage.key(i);
+          if (k?.startsWith('negocio_jwt_')) {
+            const bid = k.replace('negocio_jwt_', '');
+            if (this.auth.isBusinessUnlocked(bid)) {
+              this.router.navigate(['/business', bid, 'admin']);
+              return;
+            }
+          }
+        }
+      } catch {
+        // ignore
+      }
+      this.router.navigate(['/owner/dashboard']);
+    }
   }
 }

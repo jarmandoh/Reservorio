@@ -1,5 +1,5 @@
 import { Component, ElementRef, viewChild, signal, output } from '@angular/core';
-import * as L from 'leaflet';
+import type * as Leaflet from 'leaflet';
 
 export interface MapCoordinates {
   lat: number;
@@ -24,8 +24,10 @@ export class MapModalComponent {
   // Estado reactivo de las coordenadas seleccionadas
   selectedCoords = signal<MapCoordinates | null>(null);
 
-  private map!: L.Map;
-  private marker!: L.Marker;
+  private map!: Leaflet.Map;
+  private marker!: Leaflet.Marker;
+  // Cache del módulo Leaflet cargado dinámicamente (evita re-importar en cada open)
+  private leafletModule: typeof Leaflet | null = null;
 
   // Abre el modal y levanta el mapa
   public open(initialCoords?: MapCoordinates) {
@@ -38,8 +40,9 @@ export class MapModalComponent {
     }, 50);
   }
 
-  // Inicializa la instancia de Leaflet
-  private initMap(initialCoords?: MapCoordinates) {
+  // Inicializa la instancia de Leaflet (lazy-loaded: solo se descarga al abrir el mapa)
+  private async initMap(initialCoords?: MapCoordinates) {
+    const L: typeof Leaflet = this.leafletModule ?? (this.leafletModule = await import('leaflet'));
     const defaultLat = initialCoords?.lat ?? 4.711; // Bogotá por defecto
     const defaultLng = initialCoords?.lng ?? -74.0721;
 
@@ -66,7 +69,7 @@ export class MapModalComponent {
     }
 
     // Escuchar el clic en el mapa
-    this.map.on('click', (e: L.LeafletMouseEvent) => {
+    this.map.on('click', (e: Leaflet.LeafletMouseEvent) => {
       const { lat, lng } = e.latlng;
       this.setMarker(lat, lng);
     });
@@ -74,6 +77,8 @@ export class MapModalComponent {
 
   // Crea o mueve el marcador en el mapa
   private setMarker(lat: number, lng: number) {
+    const L = this.leafletModule;
+    if (!L) return;
     this.selectedCoords.set({ lat, lng });
 
     if (this.marker) {

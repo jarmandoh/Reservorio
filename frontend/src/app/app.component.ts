@@ -4,7 +4,8 @@ import { ToastComponent } from './shared/components/toast/toast.component';
 import { OfflineService } from './core/services/offline.service';
 import { AuthService } from './core/services/auth.service';
 import { ThemeService } from './core/services/theme.service';
-import { filter, timer } from 'rxjs';
+import { ToastService } from './core/services/toast.service';
+import { filter, interval, timer } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import gsap from 'gsap';
@@ -75,21 +76,54 @@ export class AppComponent implements OnInit {
   private offlineService = inject(OfflineService);
   private readonly auth = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly toast = inject(ToastService);
   protected readonly themeService = inject(ThemeService);
   protected readonly online = this.offlineService.online;
   private busy = false;
 
   ngOnInit() {
-    // Renovación de sesión activa (admin/owner/customer): primero a los 5s y luego cada hora.
-    // Silencioso; si el backend rechaza (expirada fuera de gracia), la sesión caduca con normalidad.
-    timer(5_000, 60 * 60 * 1000)
+    // ── Cierre proactivo de sesión si el token es inválido o expirado ──────
+    // Limpia al iniciar y ante cada navegación; también cada 60s por si expira en segundo plano.
+    this.auth.purgeInvalidTokens();
+    this.checkProactiveSessionExpiry();
+
+    // Verifica en cada navegación que la sesión siga válida
+    this.router.events
       .pipe(
-        switchMap(() => this.auth.refreshSession()),
+        filter(e => e instanceof NavigationStart),
         takeUntilDestroyed(this.destroyRef)
       )
-      .subscribe();
+      .subscribe(() => {
+        const purged = this.auth.purgeInvalidTokens();
+        if (purged.length) this.checkProactiveSessionExpiry();
+      });
+
+    // Poll cada 60s para tokens que expiran mientras la app está abierta sin navegar
+    interval(60_000)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        const purged = this.auth.purgeInvalidTokens();
+        if (purged.length) this.checkProactiveSessionExpiry();
+      });
+
+    // Renovación de sesión: defer para no bloquear LCP; usa requestIdleCallback si disponible
+    const scheduleRefresh = () => {
+      timer(5_000, 60 * 60 * 1000)
+        .pipe(
+          switchMap(() => this.auth.refreshSession()),
+          takeUntilDestroyed(this.destroyRef)
+        )
+        .subscribe();
+    };
+    if ('requestIdleCallback' in window) {
+      (window as unknown as { requestIdleCallback: (cb: () => void) => number }).requestIdleCallback(scheduleRefresh);
+    } else {
+      setTimeout(scheduleRefresh, 3000);
+    }
 
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    // Solo anima en dispositivos con capacidad hover (desktop) para no penalizar INP móvil
+    if (!window.matchMedia('(hover: hover)').matches) return;
 
     this.router.events
       .pipe(
@@ -121,5 +155,51 @@ export class AppComponent implements OnInit {
           );
         }
       });
+  }
+
+  private checkProactiveSessionExpiry(): void {
+    const url = this.router.url || '/';
+    // No interferir con páginas de login/registro (deben ser siempre visibles)
+    if (
+      url === '/' ||
+      url.startsWith('/login') ||
+      url.startsWith('/owner/login') ||
+      url.startsWith('/owner/register') ||
+      url.startsWith('/customer/login') ||
+      url.startsWith('/customer/verify') ||
+      /\/business\/[^\/]+\/login/.test(url)
+    ) {
+      return;
+    }
+    let redirected = false;
+    // Si está en ruta protegida y el token correspondiente ya no es válido, cierra sesión y redirige al home
+    if (url.startsWith('/admin')) {
+      const hasJwt = !!this.auth.getAdminToken();
+      const hasLegacy = this.auth.isUnlocked();
+      if (!hasJwt && !hasLegacy) {
+        this.router.navigate(['/'], { replaceUrl: true }).catch(() => {});
+        redirected = true;
+      }
+    } else if (url.startsWith('/owner')) {
+      if (!this.auth.getOwnerToken()) {
+        this.router.navigate(['/'], { replaceUrl: true }).catch(() => {});
+        redirected = true;
+      }
+    } else if (url.startsWith('/customer')) {
+      if (!this.auth.getCustomerToken()) {
+        this.router.navigate(['/'], { replaceUrl: true }).catch(() => {});
+        redirected = true;
+      }
+    } else if (url.startsWith('/business/')) {
+      const m = url.match(/\/business\/([^\/]+)/);
+      const bid = m?.[1];
+      if (bid && !this.auth.getBusinessToken(bid)) {
+        this.router.navigate(['/'], { replaceUrl: true }).catch(() => {});
+        redirected = true;
+      }
+    }
+    if (redirected) {
+      this.toast.show('Sesión expirada, vuelve a iniciar sesión', 'error');
+    }
   }
 }

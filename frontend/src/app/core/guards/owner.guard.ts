@@ -6,8 +6,12 @@ export const ownerGuard: CanActivateFn = () => {
   const auth = inject(AuthService);
   const router = inject(Router);
 
+  // Token inválido o expirado -> cierra sesión y redirige al home;
+  // sin sesión previa -> redirige al login de owner.
+  const purged = auth.purgeInvalidTokens();
   if (auth.isOwnerUnlocked()) return true;
 
-  router.navigate(['/owner/login']);
+  if (purged.length > 0) router.navigate(['/']);
+  else router.navigate(['/owner/login']);
   return false;
 };

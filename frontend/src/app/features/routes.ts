@@ -32,6 +32,14 @@ export const featureRoutes: Routes = [
     canMatch: [ownerGuard],
   },
   {
+    path: 'account/create',
+    loadComponent: () => import('./account-create/account-create.component').then(m => m.AccountCreateComponent),
+  },
+  {
+    path: 'register',
+    loadComponent: () => import('./account-create/account-create.component').then(m => m.AccountCreateComponent),
+  },
+  {
     path: 'customer/login',
     loadComponent: () => import('./customer-login/customer-login.component').then(m => m.CustomerLoginComponent),
   },
