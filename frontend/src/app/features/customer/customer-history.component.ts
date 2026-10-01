@@ -4,6 +4,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { formatCurrency } from '../../core/config/currency';
+import { formatTime24 } from '../../core/config/time';
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
@@ -116,7 +117,7 @@ import { Customer, CustomerHistoryBooking } from '../../core/models/reservation.
                       <p class="text-sm text-on-surface-variant mt-1">{{ b.serviceId || 'Servicio' }}</p>
                       <p class="text-sm mt-1 flex items-center gap-2">
                         <span class="material-icons-round text-base text-on-surface-variant">schedule</span>
-                        {{ formatDate(b.date) }} · {{ b.slot }}
+                        {{ formatDate(b.date) }} · {{ formatTime24(b.slot) }}
                       </p>
                     </div>
                     <span class="badge" [ngClass]="statusCss(b.status)">{{ statusLabel(b.status) }}</span>
@@ -271,6 +272,10 @@ export class CustomerHistoryComponent implements OnInit {
     if (!date) return '';
     const [y, m, d] = date.split('-');
     return y && m && d ? `${d}/${m}/${y}` : date;
+  }
+
+  formatTime24(slot: string): string {
+    return formatTime24(slot);
   }
 
   statusCss(status: string): string {

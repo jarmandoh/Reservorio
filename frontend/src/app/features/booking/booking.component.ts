@@ -11,6 +11,7 @@ import { ToastService } from '../../core/services/toast.service';
 import { RealtimeService } from '../../core/services/realtime.service';
 import { AuthService } from '../../core/services/auth.service';
 import { DEFAULT_CURRENCY, formatCurrency } from '../../core/config/currency';
+import { formatTime24 } from '../../core/config/time';
 import { Reservation, PaymentMethod, CheckoutInstructions } from '../../core/models/reservation.model';
 import { Business, Review, RatingStats } from '../../core/models/businesses.model';
 
@@ -32,43 +33,58 @@ interface ConfirmedBooking {
       class="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(26,115,232,0.26),_transparent_32%),linear-gradient(180deg,#040814_0%,#091324_52%,#0c1628_100%)] text-white"
     >
       <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
-        <div
-          class="grid gap-8 lg:min-h-[calc(100vh-5rem)] lg:grid-cols-[minmax(0,1fr)_430px] lg:items-center lg:gap-12"
-        >
-          <section class="flex flex-col justify-center gap-8 lg:pr-6">
-            <div class="space-y-4">
-              <p class="text-[11px] font-semibold uppercase tracking-[0.35em] text-brand-light">Reserva sin esperas</p>
-              <h1 class="font-display text-4xl font-bold leading-none sm:text-5xl lg:text-6xl">
-                Agenda tu cita en minutos.<br />
-                <span class="text-brand-sky">Rapido, claro y al instante.</span>
-              </h1>
-              <p class="max-w-xl text-sm leading-6 text-slate-300 sm:text-base">
-                Elige tu servicio, revisa la disponibilidad y deja tus datos para pedir la reserva en un flujo simple.
-              </p>
-            </div>
+        <div class="grid gap-8 lg:min-h-[calc(100vh-5rem)] lg:grid-cols-[minmax(0,1fr)_430px] lg:items-start lg:gap-12">
+          <section
+            class="lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto lg:overscroll-contain lg:pr-6"
+          >
+            <div class="flex flex-col justify-center gap-8 lg:min-h-full">
+              <div class="space-y-5">
+                <span
+                  class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] text-brand-light backdrop-blur-sm"
+                >
+                  <span class="material-icons-round text-[0.9rem]">bolt</span>
+                  Reserva sin esperas
+                </span>
+                <h1 class="font-display text-4xl font-bold leading-[1.05] text-balance sm:text-5xl lg:text-[3.5rem]">
+                  Agenda tu cita en minutos.
+                  <span class="mt-1 block text-brand-sky">Rápido, claro y al instante.</span>
+                </h1>
+                <p class="max-w-xl text-sm leading-6 text-slate-300 sm:text-base">
+                  Elige tu servicio, revisa la disponibilidad y deja tus datos para pedir la reserva en un flujo simple.
+                </p>
+              </div>
 
-            <div class="grid gap-3 sm:max-w-xl">
-              @for (item of instructionItems; track item.order) {
-                <div class="rounded-3xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
-                  <div class="flex items-start gap-4">
-                    <span class="pt-1 font-mono text-xs tracking-[0.28em] text-brand-light">{{ item.order }}</span>
-                    <div>
-                      <p class="font-display text-lg font-semibold text-white">{{ item.title }}</p>
+              <ol class="flex flex-col">
+                @for (item of instructionItems; track item.order; let last = $last) {
+                  <li class="relative flex gap-4" [class.pb-7]="!last" [class.pb-1]="last">
+                    @if (!last) {
+                      <span
+                        class="absolute left-4 top-9 h-[calc(100%-2.25rem)] w-px bg-gradient-to-b from-white/25 to-transparent"
+                        aria-hidden="true"
+                      ></span>
+                    }
+                    <span
+                      class="relative z-10 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/10 font-mono text-xs font-semibold text-white backdrop-blur-sm"
+                    >
+                      {{ item.order }}
+                    </span>
+                    <div class="pt-0.5">
+                      <p class="font-display text-base font-semibold text-white">{{ item.title }}</p>
                       <p class="mt-1 text-sm leading-6 text-slate-300">{{ item.description }}</p>
                     </div>
-                  </div>
-                </div>
-              }
-            </div>
+                  </li>
+                }
+              </ol>
 
-            <div
-              class="rounded-[2rem] border border-white/10 bg-[linear-gradient(135deg,rgba(26,115,232,0.16),rgba(142,194,255,0.08))] p-5 backdrop-blur-sm sm:max-w-xl"
-            >
-              <p class="text-xs font-semibold uppercase tracking-[0.24em] text-brand-light">Instrucciones</p>
-              <p class="mt-3 text-sm leading-6 text-slate-200">
-                Avanza paso a paso para reservar mas rapido. Si necesitas cambiar algo, vuelve atras y ajustalo sin
-                empezar de nuevo.
-              </p>
+              <div
+                class="flex items-start gap-3 rounded-2xl border-l-2 border-brand-sky/60 bg-white/[0.07] px-4 py-3.5 backdrop-blur-sm sm:max-w-xl"
+              >
+                <span class="material-icons-round mt-0.5 flex-shrink-0 text-brand-light">lightbulb</span>
+                <p class="text-sm leading-6 text-slate-200">
+                  <span class="font-semibold text-white">Puedes volver atrás en cualquier momento.</span>
+                  Ajusta el servicio o el horario sin perder lo que ya completaste.
+                </p>
+              </div>
             </div>
           </section>
 
@@ -151,32 +167,51 @@ interface ConfirmedBooking {
                     }
                   </div>
 
-                  <div class="mt-4 flex items-center gap-2 overflow-x-auto pb-1">
-                    @for (item of bookingSteps; track item.value; let last = $last) {
-                      <div class="flex items-center gap-2">
+                  <div class="mt-5">
+                    <div class="relative">
+                      <div class="absolute left-[12.5%] right-[12.5%] top-[15px] h-0.5 rounded-full bg-white/20">
                         <div
-                          class="flex h-7 w-7 items-center justify-center rounded-full border text-[11px] font-semibold"
-                          [class.bg-white]="step() >= item.value"
-                          [class.text-primary]="step() >= item.value"
-                          [class.border-white]="step() >= item.value"
-                          [class.bg-transparent]="step() < item.value"
-                          [class.text-white/70]="step() < item.value"
-                          [class.border-white/25]="step() < item.value"
-                        >
-                          {{ item.value }}
-                        </div>
-                        <span
-                          class="text-[11px] font-medium"
-                          [class.text-white]="step() >= item.value"
-                          [class.text-white/70]="step() < item.value"
-                        >
-                          {{ item.label }}
-                        </span>
-                        @if (!last) {
-                          <div class="h-px w-4 bg-white/20"></div>
-                        }
+                          class="h-full rounded-full bg-white transition-[width] duration-500 ease-out"
+                          [style.width.%]="stepProgress()"
+                        ></div>
                       </div>
-                    }
+                      <ol class="relative flex items-start">
+                        @for (item of bookingSteps; track item.value) {
+                          <li class="flex min-w-0 flex-1 flex-col items-center gap-1.5">
+                            <button
+                              type="button"
+                              class="flex h-8 w-8 items-center justify-center rounded-full border text-[11px] font-semibold transition"
+                              [class.border-white]="step() >= item.value"
+                              [class.bg-white]="step() > item.value"
+                              [class.text-primary]="step() > item.value"
+                              [class.bg-white/20]="step() === item.value"
+                              [class.text-white]="step() === item.value"
+                              [class.border-white/50]="step() < item.value"
+                              [class.text-white/60]="step() < item.value"
+                              [class.cursor-pointer]="item.value < step()"
+                              [class.cursor-default]="item.value >= step()"
+                              [disabled]="item.value >= step()"
+                              [attr.aria-current]="item.value === step() ? 'step' : null"
+                              [attr.aria-label]="'Paso ' + item.value + ': ' + item.label"
+                              (click)="goToStep(item.value)"
+                            >
+                              @if (step() > item.value) {
+                                <span class="material-icons-round text-[0.9rem]">check</span>
+                              } @else {
+                                {{ item.value }}
+                              }
+                            </button>
+                            <span
+                              class="max-w-full truncate text-[10px] font-medium"
+                              [class.text-white]="step() >= item.value"
+                              [class.text-white/55]="step() < item.value"
+                            >
+                              {{ item.label }}
+                            </span>
+                          </li>
+                        }
+                      </ol>
+                    </div>
                   </div>
                 </header>
 
@@ -224,85 +259,81 @@ interface ConfirmedBooking {
                       @if (!servicesLoading() && !servicesError()) {
                         @if (services().length) {
                           <div class="space-y-3">
-                            <div class="flex gap-2 overflow-x-auto pb-1">
-                              <button
-                                class="btn-tertiary btn-sm"
-                                [class.btn-primary]="serviceFilter() === 'all'"
-                                (click)="serviceFilter.set('all')"
-                              >
-                                Todos
-                              </button>
-                              <button
-                                class="btn-tertiary btn-sm"
-                                [class.btn-primary]="serviceFilter() === 'popular'"
-                                (click)="serviceFilter.set('popular')"
-                              >
-                                Populares
-                              </button>
-                              <button
-                                class="btn-tertiary btn-sm"
-                                [class.btn-primary]="serviceFilter() === 'quick'"
-                                (click)="serviceFilter.set('quick')"
-                              >
-                                Rapidos
-                              </button>
-                              <button
-                                class="btn-tertiary btn-sm"
-                                [class.btn-primary]="serviceFilter() === 'premium'"
-                                (click)="serviceFilter.set('premium')"
-                              >
-                                Premium
-                              </button>
+                            <div class="flex gap-1.5 overflow-x-auto pb-1" role="group" aria-label="Filtrar servicios">
+                              @for (filter of serviceFilters; track filter.id) {
+                                <button
+                                  type="button"
+                                  class="shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition"
+                                  [class.border-primary]="serviceFilter() === filter.id"
+                                  [class.bg-primary]="serviceFilter() === filter.id"
+                                  [class.text-white]="serviceFilter() === filter.id"
+                                  [class.border-outline-variant]="serviceFilter() !== filter.id"
+                                  [class.bg-white]="serviceFilter() !== filter.id"
+                                  [class.text-on-surface-variant]="serviceFilter() !== filter.id"
+                                  [class.hover:bg-surface-low]="serviceFilter() !== filter.id"
+                                  [attr.aria-pressed]="serviceFilter() === filter.id"
+                                  (click)="serviceFilter.set(filter.id)"
+                                >
+                                  {{ filter.label }}
+                                </button>
+                              }
                             </div>
 
-                            <div class="flex flex-col gap-3">
+                            <div class="flex flex-col gap-2.5">
                               @for (svc of visibleServices(); track svc) {
                                 <button
-                                  class="rounded-2xl border p-4 sm:p-4 text-left transition min-h-[72px] sm:min-h-[auto]"
+                                  type="button"
+                                  class="w-full rounded-2xl border p-4 text-left transition"
                                   [class.border-primary]="selectedService() === svc"
                                   [class.bg-brand-soft-high]="selectedService() === svc"
                                   [class.shadow-card]="selectedService() === svc"
                                   [class.border-outline-variant]="selectedService() !== svc"
                                   [class.bg-white]="selectedService() !== svc"
+                                  [class.hover:border-primary/50]="selectedService() !== svc"
+                                  [attr.aria-pressed]="selectedService() === svc"
                                   (click)="selectService(svc)"
                                 >
                                   <div class="flex items-center justify-between gap-3">
-                                    <div class="flex items-center gap-3">
+                                    <div class="flex min-w-0 items-center gap-3">
                                       <div
-                                        class="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary-container text-white"
+                                        class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary-container text-white"
                                       >
-                                        <span class="material-icons-round text-[1.15rem]">content_cut</span>
+                                        <span class="material-icons-round text-[1.1rem]">{{ serviceIcon(svc) }}</span>
                                       </div>
-                                      <div>
-                                        <p class="font-display text-base font-semibold text-on-surface">{{ svc }}</p>
-                                        <p class="text-xs text-on-surface-variant">{{ serviceMeta(svc).summary }}</p>
+                                      <div class="min-w-0">
+                                        <p class="truncate font-display text-base font-semibold text-on-surface">
+                                          {{ svc }}
+                                        </p>
+                                        <p class="text-xs leading-5 text-on-surface-variant">
+                                          {{ serviceMeta(svc).summary }}
+                                        </p>
                                       </div>
                                     </div>
 
-                                    @if (selectedService() === svc) {
-                                      <span class="material-icons-round text-primary">check_circle</span>
-                                    }
+                                    <span
+                                      class="material-icons-round flex-shrink-0 text-primary transition duration-200"
+                                      [class.opacity-0]="selectedService() !== svc"
+                                      [class.scale-75]="selectedService() !== svc"
+                                    >
+                                      check_circle
+                                    </span>
                                   </div>
 
-                                  <div class="mt-4 grid grid-cols-3 gap-2 text-center text-xs">
-                                    <div class="rounded-xl bg-surface-container px-2 py-2">
-                                      <p class="text-on-surface-variant">Desde</p>
-                                      <p class="mt-1 font-display font-semibold text-on-surface">
-                                        {{ serviceMeta(svc).price }}
-                                      </p>
-                                    </div>
-                                    <div class="rounded-xl bg-surface-container px-2 py-2">
-                                      <p class="text-on-surface-variant">Duración</p>
-                                      <p class="mt-1 font-display font-semibold text-on-surface">
-                                        {{ serviceMeta(svc).duration }}
-                                      </p>
-                                    </div>
-                                    <div class="rounded-xl bg-surface-container px-2 py-2">
-                                      <p class="text-on-surface-variant">Estado</p>
-                                      <p class="mt-1 font-display font-semibold text-on-surface">
-                                        {{ serviceMeta(svc).availability }}
-                                      </p>
-                                    </div>
+                                  <div
+                                    class="mt-3.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs font-medium text-on-surface-variant"
+                                  >
+                                    <span class="inline-flex items-center gap-1">
+                                      <span class="material-icons-round text-[0.95rem] text-primary">payments</span>
+                                      {{ serviceMeta(svc).price }}
+                                    </span>
+                                    <span class="inline-flex items-center gap-1">
+                                      <span class="material-icons-round text-[0.95rem] text-primary">schedule</span>
+                                      {{ serviceMeta(svc).duration }}
+                                    </span>
+                                    <span class="inline-flex items-center gap-1">
+                                      <span class="material-icons-round text-[0.95rem] text-primary">bolt</span>
+                                      {{ serviceMeta(svc).availability }}
+                                    </span>
                                   </div>
                                 </button>
                               }
@@ -390,27 +421,31 @@ interface ConfirmedBooking {
                               Actualizar
                             </button>
                           </div>
-                          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                            @for (row of reservations(); track row._rowIndex) {
-                              <button
-                                [class]="slotClass(row)"
-                                [disabled]="isTaken(row)"
-                                (click)="selectSlot(row)"
-                                class="min-h-[56px] sm:min-h-[auto]"
+                          <div class="rounded-2xl border border-outline-variant bg-white p-4">
+                            <label class="form-label" for="slotSelect">Elige tu horario</label>
+                            @if (reservations().length) {
+                              <select
+                                id="slotSelect"
+                                class="form-select w-full text-base"
+                                [value]="selectedSlot()?._rowIndex ?? ''"
+                                (change)="onSlotSelect($event)"
                               >
-                                <span class="block">{{ row.franja }}</span>
-                                @if (isTaken(row)) {
-                                  <span class="mt-1 block text-[10px] uppercase tracking-[0.12em] opacity-75"
-                                    >Ocupado</span
+                                <option value="" disabled>Selecciona un horario disponible</option>
+                                @for (row of reservations(); track row._rowIndex) {
+                                  <option
+                                    [value]="row._rowIndex"
+                                    [disabled]="isTaken(row)"
+                                    [selected]="selectedSlot()?._rowIndex === row._rowIndex"
                                   >
+                                    {{ formatTime24(row.franja) }}{{ isTaken(row) ? ' — Ocupado' : ' — Disponible' }}
+                                  </option>
                                 }
-                              </button>
-                            }
-
-                            @if (!reservations().length) {
-                              <p
-                                class="col-span-3 rounded-2xl bg-surface-low px-4 py-6 text-center text-sm text-outline"
-                              >
+                              </select>
+                              <p class="mt-2 text-xs text-on-surface-variant">
+                                Las franjas marcadas como ocupadas no se pueden seleccionar.
+                              </p>
+                            } @else {
+                              <p class="rounded-2xl bg-surface-low px-4 py-6 text-center text-sm text-outline">
                                 No hay franjas disponibles por ahora.
                               </p>
                             }
@@ -426,7 +461,7 @@ interface ConfirmedBooking {
                               </div>
                               <div>
                                 <p class="font-display text-lg font-semibold text-on-surface">
-                                  {{ selectedSlot()!.franja }}
+                                  {{ formatTime24(selectedSlot()!.franja) }}
                                 </p>
                                 <p class="text-sm text-on-surface-variant">Listo para continuar con tus datos</p>
                               </div>
@@ -442,7 +477,7 @@ interface ConfirmedBooking {
 
                   @if (step() === 3) {
                     @if (business()?.cancellationPolicy) {
-                      <div class="rounded-2xl border-l-4 border-l-orange-500 bg-orange-50 p-4">
+                      <div class="rounded-2xl bg-orange-50 p-4 m-2">
                         <div class="flex items-center gap-2">
                           <span class="material-icons-round text-orange-600 flex-shrink-0">info</span>
                           <div>
@@ -453,7 +488,7 @@ interface ConfirmedBooking {
                       </div>
                     }
 
-                    <div class="rounded-2xl border border-green-500/30 bg-success-container p-4">
+                    <div class="rounded-2xl bg-success-container p-4 m-2">
                       <div class="flex items-center gap-2">
                         <span class="material-icons-round text-success flex-shrink-0">security</span>
                         <div>
@@ -502,7 +537,7 @@ interface ConfirmedBooking {
                         }
                       </div>
 
-                      <div class="grid gap-3 sm:grid-cols-2">
+                      <div class="grid gap-3 sm:grid-cols-1">
                         <div class="rounded-2xl border border-outline-variant bg-white p-4">
                           <div class="flex items-start justify-between gap-3">
                             <div>
@@ -520,7 +555,7 @@ interface ConfirmedBooking {
                             <div>
                               <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">Horario</p>
                               <p class="mt-1 font-display text-lg font-semibold text-on-surface">
-                                {{ selectedSlot()?.franja }}
+                                {{ formatTime24(selectedSlot()?.franja) }}
                               </p>
                             </div>
                             <button class="btn-tertiary btn-sm" (click)="goToStep(2)">Editar</button>
@@ -529,9 +564,7 @@ interface ConfirmedBooking {
                       </div>
 
                       @if (!isCustomerAuthenticated()) {
-                        <div
-                          class="rounded-2xl border border-amber-200 bg-amber-50 p-4 flex flex-col gap-3"
-                        >
+                        <div class="rounded-2xl border border-amber-200 bg-amber-50 p-4 flex flex-col gap-3">
                           <div class="flex items-start gap-3">
                             <span class="material-icons-round text-amber-600">lock</span>
                             <div class="flex-1">
@@ -647,7 +680,7 @@ interface ConfirmedBooking {
                           <div class="h-px bg-outline-variant/30"></div>
                           <div class="flex items-center justify-between gap-4">
                             <span class="text-on-surface-variant">Horario</span>
-                            <span class="font-semibold text-on-surface">{{ confirmed()?.franja }}</span>
+                            <span class="font-semibold text-on-surface">{{ formatTime24(confirmed()?.franja) }}</span>
                           </div>
                           <div class="h-px bg-outline-variant/30"></div>
                           <div class="flex items-center justify-between gap-4">
@@ -716,7 +749,9 @@ interface ConfirmedBooking {
                           class="mt-4 flex items-center justify-between gap-3 rounded-xl border border-primary/15 bg-brand-soft-high px-3 py-2.5 text-sm"
                         >
                           <span class="text-on-surface-variant">Importe de hoy</span>
-                          <span class="font-display text-lg font-bold text-primary">{{ formatCurrency(dueAmount()) }}</span>
+                          <span class="font-display text-lg font-bold text-primary">{{
+                            formatCurrency(dueAmount())
+                          }}</span>
                         </div>
                       </div>
 
@@ -910,6 +945,7 @@ export class BookingComponent implements OnInit, OnDestroy {
   );
   readonly dueAmount = computed(() => (this.depositActive() ? Math.round(this.baseAmount() * 0.3) : this.baseAmount()));
   readonly formatCurrency = formatCurrency;
+  readonly formatTime24 = formatTime24;
   readonly isCustomerAuthenticated = computed(() => this.auth.isCustomerUnlocked());
   readonly paymentLabel = computed(() => {
     if (this.paymentLoading()) return '';
@@ -931,23 +967,30 @@ export class BookingComponent implements OnInit, OnDestroy {
     { value: 4, label: 'Listo' },
   ] as const;
   readonly serviceFilter = signal<'all' | 'popular' | 'quick' | 'premium'>('all');
+  readonly serviceFilters = [
+    { id: 'all', label: 'Todos' },
+    { id: 'popular', label: 'Populares' },
+    { id: 'quick', label: 'Rápidos' },
+    { id: 'premium', label: 'Premium' },
+  ] as const;
+  readonly stepProgress = computed(() => ((this.step() - 1) / (this.bookingSteps.length - 1)) * 100);
   readonly availableSlotsCount = computed(() => this.reservations().filter(row => !this.isTaken(row)).length);
   readonly reservedSlotsCount = computed(() => this.reservations().filter(row => this.isTaken(row)).length);
   readonly instructionItems = [
     {
       order: '01',
-      title: 'Elige que quieres reservar',
-      description: 'Selecciona el servicio y activa el siguiente paso del formulario.',
+      title: 'Elige qué quieres reservar',
+      description: 'Selecciona el servicio y avanza al siguiente paso.',
     },
     {
       order: '02',
       title: 'Escoge el mejor horario',
-      description: 'Revisa la disponibilidad y elige la franja que mejor se ajuste a tu dia.',
+      description: 'Revisa la disponibilidad y toma la franja que mejor te sirva.',
     },
     {
       order: '03',
       title: 'Confirma en un momento',
-      description: 'Deja tus datos, revisa el resumen y envia la reserva al instante.',
+      description: 'Deja tus datos, revisa el resumen y envía la reserva.',
     },
   ] as const;
 
@@ -1017,7 +1060,10 @@ export class BookingComponent implements OnInit, OnDestroy {
     if (!token || !customerId) return;
     this.api
       .getCustomerMe(token)
-      .pipe(takeUntilDestroyed(this.destroyRef), catchError(() => of(null)))
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        catchError(() => of(null))
+      )
       .subscribe(customer => {
         if (!customer) return;
         const patch: Record<string, string> = {};
@@ -1175,15 +1221,17 @@ export class BookingComponent implements OnInit, OnDestroy {
     );
   }
 
-  slotClass(row: Reservation): string {
-    const base = 'slot-chip';
-    if (this.selectedSlot()?._rowIndex === row._rowIndex) return base + ' selected';
-    if (this.isTaken(row)) return base + ' taken';
-    return base;
-  }
-
-  selectSlot(row: Reservation): void {
-    if (this.isTaken(row)) return;
+  onSlotSelect(event: Event): void {
+    const value = (event.target as HTMLSelectElement).value;
+    if (!value) {
+      this.selectedSlot.set(null);
+      return;
+    }
+    const row = this.reservations().find(r => String(r._rowIndex) === value);
+    if (!row || this.isTaken(row)) {
+      this.selectedSlot.set(null);
+      return;
+    }
     this.selectedSlot.set(row);
   }
 
@@ -1211,6 +1259,33 @@ export class BookingComponent implements OnInit, OnDestroy {
       return true;
     });
   });
+
+  serviceIcon(service: string): string {
+    const lowercase = service.toLowerCase();
+
+    if (
+      lowercase.includes('facial') ||
+      lowercase.includes('spa') ||
+      lowercase.includes('mani') ||
+      lowercase.includes('pedi')
+    ) {
+      return 'spa';
+    }
+
+    if (lowercase.includes('corte') || lowercase.includes('barba') || lowercase.includes('peinado')) {
+      return 'content_cut';
+    }
+
+    if (lowercase.includes('maquillaje') || lowercase.includes('celebr') || lowercase.includes('evento')) {
+      return 'brush';
+    }
+
+    if (lowercase.includes('depil') || lowercase.includes('laser')) {
+      return 'auto_awesome';
+    }
+
+    return 'self_improvement';
+  }
 
   serviceMeta(service: string): {
     price: string;

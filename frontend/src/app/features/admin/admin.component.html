@@ -23,8 +23,10 @@
     </button>
   </header>
 
-  <!-- NAV TABS -->
-  <nav class="flex items-center gap-1 px-4 py-2 bg-surface-lowest border-b border-outline-variant/30 overflow-x-auto">
+  <!-- NAV TABS — fijo al hacer scroll (debajo del header h-16) -->
+  <nav
+    class="sticky top-16 z-10 flex items-center gap-1 px-4 py-2 bg-surface-lowest border-b border-outline-variant/30 overflow-x-auto shadow-sm"
+  >
     @for (t of tabs; track t.id) {
       <button class="nav-item whitespace-nowrap" [class.active]="tab() === t.id" (click)="selectTab(t.id)">
         <span class="material-icons-round text-[1rem]">{{ t.icon }}</span>

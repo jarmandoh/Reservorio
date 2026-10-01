@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, AfterViewInit, signal, computed, inject, ElementRef, ChangeDetectionStrategy, HostListener } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewInit, signal, computed, inject, ElementRef, ChangeDetectionStrategy, HostListener, viewChild, afterNextRender } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -82,7 +82,10 @@ const CATEGORIES = ['Todos', 'Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci
                     <span class="material-icons-round text-sm">{{ showAccountMenu() ? 'expand_less' : 'expand_more' }}</span>
                   </button>
                   @if (showAccountMenu()) {
-                    <div class="absolute right-0 mt-2 w-60 rounded-2xl bg-white shadow-soft border border-outline-variant/30 py-1 z-20 overflow-hidden">
+                    <div
+                      #accountMenu
+                      class="absolute right-0 mt-2 w-60 rounded-2xl bg-white shadow-soft border border-outline-variant/30 py-1 z-20 overflow-hidden"
+                    >
                       <button
                         type="button"
                         class="flex items-center gap-3 w-full px-4 py-3 text-sm text-left text-on-surface hover:bg-surface-low transition"
@@ -122,14 +125,6 @@ const CATEGORIES = ['Todos', 'Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci
                   }
                 }
               </div>
-              <button
-                class="g-nav-btn flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition"
-                style="background:rgba(255,255,255,.15);backdrop-filter:blur(8px)"
-                (click)="goAdmin()"
-              >
-                <span class="material-icons-round text-base">admin_panel_settings</span>
-                <span class="hidden sm:inline">Admin</span>
-              </button>
             </div>
           </div>
 
@@ -360,14 +355,6 @@ const CATEGORIES = ['Todos', 'Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci
                   <div class="flex flex-col gap-3 pt-1 sm:flex-row sm:items-center sm:justify-between">
                     <span class="text-xs text-outline">{{ negocio.category }}</span>
                     <div class="flex flex-wrap items-center gap-2">
-                      <button
-                        type="button"
-                        class="btn-secondary btn-sm"
-                        title="Ir al dashboard de negocio"
-                        (click)="$event.stopPropagation(); goBusinessLogin(negocio)"
-                      >
-                        Panel negocio
-                      </button>
                       <div class="flex items-center gap-1 text-primary text-sm font-semibold">
                         Reservar ahora
                         <span class="material-icons-round text-base">arrow_forward</span>
@@ -428,6 +415,8 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
 
   // ── Cuenta: dropdown y nombre cuando está logueado ────────────────────
   readonly showAccountMenu = signal(false);
+  private readonly accountMenuRef = viewChild<ElementRef<HTMLElement>>('accountMenu');
+  private accountMenuTween?: gsap.core.Tween;
   readonly customerName = signal<string | null>(null);
   readonly ownerName = signal<string | null>(null);
   readonly businessName = signal<string | null>(null);
@@ -489,7 +478,7 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   onDocumentClick(event: MouseEvent): void {
     const target = event.target as HTMLElement;
     if (!target.closest('.relative')) {
-      this.showAccountMenu.set(false);
+      this.closeAccountMenu();
     }
   }
 
@@ -587,6 +576,7 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
 
   ngOnDestroy(): void {
     this.sub?.unsubscribe();
+    this.accountMenuTween?.kill();
     this.gsapCtx?.revert();
   }
 
@@ -631,14 +621,6 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
     this.router.navigate(['/booking', negocio.id]);
   }
 
-  goBusinessLogin(negocio: Business): void {
-    this.router.navigate(['/business', negocio.id, 'login']);
-  }
-
-  goAdmin(): void {
-    this.router.navigate(['/login']);
-  }
-
   goCustomer(): void {
     this.router.navigate(['/customer/history']);
   }
@@ -647,7 +629,57 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
 
   toggleAccountMenu(event: MouseEvent): void {
     event.stopPropagation();
-    this.showAccountMenu.update(v => !v);
+    if (this.showAccountMenu()) this.closeAccountMenu();
+    else this.openAccountMenu();
+  }
+
+  private openAccountMenu(): void {
+    this.showAccountMenu.set(true);
+    if (this.prefersReducedMotion()) return;
+    afterNextRender(() => {
+      const el = this.accountMenuRef()?.nativeElement;
+      if (!el) return;
+      this.accountMenuTween?.kill();
+      this.accountMenuTween = gsap.fromTo(
+        el,
+        { opacity: 0, y: -8, scale: 0.96, transformOrigin: 'top right' },
+        { opacity: 1, y: 0, scale: 1, duration: 0.24, ease: 'power2.out', clearProps: 'all' }
+      );
+      const items = el.querySelectorAll('button');
+      if (items.length) {
+        gsap.fromTo(
+          items,
+          { opacity: 0, y: 6 },
+          { opacity: 1, y: 0, duration: 0.2, stagger: 0.04, ease: 'power2.out', clearProps: 'all' }
+        );
+      }
+    });
+  }
+
+  closeAccountMenu(): void {
+    if (!this.showAccountMenu()) return;
+    if (this.prefersReducedMotion()) {
+      this.showAccountMenu.set(false);
+      return;
+    }
+    const el = this.accountMenuRef()?.nativeElement;
+    if (!el) {
+      this.showAccountMenu.set(false);
+      return;
+    }
+    this.accountMenuTween?.kill();
+    this.accountMenuTween = gsap.to(el, {
+      opacity: 0,
+      y: -8,
+      scale: 0.96,
+      duration: 0.16,
+      ease: 'power2.in',
+      onComplete: () => this.showAccountMenu.set(false),
+    });
+  }
+
+  private prefersReducedMotion(): boolean {
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
 
   goCustomerLogin(): void {

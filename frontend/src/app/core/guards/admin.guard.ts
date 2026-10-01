@@ -15,6 +15,6 @@ export const adminGuard: CanActivateFn = () => {
   if (hasJwt || hasLegacy) return true;
 
   if (purged.length > 0) router.navigate(['/']);
-  else router.navigate(['/login']);
+  else router.navigate(['/jh-login']);
   return false;
 };

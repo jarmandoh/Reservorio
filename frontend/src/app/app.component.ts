@@ -162,7 +162,7 @@ export class AppComponent implements OnInit {
     // No interferir con páginas de login/registro (deben ser siempre visibles)
     if (
       url === '/' ||
-      url.startsWith('/login') ||
+      url.startsWith('/jh-login') ||
       url.startsWith('/owner/login') ||
       url.startsWith('/owner/register') ||
       url.startsWith('/customer/login') ||

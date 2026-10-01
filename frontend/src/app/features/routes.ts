@@ -14,7 +14,7 @@ export const featureRoutes: Routes = [
     loadComponent: () => import('./booking/booking.component').then(m => m.BookingComponent),
   },
   {
-    path: 'login',
+    path: 'jh-login',
     loadComponent: () => import('./login/login.component').then(m => m.LoginComponent),
   },
   {
