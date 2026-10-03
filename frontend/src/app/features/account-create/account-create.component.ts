@@ -28,6 +28,15 @@ type AccountType = 'usuario' | 'negocio';
       (submit)="submit()"
       (footerAction)="goLogin()"
     >
+      <a
+        routerLink="/"
+        class="mb-4 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-primary hover:underline"
+        aria-label="Volver al inicio"
+      >
+        <span class="material-icons-round text-base" aria-hidden="true">arrow_back</span>
+        Volver al inicio
+      </a>
+
       <!-- Selector de tipo -->
       <div class="grid grid-cols-2 gap-3 mb-2">
         <button

@@ -27,6 +27,15 @@ type AuthMode = 'credentials' | 'otp';
       (submit)="submit()"
       (footerAction)="goCreateAccount()"
     >
+      <a
+        routerLink="/"
+        class="mb-4 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-primary hover:underline"
+        aria-label="Volver al inicio"
+      >
+        <span class="material-icons-round text-base" aria-hidden="true">arrow_back</span>
+        Volver al inicio
+      </a>
+
       <div class="mb-4 grid grid-cols-2 gap-2">
         <button
           type="button"

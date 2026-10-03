@@ -35,7 +35,7 @@ interface ConfirmedBooking {
       <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
         <div class="grid gap-8 lg:min-h-[calc(100vh-5rem)] lg:grid-cols-[minmax(0,1fr)_430px] lg:items-start lg:gap-12">
           <section
-            class="lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto lg:overscroll-contain lg:pr-6"
+            class="order-2 lg:order-1 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto lg:overscroll-contain lg:pr-6"
           >
             <div class="flex flex-col justify-center gap-8 lg:min-h-full">
               <div class="space-y-5">
@@ -88,7 +88,7 @@ interface ConfirmedBooking {
             </div>
           </section>
 
-          <section class="flex justify-center lg:justify-end">
+          <section class="order-1 flex justify-center lg:order-2 lg:justify-end">
             <div
               class="w-full max-w-[430px] rounded-[2.1rem] border border-white/10 bg-white/5 p-3 shadow-[0_32px_80px_rgba(0,0,0,0.45)] backdrop-blur-md"
             >
@@ -236,7 +236,12 @@ interface ConfirmedBooking {
                       }
 
                       @if (servicesLoading()) {
-                        <div class="flex flex-col gap-3">
+                        <div
+                          class="flex flex-col gap-3"
+                          role="status"
+                          aria-live="polite"
+                          aria-label="Cargando servicios"
+                        >
                           <div class="skeleton h-20 rounded-2xl"></div>
                           <div class="skeleton h-20 rounded-2xl"></div>
                           <div class="skeleton h-20 rounded-2xl"></div>
@@ -244,7 +249,7 @@ interface ConfirmedBooking {
                       }
 
                       @if (servicesError() && !servicesLoading()) {
-                        <div class="rounded-2xl bg-error-container p-5">
+                        <div class="rounded-2xl bg-error-container p-5" role="alert">
                           <div class="flex items-start gap-3 text-error-on-container">
                             <span class="material-icons-round mt-0.5">warning</span>
                             <div>
@@ -384,7 +389,12 @@ interface ConfirmedBooking {
                       </div>
 
                       @if (loading()) {
-                        <div class="grid grid-cols-3 gap-2">
+                        <div
+                          class="grid grid-cols-3 gap-2"
+                          role="status"
+                          aria-live="polite"
+                          aria-label="Cargando horarios"
+                        >
                           @for (i of [1, 2, 3, 4, 5, 6, 7, 8, 9]; track i) {
                             <div class="skeleton h-12 rounded-xl"></div>
                           }
@@ -392,7 +402,7 @@ interface ConfirmedBooking {
                       }
 
                       @if (error() && !loading()) {
-                        <div class="rounded-2xl bg-error-container p-5">
+                        <div class="rounded-2xl bg-error-container p-5" role="alert">
                           <div class="flex items-start gap-3 text-error-on-container">
                             <span class="material-icons-round mt-0.5">warning</span>
                             <div>
@@ -412,7 +422,7 @@ interface ConfirmedBooking {
                           >
                             <div>
                               <p class="section-label">Horarios disponibles</p>
-                              <p class="text-xs text-primary">
+                              <p class="text-xs text-primary" aria-live="polite" aria-atomic="true">
                                 Actualización en tiempo real · {{ availableSlotsCount() }} libres /
                                 {{ reservedSlotsCount() }} ocupadas
                               </p>
@@ -591,7 +601,22 @@ interface ConfirmedBooking {
                         </div>
                       }
 
-                      <form [formGroup]="bookingForm" class="flex flex-col gap-3" (ngSubmit)="submit()">
+                      <form
+                        [formGroup]="bookingForm"
+                        class="flex flex-col gap-3"
+                        (ngSubmit)="submit()"
+                        [attr.aria-describedby]="submitAttempted() && bookingForm.invalid ? 'booking-form-error' : null"
+                      >
+                        @if (submitAttempted() && bookingForm.invalid) {
+                          <p
+                            id="booking-form-error"
+                            class="rounded-xl bg-error-container px-3 py-2 text-sm text-error-on-container"
+                            role="alert"
+                            aria-live="assertive"
+                          >
+                            Revisa los campos señalados antes de continuar.
+                          </p>
+                        }
                         <div>
                           <label class="form-label" for="cliente">Tu nombre</label>
                           <input
@@ -601,9 +626,15 @@ interface ConfirmedBooking {
                             formControlName="cliente"
                             placeholder="Ana Garcia"
                             autocomplete="name"
+                            required
+                            minlength="2"
+                            [attr.aria-invalid]="fieldInvalid('cliente') ? 'true' : null"
+                            [attr.aria-describedby]="fieldInvalid('cliente') ? 'cliente-error' : null"
                           />
                           @if (fieldInvalid('cliente')) {
-                            <p class="mt-1 text-xs text-error">Requerido</p>
+                            <p id="cliente-error" class="mt-1 text-xs text-error" role="alert">
+                              Escribe tu nombre (mínimo 2 caracteres).
+                            </p>
                           }
                         </div>
 
@@ -616,9 +647,15 @@ interface ConfirmedBooking {
                             formControlName="telefono"
                             placeholder="300 123 4567"
                             autocomplete="tel"
+                            required
+                            pattern="[0-9+\\s-]{7,15}"
+                            [attr.aria-invalid]="fieldInvalid('telefono') ? 'true' : null"
+                            [attr.aria-describedby]="fieldInvalid('telefono') ? 'telefono-error' : null"
                           />
                           @if (fieldInvalid('telefono')) {
-                            <p class="mt-1 text-xs text-error">7-15 dígitos</p>
+                            <p id="telefono-error" class="mt-1 text-xs text-error" role="alert">
+                              Introduce un teléfono válido (7-15 caracteres).
+                            </p>
                           }
                         </div>
 
@@ -630,6 +667,9 @@ interface ConfirmedBooking {
                             type="checkbox"
                             formControlName="dataConsent"
                             class="mt-0.5 h-5 w-5 accent-primary"
+                            required
+                            [attr.aria-invalid]="fieldInvalid('dataConsent') ? 'true' : null"
+                            [attr.aria-describedby]="fieldInvalid('dataConsent') ? 'data-consent-error' : null"
                           />
                           <span class="flex-1 text-xs leading-5 text-on-surface-variant">
                             He leído y acepto la
@@ -640,7 +680,9 @@ interface ConfirmedBooking {
                           </span>
                         </label>
                         @if (fieldInvalid('dataConsent')) {
-                          <p class="mt-1 text-xs text-error">Debes aceptar la política de privacidad</p>
+                          <p id="data-consent-error" class="mt-1 text-xs text-error" role="alert">
+                            Debes aceptar la política de privacidad.
+                          </p>
                         }
 
                         <div
@@ -656,6 +698,9 @@ interface ConfirmedBooking {
                     <div class="flex flex-col gap-5 px-5 py-5">
                       <div
                         class="rounded-[1.75rem] bg-gradient-to-br from-primary to-primary-container p-6 text-center text-white"
+                        role="status"
+                        aria-live="polite"
+                        aria-atomic="true"
                       >
                         <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white/20">
                           <span class="material-icons-round text-3xl">check_circle</span>
@@ -709,12 +754,13 @@ interface ConfirmedBooking {
 
                       <div class="rounded-2xl border border-outline-variant bg-white p-5">
                         <p class="section-label">Método de pago</p>
-                        <div class="grid grid-cols-2 gap-2">
+                        <div class="grid grid-cols-2 gap-2" role="group" aria-label="Método de pago">
                           @for (opt of paymentOptions; track opt.id) {
                             <button
                               type="button"
                               class="payment-option"
                               [class.selected]="paymentMethod() === opt.id"
+                              [attr.aria-pressed]="paymentMethod() === opt.id"
                               (click)="paymentMethod.set(opt.id)"
                             >
                               <span class="material-icons-round text-primary flex-shrink-0">{{ opt.icon }}</span>
@@ -840,6 +886,8 @@ interface ConfirmedBooking {
                                 type="button"
                                 (click)="reviewForm.patchValue({ rating: i })"
                                 [class.bg-yellow-400/20]="i <= (reviewForm.get('rating')?.value || 0)"
+                                [attr.aria-label]="i + ' estrellas'"
+                                [attr.aria-pressed]="i === (reviewForm.get('rating')?.value || 0)"
                               >
                                 <span
                                   class="material-icons-round text-[1.5rem]"
@@ -850,10 +898,13 @@ interface ConfirmedBooking {
                               </button>
                             }
                           </div>
+                          <label for="review-text" class="sr-only">Tu reseña (opcional)</label>
                           <textarea
+                            id="review-text"
                             class="w-full rounded-lg border border-outline p-2 text-sm resize-none focus:outline-none focus:border-primary"
                             formControlName="review"
                             placeholder="Cuenta tu experiencia (opcional)"
+                            maxlength="500"
                             [attr.rows]="2"
                           ></textarea>
                           <button
@@ -1001,6 +1052,7 @@ export class BookingComponent implements OnInit, OnDestroy {
     dataConsent: [false, [Validators.requiredTrue]],
   });
   readonly bookingFormValid = signal(true);
+  readonly submitAttempted = signal(false);
 
   readonly reviewForm = this.fb.group({
     rating: [0, [Validators.required, Validators.min(1), Validators.max(5)]],
@@ -1415,7 +1467,10 @@ export class BookingComponent implements OnInit, OnDestroy {
       return;
     }
     this.bookingForm.markAllAsTouched();
-    if (this.bookingForm.invalid || !this.selectedSlot() || !this.selectedService()) return;
+    if (this.bookingForm.invalid || !this.selectedSlot() || !this.selectedService()) {
+      this.submitAttempted.set(true);
+      return;
+    }
 
     const { cliente, telefono, notas, dataConsent } = this.bookingForm.value;
     const payload: ConfirmedBooking = {

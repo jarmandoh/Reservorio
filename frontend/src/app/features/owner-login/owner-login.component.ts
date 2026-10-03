@@ -1,14 +1,14 @@
 import { Component, DestroyRef, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../core/services/auth.service';
 import { AuthCardComponent } from '../../shared/components/auth-card/auth-card.component';
 
 @Component({
   selector: 'app-owner-login',
-  imports: [CommonModule, ReactiveFormsModule, AuthCardComponent],
+  imports: [CommonModule, ReactiveFormsModule, AuthCardComponent, RouterLink],
   template: `
     <app-auth-card
       title="Login de dueño"
@@ -24,6 +24,15 @@ import { AuthCardComponent } from '../../shared/components/auth-card/auth-card.c
       (submit)="submit()"
       (footerAction)="goRegister()"
     >
+      <a
+        routerLink="/"
+        class="mb-4 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-primary hover:underline"
+        aria-label="Volver al inicio"
+      >
+        <span class="material-icons-round text-base" aria-hidden="true">arrow_back</span>
+        Volver al inicio
+      </a>
+
       <div>
         <label class="form-label">Correo electrónico</label>
         <input type="email" class="form-input w-full" formControlName="email" />
