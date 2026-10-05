@@ -13,7 +13,6 @@ import {
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { Title, Meta } from '@angular/platform-browser';
 import { Subscription } from 'rxjs';
 import { catchError, of } from 'rxjs';
 import { ApiService } from '../../core/services/api.service';
@@ -427,8 +426,6 @@ export class HomeComponent implements OnInit, OnDestroy {
   private router = inject(Router);
   private auth = inject(AuthService);
   private sub?: Subscription;
-  private title = inject(Title);
-  private meta = inject(Meta);
 
   /** Intervalo de refresco en ms (30 seg) */
   private readonly POLL_MS = 30_000;
@@ -477,18 +474,6 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.title.setTitle('Reservorio · Reserva cita online en tus negocios favoritos');
-    this.meta.updateTag({
-      name: 'description',
-      content:
-        'Encuentra negocios locales, consulta disponibilidad y reserva tu cita online en minutos. Gratis y sin esperas.',
-    });
-    this.meta.updateTag({ name: 'og:title', content: 'Reservorio · Reserva cita online' });
-    this.meta.updateTag({
-      name: 'og:description',
-      content: 'Encuentra negocios locales, consulta disponibilidad y reserva tu cita online en minutos.',
-    });
-    this.meta.updateTag({ property: 'og:type', content: 'website' });
     this.loadBusinesses();
     this.loadAccountName();
   }

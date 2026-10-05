@@ -1,13 +1,15 @@
 import http from 'node:http';
+import https from 'node:https';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
 const root = path.resolve('dist/frontend/browser');
 const port = Number(process.env.PORT || 4200);
 const fallback = 'index.html';
-const apiUrl = process.env.API_URL || '/api';
-
-const configScript = `<script>window.__APP_CONFIG__ = window.__APP_CONFIG__ || {}; window.__APP_CONFIG__.apiUrl = ${JSON.stringify(apiUrl)};</script>`;
+const apiTarget = new URL(process.env.API_PROXY_TARGET || 'http://127.0.0.1:3000');
+const apiPath = apiTarget.pathname.replace(/\/$/, '');
+const apiBasePath = apiPath.endsWith('/api') ? apiPath : `${apiPath}/api`;
+const apiTransport = apiTarget.protocol === 'https:' ? https : http;
 
 const mime = {
   '.html': 'text/html; charset=utf-8',
@@ -26,7 +28,34 @@ const mime = {
 
 const server = http.createServer(async (req, res) => {
   try {
-    const pathname = decodeURIComponent(new URL(req.url ?? '/', 'http://x').pathname);
+    const requestUrl = new URL(req.url ?? '/', 'http://x');
+    const pathname = decodeURIComponent(requestUrl.pathname);
+
+    if (pathname === '/api' || pathname.startsWith('/api/')) {
+      const targetPath = `${apiBasePath}${requestUrl.pathname.slice('/api'.length)}${requestUrl.search}`;
+      const proxyRequest = apiTransport.request(
+        {
+          hostname: apiTarget.hostname,
+          port: apiTarget.port || (apiTarget.protocol === 'https:' ? 443 : 80),
+          path: targetPath,
+          method: req.method,
+          headers: { ...req.headers, host: apiTarget.host },
+        },
+        proxyResponse => {
+          res.writeHead(proxyResponse.statusCode || 502, proxyResponse.headers);
+          proxyResponse.pipe(res);
+        }
+      );
+
+      proxyRequest.on('error', error => {
+        console.error('API proxy error:', error.message);
+        if (!res.headersSent) res.writeHead(502, { 'Content-Type': 'text/plain; charset=utf-8' });
+        res.end('API proxy unavailable');
+      });
+      req.pipe(proxyRequest);
+      return;
+    }
+
     let filePath = path.resolve(root, '.' + pathname);
     if (!filePath.startsWith(root)) filePath = path.join(root, fallback);
 
@@ -37,18 +66,7 @@ const server = http.createServer(async (req, res) => {
       filePath = path.join(root, fallback);
     }
 
-    const isHtml = filePath === path.join(root, fallback) || path.extname(filePath).toLowerCase() === '.html';
-    let content = await fs.readFile(filePath);
-
-    if (isHtml) {
-      let html = content.toString('utf8');
-      if (html.includes('</head>')) {
-        html = html.replace('</head>', `${configScript}\n  </head>`);
-      } else {
-        html = `${configScript}\n${html}`;
-      }
-      content = Buffer.from(html, 'utf8');
-    }
+    const content = await fs.readFile(filePath);
 
     const ext = path.extname(filePath).toLowerCase();
     res.writeHead(200, { 'Content-Type': mime[ext] || 'application/octet-stream' });

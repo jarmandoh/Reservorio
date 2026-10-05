@@ -5,6 +5,7 @@ import { OfflineService } from './core/services/offline.service';
 import { AuthService } from './core/services/auth.service';
 import { ThemeService } from './core/services/theme.service';
 import { ToastService } from './core/services/toast.service';
+import { SeoService } from './core/services/seo.service';
 import { filter, interval, timer } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -83,12 +84,15 @@ export class AppComponent implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly toast = inject(ToastService);
+  private readonly seo = inject(SeoService);
   protected readonly themeService = inject(ThemeService);
   protected readonly online = this.offlineService.online;
   private busy = false;
   private hasCompletedInitialNavigation = false;
 
   ngOnInit() {
+    this.seo.updateForRoute(this.router.url);
+
     // ── Cierre proactivo de sesión si el token es inválido o expirado ──────
     // Limpia al iniciar y ante cada navegación; también cada 60s por si expira en segundo plano.
     this.auth.purgeInvalidTokens();
@@ -111,6 +115,7 @@ export class AppComponent implements OnInit {
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe(() => {
+        this.seo.updateForRoute(this.router.url);
         if (this.hasCompletedInitialNavigation) {
           requestAnimationFrame(() => this.mainContent.nativeElement.focus());
         }

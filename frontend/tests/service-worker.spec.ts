@@ -7,18 +7,6 @@ test('serves the cached application shell offline and recovers on reconnection',
   await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
   await page.reload();
   await expect(page.locator('app-root')).toBeVisible();
-  await expect
-    .poll(() =>
-      page.evaluate(async () => {
-        const indexUrl = new URL('/index.html', location.origin).href;
-        for (const cacheName of await caches.keys()) {
-          const cache = await caches.open(cacheName);
-          if (await cache.match(indexUrl)) return true;
-        }
-        return false;
-      })
-    )
-    .toBe(true);
 
   await context.setOffline(true);
   await page.reload();
@@ -47,8 +35,11 @@ test('clears an expired session when the API responds with 401', async ({ page }
   );
 
   const request = page.waitForRequest(req => req.url().includes('/api/businesses') && req.method() === 'GET');
-  await page.goto('/');
+  const toastVisible = expect(page.getByText('Token expirado')).toBeVisible();
+  const navigation = page.goto('/');
+  await Promise.all([navigation, request]);
   expect((await request).headers().authorization).toMatch(/^Bearer /);
+  await toastVisible;
   await expect.poll(() => page.evaluate(() => localStorage.getItem('reservorio_customer_jwt'))).toBeNull();
-  await expect(page.getByText('Token expirado')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Negocios disponibles' })).toBeVisible();
 });

@@ -104,8 +104,33 @@ El script pide confirmación, corta conexiones activas, recrea la base y aplica 
 ### PWA, SEO y dominio
 
 - **PWA**: `ng build` genera `browser/ngsw.json` + `ngsw-worker.js`; el Service Worker se registra en producción. Tras desplegar una versión nueva, los usuarios la activan en el siguiente arranque (el SW comprueba actualizaciones).
-- **SEO**: sustituye el dominio placeholder `TU-DOMINIO.EJEMPLO` en `frontend/src/robots.txt` y `frontend/src/sitemap.xml` por el dominio real (los ficheros se copian a la raíz del sitio en el build).
+- **Dominio canónico**: esta configuración usa `https://reservorio.app`. Antes de publicar, configura DNS para ese host y define `FRONTEND_URL=https://reservorio.app`, `FRONTEND_HOST=reservorio.app` y `CORS_ORIGINS=https://reservorio.app` en `.env.production`. Si el dominio de despliegue difiere, cambia también `CANONICAL_ORIGIN` en `frontend/src/app/core/services/seo.service.ts`, `frontend/src/index.html`, `frontend/src/robots.txt` y `frontend/src/sitemap.xml`.
+- **SEO**: sitemap solo incluye home y política de privacidad, las únicas páginas actualmente indexables. Canonical, título, descripción y Open Graph se actualizan por ruta; flujos de reserva, pago, login, cuentas, paneles y rutas desconocidas quedan `noindex`. Nginx refuerza la política con `X-Robots-Tag`. Mantén fuera del sitemap páginas interactivas o datos de negocio que no se rendericen públicamente.
+- **SSR/prerender**: se mantiene la SPA cliente por ahora. No hay una ruta pública de ficha de negocio; reserva y pago son flujos transaccionales, y el listado de home depende de API dinámica. Reevaluar SSR/prerender al crear páginas públicas indexables de negocio y medir su contenido/metadata inicial antes de cambiar la arquitectura.
 - **HTTPS**: el contenedor Nginx envía HSTS y CSP, pero solo tienen efecto sirviendo el sitio por HTTPS (usa un reverse proxy/CDN con TLS real; el `Strict-Transport-Security` se ignora en HTTP simple).
+
+### 8. Smoke de release en staging
+
+Antes de publicar, apunta las pruebas de release a staging (sin iniciar servidores locales):
+
+```bash
+cd frontend
+PLAYWRIGHT_SKIP_SERVER=1 PLAYWRIGHT_BASE_URL=https://staging.reservorio.app \
+  pnpm exec playwright test --project=chromium-smoke --project=chromium-a11y
+```
+
+Verifica manualmente con el dominio de staging:
+
+```bash
+curl -fsSI https://staging.reservorio.app/
+curl -fsSI https://staging.reservorio.app/privacy
+curl -fsSI https://staging.reservorio.app/booking/smoke
+curl -fsS https://staging.reservorio.app/robots.txt
+curl -fsS https://staging.reservorio.app/sitemap.xml
+curl -fsS https://staging.reservorio.app/api/businesses
+```
+
+Confirma certificado válido, redirección HTTP→HTTPS, CSP sin violaciones al cargar fuentes/mapas/checkout, `X-Robots-Tag: index, follow` solo en `/` y `/privacy`, `noindex` en flujos privados/transaccionales, rutas profundas con HTML/Angular funcional, API disponible y checkout Stripe en modo de prueba. No completes un pago real como parte del smoke. Registra fecha, commit desplegado, resultados y URL de staging en el informe de release; envía sitemap a Search Console cuando tengas acceso verificado al dominio.
 
 ## 7. Reset rápido
 

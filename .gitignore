@@ -26,7 +26,6 @@ playwright-report/
 playwright-report/*
 test-results/
 test-results/*
-playwright.config.ts
 tmp_pg_log.txt
 
 # Logs

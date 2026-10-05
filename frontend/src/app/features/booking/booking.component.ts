@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ReactiveFormsModule, FormBuilder, Validators, AbstractControl } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { Title } from '@angular/platform-browser';
 import { interval, Subscription, switchMap, startWith, catchError, of, fromEvent } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ApiService } from '../../core/services/api.service';
@@ -966,7 +965,6 @@ export class BookingComponent implements OnInit, OnDestroy {
   private toast = inject(ToastService);
   private realtime = inject(RealtimeService);
   private auth = inject(AuthService);
-  private title = inject(Title);
   readonly Math = Math;
   private fb = inject(FormBuilder);
   private router = inject(Router);
@@ -1103,7 +1101,6 @@ export class BookingComponent implements OnInit, OnDestroy {
         if (!found) location.replace('/'); // Redirect if business not found
         if (found) {
           this.business.set(found);
-          this.title.setTitle(`Reserva en ${found.name} — Reservorio`);
         }
       });
     this.api.trackBusinessView(this.businessId).subscribe();
