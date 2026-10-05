@@ -1,5 +1,5 @@
 import { ApplicationConfig, isDevMode } from '@angular/core';
-import { provideRouter, withPreloading, PreloadAllModules, withInMemoryScrolling, withViewTransitions, withComponentInputBinding } from '@angular/router';
+import { provideRouter, withInMemoryScrolling, withViewTransitions, withComponentInputBinding } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 // Para modo zoneless experimental (Angular 22+): descomenta la línea siguiente,
 // elimina `zone.js` de `polyfills` en `angular.json:50` y añade
@@ -16,7 +16,6 @@ export const appConfig: ApplicationConfig = {
     provideRouter(
       routes,
       withComponentInputBinding(),
-      withPreloading(PreloadAllModules),
       withInMemoryScrolling({ scrollPositionRestoration: 'top', anchorScrolling: 'enabled' }),
       withViewTransitions()
     ),

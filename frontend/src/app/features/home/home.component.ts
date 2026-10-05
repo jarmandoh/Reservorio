@@ -1,4 +1,17 @@
-import { Component, OnInit, OnDestroy, AfterViewInit, signal, computed, inject, ElementRef, ChangeDetectionStrategy, HostListener, viewChild, afterNextRender } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  OnDestroy,
+  AfterViewInit,
+  signal,
+  computed,
+  inject,
+  ElementRef,
+  ChangeDetectionStrategy,
+  HostListener,
+  viewChild,
+  afterNextRender,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -79,7 +92,9 @@ const CATEGORIES = ['Todos', 'Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci
                   >
                     <span class="material-icons-round text-base">account_circle</span>
                     <span class="hidden sm:inline">Mi cuenta</span>
-                    <span class="material-icons-round text-sm">{{ showAccountMenu() ? 'expand_less' : 'expand_more' }}</span>
+                    <span class="material-icons-round text-sm">{{
+                      showAccountMenu() ? 'expand_less' : 'expand_more'
+                    }}</span>
                   </button>
                   @if (showAccountMenu()) {
                     <div
@@ -140,7 +155,7 @@ const CATEGORIES = ['Todos', 'Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci
           </div>
 
           <!-- Search bar -->
-          <div class="grid gap-3 sm:grid-cols-[1fr_220px] max-w-3xl">
+          <div class="g-search grid gap-3 sm:grid-cols-[1fr_220px] max-w-3xl">
             <div class="relative">
               <span
                 class="material-icons-round absolute left-4 top-1/2 -translate-y-1/2
@@ -490,21 +505,27 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
     if (this.auth.isCustomerUnlocked()) {
       const token = this.auth.getCustomerToken();
       if (token) {
-        this.api.getCustomerMe(token).pipe(catchError(() => of(null))).subscribe(customer => {
-          if (customer?.name) this.customerName.set(customer.name);
-          else {
-            const payload = this.auth.decodeToken(token) as { customerId?: string } | null;
-            this.customerName.set(payload?.customerId ? 'Usuario' : 'Mi cuenta');
-          }
-        });
+        this.api
+          .getCustomerMe(token)
+          .pipe(catchError(() => of(null)))
+          .subscribe(customer => {
+            if (customer?.name) this.customerName.set(customer.name);
+            else {
+              const payload = this.auth.decodeToken(token) as { customerId?: string } | null;
+              this.customerName.set(payload?.customerId ? 'Usuario' : 'Mi cuenta');
+            }
+          });
       }
     } else if (this.auth.isOwnerUnlocked()) {
       const token = this.auth.getOwnerToken();
       if (token) {
-        this.api.getOwnerMe(token).pipe(catchError(() => of(null))).subscribe(owner => {
-          if (owner?.name) this.ownerName.set(owner.name);
-          else this.ownerName.set('Negocio');
-        });
+        this.api
+          .getOwnerMe(token)
+          .pipe(catchError(() => of(null)))
+          .subscribe(owner => {
+            if (owner?.name) this.ownerName.set(owner.name);
+            else this.ownerName.set('Negocio');
+          });
       }
     } else {
       // Busca token de negocio (business-admin)
@@ -525,10 +546,13 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
           if (known) this.businessName.set(known.name);
           else {
             this.businessName.set('Negocio');
-            this.api.getBusinesses().pipe(catchError(() => of([]))).subscribe(list => {
-              const found = list.find(b => b.id === businessId);
-              if (found) this.businessName.set(found.name);
-            });
+            this.api
+              .getBusinesses()
+              .pipe(catchError(() => of([])))
+              .subscribe(list => {
+                const found = list.find(b => b.id === businessId);
+                if (found) this.businessName.set(found.name);
+              });
           }
         }
       } catch {
