@@ -378,10 +378,23 @@
 
 .dark .card {
   background-color: #1a222d;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(184, 191, 201, 0.12);
+  box-shadow:
+    0 10px 24px rgba(0, 0, 0, 0.36),
+    0 2px 6px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.035);
 }
 .dark .card-flat {
   background-color: #202a36;
+}
+
+.dark .shadow-card,
+.dark .shadow-soft,
+.dark .shadow-xl {
+  box-shadow:
+    0 12px 28px rgba(0, 0, 0, 0.38),
+    0 3px 8px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.035);
 }
 
 .dark .slot-chip {
