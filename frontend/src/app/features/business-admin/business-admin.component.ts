@@ -11,6 +11,7 @@ import { ToastService } from '../../core/services/toast.service';
 import { RealtimeService } from '../../core/services/realtime.service';
 import { BadgeComponent } from '../../shared/components/badge/badge.component';
 import { DEFAULT_CURRENCY, formatCurrency } from '../../core/config/currency';
+import { isAllowedCheckoutRedirect } from '../../core/config/checkout-url';
 import {
   BookingRecord,
   Customer,
@@ -1328,8 +1329,12 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
               ...current,
             ]);
           }
-          this.toast.success('Redirigiendo al pago seguro de Stripe');
-          if (checkoutData?.checkoutUrl) window.location.href = checkoutData.checkoutUrl;
+          if (checkoutData?.checkoutUrl && isAllowedCheckoutRedirect(checkoutData.checkoutUrl)) {
+            this.toast.success('Redirigiendo al pago seguro de Stripe');
+            window.location.href = checkoutData.checkoutUrl;
+          } else {
+            this.toast.error('La pasarela de pago no está disponible o no es segura. Inténtalo de nuevo.');
+          }
           this.checkouting.set(false);
         },
         error: err => {

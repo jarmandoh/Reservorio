@@ -63,7 +63,21 @@ type AuthMode = 'credentials' | 'otp';
 
       <div>
         <label class="form-label" for="email">Correo electrónico</label>
-        <input id="email" type="email" class="form-input w-full" formControlName="email" (input)="onEmailChange()" />
+        <input
+          id="email"
+          type="email"
+          class="form-input w-full"
+          formControlName="email"
+          autocomplete="email"
+          [attr.aria-invalid]="form.controls.email.invalid && form.controls.email.touched ? 'true' : null"
+          [attr.aria-describedby]="
+            form.controls.email.invalid && form.controls.email.touched ? 'email-error' : error() ? 'auth-error' : null
+          "
+          (input)="onEmailChange()"
+        />
+        @if (form.controls.email.invalid && form.controls.email.touched) {
+          <p id="email-error" class="mt-1 text-xs text-error">Introduce un correo electrónico válido.</p>
+        }
       </div>
 
       @if (mode() === 'credentials') {
@@ -75,7 +89,17 @@ type AuthMode = 'credentials' | 'otp';
             class="form-input w-full"
             formControlName="phone"
             placeholder="Ej. 600 123 456"
+            autocomplete="tel"
+            [attr.aria-invalid]="form.controls.phone.invalid && form.controls.phone.touched ? 'true' : null"
+            [attr.aria-describedby]="
+              form.controls.phone.invalid && form.controls.phone.touched ? 'phone-error' : error() ? 'auth-error' : null
+            "
           />
+          @if (form.controls.phone.invalid && form.controls.phone.touched) {
+            <p id="phone-error" class="mt-1 text-xs text-error">
+              Introduce un teléfono válido de al menos 7 caracteres.
+            </p>
+          }
           <p class="text-xs text-on-surface-variant mt-1">
             ¿No lo recuerdas?
             <button type="button" class="text-primary font-semibold underline" (click)="sendMagicLink()">
@@ -96,15 +120,28 @@ type AuthMode = 'credentials' | 'otp';
             inputmode="numeric"
             maxlength="8"
             placeholder="123456"
+            [attr.aria-invalid]="form.controls.code.invalid && form.controls.code.touched ? 'true' : null"
+            [attr.aria-describedby]="
+              form.controls.code.invalid && form.controls.code.touched ? 'code-error' : error() ? 'auth-error' : null
+            "
           />
         </div>
+        @if (form.controls.code.invalid && form.controls.code.touched) {
+          <p id="code-error" class="mt-1 text-xs text-error">Introduce el código de 4 a 8 dígitos.</p>
+        }
         @if (codeRequested()) {
           <p class="text-xs text-on-surface-variant mt-1">Te enviamos el código a tu correo electrónico.</p>
         }
       }
 
       @if (notice()) {
-        <p class="rounded-2xl bg-primary/10 border border-primary/30 text-sm text-primary mt-4 p-3">{{ notice() }}</p>
+        <p
+          class="rounded-2xl bg-primary/10 border border-primary/30 text-sm text-primary mt-4 p-3"
+          role="status"
+          aria-live="polite"
+        >
+          {{ notice() }}
+        </p>
       }
 
       <p class="text-center text-xs text-on-surface-variant mt-2">

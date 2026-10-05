@@ -158,6 +158,49 @@ function getTransferInstructions(bookingId) {
   };
 }
 
+function getCheckoutReturnUrls(payload, bookingId) {
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:4200';
+  let frontendOrigin;
+
+  try {
+    frontendOrigin = new URL(frontendUrl);
+  } catch {
+    return null;
+  }
+
+  if (!['http:', 'https:'].includes(frontendOrigin.protocol)) return null;
+  if (process.env.NODE_ENV === 'production' && frontendOrigin.protocol !== 'https:') return null;
+
+  const urls = [
+    [
+      payload.successUrl,
+      `/payment/success?bookingId=${encodeURIComponent(bookingId)}`,
+      '/payment/success',
+    ],
+    [
+      payload.cancelUrl,
+      `/payment/cancel?bookingId=${encodeURIComponent(bookingId)}`,
+      '/payment/cancel',
+    ],
+  ];
+
+  const validatedUrls = urls.map(([providedUrl, fallbackPath, expectedPath]) => {
+    let parsedUrl;
+    try {
+      parsedUrl = providedUrl ? new URL(String(providedUrl)) : new URL(fallbackPath, frontendOrigin);
+    } catch {
+      return null;
+    }
+
+    if (parsedUrl.origin !== frontendOrigin.origin || parsedUrl.pathname !== expectedPath) return null;
+    if (parsedUrl.username || parsedUrl.password || parsedUrl.hash) return null;
+    return parsedUrl.toString();
+  });
+
+  if (validatedUrls.some(url => url === null)) return null;
+  return { successUrl: validatedUrls[0], cancelUrl: validatedUrls[1] };
+}
+
 async function getPayment(id) {
   const cleanId = String(id ?? '').trim();
   if (!cleanId) {
@@ -238,6 +281,11 @@ async function createCheckoutSession(payload = {}) {
     return { ok: false, status: 400, message: 'method inválido' };
   }
 
+  const returnUrls = getCheckoutReturnUrls(payload, bookingId);
+  if (!returnUrls) {
+    return { ok: false, status: 400, message: 'successUrl o cancelUrl inválida' };
+  }
+
   const paymentRecord = await createPayment({
     bookingId,
     providerId,
@@ -281,14 +329,7 @@ async function createCheckoutSession(payload = {}) {
     };
   }
 
-  const successUrl = String(
-    payload.successUrl ||
-      `${process.env.FRONTEND_URL || 'http://localhost:4200'}/payment/success?bookingId=${encodeURIComponent(bookingId)}`
-  );
-  const cancelUrl = String(
-    payload.cancelUrl ||
-      `${process.env.FRONTEND_URL || 'http://localhost:4200'}/payment/cancel?bookingId=${encodeURIComponent(bookingId)}`
-  );
+  const { successUrl, cancelUrl } = returnUrls;
 
   const paymentMethodTypes = method === 'paypal' ? ['paypal'] : ['card'];
 

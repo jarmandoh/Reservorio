@@ -58,7 +58,7 @@ export class ApiService {
         this.offline.write(key, value);
         return value;
       }),
-      catchError(err => (cached !== null ? of(cached) : throwError(() => err)))
+      catchError(err => (!this.offline.online() && cached !== null ? of(cached) : throwError(() => err)))
     );
   }
 
@@ -201,14 +201,10 @@ export class ApiService {
   }
 
   getBusinessById(businessId: string, token: string): Observable<Business> {
-    const request$ = this.http
-      .get<ApiResponse<Business>>(`${this.base}/businesses/${businessId}`, this.authHeader(token))
-      .pipe(
-        map(r => r.data!),
-        catchError(this.handleError)
-      );
-
-    return this.cachedGet(`business:${businessId}`, request$);
+    return this.http.get<ApiResponse<Business>>(`${this.base}/businesses/${businessId}`, this.authHeader(token)).pipe(
+      map(r => r.data!),
+      catchError(this.handleError)
+    );
   }
 
   // ── Multi-business (admin) ────────────────────────────────────────────
@@ -267,14 +263,10 @@ export class ApiService {
   }
 
   getBusinessAvailability(negocioId: string): Observable<Reservation[]> {
-    const request$ = this.http
-      .get<ApiResponse<Reservation[]>>(`${this.base}/businesses/${negocioId}/availability`)
-      .pipe(
-        map(r => (r.data ?? []).map(row => ({ ...row, _rowIndex: Number(row.id) }))),
-        catchError(this.handleError)
-      );
-
-    return this.cachedGet(`availability:${negocioId}`, request$);
+    return this.http.get<ApiResponse<Reservation[]>>(`${this.base}/businesses/${negocioId}/availability`).pipe(
+      map(r => (r.data ?? []).map(row => ({ ...row, _rowIndex: Number(row.id) }))),
+      catchError(this.handleError)
+    );
   }
 
   createBusinessReservation(negocioId: string, payload: BookingPayload): Observable<ApiResponse> {

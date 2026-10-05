@@ -26,17 +26,5 @@
       }
     }
   ],
-  "dataGroups": [
-    {
-      "name": "api",
-      "urls": ["/api/**"],
-      "cacheConfig": {
-        "strategy": "freshness",
-        "maxSize": 100,
-        "maxAge": "1h",
-        "timeout": "3s"
-      }
-    }
-  ],
   "navigationUrls": ["/**", "!/api/**", "!/oauth/**", "!/payment/success", "!/payment/cancel"]
 }

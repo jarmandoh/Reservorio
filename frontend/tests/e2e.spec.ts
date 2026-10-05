@@ -117,6 +117,28 @@ test.beforeAll(async ({ request }) => {
 });
 
 test.describe('Reserva y administración', () => {
+  test('recupera la carga de servicios al reintentar después de un fallo de API', async ({ page }) => {
+    let attempts = 0;
+    await page.route(`**/api/businesses/${businessId}/services`, async route => {
+      attempts += 1;
+      if (attempts === 1) {
+        await route.fulfill({
+          status: 503,
+          contentType: 'application/json',
+          body: JSON.stringify({ ok: false, message: 'Fallo temporal' }),
+        });
+        return;
+      }
+      await route.continue();
+    });
+
+    await page.goto(`/booking/${businessId}`);
+    await expect(page.getByText('No se pudieron cargar los servicios')).toBeVisible();
+    await page.getByRole('button', { name: 'Reintentar' }).click();
+    await expect(page.getByText('No se pudieron cargar los servicios')).toHaveCount(0);
+    expect(attempts).toBeGreaterThan(1);
+  });
+
   test('flujo de reserva muestra validación y confirma reserva', async ({ page }) => {
     await loginCustomerOnPage(page, customerToken);
     await page.goto(`/booking/${businessId}`);

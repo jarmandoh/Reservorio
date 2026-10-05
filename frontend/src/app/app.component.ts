@@ -8,7 +8,7 @@ import { ToastService } from './core/services/toast.service';
 import { filter, interval, timer } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import gsap from 'gsap';
+import type gsap from 'gsap';
 
 // ── Presets de animación ──────────────────────────────────────────────────────
 const ENTER: gsap.TweenVars[] = [
@@ -46,9 +46,12 @@ function rand(len: number) {
   selector: 'app-root',
   imports: [RouterOutlet, ToastComponent],
   template: `
-    <div #pageHost>
-      <router-outlet />
-    </div>
+    <a class="skip-link" href="#main-content">Saltar al contenido principal</a>
+    <main #mainContent id="main-content" tabindex="-1">
+      <div #pageHost>
+        <router-outlet />
+      </div>
+    </main>
     <app-toast />
 
     <button
@@ -58,20 +61,23 @@ function rand(len: number) {
       [attr.aria-label]="themeService.isDark() ? 'Activar tema claro' : 'Activar tema oscuro'"
       (click)="themeService.toggle()"
     >
-      <span class="material-icons-round">{{ themeService.isDark() ? 'light_mode' : 'dark_mode' }}</span>
+      <span class="material-icons-round" aria-hidden="true">{{
+        themeService.isDark() ? 'light_mode' : 'dark_mode'
+      }}</span>
     </button>
 
     @if (!online()) {
       <div class="offline-banner" role="status" aria-live="polite">
         <span class="material-icons-round text-[1.1rem] flex-shrink-0">wifi_off</span>
         <span class="flex-1">Sin conexión. Los datos mostrados pueden estar desactualizados.</span>
-        <button type="button">Esperando conexión…</button>
+        <span>Esperando conexión…</span>
       </div>
     }
   `,
 })
 export class AppComponent implements OnInit {
   @ViewChild('pageHost', { static: true }) pageHost!: ElementRef<HTMLDivElement>;
+  @ViewChild('mainContent', { static: true }) mainContent!: ElementRef<HTMLElement>;
   private router = inject(Router);
   private offlineService = inject(OfflineService);
   private readonly auth = inject(AuthService);
@@ -80,6 +86,7 @@ export class AppComponent implements OnInit {
   protected readonly themeService = inject(ThemeService);
   protected readonly online = this.offlineService.online;
   private busy = false;
+  private hasCompletedInitialNavigation = false;
 
   ngOnInit() {
     // ── Cierre proactivo de sesión si el token es inválido o expirado ──────
@@ -96,6 +103,18 @@ export class AppComponent implements OnInit {
       .subscribe(() => {
         const purged = this.auth.purgeInvalidTokens();
         if (purged.length) this.checkProactiveSessionExpiry();
+      });
+
+    this.router.events
+      .pipe(
+        filter(e => e instanceof NavigationEnd),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(() => {
+        if (this.hasCompletedInitialNavigation) {
+          requestAnimationFrame(() => this.mainContent.nativeElement.focus());
+        }
+        this.hasCompletedInitialNavigation = true;
       });
 
     // Poll cada 60s para tokens que expiran mientras la app está abierta sin navegar
@@ -125,6 +144,10 @@ export class AppComponent implements OnInit {
     // Solo anima en dispositivos con capacidad hover (desktop) para no penalizar INP móvil
     if (!window.matchMedia('(hover: hover)').matches) return;
 
+    let gsapPromise: Promise<(typeof import('gsap'))['default']> | undefined;
+    const loadGsap = () => (gsapPromise ??= import('gsap').then(module => module.default));
+    let hasInitialNavigationCompleted = false;
+
     this.router.events
       .pipe(
         filter(e => e instanceof NavigationStart || e instanceof NavigationEnd),
@@ -133,26 +156,39 @@ export class AppComponent implements OnInit {
       .subscribe(event => {
         const el = this.pageHost.nativeElement;
 
-        if (event instanceof NavigationStart && !this.busy) {
+        if (event instanceof NavigationStart && hasInitialNavigationCompleted && !this.busy) {
           this.busy = true;
           const i = rand(EXIT.length);
-          gsap.killTweensOf(el);
-          gsap.to(el, EXIT[i]);
+          void loadGsap()
+            .then(gsap => {
+              if (!this.busy) return;
+              gsap.killTweensOf(el);
+              gsap.to(el, EXIT[i]);
+            })
+            .catch(error => console.error('No se pudo cargar la animación de navegación:', error));
         }
 
         if (event instanceof NavigationEnd) {
+          if (!hasInitialNavigationCompleted) {
+            hasInitialNavigationCompleted = true;
+            return;
+          }
           this.busy = false;
           const i = rand(ENTER.length);
-          gsap.killTweensOf(el);
-          gsap.set(el, ENTER[i]);
-          requestAnimationFrame(() =>
-            gsap.to(el, {
-              ...TO[i],
-              onComplete: () => {
-                gsap.set(el, { clearProps: 'all' });
-              },
+          void loadGsap()
+            .then(gsap => {
+              gsap.killTweensOf(el);
+              gsap.set(el, ENTER[i]);
+              requestAnimationFrame(() =>
+                gsap.to(el, {
+                  ...TO[i],
+                  onComplete: () => {
+                    gsap.set(el, { clearProps: 'all' });
+                  },
+                })
+              );
             })
-          );
+            .catch(error => console.error('No se pudo cargar la animación de navegación:', error));
         }
       });
   }

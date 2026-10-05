@@ -11,6 +11,7 @@ import { ToastService } from '../../core/services/toast.service';
 import { RealtimeService } from '../../core/services/realtime.service';
 import { AuthService } from '../../core/services/auth.service';
 import { DEFAULT_CURRENCY, formatCurrency } from '../../core/config/currency';
+import { isAllowedCheckoutRedirect } from '../../core/config/checkout-url';
 import { formatTime24 } from '../../core/config/time';
 import { Reservation, PaymentMethod, CheckoutInstructions } from '../../core/models/reservation.model';
 import { Business, Review, RatingStats } from '../../core/models/businesses.model';
@@ -255,7 +256,9 @@ interface ConfirmedBooking {
                             <div>
                               <p class="font-semibold">No se pudieron cargar los servicios</p>
                               <p class="mt-1 text-sm">{{ servicesError() }}</p>
-                              <button class="btn-secondary btn-sm mt-4" (click)="loadServices()">Reintentar</button>
+                              <button type="button" class="btn-secondary btn-sm mt-4" (click)="loadServices()">
+                                Reintentar
+                              </button>
                             </div>
                           </div>
                         </div>
@@ -385,7 +388,7 @@ interface ConfirmedBooking {
                             <p class="font-display font-semibold text-on-surface">{{ selectedService() }}</p>
                           </div>
                         </div>
-                        <button class="btn-tertiary btn-sm" (click)="goToStep(1)">Cambiar</button>
+                        <button type="button" class="btn-tertiary btn-sm" (click)="goToStep(1)">Cambiar</button>
                       </div>
 
                       @if (loading()) {
@@ -409,7 +412,9 @@ interface ConfirmedBooking {
                               <p class="font-semibold">No se pudo cargar la disponibilidad</p>
                               <p class="mt-1 text-sm">{{ error() }}</p>
                               <p class="mt-1 text-sm">Verifica que la hoja del negocio este publicada.</p>
-                              <button class="btn-secondary btn-sm mt-4" (click)="startPolling()">Reintentar</button>
+                              <button type="button" class="btn-secondary btn-sm mt-4" (click)="startPolling()">
+                                Reintentar
+                              </button>
                             </div>
                           </div>
                         </div>
@@ -556,7 +561,7 @@ interface ConfirmedBooking {
                                 {{ selectedService() }}
                               </p>
                             </div>
-                            <button class="btn-tertiary btn-sm" (click)="goToStep(1)">Editar</button>
+                            <button type="button" class="btn-tertiary btn-sm" (click)="goToStep(1)">Editar</button>
                           </div>
                         </div>
 
@@ -568,7 +573,7 @@ interface ConfirmedBooking {
                                 {{ formatTime24(selectedSlot()?.franja) }}
                               </p>
                             </div>
-                            <button class="btn-tertiary btn-sm" (click)="goToStep(2)">Editar</button>
+                            <button type="button" class="btn-tertiary btn-sm" (click)="goToStep(2)">Editar</button>
                           </div>
                         </div>
                       </div>
@@ -831,7 +836,13 @@ interface ConfirmedBooking {
                       }
 
                       <div class="flex flex-col gap-2 sm:flex-row sm:gap-3">
-                        <button class="btn-primary flex-1" [disabled]="paymentLoading()" (click)="startCheckout()">
+                        <button
+                          type="button"
+                          class="btn-primary flex-1"
+                          [disabled]="paymentLoading()"
+                          [attr.aria-busy]="paymentLoading()"
+                          (click)="startCheckout()"
+                        >
                           @if (paymentLoading()) {
                             <span class="material-icons-round animate-spin text-base">refresh</span>
                           } @else {
@@ -839,7 +850,7 @@ interface ConfirmedBooking {
                             <span class="material-icons-round text-base">payment</span>
                           }
                         </button>
-                        <button class="btn-secondary flex-1" (click)="resetFlow()">
+                        <button type="button" class="btn-secondary flex-1" (click)="resetFlow()">
                           <span class="material-icons-round text-base">add</span>
                           <span class="hidden sm:inline">Nueva reserva</span>
                         </button>
@@ -1547,7 +1558,7 @@ export class BookingComponent implements OnInit, OnDestroy {
         next: result => {
           this.paymentLoading.set(false);
           const data = result.data;
-          if (data?.checkoutUrl) {
+          if (data?.checkoutUrl && isAllowedCheckoutRedirect(data.checkoutUrl)) {
             window.location.href = data.checkoutUrl;
             return;
           }

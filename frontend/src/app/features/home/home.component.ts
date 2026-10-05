@@ -2,7 +2,6 @@ import {
   Component,
   OnInit,
   OnDestroy,
-  AfterViewInit,
   signal,
   computed,
   inject,
@@ -10,7 +9,6 @@ import {
   ChangeDetectionStrategy,
   HostListener,
   viewChild,
-  afterNextRender,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
@@ -21,7 +19,6 @@ import { catchError, of } from 'rxjs';
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
 import { Business } from '../../core/models/businesses.model';
-import gsap from 'gsap';
 
 // Fallback estático mientras no haya datos en la API
 const FALLBACK_BUSINESSES: Business[] = [
@@ -48,7 +45,7 @@ const CATEGORIES = ['Todos', 'Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci
 @Component({
   selector: 'app-home',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterLink],
   template: `
     <div class="min-h-screen bg-surface flex flex-col">
       <!-- ══ HERO ═══════════════════════════════════════════════════════ -->
@@ -87,8 +84,8 @@ const CATEGORIES = ['Todos', 'Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci
                     style="background:rgba(255,255,255,.15);backdrop-filter:blur(8px)"
                     (click)="toggleAccountMenu($event)"
                     [attr.aria-expanded]="showAccountMenu()"
-                    aria-haspopup="true"
                     aria-label="Mi cuenta"
+                    #accountMenuTrigger
                   >
                     <span class="material-icons-round text-base">account_circle</span>
                     <span class="hidden sm:inline">Mi cuenta</span>
@@ -99,7 +96,7 @@ const CATEGORIES = ['Todos', 'Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci
                   @if (showAccountMenu()) {
                     <div
                       #accountMenu
-                      class="absolute right-0 mt-2 w-60 rounded-2xl bg-white shadow-soft border border-outline-variant/30 py-1 z-20 overflow-hidden"
+                      class="account-menu absolute right-0 mt-2 w-60 rounded-2xl bg-white shadow-soft border border-outline-variant/30 py-1 z-20 overflow-hidden"
                     >
                       <button
                         type="button"
@@ -162,7 +159,9 @@ const CATEGORIES = ['Todos', 'Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci
                          text-primary text-[1.25rem] pointer-events-none"
                 >search</span
               >
+              <label class="sr-only" for="business-search">Busca por nombre, servicio o categoría</label>
               <input
+                id="business-search"
                 type="search"
                 class="w-full bg-white text-on-surface rounded-2xl pl-12 pr-5 py-4
                      text-base shadow-soft placeholder:text-outline focus:outline-none
@@ -178,7 +177,9 @@ const CATEGORIES = ['Todos', 'Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci
                          text-primary text-[1.25rem] pointer-events-none"
                 >place</span
               >
+              <label class="sr-only" for="business-location">Filtra por ciudad o zona</label>
               <input
+                id="business-location"
                 type="text"
                 class="w-full bg-white text-on-surface rounded-2xl pl-12 pr-5 py-4
                      text-base shadow-soft placeholder:text-outline focus:outline-none
@@ -210,7 +211,7 @@ const CATEGORIES = ['Todos', 'Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci
 
       <!-- ══ CATEGORY CHIPS ══════════════════════════════════════════ -->
       <div class="bg-surface-lowest border-b border-outline-variant/30 sticky top-0 z-10">
-        <div class="g-chips-inner max-w-4xl mx-auto px-4 py-3 flex gap-2 overflow-x-auto hide-scrollbar">
+        <div class="g-chips-inner max-w-4xl mx-auto px-4 py-3 flex gap-2 overflow-x-auto">
           @for (cat of categories; track cat) {
             <button
               class="whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-all flex-shrink-0"
@@ -218,6 +219,7 @@ const CATEGORIES = ['Todos', 'Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci
               [style.color]="selectedCategory === cat ? '#fff' : ''"
               [class.bg-surface-low]="selectedCategory !== cat"
               [class.text-on-surface]="selectedCategory !== cat"
+              [attr.aria-pressed]="selectedCategory === cat"
               (click)="selectCategory(cat)"
             >
               {{ cat }}
@@ -227,7 +229,7 @@ const CATEGORIES = ['Todos', 'Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci
       </div>
 
       <!-- ══ CONTENT ══════════════════════════════════════════════════ -->
-      <main class="flex-1 max-w-4xl mx-auto w-full px-4 py-6 flex flex-col gap-6">
+      <div class="flex-1 max-w-4xl mx-auto w-full px-4 py-6 flex flex-col gap-6">
         <!-- Section header -->
         <div class="flex items-center justify-between">
           <div>
@@ -282,15 +284,11 @@ const CATEGORIES = ['Todos', 'Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci
         @if (!loading()) {
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             @for (negocio of displayedBusinesses(); track negocio.id) {
-              <div
-                role="button"
-                tabindex="0"
+              <a
+                [routerLink]="['/booking', negocio.id]"
                 class="g-card text-left bg-surface-lowest rounded-2xl shadow-card overflow-hidden
                      transition-all hover:-translate-y-0.5 hover:shadow-soft active:scale-[.98]
                      focus:outline-none focus:ring-2 focus:ring-primary/30 cursor-pointer"
-                (click)="goToBooking(negocio)"
-                (keydown.enter)="goToBooking(negocio)"
-                (keydown.space)="goToBooking(negocio)"
               >
                 <!-- Card header gradient -->
                 <div class="relative h-28 flex items-end p-5" [style.background]="negocio.gradient">
@@ -377,14 +375,14 @@ const CATEGORIES = ['Todos', 'Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci
                     </div>
                   </div>
                 </div>
-              </div>
+              </a>
             }
           </div>
         }
 
         <!-- Bottom padding for mobile -->
         <div class="h-4"></div>
-      </main>
+      </div>
 
       <!-- ══ FOOTER ══════════════════════════════════════════════════ -->
       <footer class="bg-surface-lowest border-t border-outline-variant/30 py-6 px-6 text-center">
@@ -398,40 +396,46 @@ const CATEGORIES = ['Todos', 'Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci
   `,
   styles: [
     `
-      .hide-scrollbar::-webkit-scrollbar {
-        display: none;
-      }
-      .hide-scrollbar {
-        -ms-overflow-style: none;
-        scrollbar-width: none;
-      }
       .line-clamp-2 {
         display: -webkit-box;
         -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
         overflow: hidden;
       }
+
+      .account-menu {
+        animation: account-menu-enter 160ms ease-out both;
+      }
+
+      @keyframes account-menu-enter {
+        from {
+          opacity: 0;
+          transform: translateY(-0.5rem) scale(0.98);
+          transform-origin: top right;
+        }
+
+        to {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
     `,
   ],
 })
-export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
+export class HomeComponent implements OnInit, OnDestroy {
   private api = inject(ApiService);
   private router = inject(Router);
   private auth = inject(AuthService);
   private sub?: Subscription;
-  private elRef = inject(ElementRef);
   private title = inject(Title);
   private meta = inject(Meta);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private gsapCtx?: any;
 
   /** Intervalo de refresco en ms (30 seg) */
   private readonly POLL_MS = 30_000;
 
   // ── Cuenta: dropdown y nombre cuando está logueado ────────────────────
   readonly showAccountMenu = signal(false);
-  private readonly accountMenuRef = viewChild<ElementRef<HTMLElement>>('accountMenu');
-  private accountMenuTween?: gsap.core.Tween;
+  private readonly accountMenuTriggerRef = viewChild<ElementRef<HTMLButtonElement>>('accountMenuTrigger');
   readonly customerName = signal<string | null>(null);
   readonly ownerName = signal<string | null>(null);
   readonly businessName = signal<string | null>(null);
@@ -495,6 +499,13 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
     if (!target.closest('.relative')) {
       this.closeAccountMenu();
     }
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    if (!this.showAccountMenu()) return;
+    this.closeAccountMenu();
+    this.accountMenuTriggerRef()?.nativeElement.focus();
   }
 
   private loadAccountName(): void {
@@ -594,37 +605,11 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
             // ignore
           }
         }
-        setTimeout(() => this.animateCards(), 50);
       });
   }
 
   ngOnDestroy(): void {
     this.sub?.unsubscribe();
-    this.accountMenuTween?.kill();
-    this.gsapCtx?.revert();
-  }
-
-  ngAfterViewInit(): void {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const root = this.elRef.nativeElement as HTMLElement;
-    this.gsapCtx = gsap.context(() => {
-      const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
-      tl.fromTo('.g-nav-logo', { x: -20, opacity: 0 }, { x: 0, opacity: 1, duration: 0.5 })
-        .fromTo('.g-nav-btn', { x: 20, opacity: 0 }, { x: 0, opacity: 1, duration: 0.5 }, '<')
-        .fromTo('.g-title', { y: 48, opacity: 0 }, { y: 0, opacity: 1, duration: 0.65 }, '-=0.2')
-        .fromTo('.g-sub', { y: 24, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5 }, '-=0.35')
-        .fromTo('.g-search', { y: 20, scale: 0.97, opacity: 0 }, { y: 0, scale: 1, opacity: 1, duration: 0.5 }, '-=0.3')
-        .fromTo('.g-stat', { y: 12, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, stagger: 0.08 }, '-=0.2')
-        .fromTo('.g-chips-inner', { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.4 }, '-=0.1');
-    }, root);
-  }
-
-  private animateCards(): void {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const root = this.elRef.nativeElement as HTMLElement;
-    const cards = root.querySelectorAll('.g-card');
-    if (!cards.length) return;
-    gsap.fromTo(cards, { y: 50, opacity: 0 }, { y: 0, opacity: 1, duration: 0.55, stagger: 0.12, ease: 'power3.out' });
   }
 
   onSearch(): void {
@@ -659,51 +644,11 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
 
   private openAccountMenu(): void {
     this.showAccountMenu.set(true);
-    if (this.prefersReducedMotion()) return;
-    afterNextRender(() => {
-      const el = this.accountMenuRef()?.nativeElement;
-      if (!el) return;
-      this.accountMenuTween?.kill();
-      this.accountMenuTween = gsap.fromTo(
-        el,
-        { opacity: 0, y: -8, scale: 0.96, transformOrigin: 'top right' },
-        { opacity: 1, y: 0, scale: 1, duration: 0.24, ease: 'power2.out', clearProps: 'all' }
-      );
-      const items = el.querySelectorAll('button');
-      if (items.length) {
-        gsap.fromTo(
-          items,
-          { opacity: 0, y: 6 },
-          { opacity: 1, y: 0, duration: 0.2, stagger: 0.04, ease: 'power2.out', clearProps: 'all' }
-        );
-      }
-    });
   }
 
   closeAccountMenu(): void {
     if (!this.showAccountMenu()) return;
-    if (this.prefersReducedMotion()) {
-      this.showAccountMenu.set(false);
-      return;
-    }
-    const el = this.accountMenuRef()?.nativeElement;
-    if (!el) {
-      this.showAccountMenu.set(false);
-      return;
-    }
-    this.accountMenuTween?.kill();
-    this.accountMenuTween = gsap.to(el, {
-      opacity: 0,
-      y: -8,
-      scale: 0.96,
-      duration: 0.16,
-      ease: 'power2.in',
-      onComplete: () => this.showAccountMenu.set(false),
-    });
-  }
-
-  private prefersReducedMotion(): boolean {
-    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    this.showAccountMenu.set(false);
   }
 
   goCustomerLogin(): void {

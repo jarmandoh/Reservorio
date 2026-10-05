@@ -68,7 +68,7 @@ module.exports = {
           variant: '#414754',
         },
         outline: {
-          DEFAULT: '#727785',
+          DEFAULT: '#686e7c',
           variant: '#c1c6d6',
         },
         error: {

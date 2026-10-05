@@ -15,6 +15,8 @@ const paymentsRoutes = require('../src/routes/payments.routes');
 const notificationsService = require('../src/services/notifications.service');
 
 const ORIGINAL_DB_URL = process.env.DATABASE_URL;
+const ORIGINAL_FRONTEND_URL = process.env.FRONTEND_URL;
+const ORIGINAL_NODE_ENV = process.env.NODE_ENV;
 
 function buildApp() {
   const app = express();
@@ -37,6 +39,12 @@ const insertedPayment = {
 describe('payments — más canales y confirmación manual', () => {
   beforeEach(() => {
     process.env.DATABASE_URL = 'postgres://test';
+    process.env.FRONTEND_URL = 'http://localhost:4200';
+    if (ORIGINAL_NODE_ENV === undefined) {
+      delete process.env.NODE_ENV;
+    } else {
+      process.env.NODE_ENV = ORIGINAL_NODE_ENV;
+    }
     db.query.mockReset();
     notificationsService.createNotification.mockClear();
   });
@@ -46,6 +54,16 @@ describe('payments — más canales y confirmación manual', () => {
       delete process.env.DATABASE_URL;
     } else {
       process.env.DATABASE_URL = ORIGINAL_DB_URL;
+    }
+    if (ORIGINAL_FRONTEND_URL === undefined) {
+      delete process.env.FRONTEND_URL;
+    } else {
+      process.env.FRONTEND_URL = ORIGINAL_FRONTEND_URL;
+    }
+    if (ORIGINAL_NODE_ENV === undefined) {
+      delete process.env.NODE_ENV;
+    } else {
+      process.env.NODE_ENV = ORIGINAL_NODE_ENV;
     }
   });
 
@@ -100,6 +118,92 @@ describe('payments — más canales y confirmación manual', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.data.checkoutUrl).toContain('dev=1');
+  });
+
+  test('POST /checkout acepta URLs de retorno del frontend configurado', async () => {
+    db.query.mockResolvedValueOnce({ rows: [insertedPayment] });
+
+    const res = await request(buildApp()).post('/api/payments/checkout').send({
+      bookingId: 'b1',
+      providerId: 'neg1',
+      customerId: 'c1',
+      amount: 30,
+      currency: 'EUR',
+      method: 'card',
+      successUrl: 'http://localhost:4200/payment/success?bookingId=b1',
+      cancelUrl: 'http://localhost:4200/payment/cancel?bookingId=b1',
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.checkoutUrl).toContain('http://localhost:4200/payment/success');
+    expect(db.query).toHaveBeenCalledTimes(1);
+  });
+
+  test('POST /checkout rechaza URLs de retorno fuera del origen de frontend', async () => {
+    const res = await request(buildApp()).post('/api/payments/checkout').send({
+      bookingId: 'b1',
+      providerId: 'neg1',
+      customerId: 'c1',
+      amount: 30,
+      currency: 'EUR',
+      method: 'card',
+      successUrl: 'https://evil.example/payment/success?bookingId=b1',
+      cancelUrl: 'http://localhost:4200/payment/cancel?bookingId=b1',
+    });
+
+    expect(res.status).toBe(400);
+    expect(res.body.message).toBe('successUrl o cancelUrl inválida');
+    expect(db.query).not.toHaveBeenCalled();
+  });
+
+  test('POST /checkout rechaza rutas de retorno no correspondientes al pago', async () => {
+    const res = await request(buildApp()).post('/api/payments/checkout').send({
+      bookingId: 'b1',
+      providerId: 'neg1',
+      customerId: 'c1',
+      amount: 30,
+      currency: 'EUR',
+      method: 'card',
+      successUrl: 'http://localhost:4200/customer/history',
+      cancelUrl: 'http://localhost:4200/payment/cancel?bookingId=b1',
+    });
+
+    expect(res.status).toBe(400);
+    expect(db.query).not.toHaveBeenCalled();
+  });
+
+  test('POST /checkout exige origen HTTPS y URLs HTTPS en producción', async () => {
+    process.env.NODE_ENV = 'production';
+    process.env.FRONTEND_URL = 'https://reservorio.example';
+    db.query.mockResolvedValueOnce({ rows: [insertedPayment] });
+
+    const validResponse = await request(buildApp()).post('/api/payments/checkout').send({
+      bookingId: 'b1',
+      providerId: 'neg1',
+      customerId: 'c1',
+      amount: 30,
+      currency: 'EUR',
+      method: 'card',
+      successUrl: 'https://reservorio.example/payment/success?bookingId=b1',
+      cancelUrl: 'https://reservorio.example/payment/cancel?bookingId=b1',
+    });
+
+    expect(validResponse.status).toBe(200);
+
+    db.query.mockReset();
+    const invalidResponse = await request(buildApp()).post('/api/payments/checkout').send({
+      bookingId: 'b1',
+      providerId: 'neg1',
+      customerId: 'c1',
+      amount: 30,
+      currency: 'EUR',
+      method: 'card',
+      successUrl: 'http://reservorio.example/payment/success?bookingId=b1',
+      cancelUrl: 'https://reservorio.example/payment/cancel?bookingId=b1',
+    });
+
+    expect(invalidResponse.status).toBe(400);
+    expect(db.query).not.toHaveBeenCalled();
   });
 
   test('PATCH /:id requiere token', async () => {

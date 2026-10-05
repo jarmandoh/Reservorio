@@ -2,6 +2,7 @@ import { Injectable, signal } from '@angular/core';
 
 const CACHE_KEY_PREFIX = 'reservorio_offline_v1:';
 const MAX_ENTRIES = 80;
+const MAX_ENTRY_AGE_MS = 60 * 60 * 1000;
 
 function isBrowser(): boolean {
   return typeof window !== 'undefined' && typeof localStorage !== 'undefined';
@@ -42,6 +43,10 @@ export class OfflineService {
       const raw = localStorage.getItem(this.keyFor(key));
       if (!raw) return null;
       const entry = JSON.parse(raw) as { data: T; savedAt: number };
+      if (typeof entry.savedAt !== 'number' || Date.now() - entry.savedAt > MAX_ENTRY_AGE_MS) {
+        localStorage.removeItem(this.keyFor(key));
+        return null;
+      }
       this.prune();
       return entry.data;
     } catch (_error) {

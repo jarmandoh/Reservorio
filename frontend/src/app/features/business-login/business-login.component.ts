@@ -59,7 +59,20 @@ import { PinAuthCardComponent } from '../../shared/components/pin-auth-card/pin-
             formControlName="pin"
             placeholder="••••"
             autocomplete="current-password"
+            [attr.aria-invalid]="
+              (form.controls.pin.touched && form.controls.pin.invalid) || loginError() ? 'true' : null
+            "
+            [attr.aria-describedby]="
+              form.controls.pin.touched && form.controls.pin.invalid
+                ? 'business-pin-error'
+                : loginError()
+                  ? 'pin-auth-error'
+                  : null
+            "
           />
+          @if (form.controls.pin.touched && form.controls.pin.invalid) {
+            <p id="business-pin-error" class="mt-1 text-xs text-error">Introduce un PIN de al menos 4 dígitos.</p>
+          }
         </div>
       }
     </app-pin-auth-card>

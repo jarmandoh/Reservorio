@@ -14,8 +14,11 @@ import { FormGroup, ReactiveFormsModule } from '@angular/forms';
         @if (errorMessage) {
           <div
             class="flex gap-3 p-4 rounded-xl text-sm bg-error-container text-error-on-container border border-error/40"
+            id="pin-auth-error"
+            role="alert"
+            aria-live="assertive"
           >
-            <span class="material-icons-round text-base mt-0.5">error_outline</span>
+            <span class="material-icons-round text-base mt-0.5" aria-hidden="true">error_outline</span>
             <p>{{ errorMessage }}</p>
           </div>
         }
@@ -23,9 +26,14 @@ import { FormGroup, ReactiveFormsModule } from '@angular/forms';
         <form [formGroup]="formGroup" (ngSubmit)="submit.emit()" class="card flex flex-col gap-4">
           <ng-content></ng-content>
 
-          <button type="submit" class="btn-primary w-full" [disabled]="isSubmitDisabled || loading">
+          <button
+            type="submit"
+            class="btn-primary w-full"
+            [disabled]="isSubmitDisabled || loading"
+            [attr.aria-busy]="loading"
+          >
             @if (loading) {
-              <span class="material-icons-round text-base animate-spin">refresh</span>
+              <span class="material-icons-round text-base animate-spin" aria-hidden="true">refresh</span>
               {{ loadingLabel }}
             } @else {
               {{ submitLabel }}

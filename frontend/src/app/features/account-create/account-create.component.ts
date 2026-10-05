@@ -44,26 +44,28 @@ type AccountType = 'usuario' | 'negocio';
           class="flex flex-col items-center gap-1 rounded-2xl border-2 px-3 py-4 transition"
           [class.border-primary]="accountType() === 'usuario'"
           [class.bg-primary-container]="accountType() === 'usuario'"
-          [class.text-primary]="accountType() === 'usuario'"
+          [class.text-white]="accountType() === 'usuario'"
           [class.border-outline-variant]="accountType() !== 'usuario'"
+          [attr.aria-pressed]="accountType() === 'usuario'"
           (click)="setType('usuario')"
         >
           <span class="material-icons-round text-2xl">person</span>
           <span class="text-sm font-bold">Usuario</span>
-          <span class="text-xs opacity-70">Reservar citas</span>
+          <span class="text-xs">Reservar citas</span>
         </button>
         <button
           type="button"
           class="flex flex-col items-center gap-1 rounded-2xl border-2 px-3 py-4 transition"
           [class.border-primary]="accountType() === 'negocio'"
           [class.bg-primary-container]="accountType() === 'negocio'"
-          [class.text-primary]="accountType() === 'negocio'"
+          [class.text-white]="accountType() === 'negocio'"
           [class.border-outline-variant]="accountType() !== 'negocio'"
+          [attr.aria-pressed]="accountType() === 'negocio'"
           (click)="setType('negocio')"
         >
           <span class="material-icons-round text-2xl">store</span>
           <span class="text-sm font-bold">Negocio</span>
-          <span class="text-xs opacity-70">Gestionar reservas</span>
+          <span class="text-xs">Gestionar reservas</span>
         </button>
       </div>
 
@@ -77,26 +79,53 @@ type AccountType = 'usuario' | 'negocio';
 
       <div>
         <label class="form-label" for="name">Nombre completo</label>
-        <input id="name" type="text" class="form-input w-full" formControlName="name" placeholder="Ana García" autocomplete="name" />
+        <input
+          id="name"
+          type="text"
+          class="form-input w-full"
+          formControlName="name"
+          placeholder="Ana García"
+          autocomplete="name"
+          [attr.aria-invalid]="form.controls.name.touched && form.controls.name.invalid ? 'true' : null"
+          [attr.aria-describedby]="form.controls.name.touched && form.controls.name.invalid ? 'name-error' : null"
+        />
         @if (form.controls.name.touched && form.controls.name.invalid) {
-          <p class="text-xs text-error mt-1">Mínimo 2 caracteres</p>
+          <p id="name-error" class="text-xs text-error mt-1">Mínimo 2 caracteres</p>
         }
       </div>
 
       <div>
         <label class="form-label" for="email">Correo electrónico</label>
-        <input id="email" type="email" class="form-input w-full" formControlName="email" placeholder="ana@ejemplo.com" autocomplete="email" />
+        <input
+          id="email"
+          type="email"
+          class="form-input w-full"
+          formControlName="email"
+          placeholder="ana@ejemplo.com"
+          autocomplete="email"
+          [attr.aria-invalid]="form.controls.email.touched && form.controls.email.invalid ? 'true' : null"
+          [attr.aria-describedby]="form.controls.email.touched && form.controls.email.invalid ? 'email-error' : null"
+        />
         @if (form.controls.email.touched && form.controls.email.invalid) {
-          <p class="text-xs text-error mt-1">Correo inválido</p>
+          <p id="email-error" class="text-xs text-error mt-1">Correo inválido</p>
         }
       </div>
 
       @if (accountType() === 'usuario') {
         <div>
           <label class="form-label" for="phone">Teléfono</label>
-          <input id="phone" type="tel" class="form-input w-full" formControlName="phone" placeholder="600 123 456" autocomplete="tel" />
+          <input
+            id="phone"
+            type="tel"
+            class="form-input w-full"
+            formControlName="phone"
+            placeholder="600 123 456"
+            autocomplete="tel"
+            [attr.aria-invalid]="form.controls.phone.touched && form.controls.phone.invalid ? 'true' : null"
+            [attr.aria-describedby]="form.controls.phone.touched && form.controls.phone.invalid ? 'phone-error' : null"
+          />
           @if (form.controls.phone.touched && form.controls.phone.invalid) {
-            <p class="text-xs text-error mt-1">Mínimo 7 dígitos</p>
+            <p id="phone-error" class="text-xs text-error mt-1">Mínimo 7 dígitos</p>
           }
         </div>
       }
@@ -104,16 +133,42 @@ type AccountType = 'usuario' | 'negocio';
       @if (accountType() === 'negocio') {
         <div>
           <label class="form-label" for="password">Contraseña</label>
-          <input id="password" type="password" class="form-input w-full" formControlName="password" placeholder="Mínimo 6 caracteres" autocomplete="new-password" />
+          <input
+            id="password"
+            type="password"
+            class="form-input w-full"
+            formControlName="password"
+            placeholder="Mínimo 6 caracteres"
+            autocomplete="new-password"
+            [attr.aria-invalid]="form.controls.password.touched && form.controls.password.invalid ? 'true' : null"
+            [attr.aria-describedby]="
+              form.controls.password.touched && form.controls.password.invalid ? 'password-error' : null
+            "
+          />
           @if (form.controls.password.touched && form.controls.password.invalid) {
-            <p class="text-xs text-error mt-1">Mínimo 6 caracteres</p>
+            <p id="password-error" class="text-xs text-error mt-1">Mínimo 6 caracteres</p>
           }
         </div>
         <div>
           <label class="form-label" for="confirmPassword">Confirmar contraseña</label>
-          <input id="confirmPassword" type="password" class="form-input w-full" formControlName="confirmPassword" placeholder="Repite tu contraseña" autocomplete="new-password" />
+          <input
+            id="confirmPassword"
+            type="password"
+            class="form-input w-full"
+            formControlName="confirmPassword"
+            placeholder="Repite tu contraseña"
+            autocomplete="new-password"
+            [attr.aria-invalid]="
+              form.controls.confirmPassword.touched && form.hasError('passwordMismatch') ? 'true' : null
+            "
+            [attr.aria-describedby]="
+              form.controls.confirmPassword.touched && form.hasError('passwordMismatch')
+                ? 'confirm-password-error'
+                : null
+            "
+          />
           @if (form.hasError('passwordMismatch') && form.controls.confirmPassword.touched) {
-            <p class="text-xs text-error mt-1">Las contraseñas no coinciden</p>
+            <p id="confirm-password-error" class="text-xs text-error mt-1">Las contraseñas no coinciden</p>
           }
         </div>
       }
@@ -158,7 +213,9 @@ export class AccountCreateComponent {
     { validators: this.passwordMatchValidator }
   );
 
-  submitLabel = computed(() => (this.accountType() === 'usuario' ? 'Crear cuenta de usuario' : 'Crear cuenta de negocio'));
+  submitLabel = computed(() =>
+    this.accountType() === 'usuario' ? 'Crear cuenta de usuario' : 'Crear cuenta de negocio'
+  );
 
   constructor() {
     this.setType('usuario');
@@ -275,7 +332,9 @@ export class AccountCreateComponent {
           },
           error: err => {
             this.loading.set(false);
-            this.error.set(err instanceof Error ? err.message : 'No se pudo crear la cuenta de negocio (¿email ya registrado?).');
+            this.error.set(
+              err instanceof Error ? err.message : 'No se pudo crear la cuenta de negocio (¿email ya registrado?).'
+            );
           },
         });
     }

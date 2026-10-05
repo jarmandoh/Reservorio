@@ -127,7 +127,6 @@ jobs:
       - name: Unit tests with coverage
         working-directory: frontend
         run: npx ng test --watch=false --coverage
-        continue-on-error: true
 
       - name: Upload frontend coverage
         if: always()
@@ -210,7 +209,7 @@ jobs:
 
       - name: Install Playwright browsers
         working-directory: frontend
-        run: pnpm exec playwright install --with-deps chromium
+        run: pnpm exec playwright install --with-deps chromium webkit
 
       - name: Run E2E tests
         working-directory: frontend

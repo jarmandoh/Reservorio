@@ -33,8 +33,9 @@ import { PinAuthCardComponent } from '../../shared/components/pin-auth-card/pin-
       </div>
 
       <div>
-        <label class="form-label text-center block mb-3">PIN de acceso</label>
+        <label class="form-label text-center block mb-3" for="admin-pin">PIN de acceso</label>
         <input
+          id="admin-pin"
           type="password"
           class="form-input text-center tracking-[0.5em] text-xl font-display"
           inputmode="numeric"
@@ -42,10 +43,13 @@ import { PinAuthCardComponent } from '../../shared/components/pin-auth-card/pin-
           formControlName="pin"
           placeholder="••••"
           autocomplete="current-password"
-          autofocus
+          [attr.aria-invalid]="fieldInvalid('pin') || loginError() ? 'true' : null"
+          [attr.aria-describedby]="fieldInvalid('pin') ? 'admin-pin-error' : loginError() ? 'pin-auth-error' : null"
         />
         @if (fieldInvalid('pin')) {
-          <p class="text-xs text-error text-center mt-2">Ingresa tu PIN (mínimo 4 dígitos)</p>
+          <p id="admin-pin-error" class="text-xs text-error text-center mt-2" role="alert">
+            Ingresa tu PIN (mínimo 4 dígitos)
+          </p>
         }
       </div>
     </app-pin-auth-card>

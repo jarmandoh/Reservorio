@@ -20,14 +20,24 @@ import { FormGroup, ReactiveFormsModule } from '@angular/forms';
           <ng-content></ng-content>
 
           @if (errorMessage) {
-            <div class="rounded-2xl border border-error/30 bg-error-container p-3 text-sm text-error">
+            <div
+              class="rounded-2xl border border-error/30 bg-error-container p-3 text-sm text-error"
+              id="auth-error"
+              role="alert"
+              aria-live="assertive"
+            >
               {{ errorMessage }}
             </div>
           }
 
-          <button type="submit" class="btn-primary w-full" [disabled]="isSubmitDisabled || loading">
+          <button
+            type="submit"
+            class="btn-primary w-full"
+            [disabled]="isSubmitDisabled || loading"
+            [attr.aria-busy]="loading"
+          >
             @if (loading) {
-              <span class="material-icons-round text-base animate-spin">refresh</span>
+              <span class="material-icons-round text-base animate-spin" aria-hidden="true">refresh</span>
               {{ loadingLabel }}
             } @else {
               {{ submitLabel }}

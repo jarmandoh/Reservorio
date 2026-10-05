@@ -10,22 +10,17 @@
   }
   body {
     background: linear-gradient(180deg, #f7f9ff 0%, #eef5ff 100%);
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-family:
+      'Inter',
+      system-ui,
+      -apple-system,
+      sans-serif;
     color: #181c20;
     overflow-x: hidden;
     -webkit-tap-highlight-color: transparent;
     -webkit-font-smoothing: antialiased;
     /* content-visibility auto para secciones bajo el pliegue (reduce CLS + LCP) */
     text-rendering: optimizeLegibility;
-  }
-
-  /* Ocultar scrollbar manteniendo scroll funcional */
-  * {
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE / Edge legacy */
-  }
-  *::-webkit-scrollbar {
-    display: none; /* Chrome / Safari / Opera */
   }
 
   /* Tap targets cómodos en móvil */
@@ -42,6 +37,24 @@
 
 /* ── Component layer ─────────────────────────────────────────────────────── */
 @layer components {
+  .skip-link {
+    position: fixed;
+    top: 0.5rem;
+    left: 0.5rem;
+    z-index: 100;
+    transform: translateY(calc(-100% - 1rem));
+    border-radius: 0.5rem;
+    background: #ffffff;
+    padding: 0.75rem 1rem;
+    color: #003b7a;
+    font-weight: 700;
+    box-shadow: 0 2px 12px rgb(0 0 0 / 25%);
+  }
+
+  .skip-link:focus {
+    transform: translateY(0);
+  }
+
   .btn-primary {
     @apply flex items-center justify-center gap-2 w-full px-6 py-3.5 rounded-lg font-semibold text-white transition
            disabled:opacity-40 disabled:cursor-not-allowed;
@@ -257,6 +270,26 @@
 .dark body {
   background: linear-gradient(180deg, #0e141b 0%, #151c26 100%);
   color: #e6e9ee;
+}
+
+:focus-visible {
+  outline: 3px solid #ffbf00 !important;
+  outline-offset: 3px;
+}
+
+#main-content:focus {
+  outline: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 /* Utilidades de superficie */
