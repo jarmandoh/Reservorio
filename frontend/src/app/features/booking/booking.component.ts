@@ -972,7 +972,7 @@ export class BookingComponent implements OnInit, OnDestroy {
   private readonly destroyRef = inject(DestroyRef);
 
   readonly business = signal<Business | null>(null);
-  private businessId = '';
+  businessId = '';
 
   readonly step = signal<Step>(1);
   readonly loading = signal(false);
