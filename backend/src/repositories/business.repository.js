@@ -22,7 +22,7 @@ function buildBusinessWhereClauses(filters = {}) {
   if (search) {
     values.push(`%${clean(search)}%`);
     clauses.push(
-      `(name ILIKE $${values.length} OR description ILIKE $${values.length} OR location ILIKE $${values.length} OR category ILIKE $${values.length} OR tags ILIKE $${values.length})`
+      `(name ILIKE $${values.length} OR description ILIKE $${values.length} OR location ILIKE $${values.length} OR category ILIKE $${values.length} OR profession ILIKE $${values.length} OR tags ILIKE $${values.length})`
     );
   }
 
@@ -82,6 +82,8 @@ async function createBusiness(payload, ownerId = null) {
     id,
     name,
     category,
+    businessType,
+    profession,
     description,
     location,
     rating,
@@ -102,15 +104,17 @@ async function createBusiness(payload, ownerId = null) {
 
   const result = await db.query(
     `INSERT INTO businesses
-       (id, name, category, description, location, rating, reviews,
+       (id, name, category, business_type, profession, description, location, rating, reviews,
         tags, gradient, icon, schedule, logo, phone,
         facebook, instagram, tiktok, whatsapp, linkedin,
         active, pin_hash)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)`,
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)`,
     [
       id,
       clean(name),
       clean(category),
+      businessType ?? 'appointment',
+      profession ? clean(profession, 100) : null,
       clean(description ?? ''),
       clean(location ?? ''),
       Number(rating ?? 5.0),

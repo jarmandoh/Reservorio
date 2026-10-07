@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, Output } from '@angular/core';
-import { FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { Component, DestroyRef, EventEmitter, Input, OnInit, Output, inject } from '@angular/core';
+import { FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-business-form',
@@ -17,6 +18,34 @@ import { FormGroup, ReactiveFormsModule } from '@angular/forms';
           <label class="form-label">Categoría</label>
           <input class="form-input w-full" formControlName="category" />
         </div>
+      </div>
+
+      <div class="grid sm:grid-cols-2 gap-4">
+        <div>
+          <label class="form-label" for="business-type">Tipo de negocio</label>
+          <select
+            id="business-type"
+            class="form-input w-full"
+            formControlName="businessType"
+            (change)="updateProfessionValidators()"
+          >
+            <option value="appointment">Negocio con agenda</option>
+            <option value="onsite_service">Prestador de servicio presencial</option>
+          </select>
+        </div>
+        @if (formGroup.get('businessType')?.value === 'onsite_service') {
+          <div>
+            <label class="form-label" for="business-profession">Profesión</label>
+            <input
+              id="business-profession"
+              class="form-input w-full"
+              formControlName="profession"
+              placeholder="Ej. electricista, ebanista, cerrajero"
+              required
+              maxlength="100"
+            />
+          </div>
+        }
       </div>
 
       <div>
@@ -92,7 +121,9 @@ import { FormGroup, ReactiveFormsModule } from '@angular/forms';
     </form>
   `,
 })
-export class BusinessFormComponent {
+export class BusinessFormComponent implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
+
   @Input() formGroup!: FormGroup;
   @Input() submitLabel = 'Guardar negocio';
   @Input() saving = false;
@@ -100,4 +131,24 @@ export class BusinessFormComponent {
 
   @Output() submit = new EventEmitter<void>();
   @Output() cancel = new EventEmitter<void>();
+
+  ngOnInit(): void {
+    this.formGroup
+      .get('businessType')
+      ?.valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.updateProfessionValidators());
+    this.updateProfessionValidators();
+  }
+
+  updateProfessionValidators(): void {
+    const profession = this.formGroup.get('profession');
+    if (!profession) return;
+
+    if (this.formGroup.get('businessType')?.value === 'onsite_service') {
+      profession.setValidators([Validators.required, Validators.maxLength(100)]);
+    } else {
+      profession.clearValidators();
+    }
+    profession.updateValueAndValidity({ emitEvent: false });
+  }
 }

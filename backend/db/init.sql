@@ -5,6 +5,9 @@ CREATE TABLE IF NOT EXISTS businesses (
   id          TEXT PRIMARY KEY,
   name        TEXT NOT NULL,
   category    TEXT NOT NULL DEFAULT '',
+  business_type TEXT NOT NULL DEFAULT 'appointment'
+    CHECK (business_type IN ('appointment', 'onsite_service')),
+  profession  TEXT,
   description TEXT NOT NULL DEFAULT '',
   location    TEXT NOT NULL DEFAULT '',
   rating      NUMERIC(4,2) NOT NULL DEFAULT 5.0,
@@ -158,6 +161,28 @@ ALTER TABLE businesses ADD COLUMN IF NOT EXISTS whatsapp           TEXT;
 ALTER TABLE businesses ADD COLUMN IF NOT EXISTS linkedin           TEXT;
 ALTER TABLE businesses ADD COLUMN IF NOT EXISTS verified           BOOLEAN NOT NULL DEFAULT false;
 ALTER TABLE businesses ADD COLUMN IF NOT EXISTS cancellation_policy TEXT NOT NULL DEFAULT 'Cancelar hasta 24 horas antes de tu cita.';
+ALTER TABLE businesses ADD COLUMN IF NOT EXISTS business_type TEXT NOT NULL DEFAULT 'appointment';
+ALTER TABLE businesses ADD COLUMN IF NOT EXISTS profession TEXT;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+     WHERE conname = 'businesses_business_type_check'
+       AND conrelid = 'businesses'::regclass
+  ) THEN
+    ALTER TABLE businesses ADD CONSTRAINT businesses_business_type_check
+      CHECK (business_type IN ('appointment', 'onsite_service'));
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+     WHERE conname = 'businesses_onsite_profession_required'
+       AND conrelid = 'businesses'::regclass
+  ) THEN
+    ALTER TABLE businesses ADD CONSTRAINT businesses_onsite_profession_required
+      CHECK (business_type <> 'onsite_service' OR NULLIF(BTRIM(profession), '') IS NOT NULL);
+  END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS categories (
   id SERIAL PRIMARY KEY,

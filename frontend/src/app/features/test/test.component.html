@@ -1,0 +1,92 @@
+<main class="story-shell">
+  <section #stage class="story-stage" aria-label="Recorrido animado por una historia de barrio">
+    <canvas #canvas class="story-canvas" aria-hidden="true"></canvas>
+    <div class="stage-vignette" aria-hidden="true"></div>
+
+    @if (storyData(); as story) {
+      <header class="story-topbar">
+        <a class="brand-mark" routerLink="/" aria-label="Resérvame, ir al inicio">
+          <span class="brand-icon" aria-hidden="true">R</span>
+          <span>resérvame</span>
+        </a>
+        <span class="edition-tag"
+          >{{ story.edition }} <i></i> 01 / {{ story.pages.length < 10 ? '0' : '' }}{{ story.pages.length }}</span
+        >
+      </header>
+
+      @if (!showIndex()) {
+        <div class="story-caption" aria-live="polite">
+          <p class="eyebrow">{{ story.intro.eyebrow }}</p>
+          <h1>{{ phaseLabel() }}</h1>
+          <p>{{ story.intro.description }}</p>
+        </div>
+      }
+
+      <div class="chapter-marker" aria-hidden="true">
+        <span class="marker-dot"></span>
+        <span>{{ story.location }}</span>
+      </div>
+
+      @if (showIndex()) {
+        <aside class="index-card" aria-labelledby="index-heading">
+          <div class="index-heading">
+            <div>
+              <p class="eyebrow">EL LIBRO ESTÁ ABIERTO</p>
+              <h2 id="index-heading">Sigue la historia</h2>
+            </div>
+            <span class="open-book-icon" aria-hidden="true">✳</span>
+          </div>
+
+          <nav aria-label="Páginas del libro">
+            @for (page of story.pages; track page.number; let index = $index) {
+              <button
+                class="page-link"
+                [class.page-link-active]="selectedPage() === index"
+                [attr.aria-current]="selectedPage() === index ? 'page' : null"
+                (click)="selectPage(index)"
+              >
+                <span class="page-number">{{ page.number }}</span>
+                <span class="page-copy">
+                  <strong>{{ page.title }}</strong>
+                  <small>{{ page.description }}</small>
+                </span>
+                <span class="page-arrow" aria-hidden="true">↗</span>
+              </button>
+            }
+          </nav>
+
+          <p class="selected-detail">{{ story.pages[selectedPage()]?.detail }}</p>
+        </aside>
+      }
+
+      <footer class="story-controls">
+        <span class="scene-status">
+          <span class="status-light" [class.status-done]="showIndex()"></span>
+          {{ showIndex() ? 'HISTORIA COMPLETA' : 'RECORRIDO 3D' }}
+        </span>
+        <div class="control-actions">
+          @if (!showIndex()) {
+            <button class="text-control" (click)="skipAnimation()">
+              Saltar animación <span aria-hidden="true">↗</span>
+            </button>
+          }
+          <button class="replay-control" (click)="replay()">
+            <span aria-hidden="true">↻</span>
+            {{ showIndex() ? 'Ver de nuevo' : 'Reiniciar' }}
+          </button>
+        </div>
+      </footer>
+    }
+
+    @if (isLoading()) {
+      <div class="scene-error" role="status">Cargando la historia...</div>
+    }
+
+    @if (errorMessage()) {
+      <div class="scene-error" role="alert">
+        <p>{{ errorMessage() }}</p>
+        <button class="retry-control" (click)="loadStoryData()">Intentar de nuevo</button>
+      </div>
+    }
+  </section>
+</main>

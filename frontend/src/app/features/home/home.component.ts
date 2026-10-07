@@ -328,6 +328,14 @@ const CATEGORIES = ['Todos', 'Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci
                   </div>
 
                   <div class="flex flex-wrap items-center gap-2">
+                    @if (negocio.businessType === 'onsite_service') {
+                      <span
+                        class="inline-flex items-center gap-1 rounded-full bg-violet-50 px-2 py-1 text-[10px] font-semibold text-violet-700"
+                      >
+                        <span class="material-icons-round text-[12px]">home_repair_service</span>
+                        {{ negocio.profession }} · Servicio presencial
+                      </span>
+                    }
                     @if (negocio.verified) {
                       <span
                         class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-semibold text-emerald-700"
@@ -365,7 +373,9 @@ const CATEGORIES = ['Todos', 'Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci
 
                   <!-- CTA -->
                   <div class="flex flex-col gap-3 pt-1 sm:flex-row sm:items-center sm:justify-between">
-                    <span class="text-xs text-outline">{{ negocio.category }}</span>
+                    <span class="text-xs text-outline">
+                      {{ negocio.businessType === 'onsite_service' ? negocio.profession : negocio.category }}
+                    </span>
                     <div class="flex flex-wrap items-center gap-2">
                       <div class="flex items-center gap-1 text-primary text-sm font-semibold">
                         Reservar ahora
@@ -455,7 +465,8 @@ export class HomeComponent implements OnInit, OnDestroy {
         negocio.name.toLowerCase().includes(q) ||
         negocio.description.toLowerCase().includes(q) ||
         negocio.tags.some(t => t.toLowerCase().includes(q)) ||
-        negocio.category.toLowerCase().includes(q);
+        negocio.category.toLowerCase().includes(q) ||
+        (negocio.profession ?? '').toLowerCase().includes(q);
       return matchCat && matchQ;
     });
   }

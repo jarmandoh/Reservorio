@@ -28,6 +28,20 @@ describe('Businesses routes', () => {
     expect(response.body.message).toContain('Token requerido');
   });
 
+  test('POST /api/businesses requires a profession for onsite service providers', async () => {
+    const token = sign({ role: 'admin' });
+    const response = await request(app).post('/api/businesses').set('Authorization', `Bearer ${token}`).send({
+      name: 'Servicio eléctrico',
+      category: 'Servicios',
+      businessType: 'onsite_service',
+      pin: '1234',
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.body.ok).toBe(false);
+    expect(db.query).not.toHaveBeenCalled();
+  });
+
   test('GET /api/businesses/all allows admin access', async () => {
     const token = sign({ role: 'admin' });
     db.query.mockResolvedValueOnce({

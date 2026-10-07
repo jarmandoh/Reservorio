@@ -76,6 +76,8 @@ function safenegocio(b) {
     id: b.id,
     name: b.name,
     category: b.category,
+    businessType: b.business_type ?? 'appointment',
+    profession: b.profession ?? '',
     description: b.description,
     location: b.location,
     rating: Number(b.rating),
@@ -170,6 +172,8 @@ async function createBusiness(payload, ownerId = null) {
   const {
     name,
     category,
+    businessType,
+    profession,
     description,
     location,
     rating,
@@ -188,6 +192,12 @@ async function createBusiness(payload, ownerId = null) {
     pin,
   } = payload ?? {};
 
+  const normalizedBusinessType = businessType ?? 'appointment';
+  const normalizedProfession = clean(profession ?? '', 100);
+  if (normalizedBusinessType === 'onsite_service' && !normalizedProfession) {
+    return { ok: false, status: 400, message: 'La profesión es obligatoria para servicios presenciales' };
+  }
+
   const id =
     clean(name)
       .toLowerCase()
@@ -203,6 +213,8 @@ async function createBusiness(payload, ownerId = null) {
       id,
       name,
       category,
+      businessType: normalizedBusinessType,
+      profession: normalizedProfession || null,
       description,
       location,
       rating,
@@ -270,6 +282,16 @@ async function updateBusiness(businessId, payload) {
       sets.push(`${key} = $${idx++}`);
       vals.push(clean(payload[key]));
     }
+  }
+
+  if (payload?.businessType !== undefined) {
+    sets.push(`business_type = $${idx++}`);
+    vals.push(payload.businessType);
+  }
+
+  if (payload?.profession !== undefined) {
+    sets.push(`profession = $${idx++}`);
+    vals.push(clean(payload.profession, 100) || null);
   }
 
   if (payload?.cancellationPolicy !== undefined) {

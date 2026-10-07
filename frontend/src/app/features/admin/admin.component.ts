@@ -205,6 +205,8 @@ export class AdminComponent implements OnInit {
   readonly businessForm = this.fb.group({
     name: ['', [Validators.required, Validators.minLength(2)]],
     category: ['', Validators.required],
+    businessType: ['appointment' as 'appointment' | 'onsite_service'],
+    profession: [''],
     description: [''],
     location: [''],
     schedule: [''],
@@ -496,6 +498,8 @@ export class AdminComponent implements OnInit {
       this.businessForm.patchValue({
         name: negocio.name,
         category: negocio.category,
+        businessType: negocio.businessType ?? 'appointment',
+        profession: negocio.profession ?? '',
         description: negocio.description,
         location: negocio.location,
         schedule: negocio.schedule ?? '',
@@ -527,13 +531,28 @@ export class AdminComponent implements OnInit {
         linkedin: '',
         verified: false,
         cancellationPolicy: '',
+        businessType: 'appointment',
+        profession: '',
       });
       this.gradientFrom.set('#005bbf');
       this.gradientTo.set('#1a73e8');
       this.businessForm.get('pin')?.setValidators([Validators.required, Validators.minLength(4)]);
     }
+    this.syncProfessionValidators();
     this.businessForm.get('pin')?.updateValueAndValidity();
     this.shownegocioModal.set(true);
+  }
+
+  syncProfessionValidators(): void {
+    const profession = this.businessForm.get('profession');
+    if (!profession) return;
+
+    if (this.businessForm.get('businessType')?.value === 'onsite_service') {
+      profession.setValidators([Validators.required, Validators.maxLength(100)]);
+    } else {
+      profession.clearValidators();
+    }
+    profession.updateValueAndValidity({ emitEvent: false });
   }
 
   closenegocioModal(): void {
@@ -558,6 +577,8 @@ export class AdminComponent implements OnInit {
       const updates: Partial<NewBusinessPayload> & { pin?: string } = {};
       updates.name = v.name!;
       updates.category = v.category!;
+      updates.businessType = v.businessType ?? 'appointment';
+      updates.profession = v.profession ?? '';
       updates.description = v.description ?? '';
       updates.location = v.location ?? '';
       updates.schedule = scheduleValue;
@@ -593,6 +614,8 @@ export class AdminComponent implements OnInit {
       const payload: NewBusinessPayload = {
         name: v.name!,
         category: v.category!,
+        businessType: v.businessType ?? 'appointment',
+        profession: v.profession ?? '',
         description: v.description ?? '',
         location: v.location ?? '',
         schedule: scheduleValue,

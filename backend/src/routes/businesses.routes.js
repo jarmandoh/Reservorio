@@ -30,6 +30,14 @@ const pinLimiter = rateLimit({
 const businessCreateValidators = [
   body('name').trim().notEmpty().withMessage('name requerido'),
   body('category').trim().notEmpty().withMessage('category requerido'),
+  body('businessType').optional().isIn(['appointment', 'onsite_service']).withMessage('businessType inválido'),
+  body('profession').optional().trim().isLength({ max: 100 }).withMessage('profession demasiado larga'),
+  body('profession').custom((value, { req }) => {
+    if (req.body?.businessType === 'onsite_service' && !String(value ?? '').trim()) {
+      throw new Error('profession requerida para servicios presenciales');
+    }
+    return true;
+  }),
   body('pin').trim().notEmpty().withMessage('pin requerido'),
   body('rating').optional().isFloat({ min: 0, max: 5 }).withMessage('rating inválido'),
   body('reviews').optional().isInt({ min: 0 }).withMessage('reviews inválido'),
@@ -39,6 +47,14 @@ const businessCreateValidators = [
 
 const businessUpdateValidators = [
   param('id').trim().notEmpty().withMessage('id requerido'),
+  body('businessType').optional().isIn(['appointment', 'onsite_service']).withMessage('businessType inválido'),
+  body('profession').optional().trim().isLength({ max: 100 }).withMessage('profession demasiado larga'),
+  body('profession').custom((value, { req }) => {
+    if (req.body?.businessType === 'onsite_service' && !String(value ?? '').trim()) {
+      throw new Error('profession requerida para servicios presenciales');
+    }
+    return true;
+  }),
   body('rating').optional().isFloat({ min: 0, max: 5 }).withMessage('rating inválido'),
   body('reviews').optional().isInt({ min: 0 }).withMessage('reviews inválido'),
   body('pin').optional().trim().notEmpty().withMessage('pin requerido'),

@@ -20,10 +20,10 @@ un despliegue sobre un volumen existente recibe los cambios de schema automátic
 
 ## Baseline
 
-`0001_init.sql` es la baseline (equivale a `backend/db/init.sql`, la misma fuente de
-verdad que usa el contenedor de PostgreSQL en su primer arranque). Las sentencias son
-idempotentes (`IF NOT EXISTS` + `ON CONFLICT DO NOTHING`), por lo que aplicarla sobre
-una base ya creada con `init.sql` no causa errores.
+`0001_init.sql` es la baseline histórica. `backend/db/init.sql` se mantiene como
+esquema inicial para contenedores nuevos; las migraciones posteriores se aplican
+también después de ese init, por lo que deben tolerar que sus columnas o restricciones
+ya existan.
 
 ## Convenciones
 

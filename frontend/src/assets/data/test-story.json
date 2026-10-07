@@ -1,0 +1,44 @@
+{
+  "edition": "CUADERNO DE OFICIOS",
+  "location": "BOGOTÁ · COLOMBIA",
+  "intro": {
+    "eyebrow": "UNA HISTORIA LOCAL",
+    "title": "Una ciudad de posibilidades",
+    "description": "Del mapa de tu ciudad a las manos que saben resolver."
+  },
+  "book": {
+    "coverTitle": "Historias cercanas",
+    "coverSubtitle": "un libro para encontrar tu próximo encuentro",
+    "contentsTitle": "Contenido",
+    "featureEyebrow": "EL OFICIO DE ESTAR CERCA",
+    "featureTitle": "Una historia local",
+    "featureLines": ["Las mejores soluciones", "comienzan con alguien", "que conoce tu barrio."],
+    "caption": "Hecho de historias reales."
+  },
+  "pages": [
+    {
+      "number": "01",
+      "title": "El mapa",
+      "description": "Todo empieza cerca de ti.",
+      "detail": "Explora lugares y personas que pueden ayudarte en tu barrio."
+    },
+    {
+      "number": "02",
+      "title": "La tienda",
+      "description": "Un buen oficio abre puertas.",
+      "detail": "Conoce profesionales locales, sus servicios y su experiencia."
+    },
+    {
+      "number": "03",
+      "title": "El encuentro",
+      "description": "Una solución, a un paso.",
+      "detail": "Encuentra la ayuda presencial que necesitas, cuando la necesitas."
+    },
+    {
+      "number": "04",
+      "title": "La historia",
+      "description": "Cada página conecta personas.",
+      "detail": "Descubre el siguiente capítulo de los servicios de tu ciudad."
+    }
+  ]
+}

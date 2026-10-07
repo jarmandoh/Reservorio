@@ -117,7 +117,7 @@ Los tokens se generan con `sign(payload)`, firma **HS256**. Expiración: **2 hor
 
 ### Migraciones SQL versionadas
 
-`backend/db/init.sql` sigue siendo la fuente para contenedores nuevos y la baseline; el schema en producción y CI se evoluciona con migraciones numeradas en `backend/db/migrations/`:
+`backend/db/init.sql` sigue siendo la fuente para contenedores nuevos; el schema existente y CI se evoluciona con migraciones numeradas en `backend/db/migrations/`:
 
 ```bash
 pnpm db:migrate            # aplica pendientes (idempotente; registra en schema_migrations)

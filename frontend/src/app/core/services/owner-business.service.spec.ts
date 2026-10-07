@@ -41,6 +41,8 @@ describe('OwnerBusinessService', () => {
         {
           name: 'Mi negocio',
           category: 'Gastronomía',
+          businessType: 'onsite_service',
+          profession: 'Electricista',
           description: 'Un lugar genial',
           location: 'Centro',
           phone: '555',
@@ -61,6 +63,8 @@ describe('OwnerBusinessService', () => {
       expect.objectContaining({
         name: 'Mi negocio',
         category: 'Gastronomía',
+        businessType: 'onsite_service',
+        profession: 'Electricista',
         tags: ['café', 'brunch'],
         pin: '1234',
       }),

@@ -158,7 +158,7 @@ Envía un email con `<FRONTEND_URL>/customer/verify?token=<token>` (TTL 15 min, 
 
 ### `GET /api/businesses`
 
-Listado público de negocios activos. Opcional `?category=` y `?tag=` para filtrar. Cada negocio incluye `cantidadReservasHoy`/`cantidadReservasTotales`, `verified`, `cancellationPolicy`, redes sociales, etc.
+Listado público de negocios activos. Opcional `?category=` y `?tag=` para filtrar. Cada negocio incluye `businessType` (`appointment` o `onsite_service`), `profession` para servicios presenciales, `cantidadReservasHoy`/`cantidadReservasTotales`, `verified`, `cancellationPolicy`, redes sociales, etc.
 
 ### `GET /api/businesses/all`
 
@@ -176,6 +176,7 @@ Requiere **admin** u **owner**. Crea un negocio.
 {
   "name": "Cancha Central",
   "category": "Deportes",
+  "businessType": "appointment",
   "pin": "5678",
   "description": "...",
   "location": "...",
@@ -189,6 +190,9 @@ Requiere **admin** u **owner**. Crea un negocio.
 ```
 
 `pin` obligatorio en el alta; se almacena como hash bcrypt.
+`businessType` puede ser `appointment` (valor predeterminado) u `onsite_service`.
+Para servicios presenciales se debe indicar `profession` (por ejemplo, `Electricista`,
+`Ebanista` o `Cerrajero`); esa profesión se incluye en la búsqueda pública.
 
 ### `POST /api/businesses/:id/auth`
 
@@ -263,6 +267,7 @@ Registra una reserva en el checkout del negocio (crea `booking` + `payment`):
   "method": "card"
 }
 ```
+
 > Moneda por defecto: `COP` (peso colombiano). Extensible vía `DEFAULT_CURRENCY` y `SUPPORTED_CURRENCIES` (`COP,USD,EUR,MXN,BRL,ARS,CLP,PEN`). El validador rechaza códigos no soportados.
 
 ### `GET /api/businesses/:id/services`

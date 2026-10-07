@@ -2,6 +2,8 @@ export interface Business {
   id: string;
   name: string;
   category: string;
+  businessType: 'appointment' | 'onsite_service';
+  profession?: string;
   description: string;
   location: string;
   rating: number;
@@ -26,6 +28,7 @@ export interface Business {
   appsScriptUrl?: string;
   verified?: boolean;
   cancellationPolicy?: string;
+  businessOwner?: Owner;
 }
 
 export interface Review {
@@ -45,6 +48,8 @@ export interface RatingStats {
 export interface NewBusinessPayload {
   name: string;
   category: string;
+  businessType?: 'appointment' | 'onsite_service';
+  profession?: string;
   description?: string;
   location?: string;
   gradient?: string;

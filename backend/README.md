@@ -135,7 +135,7 @@ pnpm db:migrate            # aplica las pendientes de db/migrations/ (idempotent
 pnpm db:migrate:create -- nombre  # crea el siguiente NNNN_*.sql
 ```
 
-`0001_init.sql` = baseline equivalente a `db/init.sql` (fuente para contenedores nuevos). El `Dockerfile` ejecuta `db:migrate` antes de arrancar, por lo que los cambios de schema llegan solos en despliegues sobre volúmenes existentes.
+`0001_init.sql` = baseline histórica del schema. `db/init.sql` se mantiene para contenedores nuevos; las migraciones posteriores también deben tolerar que el init haya creado ya la estructura más reciente. El `Dockerfile` ejecuta `db:migrate` antes de arrancar, por lo que los cambios de schema llegan solos en despliegues sobre volúmenes existentes.
 
 ## Notificaciones email/SMS (`channels.js`)
 
