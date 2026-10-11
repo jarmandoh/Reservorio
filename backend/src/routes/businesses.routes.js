@@ -58,6 +58,11 @@ const businessUpdateValidators = [
   body('rating').optional().isFloat({ min: 0, max: 5 }).withMessage('rating inválido'),
   body('reviews').optional().isInt({ min: 0 }).withMessage('reviews inválido'),
   body('pin').optional().trim().notEmpty().withMessage('pin requerido'),
+  body('whatsapp').optional().isString().isLength({ max: 40 }).withMessage('whatsapp demasiado largo'),
+  body('storeCoverImage')
+    .optional()
+    .isURL({ protocols: ['https'], require_protocol: true })
+    .withMessage('storeCoverImage debe ser una URL HTTPS'),
   body('cancellationPolicy').optional().trim().isLength({ max: 500 }).withMessage('cancellationPolicy demasiado larga'),
   handleValidation,
 ];
@@ -253,6 +258,20 @@ router.get('/:id/availability', async (req, res) => {
 });
 
 // GET /api/businesses/:id
+router.get('/:id/storefront', async (req, res) => {
+  try {
+    const result = await businessesService.getBusinessById(req.params.id);
+    if (result.ok && !result.data.active) {
+      return res.status(404).json({ ok: false, message: 'Tienda no disponible.' });
+    }
+    return res
+      .status(result.status)
+      .json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
+  } catch (e) {
+    return res.status(500).json({ ok: false, message: e.message });
+  }
+});
+
 router.get('/:id', requireBusinessAuth, async (req, res) => {
   try {
     const result = await businessesService.getBusinessById(req.params.id);

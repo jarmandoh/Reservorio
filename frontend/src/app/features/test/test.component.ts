@@ -2,6 +2,7 @@ import { AfterViewInit, Component, ElementRef, inject, OnDestroy, ViewChild, sig
 import { Subscription } from 'rxjs';
 import { RouterLink } from '@angular/router';
 import {
+  ACESFilmicToneMapping,
   BoxGeometry,
   CanvasTexture,
   Color,
@@ -14,6 +15,7 @@ import {
   Mesh,
   MeshBasicMaterial,
   MeshStandardMaterial,
+  PCFShadowMap,
   PerspectiveCamera,
   PlaneGeometry,
   RingGeometry,
@@ -189,8 +191,12 @@ export class TestComponent implements AfterViewInit, OnDestroy {
 
       const renderer = new WebGLRenderer({ canvas, antialias: true, alpha: false });
       this.renderer = renderer;
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
       renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = PCFShadowMap;
+      renderer.outputColorSpace = SRGBColorSpace;
+      renderer.toneMapping = ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.12;
       renderer.setClearColor('#dfe9e1');
 
       this.resizeObserver = new ResizeObserver(() => this.resizeRenderer());
@@ -210,6 +216,15 @@ export class TestComponent implements AfterViewInit, OnDestroy {
     const key = new DirectionalLight(0xfff1d7, 1.8);
     key.position.set(-18, 30, 22);
     key.castShadow = true;
+    key.shadow.mapSize.set(2048, 2048);
+    key.shadow.camera.left = -42;
+    key.shadow.camera.right = 42;
+    key.shadow.camera.top = 42;
+    key.shadow.camera.bottom = -42;
+    key.shadow.camera.near = 1;
+    key.shadow.camera.far = 100;
+    key.shadow.bias = -0.0002;
+    key.shadow.normalBias = 0.025;
     scene.add(key);
 
     const fill = new DirectionalLight(0x9bc9ff, 0.65);
@@ -250,6 +265,19 @@ export class TestComponent implements AfterViewInit, OnDestroy {
     }
 
     const blockColors = ['#dce8d6', '#d2e1d0', '#e8e3d6', '#cdddc9'];
+    const buildingMaterials = ['#d8bca0', '#e4d4bd', '#c8d4c2', '#e2c9b9'].map(
+      color => new MeshStandardMaterial({ color, roughness: 0.94 })
+    );
+    const roofMaterials = ['#a86f56', '#8d7460', '#b18465', '#738574'].map(
+      color => new MeshStandardMaterial({ color, roughness: 0.88 })
+    );
+    const windowMaterial = new MeshStandardMaterial({
+      color: '#a9c6c0',
+      roughness: 0.3,
+      metalness: 0.08,
+      emissive: '#30463f',
+      emissiveIntensity: 0.12,
+    });
     const positions = [
       [-54, -48, 18, 24],
       [-28, -55, 18, 22],
@@ -268,14 +296,76 @@ export class TestComponent implements AfterViewInit, OnDestroy {
         new MeshBasicMaterial({ color: blockColors[index % blockColors.length] })
       );
       block.position.set(x, 0.13, z);
+      block.receiveShadow = true;
       map.add(block);
+
+      const buildingWidth = width * 0.66;
+      const buildingDepth = depth * 0.62;
+      const buildingHeight = 4.5 + (index % 3) * 1.8;
+      const building = new Mesh(
+        new BoxGeometry(buildingWidth, buildingHeight, buildingDepth),
+        buildingMaterials[index % buildingMaterials.length]
+      );
+      building.position.set(x, 0.25 + buildingHeight / 2, z);
+      building.castShadow = true;
+      building.receiveShadow = true;
+      map.add(building);
+
+      const roof = new Mesh(
+        new BoxGeometry(buildingWidth + 0.5, 0.32, buildingDepth + 0.5),
+        roofMaterials[index % roofMaterials.length]
+      );
+      roof.position.set(x, 0.25 + buildingHeight + 0.16, z);
+      roof.castShadow = true;
+      roof.receiveShadow = true;
+      map.add(roof);
+
+      const windowGeometry = new BoxGeometry(1.15, 1.05, 0.12);
+      for (const windowX of [-buildingWidth * 0.23, buildingWidth * 0.23]) {
+        for (const windowY of [buildingHeight * 0.28, buildingHeight * 0.62]) {
+          const window = new Mesh(windowGeometry, windowMaterial);
+          window.position.set(x + windowX, 0.25 + windowY, z + buildingDepth / 2 + 0.07);
+          map.add(window);
+        }
+      }
     });
     const park = new Mesh(new PlaneGeometry(22, 18), new MeshBasicMaterial({ color: '#b9d7ad' }));
     park.rotation.x = -Math.PI / 2;
     park.position.set(-43, 0.02, -44);
     map.add(park);
+    for (const [x, z, scale] of [
+      [-49, -48, 1.15],
+      [-38, -48, 0.9],
+      [-48, -40, 0.82],
+      [-39, -39, 1.08],
+    ]) {
+      this.addMapTree(map, x, z, scale);
+    }
     this.addMapPin(map);
     return map;
+  }
+
+  private addMapTree(parent: Group, x: number, z: number, scale: number): void {
+    const tree = new Group();
+    tree.position.set(x, 0.2, z);
+    tree.scale.setScalar(scale);
+
+    const trunk = new Mesh(
+      new CylinderGeometry(0.2, 0.28, 2.1, 8),
+      new MeshStandardMaterial({ color: '#8b6248', roughness: 0.94 })
+    );
+    trunk.position.y = 1.05;
+    trunk.castShadow = true;
+    tree.add(trunk);
+
+    const crown = new Mesh(
+      new CylinderGeometry(0.15, 1.45, 2.8, 7, 1),
+      new MeshStandardMaterial({ color: '#6f916f', roughness: 0.92 })
+    );
+    crown.position.y = 2.95;
+    crown.castShadow = true;
+    tree.add(crown);
+    parent.add(tree);
   }
 
   private addMapPin(parent: Group): void {
@@ -360,9 +450,19 @@ export class TestComponent implements AfterViewInit, OnDestroy {
     rightWindow.position.x = 5.1;
     shop.add(rightWindow);
 
-    const sign = new Mesh(new BoxGeometry(6.2, 1.3, 0.35), trim);
+    const sign = new Mesh(
+      new BoxGeometry(6.2, 1.3, 0.35),
+      new MeshStandardMaterial({ color: '#f6eddf', roughness: 0.74, map: this.createSignTexture() })
+    );
     sign.position.set(0, 8.25, 7.02);
     shop.add(sign);
+
+    const awningStripe = new MeshStandardMaterial({ color: '#e8cda7', roughness: 0.78 });
+    for (let index = 0; index < 10; index += 1) {
+      const stripe = new Mesh(new BoxGeometry(0.65, 0.38, 1.18), index % 2 ? trim : awningStripe);
+      stripe.position.set(-5.85 + index * 1.3, 6.5, 7.1);
+      shop.add(stripe);
+    }
 
     for (const x of [-5.6, -3.8, 3.8, 5.6]) {
       const strip = new Mesh(new BoxGeometry(0.11, 3.55, 0.1), trim);
@@ -386,6 +486,31 @@ export class TestComponent implements AfterViewInit, OnDestroy {
     shop.add(bookSpot);
 
     return { shop, doorHinge };
+  }
+
+  private createSignTexture(): CanvasTexture {
+    const canvas = this.canvasRef.nativeElement.ownerDocument.createElement('canvas');
+    canvas.width = 1200;
+    canvas.height = 250;
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('No se pudo crear el rótulo de la tienda');
+
+    context.fillStyle = '#f5ecdc';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.strokeStyle = '#b57b5b';
+    context.lineWidth = 5;
+    context.strokeRect(18, 18, canvas.width - 36, canvas.height - 36);
+    context.textAlign = 'center';
+    context.fillStyle = '#27435a';
+    context.font = '600 76px Georgia, serif';
+    context.fillText('OFICIOS DE BARRIO', canvas.width / 2, 120, 1080);
+    context.fillStyle = '#a76443';
+    context.font = '600 24px sans-serif';
+    context.fillText('HISTORIAS Y SERVICIOS LOCALES', canvas.width / 2, 178, 1080);
+
+    const texture = new CanvasTexture(canvas);
+    texture.colorSpace = SRGBColorSpace;
+    return texture;
   }
 
   private createBook(): { book: Group; coverHinge: Group } {

@@ -20,9 +20,9 @@ import {
   Payment,
   Reservation,
 } from '../../core/models/reservation.model';
-import { Business } from '../../core/models/businesses.model';
+import { Business, CatalogProduct } from '../../core/models/businesses.model';
 
-type negocioTab = 'reservas' | 'servicios' | 'perfil' | 'google';
+type negocioTab = 'reservas' | 'servicios' | 'productos' | 'perfil' | 'google';
 
 @Component({
   selector: 'app-business-admin',
@@ -523,6 +523,121 @@ type negocioTab = 'reservas' | 'servicios' | 'perfil' | 'google';
         </div>
       }
 
+      <!-- TAB: PRODUCTOS ─────────────────────────────────────────────── -->
+      @if (tab() === 'productos') {
+        <div class="flex-1 p-4 sm:p-6 flex flex-col gap-5 max-w-4xl mx-auto w-full">
+          <div class="flex items-end justify-between gap-3">
+            <div>
+              <h2 class="font-display font-semibold text-[1.375rem]">Catálogo de productos</h2>
+              <p class="text-sm text-on-surface-variant mt-1">
+                Tus productos aparecerán en tu tienda pública y se podrán pedir por WhatsApp.
+              </p>
+            </div>
+            <button type="button" class="btn-secondary btn-sm" (click)="resetProduct()">Nuevo</button>
+          </div>
+
+          <form [formGroup]="productForm" (ngSubmit)="saveProduct()" class="card grid gap-4 sm:grid-cols-2">
+            <div class="sm:col-span-2">
+              <h3 class="font-semibold">{{ editingProduct() ? 'Editar producto' : 'Agregar producto' }}</h3>
+            </div>
+            <div>
+              <label class="form-label" for="catalog-name">Nombre</label>
+              <input id="catalog-name" class="form-input" formControlName="name" maxlength="120" required />
+            </div>
+            <div>
+              <label class="form-label" for="catalog-category">Categoría</label>
+              <input id="catalog-category" class="form-input" formControlName="category" maxlength="80" />
+            </div>
+            <div>
+              <label class="form-label" for="catalog-price">Precio (COP)</label>
+              <input
+                id="catalog-price"
+                class="form-input"
+                type="number"
+                min="0"
+                max="1000000000"
+                step="1"
+                formControlName="price"
+                required
+              />
+            </div>
+            <div>
+              <label class="form-label" for="catalog-image">Foto del producto</label>
+              <input
+                id="catalog-image"
+                class="form-input"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                (change)="uploadProductImage($event)"
+              />
+              @if (uploadingImage() === 'product') {
+                <p class="text-xs text-on-surface-variant mt-1" role="status">Subiendo foto...</p>
+              }
+              @if (productImage(); as image) {
+                <img [src]="image.url" [alt]="'Foto de ' + (productForm.value.name || 'producto')" class="mt-2 h-28 w-full rounded-lg object-cover" />
+              }
+              @if (productImageError()) {
+                <p class="text-xs text-error mt-1" role="alert">{{ productImageError() }}</p>
+              }
+            </div>
+            <div class="sm:col-span-2">
+              <label class="form-label" for="catalog-description">Descripción</label>
+              <textarea id="catalog-description" class="form-textarea" rows="2" maxlength="1000" formControlName="description"></textarea>
+            </div>
+            <label class="flex items-center gap-2 text-sm">
+              <input type="checkbox" formControlName="active" />
+              Visible en la tienda
+            </label>
+            <div class="sm:col-span-2 flex flex-wrap justify-end gap-2">
+              @if (editingProduct()) {
+                <button type="button" class="btn-secondary btn-sm" (click)="resetProduct()">Cancelar edición</button>
+              }
+              <button
+                type="submit"
+                class="btn-primary btn-sm"
+                [disabled]="productForm.invalid || !productImage() || savingProduct() || uploadingImage() !== null"
+              >
+                {{ savingProduct() ? 'Guardando...' : editingProduct() ? 'Guardar cambios' : 'Agregar producto' }}
+              </button>
+            </div>
+          </form>
+
+          @if (productsLoading()) {
+            <p class="text-sm text-on-surface-variant" role="status">Cargando productos...</p>
+          } @else if (!products().length) {
+            <div class="card py-10 text-center">
+              <span class="material-icons-round text-4xl text-outline-variant" aria-hidden="true">inventory_2</span>
+              <p class="mt-2 font-medium">Aún no tienes productos</p>
+              <p class="text-sm text-on-surface-variant">Agrega el primero para publicarlo en tu tienda.</p>
+            </div>
+          } @else {
+            <ul class="grid gap-3 sm:grid-cols-2">
+              @for (product of products(); track product.id) {
+                <li class="card flex gap-3" [class.opacity-60]="!product.active">
+                  <img [src]="product.imageUrl" [alt]="product.name" class="h-24 w-24 rounded-lg object-cover" loading="lazy" />
+                  <div class="min-w-0 flex-1">
+                    <div class="flex items-start justify-between gap-2">
+                      <div>
+                        <p class="font-semibold">{{ product.name }}</p>
+                        <p class="text-xs text-on-surface-variant">{{ product.category || 'Sin categoría' }}</p>
+                      </div>
+                      <span class="text-xs font-semibold">{{ formatCurrency(product.price) }}</span>
+                    </div>
+                    <p class="mt-1 line-clamp-2 text-xs text-on-surface-variant">{{ product.description }}</p>
+                    <div class="mt-2 flex gap-3">
+                      <button type="button" class="text-xs font-semibold text-primary" (click)="editProduct(product)">Editar</button>
+                      @if (product.active) {
+                        <button type="button" class="text-xs font-semibold text-error" (click)="deleteProduct(product)">Ocultar</button>
+                      }
+                    </div>
+                  </div>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      }
+
       <!-- TAB: PERFIL ─────────────────────────────────────────────────── -->
       @if (tab() === 'perfil') {
         <div class="flex-1 p-4 sm:p-6 flex flex-col gap-5 max-w-xl mx-auto w-full">
@@ -552,6 +667,34 @@ type negocioTab = 'reservas' | 'servicios' | 'perfil' | 'google';
                 <label class="form-label">Teléfono</label>
                 <input type="tel" class="form-input" formControlName="phone" />
               </div>
+            </div>
+            <div>
+              <label class="form-label" for="business-whatsapp">WhatsApp para pedidos</label>
+              <input
+                id="business-whatsapp"
+                type="tel"
+                class="form-input"
+                formControlName="whatsapp"
+                placeholder="573001234567"
+                autocomplete="tel"
+              />
+              <p class="text-xs text-on-surface-variant mt-1">Incluye el código de país, sin espacios ni signos. Ejemplo: 573001234567.</p>
+            </div>
+            <div>
+              <label class="form-label" for="business-cover">Foto real del local</label>
+              <input
+                id="business-cover"
+                type="file"
+                class="form-input"
+                accept="image/jpeg,image/png,image/webp"
+                (change)="uploadBusinessCover($event)"
+              />
+              @if (uploadingImage() === 'cover') {
+                <p class="text-xs text-on-surface-variant mt-1" role="status">Subiendo foto...</p>
+              }
+              @if (profileForm.value.storeCoverImage) {
+                <img [src]="profileForm.value.storeCoverImage" alt="Vista previa de la foto del local" class="mt-2 h-36 w-full rounded-lg object-cover" />
+              }
             </div>
             <div>
               <label class="form-label">Horario</label>
@@ -811,6 +954,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
   readonly tabs: { id: negocioTab; label: string; icon: string }[] = [
     { id: 'reservas', label: 'Reservas', icon: 'event_note' },
     { id: 'servicios', label: 'Servicios', icon: 'spa' },
+    { id: 'productos', label: 'Productos', icon: 'inventory_2' },
     { id: 'perfil', label: 'Perfil', icon: 'storefront' },
     { id: 'google', label: 'Sheets', icon: 'table_chart' },
   ];
@@ -819,6 +963,13 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
   readonly business = signal<Business | null>(null);
   readonly reservations = signal<Reservation[]>([]);
   readonly services = signal<string[]>([]);
+  readonly products = signal<CatalogProduct[]>([]);
+  readonly productsLoading = signal(false);
+  readonly savingProduct = signal(false);
+  readonly uploadingImage = signal<'product' | 'cover' | null>(null);
+  readonly editingProduct = signal<CatalogProduct | null>(null);
+  readonly productImage = signal<{ url: string; publicId: string } | null>(null);
+  readonly productImageError = signal('');
   readonly customers = signal<Customer[]>([]);
   readonly marketplaceBookings = signal<BookingRecord[]>([]);
   readonly payments = signal<Payment[]>([]);
@@ -1090,7 +1241,17 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
     location: [''],
     schedule: [''],
     phone: [''],
+    whatsapp: ['', Validators.pattern(/^\+?[0-9]{7,15}$/)],
+    storeCoverImage: [''],
     cancellationPolicy: [''],
+  });
+
+  readonly productForm = this.fb.group({
+    name: ['', [Validators.required, Validators.maxLength(120)]],
+    description: ['', Validators.maxLength(1000)],
+    category: ['', Validators.maxLength(80)],
+    price: [0, [Validators.required, Validators.min(0), Validators.max(1_000_000_000)]],
+    active: [true],
   });
 
   readonly pinForm = this.fb.group({
@@ -1141,6 +1302,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
   setTab(t: negocioTab): void {
     this.tab.set(t);
     if (t === 'servicios') this.loadServices();
+    if (t === 'productos') this.loadProducts();
     if (t === 'google') this.loadGoogleStatus();
   }
 
@@ -1158,6 +1320,8 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
             location: found.location,
             schedule: found.schedule ?? '',
             phone: found.phone ?? '',
+            whatsapp: found.whatsapp ?? '',
+            storeCoverImage: found.storeCoverImage ?? '',
             cancellationPolicy: found.cancellationPolicy ?? '',
           });
         },
@@ -1386,6 +1550,146 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
       });
   }
 
+  loadProducts(): void {
+    this.productsLoading.set(true);
+    this.businessAdminService
+      .loadProducts(this.negocioId, this.token)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: products => {
+          this.products.set(products);
+          this.productsLoading.set(false);
+        },
+        error: err => {
+          this.toast.error(err?.error?.message ?? 'No se pudieron cargar los productos.');
+          this.productsLoading.set(false);
+        },
+      });
+  }
+
+  resetProduct(): void {
+    this.editingProduct.set(null);
+    this.productImage.set(null);
+    this.productImageError.set('');
+    this.productForm.reset({ name: '', description: '', category: '', price: 0, active: true });
+  }
+
+  editProduct(product: CatalogProduct): void {
+    this.editingProduct.set(product);
+    this.productImage.set({ url: product.imageUrl, publicId: product.imagePublicId });
+    this.productImageError.set('');
+    this.productForm.reset({
+      name: product.name,
+      description: product.description,
+      category: product.category,
+      price: product.price,
+      active: product.active,
+    });
+  }
+
+  uploadProductImage(event: Event): void {
+    this.uploadImage(event, 'product');
+  }
+
+  uploadBusinessCover(event: Event): void {
+    this.uploadImage(event, 'cover');
+  }
+
+  private uploadImage(event: Event, assetType: 'product' | 'cover'): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      this.showImageError(assetType, 'Usa una imagen JPG, PNG o WebP.');
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      this.showImageError(assetType, 'La imagen debe pesar menos de 8 MB.');
+      return;
+    }
+
+    this.productImageError.set('');
+    this.uploadingImage.set(assetType);
+    this.businessAdminService
+      .getCatalogImageSignature(this.negocioId, assetType, this.token)
+      .pipe(
+        switchMap(signature => this.businessAdminService.uploadCatalogImage(signature, file)),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe({
+        next: image => {
+          if (assetType === 'product') {
+            this.productImage.set({ url: image.secure_url, publicId: image.public_id });
+          } else {
+            this.profileForm.patchValue({ storeCoverImage: image.secure_url });
+          }
+          this.uploadingImage.set(null);
+        },
+        error: err => {
+          this.showImageError(assetType, err?.error?.message ?? 'No se pudo subir la imagen.');
+          this.uploadingImage.set(null);
+        },
+      });
+  }
+
+  private showImageError(assetType: 'product' | 'cover', message: string): void {
+    if (assetType === 'product') this.productImageError.set(message);
+    this.toast.error(message);
+  }
+
+  saveProduct(): void {
+    const image = this.productImage();
+    if (this.productForm.invalid || !image) {
+      this.productForm.markAllAsTouched();
+      this.productImageError.set(image ? '' : 'Sube una foto para guardar el producto.');
+      return;
+    }
+
+    const values = this.productForm.getRawValue();
+    const draft = {
+      name: String(values.name ?? '').trim(),
+      description: String(values.description ?? '').trim(),
+      category: String(values.category ?? '').trim(),
+      price: Number(values.price),
+      imageUrl: image.url,
+      imagePublicId: image.publicId,
+      active: values.active ?? true,
+    };
+    const product = this.editingProduct();
+    this.savingProduct.set(true);
+    const request$ = product
+      ? this.businessAdminService.updateProduct(this.negocioId, { ...product, ...draft }, this.token)
+      : this.businessAdminService.createProduct(this.negocioId, draft, this.token);
+
+    request$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: () => {
+        this.toast.success(product ? 'Producto actualizado' : 'Producto agregado');
+        this.savingProduct.set(false);
+        this.resetProduct();
+        this.loadProducts();
+      },
+      error: err => {
+        this.toast.error(err?.error?.message ?? 'No se pudo guardar el producto.');
+        this.savingProduct.set(false);
+      },
+    });
+  }
+
+  deleteProduct(product: CatalogProduct): void {
+    this.businessAdminService
+      .deleteProduct(this.negocioId, product.id, this.token)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.toast.success('Producto ocultado de la tienda');
+          this.loadProducts();
+        },
+        error: err => this.toast.error(err?.error?.message ?? 'No se pudo ocultar el producto.'),
+      });
+  }
+
   addService(): void {
     if (this.serviceForm.invalid) return;
     const nombre = this.serviceForm.value.nombre!;
@@ -1435,6 +1739,8 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
       location: v.location ?? null,
       schedule: v.schedule ?? null,
       phone: v.phone ?? null,
+      whatsapp: v.whatsapp ?? null,
+      storeCoverImage: v.storeCoverImage ?? null,
       cancellationPolicy: v.cancellationPolicy ?? null,
     };
     this.savingProfile.set(true);

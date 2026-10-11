@@ -11,7 +11,7 @@ import {
   UpdatePayload,
   CheckoutSession,
 } from '../models/reservation.model';
-import { Business } from '../models/businesses.model';
+import { Business, CatalogProduct, CloudinaryUploadSignature, CloudinaryUploadedImage } from '../models/businesses.model';
 import { AuthService } from './auth.service';
 import { ApiService } from './api.service';
 
@@ -22,6 +22,8 @@ export interface BusinessAdminProfileValues {
   location: string | null;
   schedule: string | null;
   phone: string | null;
+  whatsapp: string | null;
+  storeCoverImage: string | null;
   cancellationPolicy?: string | null;
 }
 
@@ -32,6 +34,38 @@ export class BusinessAdminService {
 
   loadBusiness(negocioId: string, token: string): Observable<Business> {
     return this.api.getBusinessById(negocioId, token);
+  }
+
+  loadProducts(negocioId: string, token: string): Observable<CatalogProduct[]> {
+    return this.api.getCatalogProducts(negocioId, true, token);
+  }
+
+  getCatalogImageSignature(
+    negocioId: string,
+    assetType: 'product' | 'cover',
+    token: string
+  ): Observable<CloudinaryUploadSignature> {
+    return this.api.getCatalogImageSignature(negocioId, assetType, token);
+  }
+
+  uploadCatalogImage(signature: CloudinaryUploadSignature, file: File): Observable<CloudinaryUploadedImage> {
+    return this.api.uploadCatalogImage(signature, file);
+  }
+
+  createProduct(
+    negocioId: string,
+    product: Omit<CatalogProduct, 'id' | 'businessId' | 'active'> & { active?: boolean },
+    token: string
+  ): Observable<CatalogProduct> {
+    return this.api.createCatalogProduct(negocioId, product, token);
+  }
+
+  updateProduct(negocioId: string, product: CatalogProduct, token: string): Observable<CatalogProduct> {
+    return this.api.updateCatalogProduct(negocioId, product, token);
+  }
+
+  deleteProduct(negocioId: string, productId: string, token: string): Observable<void> {
+    return this.api.deleteCatalogProduct(negocioId, productId, token);
   }
 
   loadReservations(negocioId: string, token: string): Observable<Reservation[]> {
@@ -99,6 +133,8 @@ export class BusinessAdminService {
         location: String(values.location ?? '').trim(),
         schedule: String(values.schedule ?? '').trim(),
         phone: String(values.phone ?? '').trim(),
+        whatsapp: String(values.whatsapp ?? '').trim(),
+        storeCoverImage: String(values.storeCoverImage ?? '').trim(),
         cancellationPolicy: String(values.cancellationPolicy ?? '').trim(),
       },
       token

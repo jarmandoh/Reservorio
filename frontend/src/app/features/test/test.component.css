@@ -1,34 +1,36 @@
 :host {
-  --ink: #18395e;
-  --muted-ink: #65717b;
-  --paper: #fffaf0;
-  --copper: #a76443;
+  --ink: #203b4d;
+  --muted-ink: #657269;
+  --paper: #fbf5e9;
+  --copper: #a45e3f;
   display: block;
   min-height: 100dvh;
-  background: #dfe9e1;
+  background: #dce5db;
   color: var(--ink);
   font-family: 'DM Sans', sans-serif;
 }
 
 .story-shell {
   min-height: 100dvh;
-  padding: 18px;
+  padding: clamp(10px, 1.6vw, 22px);
   background:
-    radial-gradient(ellipse at 12% 10%, rgb(255 255 255 / 72%), transparent 34%),
+    radial-gradient(ellipse at 12% 10%, rgb(255 255 255 / 78%), transparent 34%),
+    radial-gradient(ellipse at 88% 90%, rgb(183 139 104 / 18%), transparent 32%),
     linear-gradient(145deg, #e9eee4 0%, #d8e4dc 56%, #e9dfcf 100%);
 }
 
 .story-stage {
   position: relative;
-  min-height: calc(100dvh - 36px);
+  min-height: calc(100dvh - clamp(20px, 3.2vw, 44px));
   overflow: hidden;
   isolation: isolate;
-  border: 1px solid rgb(255 255 255 / 75%);
-  border-radius: 28px;
+  border: 1px solid rgb(255 255 255 / 82%);
+  border-radius: clamp(18px, 2.3vw, 32px);
   background: #dfe9e1;
   box-shadow:
-    0 24px 80px rgb(39 55 48 / 16%),
-    inset 0 1px 0 rgb(255 255 255 / 80%);
+    0 28px 90px rgb(39 55 48 / 19%),
+    0 3px 12px rgb(39 55 48 / 8%),
+    inset 0 1px 0 rgb(255 255 255 / 90%);
 }
 
 .story-canvas,
@@ -47,8 +49,10 @@
   z-index: 1;
   pointer-events: none;
   background:
-    linear-gradient(180deg, rgb(239 242 231 / 75%) 0%, transparent 24%),
-    linear-gradient(0deg, rgb(20 38 46 / 35%) 0%, transparent 22%);
+    linear-gradient(180deg, rgb(245 243 231 / 86%) 0%, rgb(245 243 231 / 30%) 11%, transparent 27%),
+    linear-gradient(0deg, rgb(20 38 46 / 62%) 0%, rgb(20 38 46 / 22%) 13%, transparent 35%),
+    linear-gradient(90deg, rgb(239 242 231 / 68%) 0%, rgb(239 242 231 / 28%) 33%, transparent 62%),
+    radial-gradient(ellipse at 50% 48%, transparent 45%, rgb(29 48 44 / 13%) 100%);
 }
 
 .story-topbar,
@@ -67,13 +71,19 @@
   align-items: center;
   justify-content: space-between;
   gap: 18px;
+  padding: 11px 15px;
+  border: 1px solid rgb(255 255 255 / 66%);
+  border-radius: 999px;
+  background: rgb(250 248 237 / 64%);
+  box-shadow: 0 8px 28px rgb(47 57 49 / 8%);
+  backdrop-filter: blur(14px);
 }
 
 .brand-mark {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  color: #173858;
+  color: #203b4d;
   font-family: 'Newsreader', Georgia, serif;
   font-size: 19px;
   font-weight: 700;
@@ -86,7 +96,7 @@
   width: 32px;
   height: 32px;
   place-items: center;
-  border: 1px solid rgb(23 56 88 / 24%);
+  border: 1px solid rgb(32 59 77 / 24%);
   border-radius: 50%;
   color: #a76443;
   font-family: 'Newsreader', Georgia, serif;
@@ -106,7 +116,7 @@
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  color: rgb(24 57 94 / 65%);
+  color: rgb(32 59 77 / 72%);
 }
 
 .edition-tag i {
@@ -117,9 +127,9 @@
 }
 
 .story-caption {
-  top: 20%;
+  top: clamp(150px, 24%, 220px);
   left: clamp(28px, 7vw, 100px);
-  max-width: 360px;
+  max-width: min(390px, 34vw);
   animation: caption-enter 900ms 160ms both cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
@@ -130,20 +140,21 @@
 
 .story-caption h1 {
   margin: 0;
-  color: #18395e;
+  color: #203b4d;
   font-family: 'Newsreader', Georgia, serif;
-  font-size: clamp(32px, 4.2vw, 58px);
+  font-size: clamp(38px, 4.6vw, 68px);
   font-weight: 500;
-  letter-spacing: -0.055em;
-  line-height: 0.98;
+  letter-spacing: -0.06em;
+  line-height: 0.94;
+  text-wrap: balance;
 }
 
 .story-caption > p:last-child {
-  max-width: 285px;
-  margin: 15px 0 0;
-  color: rgb(24 57 94 / 73%);
-  font-size: 12px;
-  line-height: 1.7;
+  max-width: 300px;
+  margin: 19px 0 0;
+  color: rgb(32 59 77 / 78%);
+  font-size: 13px;
+  line-height: 1.75;
 }
 
 .chapter-marker {
@@ -152,8 +163,17 @@
   display: flex;
   align-items: center;
   gap: 9px;
-  color: rgb(255 250 240 / 90%);
+  padding: 9px 13px;
+  border: 1px solid rgb(255 250 240 / 24%);
+  border-radius: 999px;
+  background: rgb(20 38 46 / 23%);
+  color: rgb(255 250 240 / 94%);
   text-shadow: 0 1px 10px rgb(0 0 0 / 25%);
+  backdrop-filter: blur(9px);
+}
+
+.chapter-marker-index {
+  display: none;
 }
 
 .marker-dot,
@@ -168,24 +188,27 @@
 .index-card {
   top: 50%;
   right: clamp(25px, 7vw, 96px);
-  width: min(355px, calc(100% - 40px));
-  padding: 24px 24px 19px;
-  transform: translateY(-42%);
-  border: 1px solid rgb(255 255 255 / 72%);
-  border-radius: 5px 20px 20px 5px;
-  background: linear-gradient(90deg, rgb(167 100 67 / 10%) 0, transparent 14px), rgb(255 250 240 / 96%);
+  width: min(390px, calc(100% - 40px));
+  padding: 27px 27px 22px;
+  transform: translateY(-50%);
+  border: 1px solid rgb(255 255 255 / 78%);
+  border-radius: 4px 22px 22px 4px;
+  background:
+    linear-gradient(90deg, rgb(164 94 63 / 12%) 0, transparent 17px),
+    linear-gradient(135deg, rgb(255 255 255 / 65%), transparent 50%), rgb(251 245 233 / 97%);
   box-shadow:
-    0 30px 80px rgb(17 34 50 / 24%),
-    inset 5px 0 10px rgb(167 100 67 / 7%);
+    0 34px 90px rgb(17 34 50 / 28%),
+    0 5px 20px rgb(17 34 50 / 10%),
+    inset 5px 0 12px rgb(164 94 63 / 8%);
   animation: index-enter 800ms both cubic-bezier(0.16, 1, 0.3, 1);
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(18px);
 }
 
 .index-heading {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 14px;
+  margin-bottom: 18px;
 }
 
 .index-heading .eyebrow {
@@ -196,14 +219,21 @@
   margin: 0;
   color: var(--ink);
   font-family: 'Newsreader', Georgia, serif;
-  font-size: 29px;
+  font-size: 33px;
   font-weight: 500;
   letter-spacing: -0.05em;
 }
 
 .open-book-icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid rgb(164 94 63 / 18%);
+  border-radius: 50%;
+  background: rgb(164 94 63 / 8%);
   color: #a76443;
-  font-size: 25px;
+  font-size: 21px;
 }
 
 .page-link {
@@ -211,24 +241,26 @@
   width: 100%;
   grid-template-columns: 34px 1fr 18px;
   align-items: center;
-  gap: 10px;
-  padding: 11px 8px;
+  gap: 12px;
+  padding: 13px 9px;
   border: 0;
-  border-top: 1px solid rgb(24 57 94 / 9%);
+  border-top: 1px solid rgb(32 59 77 / 11%);
   background: transparent;
   color: var(--ink);
   text-align: left;
   cursor: pointer;
   transition:
     background 180ms ease,
-    padding 180ms ease;
+    padding 180ms ease,
+    box-shadow 180ms ease;
 }
 
 .page-link:hover,
 .page-link-active {
-  padding-right: 12px;
-  padding-left: 12px;
-  background: rgb(216 228 220 / 62%);
+  padding-right: 13px;
+  padding-left: 13px;
+  background: rgb(216 228 220 / 76%);
+  box-shadow: inset 2px 0 #a76443;
 }
 
 .page-number {
@@ -245,13 +277,14 @@
 
 .page-copy strong {
   font-family: 'Newsreader', Georgia, serif;
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 600;
 }
 
 .page-copy small {
   color: var(--muted-ink);
-  font-size: 10px;
+  font-size: 11px;
+  line-height: 1.45;
 }
 
 .page-arrow {
@@ -270,12 +303,12 @@
 }
 
 .selected-detail {
-  margin: 12px 0 0;
-  padding-top: 13px;
-  border-top: 1px solid rgb(24 57 94 / 12%);
+  margin: 15px 0 0;
+  padding: 14px 0 0 44px;
+  border-top: 1px solid rgb(32 59 77 / 14%);
   color: var(--muted-ink);
   font-family: 'Newsreader', Georgia, serif;
-  font-size: 15px;
+  font-size: 16px;
   font-style: italic;
   line-height: 1.5;
 }
@@ -320,6 +353,15 @@
   font: inherit;
   font-size: 11px;
   cursor: pointer;
+}
+
+.text-control:focus-visible,
+.replay-control:focus-visible,
+.retry-control:focus-visible,
+.page-link:focus-visible,
+.brand-mark:focus-visible {
+  outline: 2px solid #f1ca82;
+  outline-offset: 4px;
 }
 
 .text-control {
@@ -399,12 +441,12 @@
 @keyframes index-enter {
   from {
     opacity: 0;
-    transform: translate(18px, -38%);
+    transform: translate(22px, -50%);
   }
 
   to {
     opacity: 1;
-    transform: translate(0, -42%);
+    transform: translate(0, -50%);
   }
 }
 
@@ -420,68 +462,79 @@
   }
 
   .story-topbar {
-    inset: 18px 18px auto;
+    inset: max(14px, env(safe-area-inset-top)) 14px auto;
+    padding: 8px 11px;
   }
 
   .edition-tag {
-    font-size: 8px;
-    letter-spacing: 0.11em;
+    gap: 7px;
+    font-size: 7px;
+    letter-spacing: 0.09em;
   }
 
   .story-caption {
-    top: 16%;
-    left: 23px;
-    max-width: 260px;
+    top: 15%;
+    left: 22px;
+    max-width: min(275px, 72vw);
   }
 
   .story-caption h1 {
-    font-size: clamp(34px, 10vw, 48px);
+    font-size: clamp(38px, 10vw, 52px);
   }
 
   .story-caption > p:last-child {
-    max-width: 230px;
-    margin-top: 10px;
-    font-size: 11px;
+    max-width: 245px;
+    margin-top: 12px;
+    font-size: 12px;
   }
 
   .chapter-marker {
     right: 20px;
-    bottom: 102px;
+    bottom: 104px;
     font-size: 8px;
   }
 
   .index-card {
     top: auto;
     right: 16px;
-    bottom: 78px;
+    bottom: calc(84px + env(safe-area-inset-bottom));
     width: min(355px, calc(100% - 32px));
+    max-height: calc(100dvh - 190px - env(safe-area-inset-top));
+    overflow-y: auto;
     padding: 18px 19px 14px;
     transform: none;
+    overscroll-behavior: contain;
   }
 
   .index-heading h2 {
-    font-size: 25px;
+    font-size: 27px;
   }
 
   .page-link {
-    padding-top: 9px;
-    padding-bottom: 9px;
+    padding-top: 10px;
+    padding-bottom: 10px;
   }
 
   .page-copy small {
-    font-size: 9px;
+    font-size: 10px;
   }
 
   .selected-detail {
     margin-top: 8px;
     padding-top: 9px;
+    padding-left: 0;
     font-size: 13px;
   }
 
   .story-controls {
     right: 18px;
-    bottom: 17px;
+    bottom: max(12px, env(safe-area-inset-bottom));
     left: 18px;
+    padding: 9px 12px;
+    border: 1px solid rgb(255 250 240 / 18%);
+    border-radius: 999px;
+    background: rgb(20 38 46 / 36%);
+    backdrop-filter: blur(12px);
   }
 
   .scene-status {
@@ -501,9 +554,59 @@
     padding: 9px 12px;
     font-size: 10px;
   }
+}
 
-  .index-card ~ .chapter-marker {
-    display: none;
+@media (max-width: 380px) {
+  .brand-mark {
+    gap: 7px;
+    font-size: 16px;
+  }
+
+  .brand-icon {
+    width: 28px;
+    height: 28px;
+  }
+
+  .edition-tag {
+    font-size: 6px;
+  }
+
+  .story-controls {
+    right: 10px;
+    left: 10px;
+    gap: 8px;
+    padding: 8px 9px;
+  }
+
+  .control-actions {
+    gap: 8px;
+  }
+
+  .text-control {
+    font-size: 9px;
+  }
+
+  .replay-control {
+    gap: 5px;
+    padding: 8px 10px;
+    font-size: 9px;
+  }
+}
+
+@media (max-height: 620px) and (min-width: 761px) {
+  .story-caption {
+    top: 23%;
+  }
+
+  .index-card {
+    right: 4vw;
+    max-height: calc(100dvh - 140px);
+    overflow-y: auto;
+  }
+
+  .page-link {
+    padding-top: 8px;
+    padding-bottom: 8px;
   }
 }
 

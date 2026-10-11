@@ -22,7 +22,7 @@
         </div>
       }
 
-      <div class="chapter-marker" aria-hidden="true">
+      <div class="chapter-marker" [class.chapter-marker-index]="showIndex()" aria-hidden="true">
         <span class="marker-dot"></span>
         <span>{{ story.location }}</span>
       </div>

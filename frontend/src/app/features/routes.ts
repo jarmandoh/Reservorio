@@ -86,6 +86,10 @@ export const featureRoutes: Routes = [
     loadComponent: () => import('./privacy/privacy.component').then(m => m.PrivacyPolicyComponent),
   },
   {
+    path: 'store/:businessId',
+    loadComponent: () => import('./storefront/storefront.component').then(m => m.StorefrontComponent),
+  },
+  {
     path: 'test',
     loadComponent: () => import('./test/test.component').then(m => m.TestComponent),
   },

@@ -36,6 +36,7 @@ const httpRequestDuration = new promClient.Histogram({
 const reservations = require('./routes/reservations.routes');
 const services = require('./routes/services.routes');
 const businesses = require('./routes/businesses.routes');
+const products = require('./routes/products.routes');
 const providers = require('./routes/providers.routes');
 const auth = require('./routes/auth.routes');
 const googleOAuth = require('./routes/google.routes');
@@ -228,7 +229,7 @@ app.use((req, res, next) => {
       const labels = { method: req.method, route, status: String(res.statusCode) };
       httpRequestsTotal.inc(labels);
       httpRequestDuration.observe(labels, durationMs / 1000);
-    } catch { }
+    } catch {}
 
     const level = res.statusCode >= 500 ? 'error' : res.statusCode >= 400 ? 'warn' : 'info';
     logger[level](
@@ -250,6 +251,7 @@ app.use((req, res, next) => {
 app.use('/api/reservations', reservations);
 app.use('/api/services', services);
 app.use('/api/businesses', businesses);
+app.use('/api/businesses/:businessId/products', products.router);
 app.use('/api/providers', providers);
 app.use('/api/customers', customersRoutes);
 app.use('/api/bookings', bookingsRoutes);
@@ -352,7 +354,7 @@ function setupGracefulShutdown(server) {
     if (reminderIntervalRef) {
       try {
         clearInterval(reminderIntervalRef);
-      } catch { }
+      } catch {}
       reminderIntervalRef = null;
     }
 

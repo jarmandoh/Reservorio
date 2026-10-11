@@ -92,7 +92,9 @@ function safenegocio(b) {
     icon: b.icon,
     schedule: b.schedule,
     logo: b.logo,
+    storeCoverImage: b.store_cover_image ?? '',
     phone: b.phone,
+    whatsapp: b.whatsapp ?? '',
     active: b.active,
     verified: !!b.verified,
     cancellationPolicy: b.cancellation_policy ?? '',
@@ -270,6 +272,7 @@ async function updateBusiness(businessId, payload) {
     'icon',
     'schedule',
     'logo',
+    'storeCoverImage',
     'phone',
     'facebook',
     'instagram',
@@ -279,7 +282,8 @@ async function updateBusiness(businessId, payload) {
   ];
   for (const key of strFields) {
     if (payload?.[key] !== undefined) {
-      sets.push(`${key} = $${idx++}`);
+      const column = key === 'storeCoverImage' ? 'store_cover_image' : key;
+      sets.push(`${column} = $${idx++}`);
       vals.push(clean(payload[key]));
     }
   }

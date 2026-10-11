@@ -76,18 +76,19 @@ function canAccessBusinessId(req, res, businessId) {
 
 async function canAccessBusiness(req, res) {
   const payload = req.authPayload;
+  const businessId = req.params.id ?? req.params.businessId;
   if (!payload) {
     res.status(401).json({ ok: false, message: 'Token requerido' });
     return false;
   }
 
   if (payload.role === 'admin') return true;
-  if (payload.role === 'business-admin' && payload.businessId === req.params.id) return true;
+  if (payload.role === 'business-admin' && payload.businessId === businessId) return true;
 
   if (payload.role === 'owner') {
     try {
       const { rows } = await db.query('SELECT 1 FROM business_owners WHERE business_id = $1 AND owner_id = $2', [
-        req.params.id,
+        businessId,
         payload.ownerId,
       ]);
       if (rows.length) return true;

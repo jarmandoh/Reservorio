@@ -1,0 +1,243 @@
+<main class="storefront">
+  @if (loading()) {
+    <div class="store-loading" role="status" aria-label="Cargando tienda">
+      <span class="loading-mark">R</span>
+      <p>Preparando la tienda...</p>
+    </div>
+  } @else if (errorMessage()) {
+    <section class="store-error" role="alert">
+      <p class="store-kicker">TIENDA NO DISPONIBLE</p>
+      <h1>No pudimos abrir esta puerta.</h1>
+      <p>{{ errorMessage() }}</p>
+      <a routerLink="/">Volver a Reservorio</a>
+    </section>
+  } @else if (business(); as store) {
+    <header class="store-header">
+      <a class="store-brand" routerLink="/" aria-label="Reservorio, volver al inicio">
+        @if (store.logo) {
+          <img [src]="store.logo" [alt]="store.name" />
+        } @else {
+          <span class="brand-monogram" aria-hidden="true">{{ store.name.slice(0, 1) }}</span>
+        }
+        <span>{{ store.name }}</span>
+      </a>
+      <nav class="header-nav" aria-label="Navegación principal">
+        <a href="#inicio">Inicio</a>
+        <a href="#tienda">Tienda</a>
+        <a href="#quienes-somos">Quiénes somos</a>
+        <a href="#contacto">Contacto</a>
+      </nav>
+      <button class="header-cart" type="button" (click)="cartOpen.set(true)" [attr.aria-label]="'Abrir carrito, ' + cartCount() + ' productos'">
+        <span aria-hidden="true">Bolsa</span>
+        <span class="cart-count">{{ cartCount() }}</span>
+      </button>
+    </header>
+
+    <section
+      id="inicio"
+      class="store-hero"
+      [style.--cover-image]="store.storeCoverImage ? 'url(' + store.storeCoverImage + ')' : 'none'"
+    >
+      <div class="hero-photography" role="img" [attr.aria-label]="'Fachada de ' + store.name"></div>
+      <div class="hero-scrim"></div>
+      <div class="hero-note">
+        <span class="hero-note-dot"></span>
+        <span>{{ store.location || store.category }}</span>
+      </div>
+
+      <div class="book-stage">
+        <div class="book-spread">
+          <article class="book-page welcome-page">
+            <p class="store-kicker">UN LUGAR HECHO PARA ENCONTRARNOS</p>
+            <h1>Bienvenidos a<br /><em>{{ store.name }}</em></h1>
+            <p class="welcome-copy">
+              {{ store.description || 'Un espacio cercano, productos elegidos con cariño y atención de persona a persona.' }}
+            </p>
+            <a class="welcome-cta" href="#tienda">Descubrir la tienda <span aria-hidden="true">↗</span></a>
+            <span class="page-signature">{{ store.location || 'Hecho cerca, hecho con cuidado' }}</span>
+          </article>
+
+          <aside class="book-page menu-page" aria-label="Menú de la tienda">
+            <p class="store-kicker">SIGUE EXPLORANDO</p>
+            <nav class="book-menu" aria-label="Secciones de la tienda">
+              <a href="#inicio"><span>01</span> Inicio</a>
+              <a href="#tienda"><span>02</span> Tienda</a>
+              <a href="#quienes-somos"><span>03</span> Quiénes somos</a>
+              <a href="#contacto"><span>04</span> Contacto</a>
+            </nav>
+            <p class="menu-footnote">Una buena historia siempre se comparte.</p>
+            <span class="page-signature">RESERVORIO <span aria-hidden="true">·</span> {{ store.name }}</span>
+          </aside>
+
+          <div class="book-cover" aria-hidden="true">
+            <div class="cover-title">
+              <span>{{ store.category || 'UNA HISTORIA LOCAL' }}</span>
+              <strong>{{ store.name }}</strong>
+              <i></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <a class="hero-scroll" href="#tienda"><span></span> DESLIZA PARA EXPLORAR</a>
+    </section>
+
+    <section id="tienda" class="catalog-section">
+      <div class="section-heading">
+        <div>
+          <p class="store-kicker">SELECCIONADOS PARA TI</p>
+          <h2>La tienda</h2>
+        </div>
+        <p class="section-intro">Piezas, sabores y detalles elegidos aquí, cerca de casa.</p>
+      </div>
+
+      @if (categories().length > 1) {
+        <div class="category-filter" aria-label="Filtrar productos por categoría">
+          @for (category of categories(); track category) {
+            <button
+              type="button"
+              [class.category-active]="selectedCategory() === category"
+              [attr.aria-pressed]="selectedCategory() === category"
+              (click)="selectedCategory.set(category)"
+            >
+              {{ category }}
+            </button>
+          }
+        </div>
+      }
+
+      @if (!products().length) {
+        <div class="empty-catalog">
+          <span aria-hidden="true">✳</span>
+          <h3>Pronto habrá novedades</h3>
+          <p>El equipo de {{ store.name }} está preparando su selección para ti.</p>
+        </div>
+      } @else if (!visibleProducts().length) {
+        <p class="empty-filter">Todavía no hay productos en esta categoría.</p>
+      } @else {
+        <div class="product-grid">
+          @for (product of visibleProducts(); track product.id) {
+            <article class="product-card">
+              <div class="product-photo-wrap">
+                <img [src]="product.imageUrl" [alt]="product.name" loading="lazy" />
+                @if (product.category) {
+                  <span class="product-category">{{ product.category }}</span>
+                }
+              </div>
+              <div class="product-info">
+                <div>
+                  <h3>{{ product.name }}</h3>
+                  <p>{{ product.description }}</p>
+                </div>
+                <div class="product-purchase">
+                  <strong>{{ formatCurrency(product.price, currency) }}</strong>
+                  <button type="button" (click)="addToCart(product)" [attr.aria-label]="'Agregar ' + product.name + ' al carrito'">
+                    <span aria-hidden="true">+</span>
+                    Agregar
+                  </button>
+                </div>
+              </div>
+            </article>
+          }
+        </div>
+      }
+    </section>
+
+    <section id="quienes-somos" class="about-section">
+      <div class="about-index">R<br />—<br />01</div>
+      <div>
+        <p class="store-kicker">LAS PERSONAS DETRÁS DEL MOSTRADOR</p>
+        <h2>Lo cercano<br />tiene otra magia.</h2>
+      </div>
+      <p class="about-copy">
+        {{ store.description || store.name + ' es un negocio local que cree en el valor de hacer las cosas con cuidado y recibirte por tu nombre.' }}
+      </p>
+    </section>
+
+    <footer id="contacto" class="store-footer">
+      <div>
+        <p class="store-kicker">NOS ENCANTARÁ SALUDARTE</p>
+        <h2>Nos vemos pronto.</h2>
+      </div>
+      <address>
+        @if (store.location) {
+          <p>{{ store.location }}</p>
+        }
+        @if (store.schedule) {
+          <p>{{ store.schedule }}</p>
+        }
+        @if (store.phone) {
+          <a [href]="'tel:' + store.phone">{{ store.phone }}</a>
+        }
+        @if (store.whatsapp && whatsappContactUrl(store.whatsapp); as contactUrl) {
+          <a [href]="contactUrl" target="_blank" rel="noopener noreferrer">Escríbenos por WhatsApp ↗</a>
+        }
+      </address>
+      <p class="footer-brand">{{ store.name }} <span>·</span> Hecho cerca.</p>
+    </footer>
+
+    <button class="floating-cart" type="button" (click)="cartOpen.set(true)" [attr.aria-label]="'Abrir carrito, ' + cartCount() + ' productos'">
+      <span aria-hidden="true">Bolsa</span>
+      <span>{{ cartCount() }}</span>
+      <strong>{{ formatCurrency(cartTotal(), currency) }}</strong>
+    </button>
+
+    @if (cartOpen()) {
+      <div class="cart-backdrop" (click)="closeCart()">
+        <aside
+          class="cart-panel"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="cart-heading"
+          (click)="$event.stopPropagation()"
+        >
+          <div class="cart-heading">
+            <div>
+              <p class="store-kicker">TU SELECCIÓN</p>
+              <h2 id="cart-heading">Tu carrito <span>({{ cartCount() }})</span></h2>
+            </div>
+            <button type="button" class="cart-close" (click)="closeCart()" aria-label="Cerrar carrito">×</button>
+          </div>
+
+          @if (!cartLines().length) {
+            <div class="cart-empty">
+              <span aria-hidden="true">✳</span>
+              <p>Tu carrito está esperando algo especial.</p>
+              <button type="button" (click)="closeCart()">Seguir explorando</button>
+            </div>
+          } @else {
+            <ul class="cart-items">
+              @for (line of cartLines(); track line.product.id) {
+                <li>
+                  <img [src]="line.product.imageUrl" [alt]="line.product.name" />
+                  <div class="cart-item-details">
+                    <strong>{{ line.product.name }}</strong>
+                    <span>{{ formatCurrency(line.product.price, currency) }}</span>
+                    <div class="quantity-control" [attr.aria-label]="'Cantidad de ' + line.product.name">
+                      <button type="button" (click)="changeQuantity(line.product.id, -1)" [attr.aria-label]="'Quitar una unidad de ' + line.product.name">−</button>
+                      <span>{{ line.quantity }}</span>
+                      <button type="button" (click)="changeQuantity(line.product.id, 1)" [attr.aria-label]="'Agregar una unidad de ' + line.product.name">+</button>
+                    </div>
+                  </div>
+                  <button type="button" class="remove-item" (click)="removeFromCart(line.product.id)" [attr.aria-label]="'Eliminar ' + line.product.name">×</button>
+                </li>
+              }
+            </ul>
+            <div class="cart-total">
+              <span>Total estimado</span>
+              <strong>{{ formatCurrency(cartTotal(), currency) }}</strong>
+            </div>
+            @if (whatsappOrderUrl(); as orderUrl) {
+              <a class="order-button" [href]="orderUrl" target="_blank" rel="noopener noreferrer">
+                Hacer pedido por WhatsApp <span aria-hidden="true">↗</span>
+              </a>
+              <p class="order-note">El vendedor recibirá tu pedido y te escribirá para confirmar disponibilidad y entrega.</p>
+            } @else {
+              <p class="order-warning" role="status">Esta tienda aún no tiene WhatsApp configurado. Contacta directamente con el negocio.</p>
+            }
+          }
+        </aside>
+      </div>
+    }
+  }
+</main>

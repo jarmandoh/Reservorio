@@ -26,7 +26,15 @@ import {
   UpdatePayload,
 } from '../models/reservation.model';
 import { Categoria } from '../models/categorias.model';
-import { Business, NewBusinessPayload, Owner, OwnerAuthPayload } from '../models/businesses.model';
+import {
+  Business,
+  CatalogProduct,
+  CloudinaryUploadedImage,
+  CloudinaryUploadSignature,
+  NewBusinessPayload,
+  Owner,
+  OwnerAuthPayload,
+} from '../models/businesses.model';
 import { OfflineService } from './offline.service';
 
 export interface BusinessQuery {
@@ -205,6 +213,115 @@ export class ApiService {
       map(r => r.data!),
       catchError(this.handleError)
     );
+  }
+
+  getPublicStorefront(businessId: string): Observable<Business> {
+    return this.http
+      .get<ApiResponse<Business>>(`${this.base}/businesses/${encodeURIComponent(businessId)}/storefront`)
+      .pipe(
+        map(response => {
+          if (!response.data) throw new Error('La tienda no está disponible.');
+          return response.data;
+        }),
+        catchError(this.handleError)
+      );
+  }
+
+  getCatalogProducts(businessId: string, manage = false, token?: string): Observable<CatalogProduct[]> {
+    const url = `${this.base}/businesses/${encodeURIComponent(businessId)}/products${manage ? '/manage' : ''}`;
+    return this.http
+      .get<ApiResponse<CatalogProduct[]>>(url, token ? this.authHeader(token) : {})
+      .pipe(
+        map(response => response.data ?? []),
+        catchError(this.handleError)
+      );
+  }
+
+  getCatalogImageSignature(
+    businessId: string,
+    assetType: 'product' | 'cover',
+    token: string
+  ): Observable<CloudinaryUploadSignature> {
+    return this.http
+      .post<ApiResponse<CloudinaryUploadSignature>>(
+        `${this.base}/businesses/${encodeURIComponent(businessId)}/products/image-signature`,
+        { assetType },
+        this.authHeader(token)
+      )
+      .pipe(
+        map(response => {
+          if (!response.data) throw new Error('No se pudo preparar la carga de la imagen.');
+          return response.data;
+        }),
+        catchError(this.handleError)
+      );
+  }
+
+  uploadCatalogImage(
+    signature: CloudinaryUploadSignature,
+    file: File
+  ): Observable<CloudinaryUploadedImage> {
+    const form = new FormData();
+    form.append('file', file);
+    form.append('api_key', signature.apiKey);
+    form.append('timestamp', String(signature.timestamp));
+    form.append('public_id', signature.publicId);
+    form.append('signature', signature.signature);
+
+    return this.http
+      .post<CloudinaryUploadedImage>(
+        `https://api.cloudinary.com/v1_1/${encodeURIComponent(signature.cloudName)}/image/upload`,
+        form
+      )
+      .pipe(catchError(this.handleError));
+  }
+
+  createCatalogProduct(
+    businessId: string,
+    product: Omit<CatalogProduct, 'id' | 'businessId' | 'active'> & { active?: boolean },
+    token: string
+  ): Observable<CatalogProduct> {
+    return this.http
+      .post<ApiResponse<CatalogProduct>>(
+        `${this.base}/businesses/${encodeURIComponent(businessId)}/products`,
+        product,
+        this.authHeader(token)
+      )
+      .pipe(
+        map(response => {
+          if (!response.data) throw new Error('No se pudo guardar el producto.');
+          return response.data;
+        }),
+        catchError(this.handleError)
+      );
+  }
+
+  updateCatalogProduct(businessId: string, product: CatalogProduct, token: string): Observable<CatalogProduct> {
+    return this.http
+      .put<ApiResponse<CatalogProduct>>(
+        `${this.base}/businesses/${encodeURIComponent(businessId)}/products/${encodeURIComponent(product.id)}`,
+        product,
+        this.authHeader(token)
+      )
+      .pipe(
+        map(response => {
+          if (!response.data) throw new Error('No se pudo actualizar el producto.');
+          return response.data;
+        }),
+        catchError(this.handleError)
+      );
+  }
+
+  deleteCatalogProduct(businessId: string, productId: string, token: string): Observable<void> {
+    return this.http
+      .delete<ApiResponse<void>>(
+        `${this.base}/businesses/${encodeURIComponent(businessId)}/products/${encodeURIComponent(productId)}`,
+        this.authHeader(token)
+      )
+      .pipe(
+        map(() => undefined),
+        catchError(this.handleError)
+      );
   }
 
   // ── Multi-business (admin) ────────────────────────────────────────────
