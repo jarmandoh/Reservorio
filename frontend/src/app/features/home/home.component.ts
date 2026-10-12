@@ -18,6 +18,7 @@ import { catchError, of } from 'rxjs';
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
 import { Business } from '../../core/models/businesses.model';
+import { CategoryFiltersComponent, HomeFilters } from './category-filters/category-filters.component';
 
 // Fallback estático mientras no haya datos en la API
 const FALLBACK_BUSINESSES: Business[] = [
@@ -39,12 +40,12 @@ const FALLBACK_BUSINESSES: Business[] = [
   }, */
 ];
 
-const CATEGORIES = ['Todos', 'Salud & Bienestar', 'Belleza', 'Fitness', 'Educación', 'Restaurantes'];
+const DEFAULT_CATEGORIES = ['Salud & Bienestar', 'Belleza', 'Fitness', 'Educación', 'Restaurantes'];
 
 @Component({
   selector: 'app-home',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, CategoryFiltersComponent],
   template: `
     <div class="min-h-screen bg-surface flex flex-col">
       <!-- ══ HERO ═══════════════════════════════════════════════════════ -->
@@ -151,7 +152,7 @@ const CATEGORIES = ['Todos', 'Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci
           </div>
 
           <!-- Search bar -->
-          <div class="g-search grid gap-3 sm:grid-cols-[1fr_220px] max-w-3xl">
+          <div class="g-search grid gap-3 max-w-3xl">
             <div class="relative">
               <span
                 class="material-icons-round absolute left-4 top-1/2 -translate-y-1/2
@@ -167,24 +168,6 @@ const CATEGORIES = ['Todos', 'Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci
                      focus:ring-2 focus:ring-primary/40 transition"
                 placeholder="Busca por nombre, servicio o categoría…"
                 [(ngModel)]="searchQuery"
-                (ngModelChange)="onSearch()"
-              />
-            </div>
-            <div class="relative">
-              <span
-                class="material-icons-round absolute left-4 top-1/2 -translate-y-1/2
-                         text-primary text-[1.25rem] pointer-events-none"
-                >place</span
-              >
-              <label class="sr-only" for="business-location">Filtra por ciudad o zona</label>
-              <input
-                id="business-location"
-                type="text"
-                class="w-full bg-white text-on-surface rounded-2xl pl-12 pr-5 py-4
-                     text-base shadow-soft placeholder:text-outline focus:outline-none
-                     focus:ring-2 focus:ring-primary/40 transition"
-                placeholder="Filtra por ciudad o zona…"
-                [(ngModel)]="locationQuery"
                 (ngModelChange)="onSearch()"
               />
             </div>
@@ -208,22 +191,15 @@ const CATEGORIES = ['Todos', 'Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci
         </div>
       </header>
 
-      <!-- ══ CATEGORY CHIPS ══════════════════════════════════════════ -->
-      <div class="bg-surface-lowest border-b border-outline-variant/30 sticky top-0 z-10">
-        <div class="g-chips-inner max-w-4xl mx-auto px-4 py-3 flex gap-2 overflow-x-auto">
-          @for (cat of categories; track cat) {
-            <button
-              class="whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-all flex-shrink-0"
-              [style.background]="selectedCategory === cat ? '#005bbf' : ''"
-              [style.color]="selectedCategory === cat ? '#fff' : ''"
-              [class.bg-surface-low]="selectedCategory !== cat"
-              [class.text-on-surface]="selectedCategory !== cat"
-              [attr.aria-pressed]="selectedCategory === cat"
-              (click)="selectCategory(cat)"
-            >
-              {{ cat }}
-            </button>
-          }
+      <div class="sticky top-0 z-10 bg-surface/95 backdrop-blur-md border-b border-outline-variant/20">
+        <div class="max-w-4xl mx-auto px-4 py-3">
+          <app-category-filters
+            [categories]="categories"
+            [filters]="filters"
+            [searchQuery]="searchQuery"
+            (filtersChange)="onFiltersChange($event)"
+            (clearAll)="clearAllFilters()"
+          />
         </div>
       </div>
 
@@ -235,8 +211,8 @@ const CATEGORIES = ['Todos', 'Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci
             <h2 class="font-display font-semibold text-xl">
               @if (searchQuery) {
                 Resultados para "{{ searchQuery }}"
-              } @else if (selectedCategory !== 'Todos') {
-                {{ selectedCategory }}
+              } @else if (filters.category !== 'Todos') {
+                {{ filters.category }}
               } @else {
                 Negocios disponibles
               }
@@ -244,8 +220,8 @@ const CATEGORIES = ['Todos', 'Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci
             <p class="text-sm text-on-surface-variant mt-0.5">
               @if (filtered().length) {
                 {{ filtered().length }} resultado{{ filtered().length !== 1 ? 's' : '' }}
-              } @else if (searchQuery || selectedCategory !== 'Todos') {
-                No se encontraron resultados exactos. Se muestran todos los negocios disponibles.
+              } @else if (searchQuery || hasActiveFilters()) {
+                No hay resultados con esta combinación. Prueba cambiar o limpiar los filtros.
               } @else {
                 {{ displayedBusinesses().length }} resultado{{ displayedBusinesses().length !== 1 ? 's' : '' }}
               }
@@ -267,20 +243,24 @@ const CATEGORIES = ['Todos', 'Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci
         }
 
         <!-- Empty state -->
-        @if (!loading() && !businesses.length) {
+        @if (!loading() && !displayedBusinesses().length) {
           <div class="flex flex-col items-center justify-center gap-4 py-20 text-center">
             <div class="w-20 h-20 rounded-full bg-surface-low flex items-center justify-center">
               <span class="material-icons-round text-4xl text-outline">search_off</span>
             </div>
             <h3 class="font-display font-semibold text-xl">Sin resultados</h3>
             <p class="text-sm text-on-surface-variant max-w-xs">
-              No se encontraron negocios disponibles. Intenta más tarde.
+              @if (searchQuery || hasActiveFilters()) {
+                Prueba con otra ubicación o cambia los filtros aplicados.
+              } @else {
+                No se encontraron negocios disponibles. Intenta más tarde.
+              }
             </p>
           </div>
         }
 
         <!-- Business cards -->
-        @if (!loading()) {
+        @if (!loading() && displayedBusinesses().length) {
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             @for (negocio of displayedBusinesses(); track negocio.id) {
               <a
@@ -449,17 +429,23 @@ export class HomeComponent implements OnInit, OnDestroy {
   readonly accountDisplayName = computed(() => this.customerName() || this.ownerName() || this.businessName());
 
   businesses: Business[] = [];
-  categories = CATEGORIES;
+  categories = ['Todos', ...DEFAULT_CATEGORIES];
   searchQuery = '';
-  locationQuery = '';
-  selectedCategory = 'Todos';
+  filters: HomeFilters = { category: 'Todos', location: '', minimumRating: 0, bookableOnly: false, openState: 'any' };
   readonly loading = signal(true);
   readonly negocioLoading = signal(false);
 
   filtered(): Business[] {
     const q = this.searchQuery.toLowerCase();
     return this.businesses.filter(negocio => {
-      const matchCat = this.selectedCategory === 'Todos' || negocio.category === this.selectedCategory;
+      const matchCat = this.filters.category === 'Todos' || negocio.category === this.filters.category;
+      const matchLocation =
+        !this.filters.location || negocio.location.toLowerCase().includes(this.filters.location.toLowerCase());
+      const matchRating = negocio.rating >= this.filters.minimumRating;
+      const matchBooking = !this.filters.bookableOnly || negocio.businessType === 'appointment';
+      const openNow = this.isOpenNow(negocio.schedule);
+      const matchOpenState =
+        this.filters.openState === 'any' || (this.filters.openState === 'open' ? openNow === true : openNow === false);
       const matchQ =
         !q ||
         negocio.name.toLowerCase().includes(q) ||
@@ -467,17 +453,12 @@ export class HomeComponent implements OnInit, OnDestroy {
         negocio.tags.some(t => t.toLowerCase().includes(q)) ||
         negocio.category.toLowerCase().includes(q) ||
         (negocio.profession ?? '').toLowerCase().includes(q);
-      return matchCat && matchQ;
+      return matchCat && matchLocation && matchRating && matchBooking && matchOpenState && matchQ;
     });
   }
 
-  noSearchResults(): boolean {
-    const hasActiveFilter = !!this.searchQuery || this.selectedCategory !== 'Todos';
-    return hasActiveFilter && !this.filtered().length;
-  }
-
   displayedBusinesses(): Business[] {
-    return this.noSearchResults() ? this.businesses : this.filtered();
+    return this.filtered();
   }
 
   totalAvailable(): number {
@@ -486,7 +467,77 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadBusinesses();
+    this.loadCategories();
     this.loadAccountName();
+  }
+
+  onFiltersChange(filters: HomeFilters): void {
+    this.filters = filters;
+  }
+
+  clearAllFilters(): void {
+    this.searchQuery = '';
+    this.filters = { category: 'Todos', location: '', minimumRating: 0, bookableOnly: false, openState: 'any' };
+  }
+
+  hasActiveFilters(): boolean {
+    return (
+      this.filters.category !== 'Todos' ||
+      !!this.filters.location ||
+      this.filters.minimumRating > 0 ||
+      this.filters.bookableOnly ||
+      this.filters.openState !== 'any'
+    );
+  }
+
+  private isOpenNow(schedule?: string): boolean | null {
+    if (!schedule) return null;
+    const normalized = schedule
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase();
+    const hours = normalized.match(/(\d{1,2}:\d{2})\s*[–—-]\s*(\d{1,2}:\d{2})/);
+    if (!hours) return null;
+
+    const weekdays = ['dom', 'lun', 'mar', 'mie', 'jue', 'vie', 'sab'];
+    const today = weekdays[new Date().getDay()];
+    const dayText = normalized.slice(0, hours.index).trim();
+    const dayTokens =
+      dayText.match(/\b(dom|domingo|lun|lunes|mar|martes|mie|miercoles|jue|jueves|vie|viernes|sab|sabado)\b/g) ?? [];
+    let dayIsIncluded = dayTokens.some(token => token.startsWith(today));
+    const range = dayText.match(/\b(dom|lun|mar|mie|jue|vie|sab)\s*(?:a|al|-)\s*(dom|lun|mar|mie|jue|vie|sab)\b/);
+    if (range) {
+      const start = weekdays.indexOf(range[1]);
+      const end = weekdays.indexOf(range[2]);
+      const current = new Date().getDay();
+      dayIsIncluded = start <= end ? current >= start && current <= end : current >= start || current <= end;
+    }
+    if (!dayIsIncluded) return false;
+
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const toMinutes = (value: string) => {
+      const [hour, minute] = value.split(':').map(Number);
+      return hour * 60 + minute;
+    };
+    const opening = toMinutes(hours[1]);
+    const closing = toMinutes(hours[2]);
+    return closing < opening
+      ? currentMinutes >= opening || currentMinutes < closing
+      : currentMinutes >= opening && currentMinutes < closing;
+  }
+
+  private loadCategories(): void {
+    this.api
+      .getCategories()
+      .pipe(catchError(() => of([])))
+      .subscribe(list => {
+        const names = list.map(category => category.name.trim()).filter(Boolean);
+        this.categories = ['Todos', ...new Set(names.length ? names : DEFAULT_CATEGORIES)];
+        if (this.filters.category !== 'Todos' && !this.categories.includes(this.filters.category)) {
+          this.filters = { ...this.filters, category: 'Todos' };
+        }
+      });
   }
 
   @HostListener('document:click', ['$event'])
@@ -572,8 +623,8 @@ export class HomeComponent implements OnInit, OnDestroy {
     this.negocioLoading.set(true);
     const query = {
       q: this.searchQuery,
-      category: this.selectedCategory !== 'Todos' ? this.selectedCategory : undefined,
-      location: this.locationQuery,
+      category: this.filters.category !== 'Todos' ? this.filters.category : undefined,
+      location: this.filters.location,
     };
 
     this.sub = this.api
@@ -612,13 +663,9 @@ export class HomeComponent implements OnInit, OnDestroy {
     /* reactivo con computed */
   }
 
-  selectCategory(cat: string): void {
-    this.selectedCategory = cat;
-  }
-
   resetFilters(): void {
     this.searchQuery = '';
-    this.selectedCategory = 'Todos';
+    this.filters = { category: 'Todos', location: '', minimumRating: 0, bookableOnly: false, openState: 'any' };
     this.loadBusinesses();
   }
 
