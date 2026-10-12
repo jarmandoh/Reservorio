@@ -15,7 +15,7 @@
     <header class="store-header">
       <a class="store-brand" routerLink="/" aria-label="Reservorio, volver al inicio">
         @if (store.logo) {
-          <img [src]="store.logo" [alt]="store.name" />
+          <img [src]="store.logo" [alt]="store.name" loading="lazy" />
         } @else {
           <span class="brand-monogram" aria-hidden="true">{{ store.name.slice(0, 1) }}</span>
         }
@@ -209,7 +209,7 @@
             <ul class="cart-items">
               @for (line of cartLines(); track line.product.id) {
                 <li>
-                  <img [src]="line.product.imageUrl" [alt]="line.product.name" />
+                  <img [src]="line.product.imageUrl" [alt]="line.product.name" loading="lazy" />
                   <div class="cart-item-details">
                     <strong>{{ line.product.name }}</strong>
                     <span>{{ formatCurrency(line.product.price, currency) }}</span>

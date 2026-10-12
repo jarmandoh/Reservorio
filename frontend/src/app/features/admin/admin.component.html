@@ -621,7 +621,7 @@
                   class="w-12 h-12 rounded-xl overflow-hidden flex items-center justify-center flex-shrink-0 bg-surface-muted"
                 >
                   @if (negocio.logo) {
-                    <img src="{{ negocio.logo }}" alt="Logo de {{ negocio.name }}" class="w-full h-full object-cover" />
+                    <img src="{{ negocio.logo }}" alt="Logo de {{ negocio.name }}" class="w-full h-full object-cover" loading="lazy" />
                   } @else {
                     <span class="material-icons-round text-xl text-outline">store</span>
                   }
@@ -930,7 +930,7 @@
                 <label class="form-label">Vista previa del logo</label>
                 @if (logoPreview()) {
                   <div class="rounded-xl overflow-hidden border border-outline-variant/20 w-full h-28 bg-surface-muted">
-                    <img src="{{ logoPreview() }}" alt="Vista previa del logo" class="w-full h-full object-contain" />
+                    <img src="{{ logoPreview() }}" alt="Vista previa del logo" class="w-full h-full object-contain" loading="lazy" />
                   </div>
                 } @else {
                   <div
