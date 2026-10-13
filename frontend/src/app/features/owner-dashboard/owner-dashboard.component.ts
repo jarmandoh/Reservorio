@@ -12,7 +12,7 @@ import { BusinessListComponent } from '../../shared/components/business-list/bus
 
 @Component({
   selector: 'app-owner-dashboard',
-  imports: [CommonModule, ReactiveFormsModule, BusinessFormComponent, SidebarComponent, BusinessListComponent],
+  imports: [CommonModule, ReactiveFormsModule, BusinessFormComponent, BusinessListComponent],
   template: `
     <!-- <app-skip-link></app-skip-link> -->
       <main id="main-content" role="main" class="max-w-5xl mx-auto space-y-6">

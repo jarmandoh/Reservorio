@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS businesses (
   description TEXT NOT NULL DEFAULT '',
   location    TEXT NOT NULL DEFAULT '',
   rating      NUMERIC(4,2) NOT NULL DEFAULT 5.0,
-  reviews     INT NOT NULL DEFAULT 0,
+  reviews     INT NOT NULL DEFAULT 0 CHECK (reviews >= 0),
   tags        TEXT NOT NULL DEFAULT '',
   gradient    TEXT NOT NULL DEFAULT 'linear-gradient(135deg,#005bbf,#1a73e8)',
   icon        TEXT NOT NULL DEFAULT 'store',
@@ -27,6 +27,18 @@ CREATE TABLE IF NOT EXISTS businesses (
   pin_hash    TEXT NOT NULL,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+     WHERE conname = 'businesses_rating_range_check'
+       AND conrelid = 'businesses'::regclass
+  ) THEN
+    ALTER TABLE businesses ADD CONSTRAINT businesses_rating_range_check
+      CHECK (rating >= 0 AND rating <= 5);
+  END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS owners (
   id            TEXT PRIMARY KEY,
@@ -101,7 +113,7 @@ BEGIN
       'reservorio-test-business', 'Negocio de prueba', 'Belleza', 'appointment',
       'Negocio local para validar el flujo de administración y reservas.',
       'Bogotá, Colombia', 4.8, 12, 'pruebas,demostración',
-      'linear-gradient(135deg,#005bbf,#1a73e8)', 'store', 'Lun a sáb · 9:00–18:00',
+      'linear-gradient(135deg,#005bbf,#1a73e8)', 'store', 'Lun a sáb · 09:00–18:00',
       '+573001112233', '+573001112233', true,
       '$2b$10$VsBiSBMp6HiOSEnRmW4M8el/GxDgyxR6tCQoXpuMB2DrWjJXgwd5O'
     )
@@ -192,6 +204,20 @@ CREATE INDEX IF NOT EXISTS idx_services_business ON services(business_id);
 CREATE INDEX IF NOT EXISTS idx_customers_email ON customers(email);
 CREATE INDEX IF NOT EXISTS idx_bookings_provider ON bookings(provider_id);
 CREATE INDEX IF NOT EXISTS idx_bookings_customer ON bookings(customer_id);
+CREATE INDEX IF NOT EXISTS idx_businesses_active_name ON businesses(name) WHERE active = true;
+CREATE INDEX IF NOT EXISTS idx_business_owners_owner_business ON business_owners(owner_id, business_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_customer ON notifications(customer_id);
+CREATE INDEX IF NOT EXISTS idx_payments_booking ON payments(booking_id);
+CREATE INDEX IF NOT EXISTS idx_payments_provider_created ON payments(provider_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_payments_customer_created ON payments(customer_id, created_at DESC);
+
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE INDEX IF NOT EXISTS idx_businesses_name_trgm ON businesses USING GIN(name gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_businesses_description_trgm ON businesses USING GIN(description gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_businesses_location_trgm ON businesses USING GIN(location gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_businesses_category_trgm ON businesses USING GIN(category gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_businesses_profession_trgm ON businesses USING GIN(profession gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_businesses_tags_trgm ON businesses USING GIN(tags gin_trgm_ops);
 
 -- Anti doble-reserva a nivel de base de datos (reemplaza migration 002):
 -- Una franja ocupada (Reservado/Confirmado/Cancelado) no se puede asignar dos veces al mismo negocio.
@@ -270,6 +296,11 @@ CREATE TABLE IF NOT EXISTS business_tags (
   tag_id INT NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
   PRIMARY KEY (business_id, tag_id)
 );
+
+CREATE INDEX IF NOT EXISTS idx_business_categories_category_business
+  ON business_categories(category_id, business_id);
+CREATE INDEX IF NOT EXISTS idx_business_tags_tag_business
+  ON business_tags(tag_id, business_id);
 
 CREATE TABLE IF NOT EXISTS ratings (
   id SERIAL PRIMARY KEY,

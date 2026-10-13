@@ -33,3 +33,5 @@ ya existan.
   bloque simple.
 - Todo cambio permanente al schema va primero como migración; si afecta a contenedores
   nuevos, refleja el cambio también en `init.sql`.
+- Las migraciones con objetos reversibles deben documentar su SQL de rollback en un
+  archivo `.rollback.md` junto a la migración. El runner solo ejecuta archivos `.sql`.
