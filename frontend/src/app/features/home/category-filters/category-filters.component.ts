@@ -37,6 +37,21 @@ const EMPTY_FILTERS: HomeFilters = {
         </button>
       </div>
 
+      <label class="filter-field search-field" for="business-search">
+        <span class="field-label">Buscar negocios</span>
+        <span class="input-wrap">
+          <span class="material-icons-round" aria-hidden="true">search</span>
+          <input
+            id="business-search"
+            type="search"
+            placeholder="Nombre, servicio o categoría"
+            [ngModel]="searchQuery"
+            (ngModelChange)="searchQueryChange.emit($event)"
+            aria-label="Buscar negocios"
+          />
+        </span>
+      </label>
+
       <div class="filter-controls">
         <label class="filter-field location-field">
           <span class="field-label">Ubicación</span>
@@ -151,11 +166,32 @@ const EMPTY_FILTERS: HomeFilters = {
     `
       :host {
         display: block;
+        --filter-surface: #ffffff;
+        --filter-control: #ffffff;
+        --filter-border: #e2e8f0;
+        --filter-muted: #64748b;
+        --filter-text: #181c20;
+        --filter-hover: #eff6ff;
+        --filter-chip-bg: #f1f7ff;
+        --filter-chip-border: #dbeafe;
+        --filter-chip-text: #174a7e;
+      }
+      :host-context(.dark) {
+        --filter-surface: #1a222d;
+        --filter-control: #111821;
+        --filter-border: #34404e;
+        --filter-muted: #aab5c3;
+        --filter-text: #e6e9ee;
+        --filter-hover: #26384c;
+        --filter-chip-bg: #203349;
+        --filter-chip-border: #36516d;
+        --filter-chip-text: #d5e8fa;
+        color-scheme: dark;
       }
       .filter-panel {
         padding: 1.125rem;
-        background: var(--color-surface-lowest, #fff);
-        border: 1px solid rgba(100, 116, 139, 0.16);
+        background: var(--filter-surface);
+        border: 1px solid var(--filter-border);
         border-radius: 1rem;
         box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
       }
@@ -194,10 +230,10 @@ const EMPTY_FILTERS: HomeFilters = {
         cursor: pointer;
       }
       .clear-button:hover:not(:disabled) {
-        background: #eff6ff;
+        background: var(--filter-hover);
       }
       .clear-button:disabled {
-        color: #9ca3af;
+        color: var(--filter-muted);
         cursor: default;
       }
       .clear-button .material-icons-round {
@@ -209,6 +245,9 @@ const EMPTY_FILTERS: HomeFilters = {
         align-items: end;
         gap: 0.65rem;
       }
+      .search-field {
+        margin-bottom: 0.8rem;
+      }
       .filter-field {
         display: flex;
         min-width: 0;
@@ -216,7 +255,7 @@ const EMPTY_FILTERS: HomeFilters = {
         gap: 0.4rem;
       }
       .field-label {
-        color: #64748b;
+        color: var(--filter-muted);
         font-size: 0.7rem;
         font-weight: 600;
       }
@@ -227,9 +266,9 @@ const EMPTY_FILTERS: HomeFilters = {
         align-items: center;
         min-width: 0;
         height: 42px;
-        border: 1px solid #e2e8f0;
+        border: 1px solid var(--filter-border);
         border-radius: 0.625rem;
-        background: #fff;
+        background: var(--filter-control);
       }
       .input-wrap:focus-within,
       .select-wrap:focus-within {
@@ -238,7 +277,7 @@ const EMPTY_FILTERS: HomeFilters = {
       }
       .input-wrap > .material-icons-round {
         margin-left: 0.7rem;
-        color: #64748b;
+        color: var(--filter-muted);
         font-size: 1.05rem;
       }
       input[type='search'],
@@ -249,7 +288,7 @@ const EMPTY_FILTERS: HomeFilters = {
         padding: 0 0.65rem;
         border: 0;
         outline: 0;
-        color: var(--color-on-surface, #181c20);
+        color: var(--filter-text);
         background: transparent;
         font: inherit;
         font-size: 0.78rem;
@@ -265,7 +304,7 @@ const EMPTY_FILTERS: HomeFilters = {
       .select-wrap > .material-icons-round {
         position: absolute;
         right: 0.5rem;
-        color: #64748b;
+        color: var(--filter-muted);
         font-size: 1.1rem;
         pointer-events: none;
       }
@@ -275,10 +314,10 @@ const EMPTY_FILTERS: HomeFilters = {
         align-items: center;
         gap: 0.45rem;
         padding: 0 0.7rem;
-        border: 1px solid #e2e8f0;
+        border: 1px solid var(--filter-border);
         border-radius: 0.625rem;
-        color: #475569;
-        background: #fff;
+        color: var(--filter-muted);
+        background: var(--filter-control);
         font-size: 0.75rem;
         font-weight: 600;
         white-space: nowrap;
@@ -292,7 +331,7 @@ const EMPTY_FILTERS: HomeFilters = {
       .booking-toggle-active {
         border-color: rgba(0, 91, 191, 0.35);
         color: var(--color-primary);
-        background: #eff6ff;
+        background: var(--filter-hover);
       }
       .toggle-icon {
         font-size: 1.05rem;
@@ -304,11 +343,11 @@ const EMPTY_FILTERS: HomeFilters = {
         gap: 0.45rem;
         margin-top: 0.85rem;
         padding-top: 0.75rem;
-        border-top: 1px solid #eef2f6;
+        border-top: 1px solid var(--filter-border);
       }
       .applied-label {
         margin-right: 0.15rem;
-        color: #64748b;
+        color: var(--filter-muted);
         font-size: 0.7rem;
         font-weight: 600;
       }
@@ -317,10 +356,10 @@ const EMPTY_FILTERS: HomeFilters = {
         align-items: center;
         gap: 0.3rem;
         padding: 0.3rem 0.55rem;
-        border: 1px solid #dbeafe;
+        border: 1px solid var(--filter-chip-border);
         border-radius: 999px;
-        color: #174a7e;
-        background: #f1f7ff;
+        color: var(--filter-chip-text);
+        background: var(--filter-chip-bg);
         font-size: 0.7rem;
         font-weight: 600;
       }
@@ -372,6 +411,7 @@ export class CategoryFiltersComponent {
   @Input() filters: HomeFilters = { ...EMPTY_FILTERS };
   @Input() searchQuery = '';
   @Output() filtersChange = new EventEmitter<HomeFilters>();
+  @Output() searchQueryChange = new EventEmitter<string>();
   @Output() clearAll = new EventEmitter<void>();
 
   get hasFilters(): boolean {

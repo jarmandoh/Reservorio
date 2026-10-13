@@ -1,6 +1,7 @@
 import { Component, DestroyRef, ElementRef, OnInit, ViewChild, inject } from '@angular/core';
 import { NavigationEnd, NavigationStart, Router, RouterOutlet } from '@angular/router';
 import { ToastComponent } from './shared/components/toast/toast.component';
+import { AccountMenuComponent } from './shared/components/account-menu/account-menu.component';
 import { OfflineService } from './core/services/offline.service';
 import { AuthService } from './core/services/auth.service';
 import { ThemeService } from './core/services/theme.service';
@@ -45,36 +46,8 @@ function rand(len: number) {
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, ToastComponent],
-  template: `
-    <a class="skip-link" href="#main-content">Saltar al contenido principal</a>
-    <main #mainContent id="main-content" tabindex="-1">
-      <div #pageHost>
-        <router-outlet />
-      </div>
-    </main>
-    <app-toast />
-
-    <button
-      type="button"
-      class="fixed bottom-4 right-4 z-40 flex h-11 w-11 items-center justify-center rounded-full text-white shadow-soft transition active:scale-95"
-      style="background: linear-gradient(135deg, #005bbf 0%, #1a73e8 100%);"
-      [attr.aria-label]="themeService.isDark() ? 'Activar tema claro' : 'Activar tema oscuro'"
-      (click)="themeService.toggle()"
-    >
-      <span class="material-icons-round" aria-hidden="true">{{
-        themeService.isDark() ? 'light_mode' : 'dark_mode'
-      }}</span>
-    </button>
-
-    @if (!online()) {
-      <div class="offline-banner" role="status" aria-live="polite">
-        <span class="material-icons-round text-[1.1rem] flex-shrink-0">wifi_off</span>
-        <span class="flex-1">Sin conexión. Los datos mostrados pueden estar desactualizados.</span>
-        <span>Esperando conexión…</span>
-      </div>
-    }
-  `,
+  imports: [RouterOutlet, ToastComponent, AccountMenuComponent],
+  templateUrl: './app.component.html',
 })
 export class AppComponent implements OnInit {
   @ViewChild('pageHost', { static: true }) pageHost!: ElementRef<HTMLDivElement>;

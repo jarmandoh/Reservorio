@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, signal, computed, inject, DestroyRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, computed, inject, DestroyRef, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ReactiveFormsModule, FormBuilder, Validators, AbstractControl } from '@angular/forms';
@@ -30,67 +30,73 @@ interface ConfirmedBooking {
   imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink],
   template: `
     <div
-      class="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(26,115,232,0.26),_transparent_32%),linear-gradient(180deg,#040814_0%,#091324_52%,#0c1628_100%)] text-white"
+      class="booking-shell min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(26,115,232,0.26),_transparent_32%),linear-gradient(180deg,#040814_0%,#091324_52%,#0c1628_100%)] text-white"
+      [class.booking-embedded]="embedded"
     >
-      <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
-        <div class="grid gap-8 lg:min-h-[calc(100vh-5rem)] lg:grid-cols-[minmax(0,1fr)_430px] lg:items-start lg:gap-12">
-          <section
-            class="order-2 lg:order-1 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto lg:overscroll-contain lg:pr-6"
-          >
-            <div class="flex flex-col justify-center gap-8 lg:min-h-full">
-              <div class="space-y-5">
-                <span
-                  class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] text-brand-light backdrop-blur-sm"
-                >
-                  <span class="material-icons-round text-[0.9rem]">bolt</span>
-                  Reserva sin esperas
-                </span>
-                <h1 class="font-display text-4xl font-bold leading-[1.05] text-balance sm:text-5xl lg:text-[3.5rem]">
-                  Agenda tu cita en minutos.
-                  <span class="mt-1 block text-brand-sky">Rápido, claro y al instante.</span>
-                </h1>
-                <p class="max-w-xl text-sm leading-6 text-slate-300 sm:text-base">
-                  Elige tu servicio, revisa la disponibilidad y deja tus datos para pedir la reserva en un flujo simple.
-                </p>
-              </div>
+      <div class="booking-container mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
+        <div
+          class="booking-layout grid gap-8 lg:min-h-[calc(100vh-5rem)] lg:grid-cols-[minmax(0,1fr)_430px] lg:items-start lg:gap-12"
+        >
+          @if (!embedded) {
+            <section
+              class="order-2 lg:order-1 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto lg:overscroll-contain lg:pr-6"
+            >
+              <div class="flex flex-col justify-center gap-8 lg:min-h-full">
+                <div class="space-y-5">
+                  <span
+                    class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] text-brand-light backdrop-blur-sm"
+                  >
+                    <span class="material-icons-round text-[0.9rem]">bolt</span>
+                    Reserva sin esperas
+                  </span>
+                  <h1 class="font-display text-4xl font-bold leading-[1.05] text-balance sm:text-5xl lg:text-[3.5rem]">
+                    Agenda tu cita en minutos.
+                    <span class="mt-1 block text-brand-sky">Rápido, claro y al instante.</span>
+                  </h1>
+                  <p class="max-w-xl text-sm leading-6 text-slate-300 sm:text-base">
+                    Elige tu servicio, revisa la disponibilidad y deja tus datos para pedir la reserva en un flujo
+                    simple.
+                  </p>
+                </div>
 
-              <ol class="flex flex-col">
-                @for (item of instructionItems; track item.order; let last = $last) {
-                  <li class="relative flex gap-4" [class.pb-7]="!last" [class.pb-1]="last">
-                    @if (!last) {
+                <ol class="flex flex-col">
+                  @for (item of instructionItems; track item.order; let last = $last) {
+                    <li class="relative flex gap-4" [class.pb-7]="!last" [class.pb-1]="last">
+                      @if (!last) {
+                        <span
+                          class="absolute left-4 top-9 h-[calc(100%-2.25rem)] w-px bg-gradient-to-b from-white/25 to-transparent"
+                          aria-hidden="true"
+                        ></span>
+                      }
                       <span
-                        class="absolute left-4 top-9 h-[calc(100%-2.25rem)] w-px bg-gradient-to-b from-white/25 to-transparent"
-                        aria-hidden="true"
-                      ></span>
-                    }
-                    <span
-                      class="relative z-10 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/10 font-mono text-xs font-semibold text-white backdrop-blur-sm"
-                    >
-                      {{ item.order }}
-                    </span>
-                    <div class="pt-0.5">
-                      <p class="font-display text-base font-semibold text-white">{{ item.title }}</p>
-                      <p class="mt-1 text-sm leading-6 text-slate-300">{{ item.description }}</p>
-                    </div>
-                  </li>
-                }
-              </ol>
+                        class="relative z-10 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/10 font-mono text-xs font-semibold text-white backdrop-blur-sm"
+                      >
+                        {{ item.order }}
+                      </span>
+                      <div class="pt-0.5">
+                        <p class="font-display text-base font-semibold text-white">{{ item.title }}</p>
+                        <p class="mt-1 text-sm leading-6 text-slate-300">{{ item.description }}</p>
+                      </div>
+                    </li>
+                  }
+                </ol>
 
-              <div
-                class="flex items-start gap-3 rounded-2xl border-l-2 border-brand-sky/60 bg-white/[0.07] px-4 py-3.5 backdrop-blur-sm sm:max-w-xl"
-              >
-                <span class="material-icons-round mt-0.5 flex-shrink-0 text-brand-light">lightbulb</span>
-                <p class="text-sm leading-6 text-slate-200">
-                  <span class="font-semibold text-white">Puedes volver atrás en cualquier momento.</span>
-                  Ajusta el servicio o el horario sin perder lo que ya completaste.
-                </p>
+                <div
+                  class="flex items-start gap-3 rounded-2xl border-l-2 border-brand-sky/60 bg-white/[0.07] px-4 py-3.5 backdrop-blur-sm sm:max-w-xl"
+                >
+                  <span class="material-icons-round mt-0.5 flex-shrink-0 text-brand-light">lightbulb</span>
+                  <p class="text-sm leading-6 text-slate-200">
+                    <span class="font-semibold text-white">Puedes volver atrás en cualquier momento.</span>
+                    Ajusta el servicio o el horario sin perder lo que ya completaste.
+                  </p>
+                </div>
               </div>
-            </div>
-          </section>
+            </section>
+          }
 
           <section class="order-1 flex justify-center lg:order-2 lg:justify-end">
             <div
-              class="w-full max-w-[430px] rounded-[2.1rem] border border-white/10 bg-white/5 p-3 shadow-[0_32px_80px_rgba(0,0,0,0.45)] backdrop-blur-md"
+              class="booking-card-shell w-full max-w-[430px] rounded-[2.1rem] border border-white/10 bg-white/5 p-3 shadow-[0_32px_80px_rgba(0,0,0,0.45)] backdrop-blur-md"
             >
               <div
                 class="overflow-hidden rounded-[1.8rem] border border-primary-fixed/20 bg-surface-lowest text-on-surface shadow-soft"
@@ -959,6 +965,37 @@ interface ConfirmedBooking {
       </div>
     </div>
   `,
+  styles: [
+    `
+      .booking-embedded {
+        min-height: 0 !important;
+        height: auto;
+        background: transparent !important;
+      }
+      .booking-embedded .booking-container {
+        max-width: none;
+        padding: 0;
+      }
+      .booking-embedded .booking-layout {
+        display: block;
+        min-height: 0;
+      }
+      .booking-embedded .booking-card-shell {
+        max-width: none;
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
+        backdrop-filter: none;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .booking-embedded * {
+          scroll-behavior: auto !important;
+        }
+      }
+    `,
+  ],
 })
 export class BookingComponent implements OnInit, OnDestroy {
   private api = inject(ApiService);
@@ -970,6 +1007,10 @@ export class BookingComponent implements OnInit, OnDestroy {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
+
+  @Input() businessIdOverride = '';
+  @Input() initialServiceName = '';
+  @Input() embedded = false;
 
   readonly business = signal<Business | null>(null);
   businessId = '';
@@ -1083,7 +1124,7 @@ export class BookingComponent implements OnInit, OnDestroy {
   });
 
   ngOnInit(): void {
-    this.businessId = this.route.snapshot.params['businessId'] ?? '';
+    this.businessId = this.businessIdOverride || this.route.snapshot.params['businessId'] || '';
     this.bookingForm.statusChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.bookingFormValid.set(this.bookingForm.valid));
@@ -1453,6 +1494,10 @@ export class BookingComponent implements OnInit, OnDestroy {
       .subscribe({
         next: data => {
           this.services.set(data);
+          if (this.initialServiceName && data.includes(this.initialServiceName)) {
+            this.selectedService.set(this.initialServiceName);
+            if (this.embedded) this.goToStep(2);
+          }
           this.servicesLoading.set(false);
         },
         error: err => {

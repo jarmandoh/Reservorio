@@ -18,6 +18,8 @@
   --color-surface-high: #e5e8ee;
   --color-on-surface: #181c20;
   --color-outline: #686e7c;
+  --focus-ring-color: #4b86c5;
+  --focus-ring-halo: rgb(75 134 197 / 14%);
   --radius-sm: 0.375rem;
   --radius-md: 0.5rem;
   --radius-lg: 0.75rem;
@@ -311,8 +313,14 @@
 }
 
 :focus-visible {
-  outline: 3px solid #ffbf00 !important;
-  outline-offset: 3px;
+  outline: 2px solid var(--focus-ring-color) !important;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 3px var(--focus-ring-halo) !important;
+}
+
+.dark {
+  --focus-ring-color: #8fbaff;
+  --focus-ring-halo: rgb(143 186 255 / 18%);
 }
 
 #main-content:focus {

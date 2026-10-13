@@ -28,6 +28,7 @@ services:
       POSTGRES_USER: reservorio
       POSTGRES_PASSWORD: reservorio_pass
       POSTGRES_DB: reservorio
+      PGOPTIONS: "-c app.seed_test_users=${SEED_TEST_USERS:-off}"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./backend/db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro

@@ -72,6 +72,62 @@ CREATE TABLE IF NOT EXISTS customers (
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Cuentas locales para pruebas. Actívalas explícitamente con SEED_TEST_USERS=on.
+DO $$
+BEGIN
+  IF current_setting('app.seed_test_users', true) = 'on' THEN
+    INSERT INTO owners (id, name, email, password_hash)
+    VALUES (
+      'test-owner',
+      'Dueño de prueba',
+      'test.owner@example.test',
+      '$2b$10$8lHruu4D8PIadWudRNQWAuGN7gcRoHpB3IAhScs2hIFdVfGUFnRB.'
+    )
+    ON CONFLICT (email) DO UPDATE SET
+      name = EXCLUDED.name,
+      password_hash = EXCLUDED.password_hash;
+
+    INSERT INTO customers (id, name, email, phone)
+    VALUES ('test-customer', 'Cliente de prueba', 'test.customer@example.test', '+573001112233')
+    ON CONFLICT (email) DO UPDATE SET
+      name = EXCLUDED.name,
+      phone = EXCLUDED.phone;
+
+    INSERT INTO businesses (
+      id, name, category, business_type, description, location, rating, reviews,
+      tags, gradient, icon, schedule, phone, whatsapp, active, pin_hash
+    )
+    VALUES (
+      'reservorio-test-business', 'Negocio de prueba', 'Belleza', 'appointment',
+      'Negocio local para validar el flujo de administración y reservas.',
+      'Bogotá, Colombia', 4.8, 12, 'pruebas,demostración',
+      'linear-gradient(135deg,#005bbf,#1a73e8)', 'store', 'Lun a sáb · 9:00–18:00',
+      '+573001112233', '+573001112233', true,
+      '$2b$10$VsBiSBMp6HiOSEnRmW4M8el/GxDgyxR6tCQoXpuMB2DrWjJXgwd5O'
+    )
+    ON CONFLICT (id) DO UPDATE SET
+      name = EXCLUDED.name,
+      category = EXCLUDED.category,
+      business_type = EXCLUDED.business_type,
+      description = EXCLUDED.description,
+      location = EXCLUDED.location,
+      rating = EXCLUDED.rating,
+      reviews = EXCLUDED.reviews,
+      tags = EXCLUDED.tags,
+      gradient = EXCLUDED.gradient,
+      icon = EXCLUDED.icon,
+      schedule = EXCLUDED.schedule,
+      phone = EXCLUDED.phone,
+      whatsapp = EXCLUDED.whatsapp,
+      active = true,
+      pin_hash = EXCLUDED.pin_hash;
+
+    INSERT INTO business_owners (business_id, owner_id)
+    SELECT 'reservorio-test-business', id FROM owners WHERE email = 'test.owner@example.test'
+    ON CONFLICT DO NOTHING;
+  END IF;
+END $$;
+
 -- Preferencia de SMS del cliente (envío opcional de recordatorios/pagos).
 ALTER TABLE customers ADD COLUMN IF NOT EXISTS sms_opt_in BOOLEAN NOT NULL DEFAULT true;
 

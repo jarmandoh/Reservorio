@@ -1,3 +1,29 @@
-<!-- NOTA: AppComponent usa template inline en app.component.ts (línea 44).
-     Este archivo no se usa en el bundle. Se conserva vacío para evitar confusión.
-     No añadir contenido aquí. -->
+<a class="skip-link" href="#main-content">Saltar al contenido principal</a>
+<main #mainContent id="main-content" tabindex="-1">
+  <div #pageHost>
+    <router-outlet />
+  </div>
+</main>
+<app-toast />
+
+<app-account-menu />
+
+<button
+  type="button"
+  class="fixed bottom-4 right-4 z-40 flex h-11 w-11 items-center justify-center rounded-full text-white shadow-soft transition active:scale-95"
+  style="background: linear-gradient(135deg, #005bbf 0%, #1a73e8 100%);"
+  [attr.aria-label]="themeService.isDark() ? 'Activar tema claro' : 'Activar tema oscuro'"
+  (click)="themeService.toggle()"
+>
+  <span class="material-icons-round" aria-hidden="true">{{
+    themeService.isDark() ? 'light_mode' : 'dark_mode'
+  }}</span>
+</button>
+
+@if (!online()) {
+  <div class="offline-banner" role="status" aria-live="polite">
+    <span class="material-icons-round text-[1.1rem] flex-shrink-0">wifi_off</span>
+    <span class="flex-1">Sin conexión. Los datos mostrados pueden estar desactualizados.</span>
+    <span>Esperando conexión…</span>
+  </div>
+}

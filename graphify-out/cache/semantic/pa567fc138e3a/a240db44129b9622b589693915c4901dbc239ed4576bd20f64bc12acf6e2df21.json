@@ -1,0 +1,1 @@
+{"nodes": [{"id": "compose_local", "label": "Docker Compose local", "file_type": "code", "source_file": "docker-compose.yml", "source_location": "1", "source_url": null, "captured_at": "2026-10-12", "author": "unknown", "contributor": "unknown"}], "edges": [], "hyperedges": []}

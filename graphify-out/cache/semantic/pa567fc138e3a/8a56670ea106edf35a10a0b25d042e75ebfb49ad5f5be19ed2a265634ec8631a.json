@@ -1,0 +1,1 @@
+{"nodes": [{"id": "frontend_app_component_html_inline_template", "label": "app.component.html no se usa en el bundle; AppComponent tiene plantilla inline", "file_type": "code", "source_file": "frontend/src/app/app.component.html", "source_location": "L1-L2", "source_url": null, "captured_at": "2026-10-12", "author": null, "contributor": null}], "edges": [], "hyperedges": []}

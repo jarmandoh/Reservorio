@@ -56,6 +56,10 @@ export class AuthService {
     this.sessionStore.reset();
   }
 
+  hasActiveSession(): boolean {
+    return this.isUnlocked() || this.hasAnyValidToken();
+  }
+
   /** Elimina todos los tokens de negocio (`negocio_jwt_*`) expirados o no. */
   clearAllBusinessTokens(): void {
     try {

@@ -14,6 +14,11 @@ export const featureRoutes: Routes = [
     loadComponent: () => import('./booking/booking.component').then(m => m.BookingComponent),
   },
   {
+    path: 'business/:businessId',
+    pathMatch: 'full',
+    loadComponent: () => import('./business-page/business-page.component').then(m => m.BusinessPageComponent),
+  },
+  {
     path: 'jh-login',
     loadComponent: () => import('./login/login.component').then(m => m.LoginComponent),
   },

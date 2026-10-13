@@ -43,6 +43,15 @@ export interface BusinessQuery {
   tags?: string;
   location?: string;
   interest?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface BusinessPage {
+  businesses: Business[];
+  total: number;
+  page: number;
+  pageSize: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -192,6 +201,29 @@ export class ApiService {
     );
 
     return this.cachedGet(`businesses:${httpParams.toString()}`, request$);
+  }
+
+  getBusinessesPage(params: BusinessQuery): Observable<BusinessPage> {
+    let httpParams = new HttpParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value != null && value !== '') httpParams = httpParams.set(key, String(value));
+    });
+
+    return this.http
+      .get<
+        ApiResponse<Business[]> & {
+          meta?: { total: number; page: number; pageSize: number };
+        }
+      >(`${this.base}/businesses`, { params: httpParams })
+      .pipe(
+        map(response => ({
+          businesses: response.data ?? [],
+          total: response.meta?.total ?? response.data?.length ?? 0,
+          page: response.meta?.page ?? params.page ?? 1,
+          pageSize: response.meta?.pageSize ?? params.pageSize ?? response.data?.length ?? 0,
+        })),
+        catchError(this.handleError)
+      );
   }
 
   getOwnerBusinesses(token: string): Observable<Business[]> {

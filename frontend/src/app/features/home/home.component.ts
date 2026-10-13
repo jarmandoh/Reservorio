@@ -1,24 +1,28 @@
 import {
   Component,
   OnInit,
+  AfterViewInit,
   OnDestroy,
   signal,
   computed,
   inject,
   ElementRef,
+  NgZone,
   ChangeDetectionStrategy,
   HostListener,
+  ViewChild,
   viewChild,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
-import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { catchError, of } from 'rxjs';
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
 import { Business } from '../../core/models/businesses.model';
+import { BusinessPage } from '../../core/services/api.service';
 import { CategoryFiltersComponent, HomeFilters } from './category-filters/category-filters.component';
+import { BusinessCardComponent } from './business-card/business-card.component';
 
 // Fallback estático mientras no haya datos en la API
 const FALLBACK_BUSINESSES: Business[] = [
@@ -45,7 +49,7 @@ const DEFAULT_CATEGORIES = ['Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci�
 @Component({
   selector: 'app-home',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, FormsModule, RouterLink, CategoryFiltersComponent],
+  imports: [CommonModule, RouterLink, CategoryFiltersComponent, BusinessCardComponent],
   template: `
     <div class="min-h-screen bg-surface flex flex-col">
       <!-- ══ HERO ═══════════════════════════════════════════════════════ -->
@@ -151,28 +155,6 @@ const DEFAULT_CATEGORIES = ['Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci�
             </p>
           </div>
 
-          <!-- Search bar -->
-          <div class="g-search grid gap-3 max-w-3xl">
-            <div class="relative">
-              <span
-                class="material-icons-round absolute left-4 top-1/2 -translate-y-1/2
-                         text-primary text-[1.25rem] pointer-events-none"
-                >search</span
-              >
-              <label class="sr-only" for="business-search">Busca por nombre, servicio o categoría</label>
-              <input
-                id="business-search"
-                type="search"
-                class="w-full bg-white text-on-surface rounded-2xl pl-12 pr-5 py-4
-                     text-base shadow-soft placeholder:text-outline focus:outline-none
-                     focus:ring-2 focus:ring-primary/40 transition"
-                placeholder="Busca por nombre, servicio o categoría…"
-                [(ngModel)]="searchQuery"
-                (ngModelChange)="onSearch()"
-              />
-            </div>
-          </div>
-
           <!-- Stats bar -->
           <div class="flex items-center gap-6 mt-6 text-sm opacity-75">
             <div class="g-stat flex items-center gap-1.5">
@@ -197,6 +179,7 @@ const DEFAULT_CATEGORIES = ['Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci�
             [categories]="categories"
             [filters]="filters"
             [searchQuery]="searchQuery"
+            (searchQueryChange)="onSearchQueryChange($event)"
             (filtersChange)="onFiltersChange($event)"
             (clearAll)="clearAllFilters()"
           />
@@ -218,8 +201,8 @@ const DEFAULT_CATEGORIES = ['Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci�
               }
             </h2>
             <p class="text-sm text-on-surface-variant mt-0.5">
-              @if (filtered().length) {
-                {{ filtered().length }} resultado{{ filtered().length !== 1 ? 's' : '' }}
+              @if (displayedBusinesses().length) {
+                {{ displayedBusinesses().length }} negocio{{ displayedBusinesses().length !== 1 ? 's' : '' }} visibles
               } @else if (searchQuery || hasActiveFilters()) {
                 No hay resultados con esta combinación. Prueba cambiar o limpiar los filtros.
               } @else {
@@ -243,7 +226,7 @@ const DEFAULT_CATEGORIES = ['Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci�
         }
 
         <!-- Empty state -->
-        @if (!loading() && !displayedBusinesses().length) {
+        @if (!loading() && !displayedBusinesses().length && !hasMore()) {
           <div class="flex flex-col items-center justify-center gap-4 py-20 text-center">
             <div class="w-20 h-20 rounded-full bg-surface-low flex items-center justify-center">
               <span class="material-icons-round text-4xl text-outline">search_off</span>
@@ -258,116 +241,39 @@ const DEFAULT_CATEGORIES = ['Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci�
             </p>
           </div>
         }
+        @if (!loading() && !displayedBusinesses().length && hasMore()) {
+          <p class="text-center text-sm text-on-surface-variant" role="status">
+            Buscando más negocios que coincidan con tus filtros…
+          </p>
+        }
 
         <!-- Business cards -->
         @if (!loading() && displayedBusinesses().length) {
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            @for (negocio of displayedBusinesses(); track negocio.id) {
-              <a
-                [routerLink]="['/booking', negocio.id]"
-                class="g-card text-left bg-surface-lowest rounded-2xl shadow-card overflow-hidden
-                     transition-all hover:-translate-y-0.5 hover:shadow-soft active:scale-[.98]
-                     focus:outline-none focus:ring-2 focus:ring-primary/30 cursor-pointer"
-              >
-                <!-- Card header gradient -->
-                <div class="relative h-28 flex items-end p-5" [style.background]="negocio.gradient">
-                  <div class="absolute top-4 right-4 w-10 h-10 rounded-xl flex items-center justify-center bg-white/20">
-                    <span class="material-icons-round text-white text-xl">{{ negocio.icon }}</span>
-                  </div>
-                  <!-- Available badge -->
-                  <div
-                    class="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white/20 backdrop-blur-md text-white"
-                  >
-                    <span
-                      class="w-1.5 h-1.5 rounded-full"
-                      [style.background]="negocio.available > 0 ? '#4ade80' : '#f87171'"
-                    ></span>
-                    @if (negocio.available > 0) {
-                      {{ negocio.available }} disponible{{ negocio.available !== 1 ? 's' : '' }}
-                    } @else {
-                      Ver disponibilidad
-                    }
-                  </div>
-                </div>
-
-                <!-- Card body -->
-                <div class="p-5 flex flex-col gap-3">
-                  <div class="flex items-start justify-between gap-2">
-                    <div>
-                      <h3 class="font-display font-bold text-lg leading-tight">{{ negocio.name }}</h3>
-                      <div class="flex items-center gap-1.5 mt-0.5">
-                        <span class="material-icons-round text-outline text-sm">location_on</span>
-                        <span class="text-xs text-on-surface-variant">{{ negocio.location }}</span>
-                      </div>
-                    </div>
-                    <div class="flex items-center gap-1 flex-shrink-0">
-                      <span class="material-icons-round text-amber-500 text-sm">star</span>
-                      <span class="text-sm font-semibold">{{ negocio.rating }}</span>
-                      <span class="text-xs text-outline">({{ negocio.reviews }})</span>
-                    </div>
-                  </div>
-
-                  <div class="flex flex-wrap items-center gap-2">
-                    @if (negocio.businessType === 'onsite_service') {
-                      <span
-                        class="inline-flex items-center gap-1 rounded-full bg-violet-50 px-2 py-1 text-[10px] font-semibold text-violet-700"
-                      >
-                        <span class="material-icons-round text-[12px]">home_repair_service</span>
-                        {{ negocio.profession }} · Servicio presencial
-                      </span>
-                    }
-                    @if (negocio.verified) {
-                      <span
-                        class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-semibold text-emerald-700"
-                      >
-                        <span class="material-icons-round text-[12px]">verified</span>
-                        Verificado
-                      </span>
-                    }
-                    <span
-                      class="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2 py-1 text-[10px] font-semibold text-sky-700"
-                    >
-                      <span class="material-icons-round text-[12px]">security</span>
-                      Pago seguro
-                    </span>
-                    @if (negocio.cancellationPolicy) {
-                      <span
-                        class="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-1 text-[10px] font-semibold text-amber-700"
-                      >
-                        <span class="material-icons-round text-[12px]">info</span>
-                        Cancelación clara
-                      </span>
-                    }
-                  </div>
-
-                  <p class="text-sm text-on-surface-variant leading-relaxed line-clamp-2">
-                    {{ negocio.description }}
-                  </p>
-
-                  <!-- Tags -->
-                  <div class="flex flex-wrap gap-1.5">
-                    @for (tag of negocio.tags; track tag) {
-                      <span class="service-tag">{{ tag }}</span>
-                    }
-                  </div>
-
-                  <!-- CTA -->
-                  <div class="flex flex-col gap-3 pt-1 sm:flex-row sm:items-center sm:justify-between">
-                    <span class="text-xs text-outline">
-                      {{ negocio.businessType === 'onsite_service' ? negocio.profession : negocio.category }}
-                    </span>
-                    <div class="flex flex-wrap items-center gap-2">
-                      <div class="flex items-center gap-1 text-primary text-sm font-semibold">
-                        Reservar ahora
-                        <span class="material-icons-round text-base">arrow_forward</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </a>
+          <div class="business-grid">
+            @for (negocio of displayedBusinesses(); track negocio.id; let index = $index) {
+              <app-business-card [business]="negocio" [animationIndex]="index % 12" />
             }
           </div>
         }
+
+        @if (!loading() && loadingMore()) {
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2" role="status" aria-label="Cargando más negocios">
+            <div class="skeleton h-56 rounded-2xl"></div>
+            <div class="hidden h-56 rounded-2xl skeleton sm:block"></div>
+          </div>
+        }
+        @if (loadMoreError()) {
+          <div class="flex items-center justify-center gap-3 py-3" role="alert">
+            <span class="text-sm text-on-surface-variant">No se pudieron cargar más negocios.</span>
+            <button class="btn-tertiary btn-sm" type="button" (click)="retryLoadingMore()">Reintentar</button>
+          </div>
+        }
+        @if (!loading() && !hasMore() && displayedBusinesses().length) {
+          <p class="end-of-results" role="status">
+            Has llegado al final · {{ displayedBusinesses().length }} negocios visibles
+          </p>
+        }
+        <div #loadMoreSentinel class="load-more-sentinel" aria-hidden="true"></div>
 
         <!-- Bottom padding for mobile -->
         <div class="h-4"></div>
@@ -392,6 +298,31 @@ const DEFAULT_CATEGORIES = ['Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci�
         overflow: hidden;
       }
 
+      .business-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-items: stretch;
+        gap: 1rem;
+      }
+
+      .load-more-sentinel {
+        height: 1px;
+        width: 100%;
+      }
+
+      .end-of-results {
+        padding: 0.75rem 0;
+        color: var(--color-outline, #64748b);
+        text-align: center;
+        font-size: 0.75rem;
+      }
+
+      @media (max-width: 639px) {
+        .business-grid {
+          grid-template-columns: minmax(0, 1fr);
+        }
+      }
+
       .account-menu {
         animation: account-menu-enter 160ms ease-out both;
       }
@@ -411,11 +342,16 @@ const DEFAULT_CATEGORIES = ['Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci�
     `,
   ],
 })
-export class HomeComponent implements OnInit, OnDestroy {
+export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   private api = inject(ApiService);
   private router = inject(Router);
   private auth = inject(AuthService);
+  private zone = inject(NgZone);
   private sub?: Subscription;
+  private searchReloadTimer?: ReturnType<typeof setTimeout>;
+  private filterReloadTimer?: ReturnType<typeof setTimeout>;
+  private intersectionObserver?: IntersectionObserver;
+  @ViewChild('loadMoreSentinel') private loadMoreSentinel?: ElementRef<HTMLElement>;
 
   /** Intervalo de refresco en ms (30 seg) */
   private readonly POLL_MS = 30_000;
@@ -434,6 +370,12 @@ export class HomeComponent implements OnInit, OnDestroy {
   filters: HomeFilters = { category: 'Todos', location: '', minimumRating: 0, bookableOnly: false, openState: 'any' };
   readonly loading = signal(true);
   readonly negocioLoading = signal(false);
+  readonly loadingMore = signal(false);
+  readonly hasMore = signal(false);
+  readonly loadMoreError = signal(false);
+  readonly totalBusinessCount = signal(0);
+  private currentPage = 1;
+  private readonly PAGE_SIZE = 12;
 
   filtered(): Business[] {
     const q = this.searchQuery.toLowerCase();
@@ -450,6 +392,7 @@ export class HomeComponent implements OnInit, OnDestroy {
         !q ||
         negocio.name.toLowerCase().includes(q) ||
         negocio.description.toLowerCase().includes(q) ||
+        negocio.location.toLowerCase().includes(q) ||
         negocio.tags.some(t => t.toLowerCase().includes(q)) ||
         negocio.category.toLowerCase().includes(q) ||
         (negocio.profession ?? '').toLowerCase().includes(q);
@@ -471,13 +414,38 @@ export class HomeComponent implements OnInit, OnDestroy {
     this.loadAccountName();
   }
 
+  ngAfterViewInit(): void {
+    if (typeof IntersectionObserver === 'undefined' || !this.loadMoreSentinel) return;
+    this.intersectionObserver = new IntersectionObserver(
+      entries => {
+        if (entries.some(entry => entry.isIntersecting)) {
+          this.zone.run(() => this.loadMoreBusinesses());
+        }
+      },
+      { rootMargin: '420px 0px', threshold: 0 }
+    );
+    this.intersectionObserver.observe(this.loadMoreSentinel.nativeElement);
+  }
+
   onFiltersChange(filters: HomeFilters): void {
+    const categoryChanged = filters.category !== this.filters.category;
+    const locationChanged = filters.location !== this.filters.location;
     this.filters = filters;
+    if (categoryChanged) {
+      if (this.filterReloadTimer) clearTimeout(this.filterReloadTimer);
+      this.loadBusinesses();
+    } else if (locationChanged) {
+      if (this.filterReloadTimer) clearTimeout(this.filterReloadTimer);
+      this.filterReloadTimer = setTimeout(() => this.loadBusinesses(), 350);
+    }
   }
 
   clearAllFilters(): void {
     this.searchQuery = '';
     this.filters = { category: 'Todos', location: '', minimumRating: 0, bookableOnly: false, openState: 'any' };
+    if (this.searchReloadTimer) clearTimeout(this.searchReloadTimer);
+    if (this.filterReloadTimer) clearTimeout(this.filterReloadTimer);
+    this.loadBusinesses();
   }
 
   hasActiveFilters(): boolean {
@@ -620,47 +588,109 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   loadBusinesses(): void {
+    if (this.searchReloadTimer) clearTimeout(this.searchReloadTimer);
+    if (this.filterReloadTimer) clearTimeout(this.filterReloadTimer);
+    this.sub?.unsubscribe();
+    this.businesses = [];
+    this.currentPage = 1;
+    this.totalBusinessCount.set(0);
+    this.hasMore.set(false);
+    this.loadingMore.set(false);
+    this.loadMoreError.set(false);
+    this.loading.set(true);
     this.negocioLoading.set(true);
+    this.fetchBusinessesPage(1, true);
+  }
+
+  loadMoreBusinesses(): void {
+    if (!this.hasMore() || this.loading() || this.loadingMore() || this.loadMoreError()) return;
+    this.fetchBusinessesPage(this.currentPage + 1, false);
+  }
+
+  retryLoadingMore(): void {
+    this.loadMoreError.set(false);
+    this.loadMoreBusinesses();
+  }
+
+  private fetchBusinessesPage(page: number, reset: boolean): void {
+    if (reset) this.loading.set(true);
+    else this.loadingMore.set(true);
+
     const query = {
       q: this.searchQuery,
       category: this.filters.category !== 'Todos' ? this.filters.category : undefined,
-      location: this.filters.location,
+      location: this.filters.location || undefined,
+      page,
+      pageSize: this.PAGE_SIZE,
     };
-
     this.sub = this.api
-      .getBusinesses(query)
-      .pipe(catchError(() => of(FALLBACK_BUSINESSES)))
-      .subscribe(list => {
-        this.businesses = list.length ? list : [...FALLBACK_BUSINESSES];
-        this.negocioLoading.set(false);
+      .getBusinessesPage(query)
+      .pipe(
+        catchError(() => {
+          if (!reset) this.loadMoreError.set(true);
+          const fallback = reset ? FALLBACK_BUSINESSES : [];
+          return of({
+            businesses: fallback,
+            total: reset ? fallback.length : this.totalBusinessCount(),
+            page: reset ? page : this.currentPage,
+            pageSize: this.PAGE_SIZE,
+          } satisfies BusinessPage);
+        })
+      )
+      .subscribe(result => {
+        const nextBusinesses = reset ? result.businesses : [...this.businesses, ...result.businesses];
+        this.businesses = nextBusinesses.filter(
+          (business, index, list) => list.findIndex(item => item.id === business.id) === index
+        );
+        this.currentPage = result.page;
+        this.totalBusinessCount.set(result.total);
+        this.hasMore.set(this.businesses.length < result.total);
         this.loading.set(false);
-        // Si hay sesión de negocio con nombre genérico, actualiza con el nombre real
-        if (this.businessName() === 'Negocio') {
-          try {
-            for (let i = 0; i < sessionStorage.length; i++) {
-              const k = sessionStorage.key(i);
-              if (k?.startsWith('negocio_jwt_')) {
-                const bid = k.replace('negocio_jwt_', '');
-                if (this.auth.isBusinessUnlocked(bid)) {
-                  const found = this.businesses.find(b => b.id === bid);
-                  if (found) this.businessName.set(found.name);
-                  break;
-                }
-              }
-            }
-          } catch {
-            // ignore
-          }
-        }
+        this.loadingMore.set(false);
+        this.negocioLoading.set(false);
+        this.updateAccountBusinessName();
+        if (this.hasMore()) requestAnimationFrame(() => this.loadMoreIfNearViewport());
       });
+  }
+
+  private loadMoreIfNearViewport(): void {
+    const sentinel = this.loadMoreSentinel?.nativeElement;
+    if (!sentinel || !this.hasMore() || this.loading() || this.loadingMore() || this.loadMoreError()) return;
+    if (sentinel.getBoundingClientRect().top <= window.innerHeight + 420) this.loadMoreBusinesses();
+  }
+
+  private updateAccountBusinessName(): void {
+    if (this.businessName() !== 'Negocio') return;
+    try {
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i);
+        if (!key?.startsWith('negocio_jwt_')) continue;
+        const businessId = key.replace('negocio_jwt_', '');
+        if (!this.auth.isBusinessUnlocked(businessId)) continue;
+        const found = this.businesses.find(business => business.id === businessId);
+        if (found) this.businessName.set(found.name);
+        break;
+      }
+    } catch {
+      // ignore
+    }
   }
 
   ngOnDestroy(): void {
     this.sub?.unsubscribe();
+    this.intersectionObserver?.disconnect();
+    if (this.searchReloadTimer) clearTimeout(this.searchReloadTimer);
+    if (this.filterReloadTimer) clearTimeout(this.filterReloadTimer);
   }
 
   onSearch(): void {
-    /* reactivo con computed */
+    if (this.searchReloadTimer) clearTimeout(this.searchReloadTimer);
+    this.searchReloadTimer = setTimeout(() => this.loadBusinesses(), 300);
+  }
+
+  onSearchQueryChange(query: string): void {
+    this.searchQuery = query;
+    this.onSearch();
   }
 
   resetFilters(): void {
