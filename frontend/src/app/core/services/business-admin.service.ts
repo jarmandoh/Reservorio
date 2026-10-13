@@ -11,7 +11,8 @@ import {
   UpdatePayload,
   CheckoutSession,
 } from '../models/reservation.model';
-import { Business, CatalogProduct, CloudinaryUploadSignature, CloudinaryUploadedImage } from '../models/businesses.model';
+import { Business } from '../models/business.model';
+import { CatalogProduct, CloudinaryUploadSignature, CloudinaryUploadedImage } from '../models/catalog.model';
 import { AuthService } from './auth.service';
 import { ApiService } from './api.service';
 

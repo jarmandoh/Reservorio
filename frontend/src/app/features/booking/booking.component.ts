@@ -13,7 +13,8 @@ import { DEFAULT_CURRENCY, formatCurrency } from '../../core/config/currency';
 import { isAllowedCheckoutRedirect } from '../../core/config/checkout-url';
 import { formatTime24 } from '../../core/config/time';
 import { Reservation, PaymentMethod, CheckoutInstructions } from '../../core/models/reservation.model';
-import { Business, Review, RatingStats } from '../../core/models/businesses.model';
+import { Business } from '../../core/models/business.model';
+import { Review, RatingStats } from '../../core/models/reviews.model';
 
 type Step = 1 | 2 | 3 | 4;
 

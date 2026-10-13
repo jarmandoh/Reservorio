@@ -4,7 +4,8 @@ import { RouterLink, ActivatedRoute } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { DEFAULT_CURRENCY, formatCurrency } from '../../core/config/currency';
 import { ApiService } from '../../core/services/api.service';
-import { Business, CatalogProduct } from '../../core/models/businesses.model';
+import { Business } from '../../core/models/business.model';
+import { CatalogProduct } from '../../core/models/catalog.model';
 import { createOrderMessage, createWhatsAppOrderUrl } from './storefront-order';
 
 @Component({

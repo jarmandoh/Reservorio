@@ -5,7 +5,7 @@ import { Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../core/services/auth.service';
 import { OwnerBusinessService } from '../../core/services/owner-business.service';
-import { Business } from '../../core/models/businesses.model';
+import { Business } from '../../core/models/business.model';
 import { BusinessFormComponent } from '../../shared/components/business-form/business-form.component';
 import { SidebarComponent } from '../../shared/components/sidebar/sidebar.component';
 import { BusinessListComponent } from '../../shared/components/business-list/business-list.component';

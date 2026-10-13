@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { Business } from '../../../core/models/businesses.model';
+import { Business } from '../../../core/models/business.model';
 
 @Component({
   selector: 'app-business-card',

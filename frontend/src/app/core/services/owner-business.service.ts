@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, throwError } from 'rxjs';
 import { ApiResponse } from '../models/reservation.model';
-import { Business, NewBusinessPayload } from '../models/businesses.model';
+import { Business, NewBusinessPayload } from '../models/business.model';
 import { AuthService } from './auth.service';
 import { BusinessService } from './business.service';
 

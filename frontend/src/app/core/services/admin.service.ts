@@ -13,7 +13,7 @@ import {
   AdminServiceRecord,
 } from '../models/reservation.model';
 import { Categoria } from '../models/categorias.model';
-import { Business, NewBusinessPayload } from '../models/businesses.model';
+import { Business, NewBusinessPayload } from '../models/business.model';
 import { AuthService } from './auth.service';
 import { ApiService } from './api.service';
 

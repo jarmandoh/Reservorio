@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable, of, throwError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
-import { Review, RatingStats } from '../models/businesses.model';
+import { Review, RatingStats } from '../models/reviews.model';
 import { environment } from '../../../environments/environment';
 import {
   ApiResponse,
@@ -26,15 +26,9 @@ import {
   UpdatePayload,
 } from '../models/reservation.model';
 import { Categoria } from '../models/categorias.model';
-import {
-  Business,
-  CatalogProduct,
-  CloudinaryUploadedImage,
-  CloudinaryUploadSignature,
-  NewBusinessPayload,
-  Owner,
-  OwnerAuthPayload,
-} from '../models/businesses.model';
+import { Business, NewBusinessPayload } from '../models/business.model';
+import { CatalogProduct, CloudinaryUploadedImage, CloudinaryUploadSignature } from '../models/catalog.model';
+import { Owner, OwnerAuthPayload } from '../models/owner.model';
 import { OfflineService } from './offline.service';
 
 export interface BusinessQuery {

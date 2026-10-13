@@ -20,7 +20,13 @@ import {
   Payment,
   Reservation,
 } from '../../core/models/reservation.model';
-import { Business, CatalogProduct } from '../../core/models/businesses.model';
+import { Business } from '../../core/models/business.model';
+import { CatalogProduct } from '../../core/models/catalog.model';
+import {
+  calculateBusinessAnalytics,
+  groupReservationActivity,
+  summarizeReservations,
+} from './business-admin-analytics';
 
 type negocioTab = 'reservas' | 'servicios' | 'productos' | 'perfil' | 'google';
 
@@ -1000,19 +1006,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
   private token = '';
   private pollSub?: Subscription;
 
-  readonly resStats = computed(() => {
-    const rows = this.reservations();
-    const total = rows.length;
-    return {
-      total,
-      items: [
-        { label: 'Total', value: total },
-        { label: 'Disponibles', value: rows.filter(r => r.disponibilidad.toLowerCase().includes('disp')).length },
-        { label: 'Reservados', value: rows.filter(r => r.disponibilidad.toLowerCase().includes('reserv')).length },
-        { label: 'Pendientes', value: rows.filter(r => r.disponibilidad.toLowerCase().includes('pend')).length },
-      ],
-    };
-  });
+  readonly resStats = computed(() => summarizeReservations(this.reservations()));
 
   readonly filteredRes = computed(() => {
     let rows = this.reservations();
@@ -1038,111 +1032,13 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
     return rows;
   });
 
-  readonly reservationGroups = computed(() => {
-    const rows = this.reservations();
-    const statusGroups = [
-      {
-        label: 'Pendientes',
-        value: rows.filter(
-          r => r.disponibilidad.toLowerCase().includes('pend') || r.disponibilidad.toLowerCase().includes('reserv')
-        ).length,
-      },
-      { label: 'Confirmadas', value: rows.filter(r => r.disponibilidad.toLowerCase().includes('confirm')).length },
-      { label: 'Disponibles', value: rows.filter(r => r.disponibilidad.toLowerCase().includes('disp')).length },
-    ];
+  readonly reservationGroups = computed(() =>
+    groupReservationActivity(this.reservations(), this.providerBookings())
+  );
 
-    const byService = Object.entries(
-      rows.reduce(
-        (acc, row) => {
-          const key = row.servicio || 'Sin servicio';
-          acc[key] = (acc[key] ?? 0) + 1;
-          return acc;
-        },
-        {} as Record<string, number>
-      )
-    )
-      .map(([label, value]) => ({ label, value }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 3);
-
-    const byDay = Object.entries(
-      this.providerBookings().reduce(
-        (acc, booking) => {
-          acc[booking.date] = (acc[booking.date] ?? 0) + 1;
-          return acc;
-        },
-        {} as Record<string, number>
-      )
-    )
-      .map(([label, value]) => ({ label, value }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 3);
-
-    return { statusGroups, byService, byDay };
-  });
-
-  readonly businessAnalytics = computed(() => {
-    const totalSlots = this.reservations().length;
-    const bookings = this.providerBookings();
-    const payments = this.payments();
-
-    const reservedSlots = this.reservations().filter(
-      r =>
-        r.disponibilidad.toLowerCase().includes('pend') ||
-        r.disponibilidad.toLowerCase().includes('reserv') ||
-        r.disponibilidad.toLowerCase().includes('confirm')
-    ).length;
-
-    const confirmedSlots = this.reservations().filter(r => r.disponibilidad.toLowerCase().includes('confirm')).length;
-    const paidBookings = payments.filter(p => p.status === 'paid').length;
-    const pendingBookings = bookings.filter(b => b.status === 'pending').length;
-    const cancelledBookings = bookings.filter(b => b.status === 'cancelled').length;
-
-    const reservationRate = totalSlots ? Math.round((reservedSlots / totalSlots) * 100) : 0;
-    const confirmationRate = totalSlots ? Math.round((confirmedSlots / totalSlots) * 100) : 0;
-    const paymentRate = bookings.length ? Math.round((paidBookings / bookings.length) * 100) : 0;
-    const abandonmentRate = bookings.length
-      ? Math.round(((pendingBookings + cancelledBookings) / bookings.length) * 100)
-      : 0;
-
-    const byService = Object.entries(
-      this.reservations().reduce(
-        (acc, row) => {
-          const key = row.servicio || 'Sin servicio';
-          acc[key] = (acc[key] ?? 0) + 1;
-          return acc;
-        },
-        {} as Record<string, number>
-      )
-    )
-      .map(([label, value]) => ({ label, value }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 3);
-
-    const bySlot = Object.entries(
-      bookings.reduce(
-        (acc, booking) => {
-          acc[booking.slot] = (acc[booking.slot] ?? 0) + 1;
-          return acc;
-        },
-        {} as Record<string, number>
-      )
-    )
-      .map(([label, value]) => ({ label, value }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 3);
-
-    return {
-      cards: [
-        { label: 'Reserva', value: `${reservationRate}%`, tone: 'primary' },
-        { label: 'Confirmación', value: `${confirmationRate}%`, tone: 'success' },
-        { label: 'Pago', value: `${paymentRate}%`, tone: 'primary' },
-        { label: 'Abandono', value: `${abandonmentRate}%`, tone: 'warning' },
-      ],
-      byService,
-      bySlot,
-    };
-  });
+  readonly businessAnalytics = computed(() =>
+    calculateBusinessAnalytics(this.reservations(), this.providerBookings(), this.payments())
+  );
 
   readonly providerBookings = computed(() => this.marketplaceBookings().filter(b => b.providerId === this.negocioId));
 

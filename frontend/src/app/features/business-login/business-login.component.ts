@@ -6,7 +6,7 @@ import { catchError, of } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
-import { Business } from '../../core/models/businesses.model';
+import { Business } from '../../core/models/business.model';
 import { PinAuthCardComponent } from '../../shared/components/pin-auth-card/pin-auth-card.component';
 
 @Component({

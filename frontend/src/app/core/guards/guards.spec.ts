@@ -15,7 +15,7 @@ describe('route guards', () => {
     isCustomerUnlocked: ReturnType<typeof vi.fn>;
     isBusinessUnlocked: ReturnType<typeof vi.fn>;
   };
-  let router: { navigate: ReturnType<typeof vi.fn> };
+  let router: { navigate: ReturnType<typeof vi.fn>; parseUrl: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     auth = {
@@ -26,7 +26,7 @@ describe('route guards', () => {
       isCustomerUnlocked: vi.fn().mockReturnValue(false),
       isBusinessUnlocked: vi.fn().mockReturnValue(false),
     };
-    router = { navigate: vi.fn() };
+    router = { navigate: vi.fn(), parseUrl: vi.fn((url: string) => ({ url })) };
     TestBed.configureTestingModule({
       providers: [
         { provide: AuthService, useValue: auth },
@@ -69,8 +69,9 @@ describe('route guards', () => {
       customerGuard({} as ActivatedRouteSnapshot, {} as RouterStateSnapshot)
     );
 
-    expect(result).toBe(false);
-    expect(router.navigate).toHaveBeenCalledWith(['/customer/login']);
+    expect(result).toEqual({ url: '/customer/login' });
+    expect(router.parseUrl).toHaveBeenCalledWith('/customer/login');
+    expect(router.navigate).not.toHaveBeenCalled();
   });
 
   it('redirects business users to the login for the requested business', () => {
@@ -89,7 +90,8 @@ describe('route guards', () => {
       customerGuard({} as ActivatedRouteSnapshot, {} as RouterStateSnapshot)
     );
 
-    expect(result).toBe(false);
-    expect(router.navigate).toHaveBeenCalledWith(['/']);
+    expect(result).toEqual({ url: '/' });
+    expect(router.parseUrl).toHaveBeenCalledWith('/');
+    expect(router.navigate).not.toHaveBeenCalled();
   });
 });

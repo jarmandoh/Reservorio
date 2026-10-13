@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CatalogProduct } from '../../core/models/businesses.model';
+import { CatalogProduct } from '../../core/models/catalog.model';
 import { createOrderMessage, createWhatsAppOrderUrl } from './storefront-order';
 
 const coffee: CatalogProduct = {

@@ -16,7 +16,8 @@ import {
   AdminReview,
   AdminServiceRecord,
 } from '../../core/models/reservation.model';
-import { Business, NewBusinessPayload } from '../../core/models/businesses.model';
+import { Business, NewBusinessPayload } from '../../core/models/business.model';
+import { filterBusinesses, filterReservations, getReservationStats } from './admin.selectors';
 import { Categoria } from '../../core/models/categorias.model';
 import { MapModalComponent, MapCoordinates } from '../../shared/components/map-modal/map-modal.component';
 
@@ -225,49 +226,15 @@ export class AdminComponent implements OnInit {
     pin: [''],
   });
 
-  readonly stats = computed(() => {
-    const rows = this.reservations();
-    const total = rows.length;
-    const available = rows.filter(r => r.disponibilidad.toLowerCase().includes('disp')).length;
-    const reserved = rows.filter(r => r.disponibilidad.toLowerCase().includes('reserv')).length;
-    const pending = rows.filter(r => r.disponibilidad.toLowerCase().includes('pend')).length;
-    return [
-      { label: 'Total', value: total },
-      { label: 'Disponibles', value: available },
-      { label: 'Reservados', value: reserved },
-      { label: 'Pendientes', value: pending },
-    ];
-  });
+  readonly stats = computed(() => getReservationStats(this.reservations()));
 
-  readonly filteredRows = computed(() => {
-    let rows = this.reservations();
-    const q = this.searchQuery().toLowerCase();
-    const f = this.filterStatus().toLowerCase();
-    if (q)
-      rows = rows.filter(
-        r =>
-          r.cliente?.toLowerCase().includes(q) ||
-          r.servicio?.toLowerCase().includes(q) ||
-          r.franja?.toLowerCase().includes(q)
-      );
-    if (f) rows = rows.filter(r => r.disponibilidad.toLowerCase().includes(f));
-    return rows;
-  });
+  readonly filteredRows = computed(() =>
+    filterReservations(this.reservations(), this.searchQuery(), this.filterStatus())
+  );
 
-  readonly filteredBusinesses = computed(() => {
-    let list = this.businesses();
-    const q = this.searchQuery().toLowerCase();
-    const f = this.filterStatus().toLowerCase();
-    if (q)
-      list = list.filter(
-        b =>
-          b.name.toLowerCase().includes(q) ||
-          b.category.toLowerCase().includes(q) ||
-          (b.location ?? '').toLowerCase().includes(q)
-      );
-    if (f) list = list.filter(b => (b.active ? 'activo' : 'inactivo').includes(f));
-    return list;
-  });
+  readonly filteredBusinesses = computed(() =>
+    filterBusinesses(this.businesses(), this.searchQuery(), this.filterStatus())
+  );
 
   ngOnInit(): void {
     this.initAdminToken();

@@ -1,5 +1,5 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
-import { Business } from '../../../core/models/businesses.model';
+import { Business } from '../../../core/models/business.model';
 
 @Component({
   selector: 'app-business-list',

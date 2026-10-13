@@ -1,5 +1,5 @@
 import { DEFAULT_CURRENCY, formatCurrency } from '../../core/config/currency';
-import { CatalogProduct } from '../../core/models/businesses.model';
+import { CatalogProduct } from '../../core/models/catalog.model';
 
 export interface CartLine {
   product: CatalogProduct;

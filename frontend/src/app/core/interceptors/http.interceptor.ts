@@ -121,9 +121,13 @@ function getRedirectForExpiry(router: Router, role?: string, businessId?: string
     return null;
   }
 
-  // Si ya está en login, redirige a home igualmente si la sesión expiró allí (purga en segundo plano)
-  // Pero evita loop si el 401 vino del propio login
-  // Para sesión expirada en cualquier ruta protegida -> home
+  // Al expirar la sesión de cliente, el destino coherente es su login. Evita
+  // competir con CustomerHistoryComponent, que también gestiona el 401.
+  if (role === 'customer' || current.startsWith('/customer/history')) {
+    return ['/customer/login'];
+  }
+
+  // Para las demás rutas protegidas, salir al inicio.
   if (
     role === 'admin' ||
     role === 'owner' ||
@@ -169,53 +173,51 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
               return throwError(() => err);
             }
 
-            // Evita manejo concurrente múltiple (varias peticiones 401 a la vez)
+            const sentToken = req.headers.get('Authorization')?.replace(/^Bearer\s+/i, '') || null;
+            const payload = decodePayload(sentToken);
+            const requestUrl = req.url;
+            const isCustomerRequest = /\/customers(?:\/|$)/.test(requestUrl);
+            const role = (payload?.['role'] as string) || (isCustomerRequest ? 'customer' : null);
+            const businessId = (payload?.['businessId'] as string) || null;
+            let purgedCount = 0;
+
+            // La limpieza debe ocurrir en cada 401, incluso si otra respuesta
+            // activó el limitador de navegación. De lo contrario el token aún
+            // válido localmente puede hacer que login vuelva a abrir history.
+            if (sentToken) {
+              if (role === 'admin') auth.clearAdminToken();
+              else if (role === 'owner') auth.clearOwnerToken();
+              else if (role === 'customer') auth.clearCustomerToken();
+              else if (role === 'business-admin' && businessId) auth.clearBusinessToken(businessId);
+              else if (!isTokenValid(sentToken)) {
+                auth.clearAllAuthTokens();
+                purgedCount = 1;
+              }
+            } else {
+              purgedCount = auth.purgeInvalidTokens().length;
+            }
+
+            // Asegura que cualquier token expirado remanente se elimine.
+            purgedCount += auth.purgeInvalidTokens().length;
+
+            // Si no hay sesión activa tras la purga, resetea el store por seguridad.
+            try {
+              const hasAdmin = !!auth.getAdminToken();
+              const hasOwner = !!auth.getOwnerToken();
+              const hasCustomer = !!auth.getCustomerToken();
+              if (!hasAdmin && !hasOwner && !hasCustomer) {
+                sessionStore.reset();
+              }
+            } catch {
+              // ignore
+            }
+
+            // Evita navegación y toast duplicados si varias peticiones responden 401.
             if (!handlingSessionExpiry) {
               handlingSessionExpiry = true;
               setTimeout(() => (handlingSessionExpiry = false), 2000);
 
-              const sentToken = req.headers.get('Authorization')?.replace(/^Bearer\s+/i, '') || null;
-              const payload = decodePayload(sentToken);
-              const role = (payload?.['role'] as string) || null;
-              const businessId = (payload?.['businessId'] as string) || null;
-              let purgedCount = 0;
-
-              // Limpieza específica según el rol del token enviado
-              if (sentToken) {
-                if (role === 'admin') auth.clearAdminToken();
-                else if (role === 'owner') auth.clearOwnerToken();
-                else if (role === 'customer') auth.clearCustomerToken();
-                else if (role === 'business-admin' && businessId) auth.clearBusinessToken(businessId);
-                else {
-                  // Token con formato inválido o rol desconocido -> purga general
-                  purgedCount = auth.purgeInvalidTokens().length;
-                  // Si aún no se limpió, fuerza limpieza total
-                  if (sentToken && !isTokenValid(sentToken)) {
-                    auth.clearAllAuthTokens();
-                    purgedCount = 1;
-                  }
-                }
-              } else {
-                // No se envió token (ya era inválido localmente) -> purga todos los expirados
-                purgedCount = auth.purgeInvalidTokens().length;
-              }
-
-              // Asegura que cualquier token expirado remanente se elimine
-              purgedCount += auth.purgeInvalidTokens().length;
-
-              // Si no hay sesión activa tras la purga, resetea el store por seguridad
-              try {
-                const hasAdmin = !!auth.getAdminToken();
-                const hasOwner = !!auth.getOwnerToken();
-                const hasCustomer = !!auth.getCustomerToken();
-                if (!hasAdmin && !hasOwner && !hasCustomer) {
-                  sessionStore.reset();
-                }
-              } catch {
-                // ignore
-              }
-
-              // Solo mostrar toast si realmente había sesión que cerrar
+              // Solo mostrar toast si realmente había sesión que cerrar.
               const hadSession = !!sentToken || purgedCount > 0 || hasRawSession;
               if (!hadSession) {
                 return throwError(() => err);

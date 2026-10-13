@@ -19,7 +19,7 @@ import { Subscription } from 'rxjs';
 import { catchError, of } from 'rxjs';
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
-import { Business } from '../../core/models/businesses.model';
+import { Business } from '../../core/models/business.model';
 import { BusinessPage } from '../../core/services/api.service';
 import { CategoryFiltersComponent, HomeFilters } from './category-filters/category-filters.component';
 import { BusinessCardComponent } from './business-card/business-card.component';
