@@ -20,10 +20,11 @@ un despliegue sobre un volumen existente recibe los cambios de schema automátic
 
 ## Baseline
 
-`0001_init.sql` es la baseline histórica. `backend/db/init.sql` se mantiene como
-esquema inicial para contenedores nuevos; las migraciones posteriores se aplican
-también después de ese init, por lo que deben tolerar que sus columnas o restricciones
-ya existan.
+`backend/db/init.sql` es la única baseline del esquema inicial. Registra `init.sql`
+en `schema_migrations`; las nuevas migraciones numeradas comienzan en `0001` y se
+aplican después de ese snapshot. Las bases locales anteriores a este reinicio deben
+recrearse desde `init.sql` antes de usar las nuevas migraciones, porque sus nombres
+históricos `0001`–`0007` ya no forman parte del proyecto.
 
 ## Convenciones
 
@@ -31,7 +32,7 @@ ya existan.
   una vez aplicada a producción — crea una nueva.
 - Las migraciones no deben contener parámetros (`$1`, ...); el runner las ejecuta como
   bloque simple.
-- Todo cambio permanente al schema va primero como migración; si afecta a contenedores
-  nuevos, refleja el cambio también en `init.sql`.
+- Todo cambio permanente al schema va en una migración numerada. `init.sql` representa
+  la baseline de este reinicio y no se actualiza con cada migración posterior.
 - Las migraciones con objetos reversibles deben documentar su SQL de rollback en un
   archivo `.rollback.md` junto a la migración. El runner solo ejecuta archivos `.sql`.

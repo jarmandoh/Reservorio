@@ -11,7 +11,8 @@ CREATE TABLE IF NOT EXISTS businesses (
   description TEXT NOT NULL DEFAULT '',
   location    TEXT NOT NULL DEFAULT '',
   rating      NUMERIC(4,2) NOT NULL DEFAULT 5.0,
-  reviews     INT NOT NULL DEFAULT 0 CHECK (reviews >= 0),
+  reviews     INT NOT NULL DEFAULT 0
+    CONSTRAINT businesses_reviews_nonnegative_check CHECK (reviews >= 0),
   tags        TEXT NOT NULL DEFAULT '',
   gradient    TEXT NOT NULL DEFAULT 'linear-gradient(135deg,#005bbf,#1a73e8)',
   icon        TEXT NOT NULL DEFAULT 'store',
@@ -83,6 +84,11 @@ CREATE TABLE IF NOT EXISTS customers (
   phone       TEXT NOT NULL DEFAULT '',
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Campos de consentimiento incluidos en la baseline del esquema.
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS data_consent BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS consent_at TIMESTAMPTZ;
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS marketing_consent BOOLEAN NOT NULL DEFAULT false;
 
 -- Cuentas locales para pruebas. Actívalas explícitamente con SEED_TEST_USERS=on.
 DO $$
@@ -211,6 +217,15 @@ CREATE INDEX IF NOT EXISTS idx_payments_booking ON payments(booking_id);
 CREATE INDEX IF NOT EXISTS idx_payments_provider_created ON payments(provider_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_payments_customer_created ON payments(customer_id, created_at DESC);
 
+CREATE TABLE IF NOT EXISTS analytics_events (
+  id          TEXT PRIMARY KEY,
+  event_type  TEXT NOT NULL,
+  business_id TEXT,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_analytics_event_type_created ON analytics_events(event_type, created_at);
+CREATE INDEX IF NOT EXISTS idx_analytics_business_created ON analytics_events(business_id, created_at);
+
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 CREATE INDEX IF NOT EXISTS idx_businesses_name_trgm ON businesses USING GIN(name gin_trgm_ops);
 CREATE INDEX IF NOT EXISTS idx_businesses_description_trgm ON businesses USING GIN(description gin_trgm_ops);
@@ -219,7 +234,7 @@ CREATE INDEX IF NOT EXISTS idx_businesses_category_trgm ON businesses USING GIN(
 CREATE INDEX IF NOT EXISTS idx_businesses_profession_trgm ON businesses USING GIN(profession gin_trgm_ops);
 CREATE INDEX IF NOT EXISTS idx_businesses_tags_trgm ON businesses USING GIN(tags gin_trgm_ops);
 
--- Anti doble-reserva a nivel de base de datos (reemplaza migration 002):
+-- Anti doble-reserva a nivel de base de datos:
 -- Una franja ocupada (Reservado/Confirmado/Cancelado) no se puede asignar dos veces al mismo negocio.
 CREATE UNIQUE INDEX IF NOT EXISTS uq_reservations_franja
   ON reservations (business_id, franja)
@@ -243,6 +258,7 @@ ALTER TABLE businesses ADD COLUMN IF NOT EXISTS whatsapp           TEXT;
 ALTER TABLE businesses ADD COLUMN IF NOT EXISTS linkedin           TEXT;
 ALTER TABLE businesses ADD COLUMN IF NOT EXISTS verified           BOOLEAN NOT NULL DEFAULT false;
 ALTER TABLE businesses ADD COLUMN IF NOT EXISTS cancellation_policy TEXT NOT NULL DEFAULT 'Cancelar hasta 24 horas antes de tu cita.';
+ALTER TABLE businesses ADD COLUMN IF NOT EXISTS store_cover_image TEXT NOT NULL DEFAULT '';
 ALTER TABLE businesses ADD COLUMN IF NOT EXISTS business_type TEXT NOT NULL DEFAULT 'appointment';
 ALTER TABLE businesses ADD COLUMN IF NOT EXISTS profession TEXT;
 
@@ -301,6 +317,21 @@ CREATE INDEX IF NOT EXISTS idx_business_categories_category_business
   ON business_categories(category_id, business_id);
 CREATE INDEX IF NOT EXISTS idx_business_tags_tag_business
   ON business_tags(tag_id, business_id);
+
+CREATE TABLE IF NOT EXISTS products (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  business_id TEXT NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  category TEXT NOT NULL DEFAULT '',
+  price NUMERIC(12, 2) NOT NULL CHECK (price >= 0),
+  image_url TEXT NOT NULL,
+  image_public_id TEXT NOT NULL,
+  active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_products_business_active ON products(business_id, active, name);
 
 CREATE TABLE IF NOT EXISTS ratings (
   id SERIAL PRIMARY KEY,
@@ -385,4 +416,12 @@ INSERT INTO tags (name) VALUES
 ('Descuento'),
 ('Nuevo'),
 ('Popular')
+ON CONFLICT (name) DO NOTHING;
+
+-- Marca el esquema inicial completo; las siguientes migraciones empiezan en 0001.
+CREATE TABLE IF NOT EXISTS schema_migrations (
+  name       TEXT PRIMARY KEY,
+  applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+INSERT INTO schema_migrations (name) VALUES ('init.sql')
 ON CONFLICT (name) DO NOTHING;
