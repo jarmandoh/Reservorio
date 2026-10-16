@@ -1,13 +1,12 @@
-import { Component, OnInit, signal, computed, effect, inject, DestroyRef, viewChild } from '@angular/core';
+import { Component, OnInit, signal, computed, inject, DestroyRef, viewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, Validators, AbstractControl } from '@angular/forms';
+import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AdminService } from '../../core/services/admin.service';
 import { ToastService } from '../../core/services/toast.service';
 import { AuthService } from '../../core/services/auth.service';
 import { BadgeComponent } from '../../shared/components/badge/badge.component';
-import { formatCurrency } from '../../core/config/currency';
 import {
   Reservation,
   Payment,
@@ -17,15 +16,28 @@ import {
   AdminServiceRecord,
 } from '../../core/models/reservation.model';
 import { Business, NewBusinessPayload } from '../../core/models/business.model';
-import { filterBusinesses, filterReservations, getReservationStats } from './admin.selectors';
+import { filterReservations, getReservationStats } from './admin.selectors';
 import { Categoria } from '../../core/models/categorias.model';
 import { MapModalComponent, MapCoordinates } from '../../shared/components/map-modal/map-modal.component';
+import { AdminOverviewComponent } from './admin-overview.component';
+import { AdminReviewsComponent } from './admin-reviews.component';
+import { AdminPaymentsComponent } from './admin-payments.component';
+import { AdminBusinessesComponent } from './admin-businesses.component';
 
 type AdminTab = 'panel' | 'resenas' | 'pagos' | 'reservas' | 'servicios' | 'ajustes' | 'negocios';
 
 @Component({
   selector: 'app-admin',
-  imports: [CommonModule, ReactiveFormsModule, BadgeComponent, MapModalComponent],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    BadgeComponent,
+    MapModalComponent,
+    AdminOverviewComponent,
+    AdminReviewsComponent,
+    AdminPaymentsComponent,
+    AdminBusinessesComponent,
+  ],
   templateUrl: './admin.component.html',
 })
 export class AdminComponent implements OnInit {
@@ -74,68 +86,6 @@ export class AdminComponent implements OnInit {
   readonly deletingReviewId = signal<number | null>(null);
   readonly deletingServiceId = signal<number | null>(null);
   readonly paidUpdating = signal<string | null>(null);
-
-  readonly panelCards = computed(() => {
-    const s = this.adminStats();
-    return [
-      { label: 'Negocios', value: s?.businesses ?? 0, icon: 'store' },
-      { label: 'Clientes', value: s?.customers ?? 0, icon: 'people' },
-      { label: 'Reservas', value: s?.bookings ?? 0, icon: 'event_available' },
-      { label: 'Reseñas', value: s?.reviews ?? 0, icon: 'rate_review' },
-      { label: 'Cobrados', value: s?.paidPayments ?? 0, icon: 'payments' },
-      { label: 'Ingresos', value: formatCurrency(s?.revenue ?? 0), icon: 'payments' },
-    ];
-  });
-
-  readonly funnelSteps = computed<{ days: number; steps: { label: string; value: number; pct: number }[] } | null>(
-    () => {
-      const f = this.adminStats()?.funnel;
-      if (!f) return null;
-      const views = Math.max(1, f.views);
-      return {
-        days: f.days,
-        steps: [
-          { label: 'Vistas de negocio', value: f.views, pct: 100 },
-          { label: 'Reservas', value: f.bookings, pct: Math.round((f.bookings / views) * 100) },
-          { label: 'Pagos completados', value: f.paid, pct: Math.round((f.paid / views) * 100) },
-        ],
-      };
-    }
-  );
-
-  readonly paymentStats = computed(() => {
-    const rows = this.payments();
-    return {
-      total: rows.length,
-      paid: rows.filter(p => p.status === 'paid').length,
-      pending: rows.filter(p => p.status === 'pending').length,
-      failed: rows.filter(p => p.status === 'failed').length,
-      refunded: rows.filter(p => p.status === 'refunded').length,
-      revenue: this.adminStats()?.revenue ?? 0,
-    };
-  });
-
-  readonly filteredPayments = computed(() => {
-    const rows = this.payments();
-    const f = this.adminPaymentFilter();
-    if (!f) return rows;
-    return rows.filter(p => p.status === f);
-  });
-
-  statusBadgeClass(status: PaymentStatus): string {
-    switch (status) {
-      case 'paid':
-        return 'text-success-on bg-success-container';
-      case 'pending':
-        return 'text-tertiary bg-amber-100';
-      case 'failed':
-        return 'text-error-on-container bg-error-container';
-      case 'refunded':
-        return 'text-indigo-700 bg-indigo-100';
-      default:
-        return 'text-on-surface-variant bg-surface-low';
-    }
-  }
 
   // ── Negocios state ──────────────────────────────────────────────────────
   readonly adminToken = signal<string | null>(null);
@@ -230,10 +180,6 @@ export class AdminComponent implements OnInit {
 
   readonly filteredRows = computed(() =>
     filterReservations(this.reservations(), this.searchQuery(), this.filterStatus())
-  );
-
-  readonly filteredBusinesses = computed(() =>
-    filterBusinesses(this.businesses(), this.searchQuery(), this.filterStatus())
   );
 
   ngOnInit(): void {

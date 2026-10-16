@@ -1,0 +1,87 @@
+<div class="flex-1 p-4 sm:p-6 flex flex-col gap-5 max-w-6xl mx-auto w-full">
+  @if (error && !stats) {
+    <div class="bg-error-container rounded-xl p-4 flex items-center gap-3 text-error-on-container">
+      <span class="material-icons-round">warning</span>
+      <p class="text-sm">{{ error }}</p>
+    </div>
+  }
+
+  @if (loading && !stats) {
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+      @for (i of [1, 2, 3, 4, 5, 6]; track i) {
+        <div class="skeleton h-24 rounded-2xl"></div>
+      }
+    </div>
+  } @else {
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+      @for (card of panelCards(); track card.label) {
+        <div class="card flex flex-col gap-2">
+          <div class="flex items-center justify-between gap-2">
+            <p class="text-[11px] uppercase tracking-widest text-outline font-semibold">{{ card.label }}</p>
+            <span class="material-icons-round text-outline-variant text-[1.1rem]">{{ card.icon }}</span>
+          </div>
+          <p class="font-display font-bold text-2xl text-on-surface">{{ card.value }}</p>
+        </div>
+      }
+    </div>
+
+    @if (stats; as s) {
+      <div class="card p-0 overflow-hidden">
+        <div class="px-5 py-4 border-b border-outline-variant/30">
+          <h3 class="font-display font-semibold text-on-surface">Actividad general</h3>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 p-5 text-sm">
+          <div>
+            <p class="text-outline text-[11px] uppercase tracking-widest font-semibold">Negocios activos</p>
+            <p class="font-display font-bold text-xl text-success mt-1">{{ s.activeBusinesses }}</p>
+          </div>
+          <div>
+            <p class="text-outline text-[11px] uppercase tracking-widest font-semibold">Verificados</p>
+            <p class="font-display font-bold text-xl text-primary mt-1">{{ s.verifiedBusinesses }}</p>
+          </div>
+          <div>
+            <p class="text-outline text-[11px] uppercase tracking-widest font-semibold">Reservas confirmadas</p>
+            <p class="font-display font-bold text-xl text-on-surface mt-1">{{ s.confirmedBookings }}</p>
+          </div>
+          <div>
+            <p class="text-outline text-[11px] uppercase tracking-widest font-semibold">Valoración media</p>
+            <p class="font-display font-bold text-xl text-on-surface mt-1">
+              {{ s.averageRating }}
+              <span class="material-icons-round text-yellow-400 text-[1rem] align-middle">star</span>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      @if (funnelSteps(); as funnel) {
+        <div class="card p-0 overflow-hidden">
+          <div class="px-5 py-4 border-b border-outline-variant/30">
+            <h3 class="font-display font-semibold text-on-surface">Embudo de conversión</h3>
+            <p class="text-xs text-on-surface-variant mt-0.5">
+              Últimos {{ funnel.days }} días: de vista de negocio a reserva y a pago
+            </p>
+          </div>
+          <div class="flex flex-col gap-4 p-5">
+            @for (step of funnel.steps; track step.label) {
+              <div>
+                <div class="flex items-center justify-between gap-2 text-sm">
+                  <span class="text-on-surface-variant">{{ step.label }}</span>
+                  <span class="font-semibold text-on-surface">
+                    {{ step.value }}
+                    <span class="text-xs font-normal text-on-surface-variant">({{ step.pct }}%)</span>
+                  </span>
+                </div>
+                <div class="mt-2 h-2.5 rounded-full bg-surface-low overflow-hidden">
+                  <div
+                    class="h-full rounded-full bg-gradient-to-r from-primary to-success transition-all"
+                    [style.width.%]="step.pct"
+                  ></div>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      }
+    }
+  }
+</div>

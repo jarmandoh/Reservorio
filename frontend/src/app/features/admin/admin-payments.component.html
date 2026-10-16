@@ -1,0 +1,128 @@
+<div class="flex-1 p-4 sm:p-6 flex flex-col gap-5 max-w-6xl mx-auto w-full">
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+    <div class="card flex flex-col gap-1.5">
+      <p class="text-[11px] uppercase tracking-widest text-outline font-semibold">Total</p>
+      <p class="font-display font-bold text-2xl text-on-surface">{{ paymentStats().total }}</p>
+    </div>
+    <div class="card flex flex-col gap-1.5">
+      <p class="text-[11px] uppercase tracking-widest text-outline font-semibold">Cobrados</p>
+      <p class="font-display font-bold text-2xl text-success">{{ paymentStats().paid }}</p>
+    </div>
+    <div class="card flex flex-col gap-1.5">
+      <p class="text-[11px] uppercase tracking-widest text-outline font-semibold">Pendientes</p>
+      <p class="font-display font-bold text-2xl text-tertiary">{{ paymentStats().pending }}</p>
+    </div>
+    <div class="card flex flex-col gap-1.5">
+      <p class="text-[11px] uppercase tracking-widest text-outline font-semibold">Ingresos</p>
+      <p class="font-display font-bold text-2xl text-info">{{ paymentStats().revenue }} $</p>
+    </div>
+  </div>
+
+  <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+    <select class="form-select sm:w-56" [value]="filter" (change)="onPaymentFilterChange($event)">
+      <option value="">Todos los estados</option>
+      <option value="pending">Pendientes</option>
+      <option value="paid">Cobrados</option>
+      <option value="failed">Fallidos</option>
+      <option value="refunded">Reembolsados</option>
+    </select>
+    <button class="btn-tertiary btn-sm gap-1" (click)="refresh.emit()">
+      <span class="material-icons-round text-base">refresh</span>
+      Recargar
+    </button>
+  </div>
+
+  @if (!filteredPayments().length) {
+    <div class="flex flex-col items-center justify-center gap-4 py-16 text-center">
+      <span class="material-icons-round text-[3.5rem] text-outline-variant">payments</span>
+      <h3 class="font-display font-semibold text-xl">Sin pagos</h3>
+      <p class="text-sm text-on-surface-variant">Aún no hay movimientos de pago.</p>
+    </div>
+  } @else {
+    <div class="hidden sm:block card p-0 overflow-hidden">
+      <table class="w-full text-sm text-left">
+        <thead>
+          <tr
+            class="border-b border-outline-variant/30 text-[11px] uppercase tracking-wider text-outline bg-surface-low"
+          >
+            <th class="px-5 py-3">Fecha</th>
+            <th class="px-5 py-3">Método</th>
+            <th class="px-5 py-3">Importe</th>
+            <th class="px-5 py-3">Estado</th>
+            <th class="px-5 py-3">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (payment of filteredPayments(); track payment.id) {
+            <tr class="border-b border-outline-variant/20 hover:bg-surface-low transition">
+              <td class="px-5 py-3.5">{{ payment.createdAt | date: 'short' }}</td>
+              <td class="px-5 py-3.5 capitalize">{{ payment.method }}</td>
+              <td class="px-5 py-3.5 font-display font-semibold">{{ payment.amount }} €</td>
+              <td class="px-5 py-3.5">
+                <span class="rounded-full px-2.5 py-1 text-xs font-semibold {{ statusBadgeClass(payment.status) }}">{{
+                  payment.status
+                }}</span>
+              </td>
+              <td class="px-5 py-3.5">
+                @if (payment.status === 'pending') {
+                  <button
+                    class="btn-primary btn-sm gap-1"
+                    [disabled]="paidUpdating === payment.id"
+                    (click)="paymentStatusChange.emit({ payment, status: 'paid' })"
+                  >
+                    <span class="material-icons-round text-[0.875rem]">check</span>
+                    Marcar cobrado
+                  </button>
+                }
+                @if (payment.status === 'paid') {
+                  <button
+                    class="btn-tertiary btn-sm gap-1"
+                    [disabled]="paidUpdating === payment.id"
+                    (click)="paymentStatusChange.emit({ payment, status: 'refunded' })"
+                  >
+                    <span class="material-icons-round text-[0.875rem]">reply</span>
+                    Reembolsar
+                  </button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <div class="flex flex-col gap-3 sm:hidden">
+      @for (payment of filteredPayments(); track payment.id) {
+        <div class="rounded-2xl border border-outline-variant/30 bg-white p-4 flex flex-col gap-2">
+          <div class="flex items-center justify-between gap-2">
+            <span class="font-display font-bold text-lg">{{ payment.amount }} €</span>
+            <span class="rounded-full px-2.5 py-1 text-xs font-semibold {{ statusBadgeClass(payment.status) }}">{{
+              payment.status
+            }}</span>
+          </div>
+          <p class="text-sm text-on-surface-variant capitalize">
+            {{ payment.method }} · {{ payment.createdAt | date: 'short' }}
+          </p>
+          @if (payment.status === 'pending') {
+            <button
+              class="btn-primary btn-sm gap-1"
+              [disabled]="paidUpdating === payment.id"
+              (click)="paymentStatusChange.emit({ payment, status: 'paid' })"
+            >
+              <span class="material-icons-round text-[0.875rem]">check</span> Marcar cobrado
+            </button>
+          }
+          @if (payment.status === 'paid') {
+            <button
+              class="btn-tertiary btn-sm gap-1"
+              [disabled]="paidUpdating === payment.id"
+              (click)="paymentStatusChange.emit({ payment, status: 'refunded' })"
+            >
+              <span class="material-icons-round text-[0.875rem]">reply</span> Reembolsar
+            </button>
+          }
+        </div>
+      }
+    </div>
+  }
+</div>

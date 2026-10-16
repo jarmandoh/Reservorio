@@ -1,0 +1,177 @@
+<div class="flex-1 p-4 sm:p-6 flex flex-col gap-5 max-w-4xl mx-auto w-full">
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <h2 class="font-display font-semibold text-[1.375rem]">Negocios</h2>
+      <p class="text-sm text-on-surface-variant mt-1">
+        Gestiona el listado, el estado y los datos principales de cada negocio.
+      </p>
+    </div>
+    <button class="btn-primary btn-sm gap-1.5" (click)="editBusiness.emit(null)" [disabled]="!adminToken">
+      <span class="material-icons-round text-base">add</span>
+      Nuevo
+    </button>
+  </div>
+
+  <div class="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto]">
+    <div class="relative">
+      <span
+        class="material-icons-round absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[1.1rem] pointer-events-none"
+        >search</span
+      >
+      <input
+        type="search"
+        class="form-input pl-10 w-full"
+        placeholder="Buscar negocio, categoría o ubicación…"
+        [value]="searchQuery"
+        (input)="searchChange.emit(getInputValue($event))"
+      />
+    </div>
+    <select
+      class="form-select w-full sm:w-64"
+      [value]="filterStatus"
+      (change)="statusChange.emit(getInputValue($event))"
+    >
+      <option value="">Todos los estados</option>
+      <option value="activo">Activo</option>
+      <option value="inactivo">Inactivo</option>
+    </select>
+  </div>
+
+  @if (!adminToken) {
+    <div class="flex flex-col gap-3 p-4 rounded-xl text-sm bg-amber-50 text-amber-800 border border-amber-300">
+      <span class="material-icons-round text-base mt-0.5">warning</span>
+      <div class="flex-1">
+        <p class="font-semibold">No se obtuvo el token de administrador</p>
+        <p class="mt-0.5 opacity-80">
+          {{ adminError ?? 'Verifica que el PIN local coincida con ADMIN_PIN en el servidor.' }}
+        </p>
+      </div>
+      <button class="btn-secondary btn-sm" (click)="retry.emit()">Reintentar</button>
+    </div>
+  }
+
+  @if (businessesLoading) {
+    <div class="flex flex-col gap-3">
+      @for (i of [1, 2, 3]; track i) {
+        <div class="skeleton h-20 rounded-2xl"></div>
+      }
+    </div>
+  }
+
+  @if (!businessesLoading) {
+    @if (!filteredBusinesses().length) {
+      <div class="flex flex-col items-center justify-center gap-4 py-16 text-center">
+        <span class="material-icons-round text-[3.5rem] text-outline-variant">search_off</span>
+        <h3 class="font-display font-semibold text-xl">Sin resultados</h3>
+        <p class="text-sm text-on-surface-variant">Ajusta los filtros o borra la búsqueda para ver negocios.</p>
+      </div>
+    } @else {
+      <div class="flex flex-col gap-3">
+        @for (negocio of filteredBusinesses(); track negocio.id) {
+          <div class="card flex items-center gap-4">
+            <div
+              class="w-12 h-12 rounded-xl overflow-hidden flex items-center justify-center flex-shrink-0 bg-surface-muted"
+            >
+              @if (negocio.logo) {
+                <img
+                  src="{{ negocio.logo }}"
+                  alt="Logo de {{ negocio.name }}"
+                  class="w-full h-full object-cover"
+                  loading="lazy"
+                />
+              } @else {
+                <span class="material-icons-round text-xl text-outline">store</span>
+              }
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <h3 class="font-display font-bold text-base truncate">{{ negocio.name }}</h3>
+                @if (negocio.verified) {
+                  <span
+                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-success-container text-success-on"
+                  >
+                    <span class="material-icons-round text-[12px]">verified</span>
+                    Verificado
+                  </span>
+                }
+                <span
+                  class="px-2 py-0.5 rounded-full text-[11px] font-semibold"
+                  [class.bg-success-container]="negocio.active"
+                  [class.text-success-on]="negocio.active"
+                  [class.bg-surface-high]="!negocio.active"
+                  [class.text-outline]="!negocio.active"
+                >
+                  {{ negocio.active ? 'Activo' : 'Inactivo' }}
+                </span>
+              </div>
+              <p class="text-xs text-on-surface-variant truncate mt-0.5">
+                {{ negocio.category }} · {{ negocio.location || 'Sin ubicación' }}
+              </p>
+            </div>
+            <div class="flex items-center gap-2 flex-shrink-0">
+              <button
+                class="w-9 h-9 flex items-center justify-center rounded-lg transition bg-primary-fixed text-primary"
+                (click)="editBusiness.emit(negocio)"
+                [disabled]="!adminToken"
+                aria-label="Editar {{ negocio.name }}"
+              >
+                <span class="material-icons-round text-base">edit</span>
+              </button>
+              <button
+                class="w-9 h-9 flex items-center justify-center rounded-lg transition disabled:opacity-40"
+                [class.bg-error-container]="negocio.active"
+                [class.text-error-on-container]="negocio.active"
+                [class.bg-success-container]="!negocio.active"
+                [class.text-success-on]="!negocio.active"
+                (click)="toggleBusiness.emit(negocio.id)"
+                [disabled]="togglingBusiness === negocio.id || !adminToken"
+                [attr.aria-label]="negocio.active ? 'Desactivar negocio' : 'Activar negocio'"
+              >
+                @if (togglingBusiness === negocio.id) {
+                  <span class="material-icons-round text-base animate-spin">refresh</span>
+                } @else {
+                  <span class="material-icons-round text-base">{{
+                    negocio.active ? 'visibility_off' : 'visibility'
+                  }}</span>
+                }
+              </button>
+              <button
+                class="w-9 h-9 flex items-center justify-center rounded-lg transition disabled:opacity-40"
+                [class.bg-success-container]="negocio.verified"
+                [class.text-success-on]="negocio.verified"
+                [class.bg-surface-container]="!negocio.verified"
+                [class.text-outline]="!negocio.verified"
+                (click)="verifyBusiness.emit(negocio.id)"
+                [disabled]="verifyingBusiness === negocio.id || !adminToken"
+                [attr.aria-label]="
+                  (negocio.verified ? 'Desmarcar como verificad' : 'Marcar como verificado') + ' ' + negocio.name
+                "
+                [attr.title]="negocio.verified ? 'Verificado: quitar marca' : 'Sin verificar: marcar como verificado'"
+              >
+                @if (verifyingBusiness === negocio.id) {
+                  <span class="material-icons-round text-base animate-spin">refresh</span>
+                } @else {
+                  <span class="material-icons-round text-base">{{
+                    negocio.verified ? 'verified' : 'verified_user'
+                  }}</span>
+                }
+              </button>
+              <button
+                class="w-9 h-9 flex items-center justify-center rounded-lg transition bg-error-container text-error-on-container disabled:opacity-40"
+                (click)="deleteBusiness.emit(negocio.id)"
+                [disabled]="deletingBusiness === negocio.id || !adminToken"
+                aria-label="Eliminar {{ negocio.name }}"
+              >
+                @if (deletingBusiness === negocio.id) {
+                  <span class="material-icons-round text-base animate-spin">refresh</span>
+                } @else {
+                  <span class="material-icons-round text-base">delete_outline</span>
+                }
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  }
+</div>

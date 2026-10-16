@@ -1,0 +1,118 @@
+<div class="flex-1 p-4 sm:p-6 flex flex-col gap-5 max-w-xl mx-auto w-full">
+  <h2 class="font-display font-semibold text-[1.375rem]">Perfil del negocio</h2>
+
+  <form [formGroup]="profileForm" (ngSubmit)="saveProfile()" class="card flex flex-col gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div>
+        <label class="form-label">Nombre</label>
+        <input type="text" class="form-input" formControlName="name" />
+      </div>
+      <div>
+        <label class="form-label">Categoría</label>
+        <input type="text" class="form-input" formControlName="category" />
+      </div>
+    </div>
+    <div>
+      <label class="form-label">Descripción</label>
+      <textarea class="form-textarea" formControlName="description" rows="2"></textarea>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div>
+        <label class="form-label">Ubicación</label>
+        <input type="text" class="form-input" formControlName="location" />
+      </div>
+      <div>
+        <label class="form-label">Teléfono</label>
+        <input type="tel" class="form-input" formControlName="phone" />
+      </div>
+    </div>
+    <div>
+      <label class="form-label" for="business-whatsapp">WhatsApp para pedidos</label>
+      <input
+        id="business-whatsapp"
+        type="tel"
+        class="form-input"
+        formControlName="whatsapp"
+        placeholder="573001234567"
+        autocomplete="tel"
+      />
+      <p class="text-xs text-on-surface-variant mt-1">
+        Incluye el código de país, sin espacios ni signos. Ejemplo: 573001234567.
+      </p>
+    </div>
+    <div>
+      <label class="form-label" for="business-cover">Foto real del local</label>
+      <input
+        id="business-cover"
+        type="file"
+        class="form-input"
+        accept="image/jpeg,image/png,image/webp"
+        (change)="uploadCover($event)"
+      />
+      @if (uploadingCover()) {
+        <p class="text-xs text-on-surface-variant mt-1" role="status">Subiendo foto...</p>
+      }
+      @if (profileForm.value.storeCoverImage) {
+        <img
+          [src]="profileForm.value.storeCoverImage"
+          alt="Vista previa de la foto del local"
+          class="mt-2 h-36 w-full rounded-lg object-cover"
+        />
+      }
+    </div>
+    <div>
+      <label class="form-label">Horario</label>
+      <input type="text" class="form-input" formControlName="schedule" placeholder="Ej. Lun-Vie 9:00–18:00" />
+    </div>
+    <div>
+      <label class="form-label">Política de cancelación</label>
+      <textarea
+        class="form-textarea"
+        formControlName="cancellationPolicy"
+        rows="2"
+        placeholder="Ej. Cancelar hasta 24 horas antes de tu cita."
+      ></textarea>
+      <p class="text-xs text-on-surface-variant mt-1">
+        Se muestra a los clientes antes de reservar. Da claridad sobre cancelaciones y reembolsos.
+      </p>
+    </div>
+    <button
+      type="submit"
+      class="btn-primary self-end min-h-[44px] sm:min-h-[auto]"
+      [disabled]="profileForm.invalid || savingProfile()"
+    >
+      @if (savingProfile()) {
+        <span class="material-icons-round text-base animate-spin">refresh</span>
+        <span class="hidden sm:inline">Guardando…</span>
+      } @else {
+        Guardar
+      }
+    </button>
+  </form>
+
+  <form [formGroup]="pinForm" (ngSubmit)="changePin()" class="card flex flex-col gap-4">
+    <p class="section-label">Cambiar PIN</p>
+    <div>
+      <label class="form-label">Nuevo PIN (mínimo 4 dígitos)</label>
+      <input type="password" class="form-input" formControlName="pin" inputmode="numeric" placeholder="••••" />
+    </div>
+    <div>
+      <label class="form-label">Confirmar PIN</label>
+      <input type="password" class="form-input" formControlName="pinConfirm" inputmode="numeric" placeholder="••••" />
+      @if (pinMismatch()) {
+        <p class="text-xs text-error mt-1">Los PINs no coinciden.</p>
+      }
+    </div>
+    <button
+      type="submit"
+      class="btn-primary self-end btn-sm min-h-[44px] sm:min-h-[auto]"
+      [disabled]="pinForm.invalid || savingPin() || pinMismatch()"
+    >
+      @if (savingPin()) {
+        <span class="material-icons-round text-base animate-spin">refresh</span>
+      } @else {
+        Actualizar PIN
+      }
+    </button>
+  </form>
+</div>

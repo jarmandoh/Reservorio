@@ -22,6 +22,7 @@ import {
 } from '../../core/models/reservation.model';
 import { Business } from '../../core/models/business.model';
 import { CatalogProduct } from '../../core/models/catalog.model';
+import { BusinessProfileComponent } from './business-profile.component';
 import {
   calculateBusinessAnalytics,
   groupReservationActivity,
@@ -32,7 +33,7 @@ type negocioTab = 'reservas' | 'servicios' | 'productos' | 'perfil' | 'google';
 
 @Component({
   selector: 'app-business-admin',
-  imports: [CommonModule, ReactiveFormsModule, BadgeComponent],
+  imports: [CommonModule, ReactiveFormsModule, BadgeComponent, BusinessProfileComponent],
   template: `
     <div class="min-h-dvh bg-surface flex flex-col">
       <!-- ══ TOP BAR ══════════════════════════════════════════════════ -->
@@ -580,7 +581,11 @@ type negocioTab = 'reservas' | 'servicios' | 'productos' | 'perfil' | 'google';
                 <p class="text-xs text-on-surface-variant mt-1" role="status">Subiendo foto...</p>
               }
               @if (productImage(); as image) {
-                <img [src]="image.url" [alt]="'Foto de ' + (productForm.value.name || 'producto')" class="mt-2 h-28 w-full rounded-lg object-cover" />
+                <img
+                  [src]="image.url"
+                  [alt]="'Foto de ' + (productForm.value.name || 'producto')"
+                  class="mt-2 h-28 w-full rounded-lg object-cover"
+                />
               }
               @if (productImageError()) {
                 <p class="text-xs text-error mt-1" role="alert">{{ productImageError() }}</p>
@@ -588,7 +593,13 @@ type negocioTab = 'reservas' | 'servicios' | 'productos' | 'perfil' | 'google';
             </div>
             <div class="sm:col-span-2">
               <label class="form-label" for="catalog-description">Descripción</label>
-              <textarea id="catalog-description" class="form-textarea" rows="2" maxlength="1000" formControlName="description"></textarea>
+              <textarea
+                id="catalog-description"
+                class="form-textarea"
+                rows="2"
+                maxlength="1000"
+                formControlName="description"
+              ></textarea>
             </div>
             <label class="flex items-center gap-2 text-sm">
               <input type="checkbox" formControlName="active" />
@@ -620,7 +631,12 @@ type negocioTab = 'reservas' | 'servicios' | 'productos' | 'perfil' | 'google';
             <ul class="grid gap-3 sm:grid-cols-2">
               @for (product of products(); track product.id) {
                 <li class="card flex gap-3" [class.opacity-60]="!product.active">
-                  <img [src]="product.imageUrl" [alt]="product.name" class="h-24 w-24 rounded-lg object-cover" loading="lazy" />
+                  <img
+                    [src]="product.imageUrl"
+                    [alt]="product.name"
+                    class="h-24 w-24 rounded-lg object-cover"
+                    loading="lazy"
+                  />
                   <div class="min-w-0 flex-1">
                     <div class="flex items-start justify-between gap-2">
                       <div>
@@ -631,9 +647,13 @@ type negocioTab = 'reservas' | 'servicios' | 'productos' | 'perfil' | 'google';
                     </div>
                     <p class="mt-1 line-clamp-2 text-xs text-on-surface-variant">{{ product.description }}</p>
                     <div class="mt-2 flex gap-3">
-                      <button type="button" class="text-xs font-semibold text-primary" (click)="editProduct(product)">Editar</button>
+                      <button type="button" class="text-xs font-semibold text-primary" (click)="editProduct(product)">
+                        Editar
+                      </button>
                       @if (product.active) {
-                        <button type="button" class="text-xs font-semibold text-error" (click)="deleteProduct(product)">Ocultar</button>
+                        <button type="button" class="text-xs font-semibold text-error" (click)="deleteProduct(product)">
+                          Ocultar
+                        </button>
                       }
                     </div>
                   </div>
@@ -646,125 +666,7 @@ type negocioTab = 'reservas' | 'servicios' | 'productos' | 'perfil' | 'google';
 
       <!-- TAB: PERFIL ─────────────────────────────────────────────────── -->
       @if (tab() === 'perfil') {
-        <div class="flex-1 p-4 sm:p-6 flex flex-col gap-5 max-w-xl mx-auto w-full">
-          <h2 class="font-display font-semibold text-[1.375rem]">Perfil del negocio</h2>
-
-          <form [formGroup]="profileForm" (ngSubmit)="saveProfile()" class="card flex flex-col gap-4">
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label class="form-label">Nombre</label>
-                <input type="text" class="form-input" formControlName="name" />
-              </div>
-              <div>
-                <label class="form-label">Categoría</label>
-                <input type="text" class="form-input" formControlName="category" />
-              </div>
-            </div>
-            <div>
-              <label class="form-label">Descripción</label>
-              <textarea class="form-textarea" formControlName="description" rows="2"></textarea>
-            </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label class="form-label">Ubicación</label>
-                <input type="text" class="form-input" formControlName="location" />
-              </div>
-              <div>
-                <label class="form-label">Teléfono</label>
-                <input type="tel" class="form-input" formControlName="phone" />
-              </div>
-            </div>
-            <div>
-              <label class="form-label" for="business-whatsapp">WhatsApp para pedidos</label>
-              <input
-                id="business-whatsapp"
-                type="tel"
-                class="form-input"
-                formControlName="whatsapp"
-                placeholder="573001234567"
-                autocomplete="tel"
-              />
-              <p class="text-xs text-on-surface-variant mt-1">Incluye el código de país, sin espacios ni signos. Ejemplo: 573001234567.</p>
-            </div>
-            <div>
-              <label class="form-label" for="business-cover">Foto real del local</label>
-              <input
-                id="business-cover"
-                type="file"
-                class="form-input"
-                accept="image/jpeg,image/png,image/webp"
-                (change)="uploadBusinessCover($event)"
-              />
-              @if (uploadingImage() === 'cover') {
-                <p class="text-xs text-on-surface-variant mt-1" role="status">Subiendo foto...</p>
-              }
-              @if (profileForm.value.storeCoverImage) {
-                <img [src]="profileForm.value.storeCoverImage" alt="Vista previa de la foto del local" class="mt-2 h-36 w-full rounded-lg object-cover" />
-              }
-            </div>
-            <div>
-              <label class="form-label">Horario</label>
-              <input type="text" class="form-input" formControlName="schedule" placeholder="Ej. Lun-Vie 9:00–18:00" />
-            </div>
-            <div>
-              <label class="form-label">Política de cancelación</label>
-              <textarea
-                class="form-textarea"
-                formControlName="cancellationPolicy"
-                rows="2"
-                placeholder="Ej. Cancelar hasta 24 horas antes de tu cita."
-              ></textarea>
-              <p class="text-xs text-on-surface-variant mt-1">
-                Se muestra a los clientes antes de reservar. Da claridad sobre cancelaciones y reembolsos.
-              </p>
-            </div>
-            <button
-              type="submit"
-              class="btn-primary self-end min-h-[44px] sm:min-h-[auto]"
-              [disabled]="profileForm.invalid || savingProfile()"
-            >
-              @if (savingProfile()) {
-                <span class="material-icons-round text-base animate-spin">refresh</span>
-                <span class="hidden sm:inline">Guardando…</span>
-              } @else {
-                Guardar
-              }
-            </button>
-          </form>
-
-          <!-- Change PIN -->
-          <form [formGroup]="pinForm" (ngSubmit)="changePin()" class="card flex flex-col gap-4">
-            <p class="section-label">Cambiar PIN</p>
-            <div>
-              <label class="form-label">Nuevo PIN (mínimo 4 dígitos)</label>
-              <input type="password" class="form-input" formControlName="pin" inputmode="numeric" placeholder="••••" />
-            </div>
-            <div>
-              <label class="form-label">Confirmar PIN</label>
-              <input
-                type="password"
-                class="form-input"
-                formControlName="pinConfirm"
-                inputmode="numeric"
-                placeholder="••••"
-              />
-              @if (pinMismatch()) {
-                <p class="text-xs text-error mt-1">Los PINs no coinciden.</p>
-              }
-            </div>
-            <button
-              type="submit"
-              class="btn-primary self-end btn-sm min-h-[44px] sm:min-h-[auto]"
-              [disabled]="pinForm.invalid || savingPin() || pinMismatch()"
-            >
-              @if (savingPin()) {
-                <span class="material-icons-round text-base animate-spin">refresh</span>
-              } @else {
-                Actualizar PIN
-              }
-            </button>
-          </form>
-        </div>
+        <app-business-profile [business]="business()" [businessId]="profileBusinessId" [token]="profileToken" />
       }
 
       <!-- TAB: GOOGLE SHEETS ────────────────────────────────────────── -->
@@ -972,7 +874,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
   readonly products = signal<CatalogProduct[]>([]);
   readonly productsLoading = signal(false);
   readonly savingProduct = signal(false);
-  readonly uploadingImage = signal<'product' | 'cover' | null>(null);
+  readonly uploadingImage = signal<'product' | null>(null);
   readonly editingProduct = signal<CatalogProduct | null>(null);
   readonly productImage = signal<{ url: string; publicId: string } | null>(null);
   readonly productImageError = signal('');
@@ -985,8 +887,6 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
   readonly svcLoading = signal(false);
   readonly addingSvc = signal(false);
   readonly deletingSvc = signal<string | null>(null);
-  readonly savingProfile = signal(false);
-  readonly savingPin = signal(false);
   readonly modalRes = signal<Reservation | null>(null);
   readonly newResStatus = signal('Disponible');
   readonly savingRes = signal(false);
@@ -1005,6 +905,14 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
   private negocioId = '';
   private token = '';
   private pollSub?: Subscription;
+
+  get profileBusinessId(): string {
+    return this.negocioId;
+  }
+
+  get profileToken(): string {
+    return this.token;
+  }
 
   readonly resStats = computed(() => summarizeReservations(this.reservations()));
 
@@ -1032,9 +940,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
     return rows;
   });
 
-  readonly reservationGroups = computed(() =>
-    groupReservationActivity(this.reservations(), this.providerBookings())
-  );
+  readonly reservationGroups = computed(() => groupReservationActivity(this.reservations(), this.providerBookings()));
 
   readonly businessAnalytics = computed(() =>
     calculateBusinessAnalytics(this.reservations(), this.providerBookings(), this.payments())
@@ -1116,11 +1022,6 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
     return paid || 89;
   });
 
-  readonly pinMismatch = computed(() => {
-    const v = this.pinForm.value;
-    return !!(v.pin && v.pinConfirm && v.pin !== v.pinConfirm);
-  });
-
   fieldInvalid(name: string): boolean {
     const ctrl = this.serviceForm.get(name);
     return !!ctrl && ctrl.invalid && (ctrl.dirty || ctrl.touched);
@@ -1130,29 +1031,12 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
     nombre: ['', [Validators.required, Validators.minLength(2)]],
   });
 
-  readonly profileForm = this.fb.group({
-    name: ['', Validators.required],
-    category: ['', Validators.required],
-    description: [''],
-    location: [''],
-    schedule: [''],
-    phone: [''],
-    whatsapp: ['', Validators.pattern(/^\+?[0-9]{7,15}$/)],
-    storeCoverImage: [''],
-    cancellationPolicy: [''],
-  });
-
   readonly productForm = this.fb.group({
     name: ['', [Validators.required, Validators.maxLength(120)]],
     description: ['', Validators.maxLength(1000)],
     category: ['', Validators.maxLength(80)],
     price: [0, [Validators.required, Validators.min(0), Validators.max(1_000_000_000)]],
     active: [true],
-  });
-
-  readonly pinForm = this.fb.group({
-    pin: ['', [Validators.required, Validators.minLength(4)]],
-    pinConfirm: ['', Validators.required],
   });
 
   ngOnInit(): void {
@@ -1209,17 +1093,6 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
       .subscribe({
         next: found => {
           this.business.set(found);
-          this.profileForm.patchValue({
-            name: found.name,
-            category: found.category,
-            description: found.description,
-            location: found.location,
-            schedule: found.schedule ?? '',
-            phone: found.phone ?? '',
-            whatsapp: found.whatsapp ?? '',
-            storeCoverImage: found.storeCoverImage ?? '',
-            cancellationPolicy: found.cancellationPolicy ?? '',
-          });
         },
         error: () => {
           this.toast.error('No se pudo cargar el negocio.');
@@ -1487,22 +1360,18 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
     this.uploadImage(event, 'product');
   }
 
-  uploadBusinessCover(event: Event): void {
-    this.uploadImage(event, 'cover');
-  }
-
-  private uploadImage(event: Event, assetType: 'product' | 'cover'): void {
+  private uploadImage(event: Event, assetType: 'product'): void {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     input.value = '';
     if (!file) return;
 
     if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-      this.showImageError(assetType, 'Usa una imagen JPG, PNG o WebP.');
+      this.showImageError('Usa una imagen JPG, PNG o WebP.');
       return;
     }
     if (file.size > 8 * 1024 * 1024) {
-      this.showImageError(assetType, 'La imagen debe pesar menos de 8 MB.');
+      this.showImageError('La imagen debe pesar menos de 8 MB.');
       return;
     }
 
@@ -1516,22 +1385,18 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
       )
       .subscribe({
         next: image => {
-          if (assetType === 'product') {
-            this.productImage.set({ url: image.secure_url, publicId: image.public_id });
-          } else {
-            this.profileForm.patchValue({ storeCoverImage: image.secure_url });
-          }
+          this.productImage.set({ url: image.secure_url, publicId: image.public_id });
           this.uploadingImage.set(null);
         },
         error: err => {
-          this.showImageError(assetType, err?.error?.message ?? 'No se pudo subir la imagen.');
+          this.showImageError(err?.error?.message ?? 'No se pudo subir la imagen.');
           this.uploadingImage.set(null);
         },
       });
   }
 
-  private showImageError(assetType: 'product' | 'cover', message: string): void {
-    if (assetType === 'product') this.productImageError.set(message);
+  private showImageError(message: string): void {
+    this.productImageError.set(message);
     this.toast.error(message);
   }
 
@@ -1621,56 +1486,6 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
         error: err => {
           this.toast.error(err?.error?.message ?? 'Error al eliminar');
           this.deletingSvc.set(null);
-        },
-      });
-  }
-
-  saveProfile(): void {
-    if (this.profileForm.invalid) return;
-    const v = this.profileForm.value;
-    const profileValues = {
-      name: v.name ?? null,
-      category: v.category ?? null,
-      description: v.description ?? null,
-      location: v.location ?? null,
-      schedule: v.schedule ?? null,
-      phone: v.phone ?? null,
-      whatsapp: v.whatsapp ?? null,
-      storeCoverImage: v.storeCoverImage ?? null,
-      cancellationPolicy: v.cancellationPolicy ?? null,
-    };
-    this.savingProfile.set(true);
-    this.businessAdminService
-      .saveProfile(this.negocioId, profileValues, this.token)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: () => {
-          this.toast.success('Perfil actualizado');
-          this.savingProfile.set(false);
-        },
-        error: err => {
-          this.toast.error(err?.error?.message ?? 'Error al guardar');
-          this.savingProfile.set(false);
-        },
-      });
-  }
-
-  changePin(): void {
-    if (this.pinForm.invalid || this.pinMismatch()) return;
-    const pin = this.pinForm.value.pin!;
-    this.savingPin.set(true);
-    this.businessAdminService
-      .updatePin(this.negocioId, pin, this.token)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: () => {
-          this.toast.success('PIN actualizado. Inicia sesión de nuevo.');
-          this.auth.clearBusinessToken(this.negocioId);
-          this.router.navigate(['/business', this.negocioId, 'login']);
-        },
-        error: err => {
-          this.toast.error(err?.error?.message ?? 'Error al cambiar PIN');
-          this.savingPin.set(false);
         },
       });
   }
