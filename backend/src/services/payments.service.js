@@ -1,8 +1,9 @@
 'use strict';
 
-const { randomUUID } = require('crypto');
+const { createHash, randomUUID } = require('crypto');
 const db = require('../db');
-const { createNotification } = require('./notifications.service');
+const { deliverExternalNotification } = require('./notifications.service');
+const idempotency = require('./idempotency.service');
 const { parsePagination } = require('../utils/pagination');
 const logger = require('../logger');
 const { DEFAULT_CURRENCY, normalizeCurrency } = require('../config/currency');
@@ -97,7 +98,7 @@ async function listPayments(filters = {}) {
   }
 }
 
-async function createPayment(payload = {}) {
+async function createPayment(payload = {}, idempotencyKey) {
   const { bookingId, providerId, customerId, amount, currency, method, status } = normalizePaymentInput(payload);
 
   if (!bookingId || !providerId || !customerId) {
@@ -116,6 +117,15 @@ async function createPayment(payload = {}) {
     return { ok: false, status: 400, message: 'status inválido' };
   }
 
+  if (!process.env.DATABASE_URL) {
+    logger.error('[payments] createPayment: DATABASE_URL no configurado');
+    return { ok: false, status: 500, message: 'DATABASE_URL no configurado; el servicio requiere PostgreSQL' };
+  }
+
+  const scope = `payment-create:${bookingId}`;
+  const claimed = await idempotency.claim(scope, idempotencyKey, { bookingId, providerId, customerId, amount, currency, method, status });
+  if (!claimed.claim) return { ...claimed.result, ...(claimed.inProgress ? { inProgress: true } : {}), ...(claimed.replayed ? { replayed: true } : {}) };
+
   const payment = {
     id: `pay-${Date.now()}-${randomUUID().slice(0, 8)}`,
     bookingId,
@@ -128,23 +138,31 @@ async function createPayment(payload = {}) {
     createdAt: new Date().toISOString(),
   };
 
-  if (!process.env.DATABASE_URL) {
-    logger.error('[payments] createPayment: DATABASE_URL no configurado');
-    return { ok: false, status: 500, message: 'DATABASE_URL no configurado; el servicio requiere PostgreSQL' };
-  }
-
+  let client;
   try {
-    const { rows } = await db.query(
-      `INSERT INTO payments (id, booking_id, provider_id, customer_id, amount, currency, method, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-       RETURNING *`,
-      [payment.id, bookingId, providerId, customerId, amount, currency, method, status]
+    client = await db.connect();
+    await client.query('BEGIN');
+    await client.query(
+      `INSERT INTO payments (id, booking_id, provider_id, customer_id, amount, currency, method, status, idempotency_scope, idempotency_key)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       ON CONFLICT DO NOTHING`,
+      [payment.id, bookingId, providerId, customerId, amount, currency, method, status, scope, claimed.claim.key]
     );
-
-    return { ok: true, status: 201, data: mapPayment(rows[0]) };
+    const { rows } = await client.query(
+      'SELECT * FROM payments WHERE idempotency_scope = $1 AND idempotency_key = $2',
+      [scope, claimed.claim.key]
+    );
+    const result = { ok: true, status: 201, data: mapPayment(rows[0]) };
+    await idempotency.complete(client, claimed.claim, result);
+    await client.query('COMMIT');
+    return result;
   } catch (error) {
+    try { await client?.query('ROLLBACK'); } catch {}
+    await idempotency.release(claimed.claim);
     logger.error('[payments] createPayment falló:', error.message);
     return { ok: false, status: 500, message: 'Error al registrar el pago en la base de datos' };
+  } finally {
+    client?.release();
   }
 }
 
@@ -224,6 +242,25 @@ async function getPayment(id) {
   }
 }
 
+async function insertPaymentNotification(client, payment, message) {
+  if (!payment.customer_id) return null;
+  const notification = {
+    id: `ntf-${randomUUID()}`,
+    businessId: payment.provider_id,
+    customerId: payment.customer_id,
+    bookingId: payment.booking_id,
+    type: 'payment_received',
+    title: 'Pago confirmado',
+    message,
+  };
+  await client.query(
+    `INSERT INTO notifications (id, business_id, customer_id, booking_id, type, channel, title, message, status)
+     VALUES ($1, $2, $3, $4, $5, 'in_app', $6, $7, 'queued')`,
+    [notification.id, notification.businessId, notification.customerId, notification.bookingId, notification.type, notification.title, notification.message]
+  );
+  return notification;
+}
+
 async function updatePaymentStatus(id, status) {
   const cleanId = String(id ?? '').trim();
   if (!['pending', 'paid', 'failed', 'refunded'].includes(status)) {
@@ -235,38 +272,46 @@ async function updatePaymentStatus(id, status) {
     return { ok: false, status: 500, message: 'DATABASE_URL no configurado; el servicio requiere PostgreSQL' };
   }
 
+  let client;
+  let notification = null;
   try {
-    const { rows } = await db.query('UPDATE payments SET status = $1, updated_at = now() WHERE id = $2 RETURNING *', [
-      status,
-      cleanId,
-    ]);
+    client = await db.connect();
+    await client.query('BEGIN');
+    let { rows } = await client.query(
+      'UPDATE payments SET status = $1, updated_at = now() WHERE id = $2 AND status IS DISTINCT FROM $1 RETURNING *',
+      [status, cleanId]
+    );
+    const transitioned = rows.length > 0;
+    if (!transitioned) {
+      ({ rows } = await client.query('SELECT * FROM payments WHERE id = $1', [cleanId]));
+    }
     if (!rows.length) {
+      await client.query('ROLLBACK');
       return { ok: false, status: 404, message: 'Pago no encontrado' };
     }
 
-    const payment = mapPayment(rows[0]);
-    if (status === 'paid' && payment.bookingId) {
-      await db.query("UPDATE bookings SET status = 'confirmed', updated_at = now() WHERE id = $1", [payment.bookingId]);
-      await createNotification({
-        businessId: payment.providerId,
-        customerId: payment.customerId,
-        bookingId: payment.bookingId,
-        type: 'payment_received',
-        channel: 'in_app',
-        title: 'Pago confirmado',
-        message: `Se registró el pago (${payment.amount} ${payment.currency}) de la reserva.`,
-        status: 'queued',
-      });
+    const row = rows[0];
+    if (transitioned && status === 'paid' && row.booking_id) {
+      await client.query("UPDATE bookings SET status = 'confirmed', updated_at = now() WHERE id = $1", [row.booking_id]);
+      notification = await insertPaymentNotification(
+        client,
+        row,
+        `Se registró el pago (${row.amount} ${row.currency}) de la reserva.`
+      );
     }
-
-    return { ok: true, status: 200, data: payment };
+    await client.query('COMMIT');
+    if (notification) deliverExternalNotification(notification).catch(() => {});
+    return { ok: true, status: 200, data: mapPayment(row) };
   } catch (error) {
+    try { await client?.query('ROLLBACK'); } catch {}
     logger.error('[payments] updatePaymentStatus falló:', error.message);
     return { ok: false, status: 500, message: error.message };
+  } finally {
+    client?.release();
   }
 }
 
-async function createCheckoutSession(payload = {}) {
+async function createCheckoutSession(payload = {}, idempotencyKey) {
   const { bookingId, providerId, customerId, amount, currency, method } = normalizePaymentInput(payload);
 
   if (!bookingId || !providerId || !customerId) {
@@ -281,12 +326,21 @@ async function createCheckoutSession(payload = {}) {
     return { ok: false, status: 400, message: 'method inválido' };
   }
 
+  if (!process.env.DATABASE_URL) {
+    return { ok: false, status: 500, message: 'DATABASE_URL no configurado; el servicio requiere PostgreSQL' };
+  }
+
   const returnUrls = getCheckoutReturnUrls(payload, bookingId);
   if (!returnUrls) {
     return { ok: false, status: 400, message: 'successUrl o cancelUrl inválida' };
   }
 
-  const paymentRecord = await createPayment({
+  const scope = `payment-checkout:${bookingId}`;
+  const claimed = await idempotency.claim(scope, idempotencyKey, { bookingId, providerId, customerId, amount, currency, method, ...returnUrls });
+  if (!claimed.claim) return { ...claimed.result, ...(claimed.inProgress ? { inProgress: true } : {}), ...(claimed.replayed ? { replayed: true } : {}) };
+
+  const payment = {
+    id: `pay-${Date.now()}-${randomUUID().slice(0, 8)}`,
     bookingId,
     providerId,
     customerId,
@@ -294,39 +348,84 @@ async function createCheckoutSession(payload = {}) {
     currency,
     method,
     status: 'pending',
-  });
-
-  if (!paymentRecord.ok) {
-    return paymentRecord;
+  };
+  let paymentRow;
+  let client;
+  try {
+    client = await db.connect();
+    await client.query('BEGIN');
+    await client.query(
+      `INSERT INTO payments (id, booking_id, provider_id, customer_id, amount, currency, method, status, idempotency_scope, idempotency_key)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', $8, $9)
+       ON CONFLICT DO NOTHING`,
+      [payment.id, bookingId, providerId, customerId, amount, currency, method, scope, claimed.claim.key]
+    );
+    const { rows } = await client.query(
+      'SELECT * FROM payments WHERE idempotency_scope = $1 AND idempotency_key = $2',
+      [scope, claimed.claim.key]
+    );
+    paymentRow = rows[0];
+    if (!paymentRow) throw new Error('No se pudo recuperar el pago asociado a la clave');
+    await client.query('COMMIT');
+  } catch (error) {
+    try { await client?.query('ROLLBACK'); } catch {}
+    await idempotency.release(claimed.claim);
+    logger.error('[payments] crear registro de checkout falló:', error.message);
+    return { ok: false, status: 500, message: 'Error al registrar el pago en la base de datos' };
+  } finally {
+    client?.release();
   }
+
+  const finalize = async (result, sessionId = null) => {
+    let finalClient;
+    try {
+      finalClient = await db.connect();
+      await finalClient.query('BEGIN');
+      if (sessionId) {
+        await finalClient.query('UPDATE payments SET checkout_session_id = $1, updated_at = now() WHERE id = $2', [
+          sessionId,
+          paymentRow.id,
+        ]);
+      }
+      await idempotency.complete(finalClient, claimed.claim, result);
+      await finalClient.query('COMMIT');
+      return result;
+    } catch (error) {
+      try { await finalClient?.query('ROLLBACK'); } catch {}
+      await idempotency.release(claimed.claim);
+      throw error;
+    } finally {
+      finalClient?.release();
+    }
+  };
 
   // Canales sin pasarela online: se registran con instrucciones para el cliente.
   if (method === 'transfer') {
-    return {
+    return finalize({
       ok: true,
       status: 200,
       data: {
-        paymentId: paymentRecord.data?.id,
+        paymentId: paymentRow.id,
         method: 'transfer',
         checkoutUrl: null,
         status: 'pending',
         instructions: getTransferInstructions(bookingId),
       },
-    };
+    });
   }
 
   if (method === 'cash') {
-    return {
+    return finalize({
       ok: true,
       status: 200,
       data: {
-        paymentId: paymentRecord.data?.id,
+        paymentId: paymentRow.id,
         method: 'cash',
         checkoutUrl: null,
         status: 'pending',
         instructions: { message: 'Paga en efectivo en el establecimiento al completar el servicio.' },
       },
-    };
+    });
   }
 
   const { successUrl, cancelUrl } = returnUrls;
@@ -335,7 +434,8 @@ async function createCheckoutSession(payload = {}) {
 
   if (stripeClient) {
     try {
-      const session = await stripeClient.checkout.sessions.create({
+      const stripeIdempotencyKey = `checkout-${createHash('sha256').update(`${scope}:${claimed.claim.key}`).digest('hex')}`;
+      const params = {
         mode: 'payment',
         line_items: [
           {
@@ -356,36 +456,41 @@ async function createCheckoutSession(payload = {}) {
           bookingId,
           providerId,
           customerId,
-          paymentId: paymentRecord.data?.id || `pay-${Date.now()}`,
+          paymentId: paymentRow.id,
           method,
         },
         payment_method_types: paymentMethodTypes,
-      });
+      };
+      const session = paymentRow.checkout_session_id
+        ? await stripeClient.checkout.sessions.retrieve(paymentRow.checkout_session_id)
+        : await stripeClient.checkout.sessions.create(params, { idempotencyKey: stripeIdempotencyKey });
 
-      return {
+      return finalize({
         ok: true,
         status: 200,
         data: {
           sessionId: session.id,
           checkoutUrl: session.url,
-          paymentId: paymentRecord.data?.id || session.metadata.paymentId,
+          paymentId: paymentRow.id,
         },
-      };
-    } catch (_error) {
-      // fall through to dev fallback if Stripe is misconfigured
+      }, session.id);
+    } catch (error) {
+      await idempotency.release(claimed.claim);
+      logger.error('[payments] Stripe checkout falló:', error.message);
+      return { ok: false, status: 502, message: 'No se pudo iniciar el checkout con el proveedor de pagos' };
     }
   }
 
-  const sessionId = `dev_session_${Date.now()}`;
-  return {
+  const sessionId = paymentRow.checkout_session_id || `dev_session_${paymentRow.id}`;
+  return finalize({
     ok: true,
     status: 200,
     data: {
       sessionId,
       checkoutUrl: `${successUrl}&dev=1&session_id=${encodeURIComponent(sessionId)}`,
-      paymentId: paymentRecord.data?.id,
+      paymentId: paymentRow.id,
     },
-  };
+  }, sessionId);
 }
 
 async function processWebhook({ rawBody, signature, event }) {
@@ -440,39 +545,72 @@ async function processWebhook({ rawBody, signature, event }) {
 
   if (!process.env.DATABASE_URL) {
     logger.warn('[payments] webhook procesado sin DATABASE_URL; no se persiste');
-  } else if (status === 'paid') {
-    try {
-      await db.query(`UPDATE payments SET status = $1, external_reference = $2, updated_at = now() WHERE id = $3`, [
-        status,
-        String(session.payment_intent || ''),
-        payment.id,
-      ]);
-      await db.query(`UPDATE bookings SET status = 'confirmed', updated_at = now() WHERE id = $1`, [bookingId]);
-      await db.query(
+    return { ok: false, status: 500, message: 'DATABASE_URL no configurado; no se puede deduplicar el webhook' };
+  }
+
+  const eventId = String(payloadEvent.id || `payload-${createHash('sha256').update(rawBody || JSON.stringify(payloadEvent)).digest('hex')}`);
+  let client;
+  let notification = null;
+  let persistedPayment;
+  try {
+    client = await db.connect();
+    await client.query('BEGIN');
+    const receipt = await client.query(
+      `INSERT INTO payment_webhook_events (provider, event_id)
+       VALUES ('stripe', $1)
+       ON CONFLICT (provider, event_id) DO NOTHING
+       RETURNING event_id`,
+      [eventId]
+    );
+    if (!receipt.rows.length) {
+      await client.query('COMMIT');
+      return { ok: true, status: 200, data: { type: payloadEvent.type, status: 'duplicate' } };
+    }
+
+    let rows = [];
+    let transitioned = false;
+    if (status === 'paid') {
+      ({ rows } = await client.query(
+        `UPDATE payments
+         SET status = 'paid', external_reference = $1, updated_at = now()
+         WHERE id = $2 AND status IS DISTINCT FROM 'paid'
+         RETURNING *`,
+        [String(session.payment_intent || ''), payment.id]
+      ));
+      transitioned = rows.length > 0;
+    }
+    if (!rows.length) {
+      ({ rows } = await client.query('SELECT * FROM payments WHERE id = $1', [payment.id]));
+    }
+    if (!rows.length) {
+      await client.query('ROLLBACK');
+      return { ok: false, status: 404, message: 'Pago no encontrado para el evento recibido' };
+    }
+    persistedPayment = rows[0];
+
+    if (transitioned) {
+      await client.query("UPDATE bookings SET status = 'confirmed', updated_at = now() WHERE id = $1", [bookingId]);
+      await client.query(
         `UPDATE reservations SET disponibilidad = 'Confirmado', updated_at = now()
          WHERE business_id = $1 AND franja = (SELECT slot FROM bookings WHERE id = $2)`,
         [providerId, bookingId]
       );
-    } catch (error) {
-      logger.error('[payments] webhook: error al confirmar el pago en BD:', error.message);
-      return { ok: false, status: 500, message: 'Error al confirmar el pago en la base de datos' };
+      notification = await insertPaymentNotification(
+        client,
+        persistedPayment,
+        `Se recibió el pago (${payment.amount} ${payment.currency}) de la reserva.`
+      );
     }
+    await client.query('COMMIT');
+    if (notification) deliverExternalNotification(notification).catch(() => {});
+    return { ok: true, status: 200, data: mapPayment(persistedPayment) };
+  } catch (error) {
+    try { await client?.query('ROLLBACK'); } catch {}
+    logger.error('[payments] webhook: error al confirmar el pago en BD:', error.message);
+    return { ok: false, status: 500, message: 'Error al confirmar el pago en la base de datos' };
+  } finally {
+    client?.release();
   }
-
-  if (status === 'paid') {
-    await createNotification({
-      businessId: providerId,
-      customerId,
-      bookingId,
-      type: 'payment_received',
-      channel: 'in_app',
-      title: 'Pago confirmado',
-      message: `Se recibió el pago (${payment.amount} ${payment.currency}) de la reserva.`,
-      status: 'queued',
-    });
-  }
-
-  return { ok: true, status: 200, data: payment };
 }
 
 module.exports = {

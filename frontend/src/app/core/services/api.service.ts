@@ -420,12 +420,14 @@ export class ApiService {
 
   createBusinessCheckout(
     negocioId: string,
-    payload: BookingPayload & { email?: string; dataConsent?: boolean }
+    payload: BookingPayload & { email?: string; dataConsent?: boolean },
+    idempotencyKey: string
   ): Observable<ApiResponse<{ bookingId: string; customerId: string; reservationId: number }>> {
     return this.http
       .post<ApiResponse<{ bookingId: string; customerId: string; reservationId: number }>>(
         `${this.base}/businesses/${negocioId}/checkout`,
-        payload
+        payload,
+        { headers: { 'Idempotency-Key': idempotencyKey } }
       )
       .pipe(catchError(this.handleError));
   }
@@ -546,15 +548,20 @@ export class ApiService {
       .pipe(catchError(this.handleError));
   }
 
-  createPayment(payload: PaymentRequest): Observable<ApiResponse<Payment>> {
-    return this.http.post<ApiResponse<Payment>>(`${this.base}/payments`, payload).pipe(catchError(this.handleError));
+  createPayment(payload: PaymentRequest, idempotencyKey: string): Observable<ApiResponse<Payment>> {
+    return this.http
+      .post<ApiResponse<Payment>>(`${this.base}/payments`, payload, { headers: { 'Idempotency-Key': idempotencyKey } })
+      .pipe(catchError(this.handleError));
   }
 
   createCheckoutSession(
-    payload: PaymentRequest & { successUrl?: string; cancelUrl?: string }
+    payload: PaymentRequest & { successUrl?: string; cancelUrl?: string },
+    idempotencyKey: string
   ): Observable<ApiResponse<CheckoutSession>> {
     return this.http
-      .post<ApiResponse<CheckoutSession>>(`${this.base}/payments/checkout`, payload)
+      .post<ApiResponse<CheckoutSession>>(`${this.base}/payments/checkout`, payload, {
+        headers: { 'Idempotency-Key': idempotencyKey },
+      })
       .pipe(catchError(this.handleError));
   }
 

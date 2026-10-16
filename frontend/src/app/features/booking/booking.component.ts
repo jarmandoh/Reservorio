@@ -11,6 +11,7 @@ import { RealtimeService } from '../../core/services/realtime.service';
 import { AuthService } from '../../core/services/auth.service';
 import { DEFAULT_CURRENCY, formatCurrency } from '../../core/config/currency';
 import { isAllowedCheckoutRedirect } from '../../core/config/checkout-url';
+import { IdempotencyAttempt, clearIdempotencyAttempt, idempotencyAttempt } from '../../core/config/idempotency-key';
 import { formatTime24 } from '../../core/config/time';
 import { Reservation, PaymentMethod, CheckoutInstructions } from '../../core/models/reservation.model';
 import { Business } from '../../core/models/business.model';
@@ -1008,6 +1009,8 @@ export class BookingComponent implements OnInit, OnDestroy {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
+  private reservationAttempt: IdempotencyAttempt | null = null;
+  private paymentAttempt: IdempotencyAttempt | null = null;
 
   @Input() businessIdOverride = '';
   @Input() initialServiceName = '';
@@ -1535,12 +1538,18 @@ export class BookingComponent implements OnInit, OnDestroy {
       notas: notas?.trim() ?? '',
     };
 
+    const checkoutPayload = { ...payload, dataConsent: dataConsent === true };
     this.submitting.set(true);
+    this.reservationAttempt = idempotencyAttempt(`reservation:${this.businessId}`, this.reservationAttempt, {
+      businessId: this.businessId,
+      payload: checkoutPayload,
+    });
     this.api
-      .createBusinessCheckout(this.businessId, { ...payload, dataConsent: dataConsent === true })
+      .createBusinessCheckout(this.businessId, checkoutPayload, this.reservationAttempt.key)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: checkout => {
+          clearIdempotencyAttempt(`reservation:${this.businessId}`, this.reservationAttempt);
           const selected = this.selectedSlot();
           if (selected) {
             this.reservations.set(
@@ -1584,21 +1593,26 @@ export class BookingComponent implements OnInit, OnDestroy {
     const successUrl = `${window.location.origin}/payment/success?bookingId=${encodeURIComponent(bookingId)}&providerId=${encodeURIComponent(providerId)}&customerId=${encodeURIComponent(customerId)}`;
     const cancelUrl = `${window.location.origin}/payment/cancel?bookingId=${encodeURIComponent(bookingId)}&providerId=${encodeURIComponent(providerId)}&customerId=${encodeURIComponent(customerId)}`;
 
+    const checkoutPayload = {
+      bookingId,
+      providerId,
+      customerId,
+      amount,
+      currency: DEFAULT_CURRENCY,
+      method,
+      status: 'pending' as const,
+      successUrl,
+      cancelUrl,
+    };
+    this.paymentAttempt = idempotencyAttempt(`payment:${bookingId}`, this.paymentAttempt, checkoutPayload);
     this.api
       .createCheckoutSession({
-        bookingId,
-        providerId,
-        customerId,
-        amount,
-        currency: DEFAULT_CURRENCY,
-        method,
-        status: 'pending',
-        successUrl,
-        cancelUrl,
-      })
+        ...checkoutPayload,
+      }, this.paymentAttempt.key)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: result => {
+          clearIdempotencyAttempt(`payment:${bookingId}`, this.paymentAttempt);
           this.paymentLoading.set(false);
           const data = result.data;
           if (data?.checkoutUrl && isAllowedCheckoutRedirect(data.checkoutUrl)) {

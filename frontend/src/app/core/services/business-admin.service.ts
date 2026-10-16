@@ -102,14 +102,15 @@ export class BusinessAdminService {
     return this.api.createNotification(payload);
   }
 
-  createPayment(payload: PaymentRequest): Observable<ApiResponse<Payment>> {
-    return this.api.createPayment(payload);
+  createPayment(payload: PaymentRequest, idempotencyKey: string): Observable<ApiResponse<Payment>> {
+    return this.api.createPayment(payload, idempotencyKey);
   }
 
   createCheckoutSession(
-    payload: PaymentRequest & { successUrl?: string; cancelUrl?: string }
+    payload: PaymentRequest & { successUrl?: string; cancelUrl?: string },
+    idempotencyKey: string
   ): Observable<ApiResponse<CheckoutSession>> {
-    return this.api.createCheckoutSession(payload);
+    return this.api.createCheckoutSession(payload, idempotencyKey);
   }
 
   loadServices(negocioId: string): Observable<string[]> {

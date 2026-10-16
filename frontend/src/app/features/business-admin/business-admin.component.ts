@@ -12,6 +12,7 @@ import { RealtimeService } from '../../core/services/realtime.service';
 import { BadgeComponent } from '../../shared/components/badge/badge.component';
 import { DEFAULT_CURRENCY, formatCurrency } from '../../core/config/currency';
 import { isAllowedCheckoutRedirect } from '../../core/config/checkout-url';
+import { IdempotencyAttempt, clearIdempotencyAttempt, idempotencyAttempt } from '../../core/config/idempotency-key';
 import {
   BookingRecord,
   Customer,
@@ -883,6 +884,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
   readonly payments = signal<Payment[]>([]);
   readonly notifications = signal<NotificationItem[]>([]);
   readonly checkouting = signal(false);
+  private checkoutAttempt: IdempotencyAttempt | null = null;
   readonly resLoading = signal(false);
   readonly svcLoading = signal(false);
   readonly addingSvc = signal(false);
@@ -1229,21 +1231,26 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
     const successUrl = `${window.location.origin}/payment/success?bookingId=${encodeURIComponent(booking.id)}&providerId=${encodeURIComponent(booking.providerId)}&customerId=${encodeURIComponent(booking.customerId)}`;
     const cancelUrl = `${window.location.origin}/payment/cancel?bookingId=${encodeURIComponent(booking.id)}&providerId=${encodeURIComponent(booking.providerId)}&customerId=${encodeURIComponent(booking.customerId)}`;
 
+    const checkoutPayload = {
+      bookingId: booking.id,
+      providerId: booking.providerId,
+      customerId: booking.customerId,
+      amount: this.paymentAmount(),
+      currency: DEFAULT_CURRENCY,
+      method: 'card' as const,
+      status: 'pending' as const,
+      successUrl,
+      cancelUrl,
+    };
+    this.checkoutAttempt = idempotencyAttempt(`business-admin-payment:${booking.id}`, this.checkoutAttempt, checkoutPayload);
     this.businessAdminService
       .createCheckoutSession({
-        bookingId: booking.id,
-        providerId: booking.providerId,
-        customerId: booking.customerId,
-        amount: this.paymentAmount(),
-        currency: DEFAULT_CURRENCY,
-        method: 'card',
-        status: 'pending',
-        successUrl,
-        cancelUrl,
-      })
+        ...checkoutPayload,
+      }, this.checkoutAttempt.key)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: data => {
+          clearIdempotencyAttempt(`business-admin-payment:${booking.id}`, this.checkoutAttempt);
           const current = this.payments();
           const checkoutData = data.data;
           if (checkoutData?.paymentId) {

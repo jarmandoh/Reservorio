@@ -320,7 +320,9 @@ router.post(`/:id/reservations`, requireAuth, reservationValidators, async (req,
 router.post('/:id/checkout', requireCustomer, checkoutValidators, async (req, res) => {
   try {
     const payload = { ...req.body, _customerId: req.customerId, _customerEmail: req.authPayload?.email };
-    const result = await checkoutService.checkoutForBusiness(req.params.id, payload);
+    const result = await checkoutService.checkoutForBusiness(req.params.id, payload, req.get('Idempotency-Key'));
+    if (result.replayed) res.set('Idempotency-Replayed', 'true');
+    if (result.inProgress) res.set('Retry-After', '1');
     res
       .status(result.status)
       .json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });

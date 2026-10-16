@@ -68,7 +68,9 @@ router.get('/', async (req, res) => {
 
 router.post('/', paymentValidators, async (req, res) => {
   try {
-    const result = await createPayment(req.body);
+    const result = await createPayment(req.body, req.get('Idempotency-Key'));
+    if (result.replayed) res.set('Idempotency-Replayed', 'true');
+    if (result.inProgress) res.set('Retry-After', '1');
     return res
       .status(result.status)
       .json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
@@ -79,7 +81,9 @@ router.post('/', paymentValidators, async (req, res) => {
 
 router.post('/checkout', checkoutValidators, async (req, res) => {
   try {
-    const result = await createCheckoutSession(req.body);
+    const result = await createCheckoutSession(req.body, req.get('Idempotency-Key'));
+    if (result.replayed) res.set('Idempotency-Replayed', 'true');
+    if (result.inProgress) res.set('Retry-After', '1');
     return res
       .status(result.status)
       .json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
