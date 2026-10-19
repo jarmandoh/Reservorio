@@ -18,6 +18,13 @@ El runner (`backend/db/migrate.js`) requiere `DATABASE_URL` válida. En Docker e
 backend aplica `db:migrate` antes de arrancar (ver `backend/Dockerfile`), por lo que
 un despliegue sobre un volumen existente recibe los cambios de schema automáticamente.
 
+## Retención de idempotencia
+
+El backend elimina cada día las respuestas idempotentes completadas con más de 30 días,
+las solicitudes abandonadas cuyo lease expiró hace más de un día y los webhooks procesados
+hace más de 90 días. Los clientes deben reutilizar la misma clave durante los reintentos
+dentro de esa ventana; después, la garantía de replay expira.
+
 ## Baseline
 
 `backend/db/init.sql` es la única baseline del esquema inicial. Registra `init.sql`

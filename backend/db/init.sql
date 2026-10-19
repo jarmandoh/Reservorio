@@ -220,6 +220,11 @@ CREATE TABLE IF NOT EXISTS idempotency_requests (
       OR (state = 'completed' AND response_status IS NOT NULL AND response_body IS NOT NULL))
 );
 
+CREATE INDEX IF NOT EXISTS idx_idempotency_completed_updated_at
+  ON idempotency_requests(updated_at) WHERE state = 'completed';
+CREATE INDEX IF NOT EXISTS idx_idempotency_processing_lease
+  ON idempotency_requests(lease_until) WHERE state = 'processing';
+
 ALTER TABLE payments ADD COLUMN IF NOT EXISTS idempotency_scope TEXT;
 ALTER TABLE payments ADD COLUMN IF NOT EXISTS idempotency_key TEXT;
 ALTER TABLE payments ADD COLUMN IF NOT EXISTS checkout_session_id TEXT;
@@ -234,6 +239,8 @@ CREATE TABLE IF NOT EXISTS payment_webhook_events (
   processed_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
   PRIMARY KEY (provider, event_id)
 );
+CREATE INDEX IF NOT EXISTS idx_payment_webhook_events_processed_at
+  ON payment_webhook_events(processed_at);
 
 CREATE INDEX IF NOT EXISTS idx_reservations_business ON reservations(business_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_business ON notifications(business_id);

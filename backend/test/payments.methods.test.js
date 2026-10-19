@@ -2,14 +2,13 @@
 
 process.env.JWT_SECRET = 'test-secret';
 
-jest.mock('../src/db', () => ({ query: jest.fn() }));
-jest.mock('../src/services/notifications.service', () => ({
-  createNotification: jest.fn().mockResolvedValue({ ok: true, status: 201, data: {} }),
-}));
-
 const request = require('supertest');
 const express = require('express');
-const db = require('../src/db');
+const { createIdempotencyDb } = require('./helpers/idempotency-db');
+const { db, state } = createIdempotencyDb();
+jest.doMock('../src/db', () => db);
+jest.doMock('../src/services/notifications.service', () => ({ deliverExternalNotification: jest.fn().mockResolvedValue(undefined) }));
+
 const { sign } = require('../src/middleware/jwt');
 const paymentsRoutes = require('../src/routes/payments.routes');
 const notificationsService = require('../src/services/notifications.service');
@@ -45,8 +44,13 @@ describe('payments — más canales y confirmación manual', () => {
     } else {
       process.env.NODE_ENV = ORIGINAL_NODE_ENV;
     }
-    db.query.mockReset();
-    notificationsService.createNotification.mockClear();
+    state.idempotency.clear();
+    state.payments.clear();
+    state.webhookEvents.clear();
+    state.notifications.length = 0;
+    db.query.mockClear();
+    db.connect.mockClear();
+    notificationsService.deliverExternalNotification.mockClear();
   });
 
   afterAll(() => {
@@ -68,8 +72,6 @@ describe('payments — más canales y confirmación manual', () => {
   });
 
   test('POST /checkout con método transfer devuelve instrucciones bancarias sin pasarela', async () => {
-    db.query.mockResolvedValueOnce({ rows: [insertedPayment] });
-
     const res = await request(buildApp()).post('/api/payments/checkout').send({
       bookingId: 'b1',
       providerId: 'neg1',
@@ -78,7 +80,7 @@ describe('payments — más canales y confirmación manual', () => {
       currency: 'EUR',
       method: 'transfer',
       status: 'pending',
-    });
+    }).set('Idempotency-Key', 'methods-transfer-1');
 
     expect(res.status).toBe(200);
     expect(res.body.data.method).toBe('transfer');
@@ -88,8 +90,6 @@ describe('payments — más canales y confirmación manual', () => {
   });
 
   test('POST /checkout con método cash devuelve instrucciones en efectivo', async () => {
-    db.query.mockResolvedValueOnce({ rows: [{ ...insertedPayment, method: 'cash' }] });
-
     const res = await request(buildApp()).post('/api/payments/checkout').send({
       bookingId: 'b1',
       providerId: 'neg1',
@@ -97,7 +97,7 @@ describe('payments — más canales y confirmación manual', () => {
       amount: 30,
       currency: 'EUR',
       method: 'cash',
-    });
+    }).set('Idempotency-Key', 'methods-cash-1');
 
     expect(res.status).toBe(200);
     expect(res.body.data.method).toBe('cash');
@@ -105,8 +105,6 @@ describe('payments — más canales y confirmación manual', () => {
   });
 
   test('POST /checkout con card sin Stripe devuelve flujo dev', async () => {
-    db.query.mockResolvedValue({ rows: [insertedPayment] });
-
     const res = await request(buildApp()).post('/api/payments/checkout').send({
       bookingId: 'b1',
       providerId: 'neg1',
@@ -114,15 +112,13 @@ describe('payments — más canales y confirmación manual', () => {
       amount: 30,
       currency: 'EUR',
       method: 'card',
-    });
+    }).set('Idempotency-Key', 'methods-card-1');
 
     expect(res.status).toBe(200);
     expect(res.body.data.checkoutUrl).toContain('dev=1');
   });
 
   test('POST /checkout acepta URLs de retorno del frontend configurado', async () => {
-    db.query.mockResolvedValueOnce({ rows: [insertedPayment] });
-
     const res = await request(buildApp()).post('/api/payments/checkout').send({
       bookingId: 'b1',
       providerId: 'neg1',
@@ -132,11 +128,11 @@ describe('payments — más canales y confirmación manual', () => {
       method: 'card',
       successUrl: 'http://localhost:4200/payment/success?bookingId=b1',
       cancelUrl: 'http://localhost:4200/payment/cancel?bookingId=b1',
-    });
+    }).set('Idempotency-Key', 'methods-card-url-1');
 
     expect(res.status).toBe(200);
     expect(res.body.data.checkoutUrl).toContain('http://localhost:4200/payment/success');
-    expect(db.query).toHaveBeenCalledTimes(1);
+    expect(state.payments.size).toBe(1);
   });
 
   test('POST /checkout rechaza URLs de retorno fuera del origen de frontend', async () => {
@@ -153,7 +149,7 @@ describe('payments — más canales y confirmación manual', () => {
 
     expect(res.status).toBe(400);
     expect(res.body.message).toBe('successUrl o cancelUrl inválida');
-    expect(db.query).not.toHaveBeenCalled();
+    expect(db.connect).not.toHaveBeenCalled();
   });
 
   test('POST /checkout rechaza rutas de retorno no correspondientes al pago', async () => {
@@ -169,14 +165,12 @@ describe('payments — más canales y confirmación manual', () => {
     });
 
     expect(res.status).toBe(400);
-    expect(db.query).not.toHaveBeenCalled();
+    expect(db.connect).not.toHaveBeenCalled();
   });
 
   test('POST /checkout exige origen HTTPS y URLs HTTPS en producción', async () => {
     process.env.NODE_ENV = 'production';
     process.env.FRONTEND_URL = 'https://reservorio.example';
-    db.query.mockResolvedValueOnce({ rows: [insertedPayment] });
-
     const validResponse = await request(buildApp()).post('/api/payments/checkout').send({
       bookingId: 'b1',
       providerId: 'neg1',
@@ -186,11 +180,12 @@ describe('payments — más canales y confirmación manual', () => {
       method: 'card',
       successUrl: 'https://reservorio.example/payment/success?bookingId=b1',
       cancelUrl: 'https://reservorio.example/payment/cancel?bookingId=b1',
-    });
+    }).set('Idempotency-Key', 'methods-prod-1');
 
     expect(validResponse.status).toBe(200);
 
-    db.query.mockReset();
+    db.query.mockClear();
+    db.connect.mockClear();
     const invalidResponse = await request(buildApp()).post('/api/payments/checkout').send({
       bookingId: 'b1',
       providerId: 'neg1',
@@ -212,10 +207,7 @@ describe('payments — más canales y confirmación manual', () => {
   });
 
   test('PATCH /:id confirma un pago manual visible por el negocio', async () => {
-    db.query
-      .mockResolvedValueOnce({ rows: [insertedPayment] }) // getPayment
-      .mockResolvedValueOnce({ rows: [{ ...insertedPayment, status: 'paid' }] }) // update
-      .mockResolvedValueOnce({}); // booking update
+    state.payments.set('pay-1', { ...insertedPayment });
 
     const token = sign({ role: 'business-admin', businessId: 'neg1' });
     const res = await request(buildApp())
@@ -225,13 +217,13 @@ describe('payments — más canales y confirmación manual', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.data.status).toBe('paid');
-    expect(notificationsService.createNotification).toHaveBeenCalledWith(
+    expect(notificationsService.deliverExternalNotification).toHaveBeenCalledWith(
       expect.objectContaining({ bookingId: 'b1', type: 'payment_received' })
     );
   });
 
   test('PATCH /:id no permite que otro negocio confirme un pago ajeno', async () => {
-    db.query.mockResolvedValueOnce({ rows: [insertedPayment] });
+    state.payments.set('pay-1', { ...insertedPayment });
 
     const token = sign({ role: 'business-admin', businessId: 'otro-negocio' });
     const res = await request(buildApp())

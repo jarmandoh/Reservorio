@@ -2,6 +2,7 @@
 
 const { verify } = require('./jwt');
 const db = require('../db');
+const { runWithRlsContext } = require('../db-context');
 
 function getBearerToken(req) {
   const header = String(req.headers.authorization || '');
@@ -17,7 +18,7 @@ function requireAuth(req, res, next) {
 
   try {
     req.authPayload = verify(token);
-    return next();
+    return runWithRlsContext(req.authPayload, next);
   } catch (err) {
     return res.status(401).json({ ok: false, message: 'Token invalido o expirado' });
   }
@@ -114,8 +115,10 @@ async function requireBusinessAuth(req, res, next) {
     return res.status(401).json({ ok: false, message: 'Token invalido o expirado' });
   }
 
-  if (!(await canAccessBusiness(req, res))) return;
-  next();
+  return runWithRlsContext(req.authPayload, async () => {
+    if (!(await canAccessBusiness(req, res))) return;
+    next();
+  });
 }
 
 module.exports = {

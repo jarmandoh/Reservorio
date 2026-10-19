@@ -17,7 +17,7 @@ type AccountOption = {
   template: `
     <div class="account-float">
       @if (menuOpen()) {
-        <section id="account-menu-panel" class="account-panel" aria-label="Menú de cuenta">
+        <section id="account-menu-panel" class="account-panel account-menu-panel" aria-label="Menú de cuenta">
           <div class="panel-heading">
             <span class="system-mark material-icons-round" aria-hidden="true">blur_on</span>
             <div>
@@ -72,7 +72,9 @@ type AccountOption = {
         [attr.aria-label]="account()?.label || 'No has iniciado sesión'"
         (click)="toggleMenu()"
       >
-        <span class="material-icons-round" aria-hidden="true">{{ account() ? 'account_circle' : 'person_outline' }}</span>
+        <span class="material-icons-round" aria-hidden="true">{{
+          account() ? 'account_circle' : 'person_outline'
+        }}</span>
         <span class="presence-indicator" [class.presence-active]="account()" aria-hidden="true"></span>
       </button>
     </div>
@@ -86,6 +88,22 @@ type AccountOption = {
         bottom: 5rem;
         display: block;
         font-family: 'Inter', system-ui, sans-serif;
+        --account-surface: var(--color-surface, #f7f9ff);
+        --account-text: var(--color-on-surface, #181c20);
+        --account-muted: var(--color-outline, #686e7c);
+        --account-border: rgb(104 110 124 / 22%);
+        --account-accent: var(--color-primary, #005bbf);
+        --account-accent-soft: rgb(0 91 191 / 8%);
+        --account-shadow: 0 16px 42px rgb(24 28 32 / 16%);
+      }
+      :host-context(.dark) {
+        --account-surface: #161d27;
+        --account-text: #e6e9ee;
+        --account-muted: #aeb8c5;
+        --account-border: rgb(230 233 238 / 14%);
+        --account-accent: #8fbaff;
+        --account-accent-soft: rgb(143 186 255 / 10%);
+        --account-shadow: 0 18px 48px rgb(0 0 0 / 38%);
       }
       .account-float {
         position: relative;
@@ -96,19 +114,24 @@ type AccountOption = {
         width: 2.75rem;
         height: 2.75rem;
         place-items: center;
-        border: 1px solid rgba(117, 218, 246, 0.45);
+        border: 1px solid var(--account-border);
         border-radius: 50%;
-        color: #d8faff;
-        background: linear-gradient(145deg, rgba(15, 42, 65, 0.96), rgba(8, 24, 43, 0.94));
-        box-shadow: 0 0 0 3px rgba(65, 207, 239, 0.08), 0 8px 24px rgba(4, 18, 31, 0.28);
+        color: var(--account-accent);
+        background: var(--account-surface);
+        box-shadow: 0 4px 14px rgb(24 28 32 / 12%);
         cursor: pointer;
-        transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+        transition:
+          transform 180ms ease,
+          box-shadow 180ms ease,
+          border-color 180ms ease;
       }
       .account-trigger:hover,
       .account-trigger.trigger-active {
         transform: translateY(-2px);
-        border-color: rgba(127, 232, 255, 0.9);
-        box-shadow: 0 0 0 4px rgba(65, 207, 239, 0.13), 0 10px 28px rgba(4, 18, 31, 0.32);
+        border-color: var(--account-accent);
+        box-shadow:
+          0 0 0 3px var(--account-accent-soft),
+          0 8px 22px rgb(24 28 32 / 18%);
       }
       .account-trigger > .material-icons-round {
         font-size: 1.55rem;
@@ -119,7 +142,7 @@ type AccountOption = {
         bottom: 0.08rem;
         width: 0.68rem;
         height: 0.68rem;
-        border: 2px solid #0b1b2a;
+        border: 2px solid var(--account-surface);
         border-radius: 50%;
         background: #f4b45d;
       }
@@ -134,19 +157,18 @@ type AccountOption = {
         width: min(20rem, calc(100vw - 2rem));
         overflow: hidden;
         padding: 1rem;
-        border: 1px solid rgba(113, 221, 248, 0.48);
-        border-radius: 0.7rem;
-        color: #e8f7ff;
-        background:
-          linear-gradient(135deg, rgba(21, 62, 87, 0.96), rgba(8, 23, 41, 0.97) 58%, rgba(12, 37, 58, 0.96));
-        box-shadow: 0 0 0 1px rgba(55, 185, 222, 0.12), 0 18px 50px rgba(0, 9, 20, 0.42);
+        border: 1px solid var(--account-border);
+        border-radius: 1rem;
+        color: var(--account-text);
+        background: var(--account-surface);
+        box-shadow: var(--account-shadow);
         backdrop-filter: blur(18px);
         animation: menu-enter 220ms cubic-bezier(0.18, 0.75, 0.3, 1) both;
       }
       .account-panel::before {
         position: absolute;
         inset: 0;
-        background: repeating-linear-gradient(0deg, transparent 0 5px, rgba(103, 217, 246, 0.025) 6px);
+        background: linear-gradient(135deg, var(--account-accent-soft), transparent 55%);
         content: '';
         pointer-events: none;
       }
@@ -160,7 +182,7 @@ type AccountOption = {
         align-items: center;
         gap: 0.65rem;
         padding-bottom: 0.85rem;
-        border-bottom: 1px solid rgba(117, 218, 246, 0.22);
+        border-bottom: 1px solid var(--account-border);
       }
       .system-mark {
         display: grid;
@@ -168,15 +190,15 @@ type AccountOption = {
         height: 2.3rem;
         flex: 0 0 auto;
         place-items: center;
-        border: 1px solid rgba(120, 231, 255, 0.42);
+        border: 1px solid var(--account-border);
         border-radius: 50%;
-        color: #78e7ff;
-        background: rgba(61, 196, 224, 0.12);
+        color: var(--account-accent);
+        background: var(--account-accent-soft);
         font-size: 1.45rem;
       }
       .panel-kicker {
         margin: 0 0 0.2rem;
-        color: #83d8ed;
+        color: var(--account-accent);
         font-size: 0.55rem;
         font-weight: 700;
         letter-spacing: 0.16em;
@@ -206,7 +228,7 @@ type AccountOption = {
         align-items: center;
         gap: 0.5rem;
         padding: 0.8rem 0.2rem 0.45rem;
-        color: rgba(232, 247, 255, 0.75);
+        color: var(--account-muted);
         font-size: 0.72rem;
       }
       .session-orb {
@@ -231,29 +253,32 @@ type AccountOption = {
         align-items: center;
         gap: 0.65rem;
         padding: 0.55rem 0.65rem;
-        border: 1px solid rgba(118, 220, 246, 0.15);
-        border-radius: 0.35rem;
-        color: #e8f7ff;
-        background: rgba(89, 195, 222, 0.055);
+        border: 1px solid var(--account-border);
+        border-radius: 0.65rem;
+        color: var(--account-text);
+        background: var(--account-accent-soft);
         font: inherit;
         font-size: 0.75rem;
         text-align: left;
         text-decoration: none;
         cursor: pointer;
-        transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
+        transition:
+          border-color 160ms ease,
+          background 160ms ease,
+          transform 160ms ease;
       }
       .menu-option:hover {
         transform: translateX(2px);
-        border-color: rgba(118, 220, 246, 0.55);
-        background: rgba(89, 195, 222, 0.13);
+        border-color: var(--account-accent);
+        background: var(--account-accent-soft);
       }
       .menu-option > .material-icons-round {
-        color: #80e4fa;
+        color: var(--account-accent);
         font-size: 1.15rem;
       }
       .option-arrow {
         margin-left: auto;
-        color: #80e4fa;
+        color: var(--account-accent);
         font-size: 0.8rem;
       }
       .logout-option {
@@ -264,7 +289,7 @@ type AccountOption = {
         position: absolute;
         width: 0.55rem;
         height: 0.55rem;
-        border-color: #91eaff;
+        border-color: var(--account-accent);
         pointer-events: none;
       }
       .corner-top {
@@ -380,4 +405,3 @@ export class AccountMenuComponent {
     }
   }
 }
-

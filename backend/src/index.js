@@ -13,6 +13,7 @@ const db = require('./db');
 const logger = require('./logger');
 const cache = require('./cache');
 const promClient = require('prom-client');
+const { runWithRlsContext } = require('./db-context');
 
 // ── Prometheus registry ──────────────────────────────────────────────────────
 const promRegistry = new promClient.Registry();
@@ -192,7 +193,7 @@ if (String(process.env.REDIS_URL || '').trim()) {
 }
 
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000 * 1000000, // 15 minutos
+  windowMs: 15 * 60 * 1000, // 15 minutos
   max: rateLimitMax,
   store: redisStore,
   standardHeaders: true,
@@ -204,6 +205,12 @@ app.use('/api/', limiter);
 // ── Body parsing ─────────────────────────────────────────────────────────────
 app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json({ limit: process.env.JSON_LIMIT || '100kb' }));
+
+// RLS parte de un contexto público; login/alta de clientes necesitan leer sus tablas de autenticación.
+app.use((req, _res, next) => {
+  const isAuthFlow = req.path.startsWith('/api/auth') || req.path.startsWith('/api/customers');
+  return runWithRlsContext({ role: isAuthFlow ? 'auth' : 'anon' }, next);
+});
 
 // ── Request tracing + counters + logging estructurado ───────────────────────
 app.use((req, res, next) => {
@@ -229,7 +236,7 @@ app.use((req, res, next) => {
       const labels = { method: req.method, route, status: String(res.statusCode) };
       httpRequestsTotal.inc(labels);
       httpRequestDuration.observe(labels, durationMs / 1000);
-    } catch {}
+    } catch { }
 
     const level = res.statusCode >= 500 ? 'error' : res.statusCode >= 400 ? 'warn' : 'info';
     logger[level](
@@ -342,6 +349,7 @@ app.use(notFound);
 app.use(errorHandler);
 
 let reminderIntervalRef = null;
+let idempotencyCleanupIntervalRef = null;
 
 function setupGracefulShutdown(server) {
   let shuttingDown = false;
@@ -354,8 +362,12 @@ function setupGracefulShutdown(server) {
     if (reminderIntervalRef) {
       try {
         clearInterval(reminderIntervalRef);
-      } catch {}
+      } catch { }
       reminderIntervalRef = null;
+    }
+    if (idempotencyCleanupIntervalRef) {
+      clearInterval(idempotencyCleanupIntervalRef);
+      idempotencyCleanupIntervalRef = null;
     }
 
     // Dejar de aceptar conexiones nuevas
@@ -409,6 +421,11 @@ function startServer() {
       const { startReminderWorker } = require('./services/reminders.worker');
       reminderIntervalRef = startReminderWorker();
       logger.info('[reminders] worker de recordatorios habilitado');
+    }
+
+    if (process.env.DATABASE_URL) {
+      const { startIdempotencyCleanupWorker } = require('./services/idempotency-cleanup.worker');
+      idempotencyCleanupIntervalRef = startIdempotencyCleanupWorker();
     }
 
     // Google OAuth warnings

@@ -27,7 +27,12 @@ async function checkoutForBusiness(businessId, payload = {}, idempotencyKey) {
   }
 
   const scope = `business-checkout:${data.businessId}:${data.customerId || data.email}`;
-  const claimed = await idempotency.claim(scope, idempotencyKey, data);
+  let claimed;
+  try {
+    claimed = await idempotency.claim(scope, idempotencyKey, data);
+  } catch (error) {
+    return { ok: false, status: 500, message: error.message || 'No se pudo iniciar la reserva' };
+  }
   if (!claimed.claim) return { ...claimed.result, ...(claimed.inProgress ? { inProgress: true } : {}), ...(claimed.replayed ? { replayed: true } : {}) };
 
   let client;

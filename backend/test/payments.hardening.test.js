@@ -1,15 +1,18 @@
 'use strict';
 
-jest.mock('../src/db', () => ({ query: jest.fn() }));
-
-const db = require('../src/db');
+const { createIdempotencyDb } = require('./helpers/idempotency-db');
+const { db, state } = createIdempotencyDb();
+jest.doMock('../src/db', () => db);
 const payments = require('../src/services/payments.service');
 
 const ORIGINAL_DB_URL = process.env.DATABASE_URL;
 
 describe('payments.service — no degradación silenciosa', () => {
   beforeEach(() => {
-    db.query.mockReset();
+    state.idempotency.clear();
+    state.payments.clear();
+    db.query.mockClear();
+    db.connect.mockClear();
   });
 
   afterAll(() => {
@@ -22,6 +25,7 @@ describe('payments.service — no degradación silenciosa', () => {
 
   test('con DATABASE_URL configurado, un fallo de BD devuelve 500 (sin fallback a memoria)', async () => {
     process.env.DATABASE_URL = 'postgres://test';
+    db.connect.mockRejectedValueOnce(new Error('boom'));
     db.query.mockRejectedValue(new Error('boom'));
 
     const res = await payments.createPayment({
@@ -31,7 +35,7 @@ describe('payments.service — no degradación silenciosa', () => {
       amount: 10,
       method: 'card',
       status: 'pending',
-    });
+    }, 'payment-db-failure');
 
     expect(res.ok).toBe(false);
     expect(res.status).toBe(500);
@@ -39,8 +43,6 @@ describe('payments.service — no degradación silenciosa', () => {
 
   test('sin DATABASE_URL, falla alto (500) en vez de guardar en memoria', async () => {
     delete process.env.DATABASE_URL;
-    db.query.mockRejectedValue(new Error('boom'));
-
     const res = await payments.createPayment({
       bookingId: 'b2',
       providerId: 'neg1',

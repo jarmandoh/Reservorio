@@ -123,7 +123,13 @@ async function createPayment(payload = {}, idempotencyKey) {
   }
 
   const scope = `payment-create:${bookingId}`;
-  const claimed = await idempotency.claim(scope, idempotencyKey, { bookingId, providerId, customerId, amount, currency, method, status });
+  let claimed;
+  try {
+    claimed = await idempotency.claim(scope, idempotencyKey, { bookingId, providerId, customerId, amount, currency, method, status });
+  } catch (error) {
+    logger.error('[payments] createPayment: no se pudo reservar la clave idempotente:', error.message);
+    return { ok: false, status: 500, message: 'Error al registrar el pago en la base de datos' };
+  }
   if (!claimed.claim) return { ...claimed.result, ...(claimed.inProgress ? { inProgress: true } : {}), ...(claimed.replayed ? { replayed: true } : {}) };
 
   const payment = {
@@ -336,7 +342,13 @@ async function createCheckoutSession(payload = {}, idempotencyKey) {
   }
 
   const scope = `payment-checkout:${bookingId}`;
-  const claimed = await idempotency.claim(scope, idempotencyKey, { bookingId, providerId, customerId, amount, currency, method, ...returnUrls });
+  let claimed;
+  try {
+    claimed = await idempotency.claim(scope, idempotencyKey, { bookingId, providerId, customerId, amount, currency, method, ...returnUrls });
+  } catch (error) {
+    logger.error('[payments] createCheckoutSession: no se pudo reservar la clave idempotente:', error.message);
+    return { ok: false, status: 500, message: 'Error al iniciar el checkout en la base de datos' };
+  }
   if (!claimed.claim) return { ...claimed.result, ...(claimed.inProgress ? { inProgress: true } : {}), ...(claimed.replayed ? { replayed: true } : {}) };
 
   const payment = {

@@ -1,7 +1,6 @@
 <main class="story-shell">
-  <section #stage class="story-stage" aria-label="Recorrido animado por una historia de barrio">
+  <section #stage class="story-stage" [class.menu-open]="showIndex()" aria-label="Libro interactivo de Resérvame">
     <canvas #canvas class="story-canvas" aria-hidden="true"></canvas>
-    <div class="stage-vignette" aria-hidden="true"></div>
 
     @if (storyData(); as story) {
       <header class="story-topbar">
@@ -9,35 +8,21 @@
           <span class="brand-icon" aria-hidden="true">R</span>
           <span>resérvame</span>
         </a>
-        <span class="edition-tag"
-          >{{ story.edition }} <i></i> 01 / {{ story.pages.length < 10 ? '0' : '' }}{{ story.pages.length }}</span
-        >
+        <span class="edition-tag">{{ story.edition }} <i></i> {{ story.pages.length }} capítulos</span>
       </header>
-
-      @if (!showIndex()) {
-        <div class="story-caption" aria-live="polite">
-          <p class="eyebrow">{{ story.intro.eyebrow }}</p>
-          <h1>{{ phaseLabel() }}</h1>
-          <p>{{ story.intro.description }}</p>
-        </div>
-      }
-
-      <div class="chapter-marker" [class.chapter-marker-index]="showIndex()" aria-hidden="true">
-        <span class="marker-dot"></span>
-        <span>{{ story.location }}</span>
-      </div>
 
       @if (showIndex()) {
         <aside class="index-card" aria-labelledby="index-heading">
           <div class="index-heading">
             <div>
-              <p class="eyebrow">EL LIBRO ESTÁ ABIERTO</p>
-              <h2 id="index-heading">Sigue la historia</h2>
+              <p class="eyebrow">{{ story.location }}</p>
+              <h2 id="index-heading">Dentro del libro</h2>
+              <p class="menu-subtitle">Explora cada capítulo de {{ story.book.coverTitle }}.</p>
             </div>
-            <span class="open-book-icon" aria-hidden="true">✳</span>
+            <span class="open-book-icon" aria-hidden="true">↗</span>
           </div>
 
-          <nav aria-label="Páginas del libro">
+          <nav class="page-list" aria-label="Capítulos del libro">
             @for (page of story.pages; track page.number; let index = $index) {
               <button
                 class="page-link"
@@ -55,31 +40,52 @@
             }
           </nav>
 
-          <p class="selected-detail">{{ story.pages[selectedPage()]?.detail }}</p>
+          <section class="selected-detail" aria-live="polite" aria-label="Detalle del capítulo seleccionado">
+            <p class="detail-label">CAPÍTULO {{ story.pages[selectedPage()]?.number }}</p>
+            <p>{{ story.pages[selectedPage()]?.detail }}</p>
+          </section>
+
+          <div class="page-navigation" aria-label="Navegación entre páginas">
+            <button
+              type="button"
+              class="page-nav-button"
+              [disabled]="selectedPage() === 0"
+              (click)="selectPage(selectedPage() - 1)"
+            >
+              <span aria-hidden="true">←</span> Anterior
+            </button>
+            <span class="page-count">{{ selectedPage() + 1 }} / {{ story.pages.length }}</span>
+            <button
+              type="button"
+              class="page-nav-button"
+              [disabled]="selectedPage() === story.pages.length - 1"
+              (click)="selectPage(selectedPage() + 1)"
+            >
+              Siguiente <span aria-hidden="true">→</span>
+            </button>
+          </div>
         </aside>
       }
 
       <footer class="story-controls">
         <span class="scene-status">
           <span class="status-light" [class.status-done]="showIndex()"></span>
-          {{ showIndex() ? 'HISTORIA COMPLETA' : 'RECORRIDO 3D' }}
+          {{ showIndex() ? 'LECTURA ABIERTA' : 'EL LIBRO SE ESTÁ ABRIENDO' }}
         </span>
         <div class="control-actions">
           @if (!showIndex()) {
-            <button class="text-control" (click)="skipAnimation()">
-              Saltar animación <span aria-hidden="true">↗</span>
-            </button>
+            <button class="text-control" (click)="skipAnimation()">Saltar intro</button>
           }
           <button class="replay-control" (click)="replay()">
             <span aria-hidden="true">↻</span>
-            {{ showIndex() ? 'Ver de nuevo' : 'Reiniciar' }}
+            {{ showIndex() ? 'Volver a la portada' : 'Reiniciar' }}
           </button>
         </div>
       </footer>
     }
 
     @if (isLoading()) {
-      <div class="scene-error" role="status">Cargando la historia...</div>
+      <div class="scene-error" role="status">Preparando el libro…</div>
     }
 
     @if (errorMessage()) {

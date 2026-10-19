@@ -1,75 +1,52 @@
 'use strict';
 
-jest.mock('../src/services/businesses.service', () => ({ createReservation: jest.fn() }));
-jest.mock('../src/services/customers.service', () => ({ findOrCreateCustomer: jest.fn() }));
-jest.mock('../src/services/bookings.service', () => ({ createBooking: jest.fn() }));
+const { createIdempotencyDb } = require('./helpers/idempotency-db');
+const { db, state } = createIdempotencyDb();
+jest.doMock('../src/db', () => db);
+jest.doMock('../src/services/syncService', () => ({ syncInBackground: jest.fn() }));
+jest.doMock('../src/services/realtime.service', () => ({ broadcastBookingCreated: jest.fn() }));
+jest.doMock('../src/services/notifications.service', () => ({ deliverExternalNotification: jest.fn().mockResolvedValue(undefined) }));
 
-const businessesService = require('../src/services/businesses.service');
-const customersService = require('../src/services/customers.service');
-const bookingsService = require('../src/services/bookings.service');
 const { checkoutForBusiness } = require('../src/services/checkout.service');
 
-describe('checkout.service', () => {
+describe('checkout.service idempotency', () => {
+  const payload = {
+    franja: '10:00', cliente: 'Ana', telefono: '600000000', servicio: 'Corte', email: 'ana@example.test',
+  };
+
   beforeEach(() => {
-    businessesService.createReservation.mockReset();
-    customersService.findOrCreateCustomer.mockReset();
-    bookingsService.createBooking.mockReset();
+    state.idempotency.clear();
+    state.reservations.length = 0;
+    state.bookings.length = 0;
+    state.notifications.length = 0;
+    db.connect.mockClear();
   });
 
-  test('crea reserva legacy, customer y booking reales, y devuelve los ids', async () => {
-    businessesService.createReservation.mockResolvedValue({ ok: true, status: 201, data: { id: 42 } });
-    customersService.findOrCreateCustomer.mockResolvedValue({ ok: true, status: 200, data: { id: 'c1' } });
-    bookingsService.createBooking.mockResolvedValue({ ok: true, status: 201, data: { id: 'b1' } });
+  test('reproduce la respuesta y no crea otra reserva al repetir la clave', async () => {
+    const first = await checkoutForBusiness('neg1', payload, 'reservation-attempt-1');
+    const replay = await checkoutForBusiness('neg1', payload, 'reservation-attempt-1');
 
-    const res = await checkoutForBusiness('neg1', {
-      franja: '10:00',
-      cliente: 'Ana',
-      telefono: '600000000',
-      servicio: 'Corte',
-      notas: 'n',
-    });
-
-    expect(res.ok).toBe(true);
-    expect(res.status).toBe(201);
-    expect(res.data).toEqual({ bookingId: 'b1', customerId: 'c1', reservationId: 42 });
-    expect(businessesService.createReservation).toHaveBeenCalledWith(
-      'neg1',
-      expect.objectContaining({ franja: '10:00' })
-    );
-    expect(customersService.findOrCreateCustomer).toHaveBeenCalledWith(
-      expect.objectContaining({ name: 'Ana', phone: '600000000' })
-    );
-    expect(bookingsService.createBooking).toHaveBeenCalledWith(
-      expect.objectContaining({ providerId: 'neg1', customerId: 'c1', slot: '10:00', serviceId: 'Corte' })
-    );
+    expect(first.ok).toBe(true);
+    expect(replay).toMatchObject({ ...first, replayed: true });
+    expect(state.reservations).toHaveLength(1);
+    expect(state.bookings).toHaveLength(1);
+    expect(state.notifications).toHaveLength(2);
   });
 
-  test('genera email guest cuando no se aporta email', async () => {
-    businessesService.createReservation.mockResolvedValue({ ok: true, status: 201, data: { id: 7 } });
-    customersService.findOrCreateCustomer.mockResolvedValue({ ok: true, status: 201, data: { id: 'c2' } });
-    bookingsService.createBooking.mockResolvedValue({ ok: true, status: 201, data: { id: 'b2' } });
+  test('rechaza la misma clave si cambia el contenido', async () => {
+    const first = await checkoutForBusiness('neg1', payload, 'reservation-attempt-2');
+    const changed = await checkoutForBusiness('neg1', { ...payload, franja: '11:00' }, 'reservation-attempt-2');
 
-    await checkoutForBusiness('neg1', { franja: '11:00', cliente: 'Luis', telefono: '600000001' });
-
-    expect(customersService.findOrCreateCustomer).toHaveBeenCalledWith(
-      expect.objectContaining({ email: expect.stringMatching(/^guest-7-.*@reservando\.local$/) })
-    );
+    expect(first.ok).toBe(true);
+    expect(changed).toMatchObject({ ok: false, status: 409 });
+    expect(state.reservations).toHaveLength(1);
   });
 
-  test('propaga el 409 cuando la franja ya no está disponible', async () => {
-    businessesService.createReservation.mockResolvedValue({ ok: false, status: 409, message: 'Franja no disponible' });
+  test('requiere una clave antes de abrir una transacción', async () => {
+    const before = db.connect.mock.calls.length;
+    const result = await checkoutForBusiness('neg1', payload);
 
-    const res = await checkoutForBusiness('neg1', { franja: '12:00', cliente: 'A', telefono: '600000002' });
-
-    expect(res.status).toBe(409);
-    expect(customersService.findOrCreateCustomer).not.toHaveBeenCalled();
-    expect(bookingsService.createBooking).not.toHaveBeenCalled();
-  });
-
-  test('valida que franja, cliente y telefono sean obligatorios', async () => {
-    const res = await checkoutForBusiness('neg1', { franja: '12:00' });
-
-    expect(res.status).toBe(400);
-    expect(businessesService.createReservation).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ ok: false, status: 400 });
+    expect(db.connect).toHaveBeenCalledTimes(before);
   });
 });

@@ -2,6 +2,7 @@
 
 const { Pool } = require('pg');
 const logger = require('./logger');
+const { getRlsContext } = require('./db-context');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -14,6 +15,38 @@ const pool = new Pool({
   // el pool local sigue funcionando; documentado en .env.production.example
 });
 
+async function applyRlsContext(client) {
+  const context = getRlsContext();
+  await client.query(
+    `SELECT
+       set_config('app.rls.role', $1, false),
+       set_config('app.rls.business_id', $2, false),
+       set_config('app.rls.owner_id', $3, false),
+       set_config('app.rls.customer_id', $4, false)`,
+    [context.role, context.businessId, context.ownerId, context.customerId]
+  );
+}
+
+async function connect() {
+  const client = await pool.connect();
+  try {
+    await applyRlsContext(client);
+    return client;
+  } catch (error) {
+    client.release();
+    throw error;
+  }
+}
+
+async function query(text, values) {
+  const client = await connect();
+  try {
+    return await client.query(text, values);
+  } finally {
+    client.release();
+  }
+}
+
 pool.on('error', err => {
   logger.error('[DB] Error inesperado en cliente idle:', err.message);
 });
@@ -25,4 +58,4 @@ pool.on('connect', () => {
   }
 });
 
-module.exports = pool;
+module.exports = { query, connect, end: (...args) => pool.end(...args), pool };

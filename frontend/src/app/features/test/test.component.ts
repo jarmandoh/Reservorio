@@ -1,27 +1,24 @@
 import { AfterViewInit, Component, ElementRef, inject, OnDestroy, ViewChild, signal } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { RouterLink } from '@angular/router';
+import { gsap } from 'gsap';
 import {
   ACESFilmicToneMapping,
+  BufferAttribute,
   BoxGeometry,
   CanvasTexture,
-  Color,
-  CylinderGeometry,
   DirectionalLight,
   DoubleSide,
   Group,
   HemisphereLight,
   MathUtils,
   Mesh,
-  MeshBasicMaterial,
   MeshStandardMaterial,
   PCFShadowMap,
   PerspectiveCamera,
   PlaneGeometry,
-  RingGeometry,
   Scene,
   SRGBColorSpace,
-  Vector3,
   WebGLRenderer,
 } from 'three';
 import { StoryData, TestStoryService } from './test-story.service';
@@ -44,25 +41,27 @@ export class TestComponent implements AfterViewInit, OnDestroy {
   readonly isPlaying = signal(false);
   readonly isLoading = signal(true);
   readonly errorMessage = signal('');
-  readonly phaseLabel = signal('Una ciudad de posibilidades');
 
   private renderer?: WebGLRenderer;
   private scene?: Scene;
   private camera?: PerspectiveCamera;
-  private map?: Group;
-  private shop?: Group;
-  private doorHinge?: Group;
   private book?: Group;
   private bookCoverHinge?: Group;
-  private mapPin?: Group;
-  private mapPulse?: Mesh;
+  private bookPages?: Mesh;
+  private bookRearCover?: Mesh;
+  private bookEdge?: Mesh;
+  private pageSurface?: Mesh;
+  private pageTurn?: Group;
+  private pageTurnMesh?: Mesh;
+  private pageTurnBasePositions?: Float32Array;
+  private pageTurnTween?: gsap.core.Tween;
   private resizeObserver?: ResizeObserver;
   private animationFrame = 0;
   private animationStart = 0;
   private hiddenAt: number | null = null;
   private storyRequest?: Subscription;
   private destroyed = false;
-  private readonly duration = 13.5;
+  private readonly duration = 7.2;
   private readonly handleVisibilityChange = (): void => {
     if (document.visibilityState === 'hidden') {
       this.hiddenAt = performance.now();
@@ -87,6 +86,7 @@ export class TestComponent implements AfterViewInit, OnDestroy {
     document.removeEventListener('visibilitychange', this.handleVisibilityChange);
     this.storyRequest?.unsubscribe();
     cancelAnimationFrame(this.animationFrame);
+    this.pageTurnTween?.kill();
     this.resizeObserver?.disconnect();
     this.scene?.traverse(object => {
       if (!(object instanceof Mesh)) return;
@@ -104,9 +104,16 @@ export class TestComponent implements AfterViewInit, OnDestroy {
 
   replay(): void {
     if (!this.scene || !this.camera || !this.renderer) return;
+    this.pageTurnTween?.kill();
+    if (this.pageTurn) {
+      this.pageTurn.visible = false;
+      this.pageTurn.rotation.y = 0;
+      this.deformPage(0);
+    }
     this.showIndex.set(false);
     this.selectedPage.set(0);
-    this.phaseLabel.set(this.storyData()?.intro.title ?? 'Una ciudad de posibilidades');
+    this.refreshOpenPages();
+    this.refreshPageTurnTexture();
     this.animationStart = performance.now();
     this.isPlaying.set(true);
     cancelAnimationFrame(this.animationFrame);
@@ -130,7 +137,58 @@ export class TestComponent implements AfterViewInit, OnDestroy {
   }
 
   selectPage(index: number): void {
+    const pages = this.storyData()?.pages ?? [];
+    if (!Number.isInteger(index) || index < 0 || index >= pages.length || index === this.selectedPage()) return;
+
+    this.pageTurnTween?.kill();
+    if (this.pageTurn) {
+      this.pageTurn.visible = false;
+      this.pageTurn.rotation.y = 0;
+      this.deformPage(0);
+    }
+    const previousPage = this.selectedPage();
+    const canAnimate =
+      !!this.pageTurn && !!this.pageTurnMesh && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const previousTexture = canAnimate
+      ? (this.pageSurface?.material as MeshStandardMaterial | undefined)?.map?.clone()
+      : undefined;
     this.selectedPage.set(index);
+    this.refreshOpenPages();
+
+    if (!canAnimate || !this.pageTurn || !this.pageTurnMesh) {
+      previousTexture?.dispose();
+      this.refreshPageTurnTexture();
+      if (this.scene && this.camera) this.renderer?.render(this.scene, this.camera);
+      return;
+    }
+
+    const material = this.pageTurnMesh.material as MeshStandardMaterial;
+    material.map?.dispose();
+    material.map = previousTexture ?? this.createOpenPagesTexture();
+    material.map.repeat.set(0.5, 1);
+    material.map.offset.set(0.5, 0);
+    material.map.needsUpdate = true;
+    material.needsUpdate = true;
+    this.pageTurn.visible = true;
+    this.pageTurn.rotation.y = 0;
+    this.deformPage(0);
+    this.pageTurnTween = gsap.to(this.pageTurn.rotation, {
+      y: index > previousPage ? -Math.PI : Math.PI,
+      duration: 1.05,
+      ease: 'power3.inOut',
+      onUpdate: () => {
+        this.deformPage(this.pageTurn?.rotation.y ?? 0);
+        if (this.scene && this.camera) this.renderer?.render(this.scene, this.camera);
+      },
+      onComplete: () => {
+        if (!this.pageTurn || !this.pageTurnMesh) return;
+        this.pageTurn.visible = false;
+        this.pageTurn.rotation.y = 0;
+        this.deformPage(0);
+        this.refreshPageTurnTexture();
+        if (this.scene && this.camera) this.renderer?.render(this.scene, this.camera);
+      },
+    });
   }
 
   loadStoryData(): void {
@@ -141,7 +199,6 @@ export class TestComponent implements AfterViewInit, OnDestroy {
       next: story => {
         if (this.destroyed) return;
         this.storyData.set(story);
-        this.phaseLabel.set(story.intro.title);
         this.isLoading.set(false);
         this.initThree();
       },
@@ -173,23 +230,27 @@ export class TestComponent implements AfterViewInit, OnDestroy {
       const canvas = this.canvasRef.nativeElement;
       const stage = this.stageRef.nativeElement;
       const scene = new Scene();
-      scene.background = new Color('#dfe9e1');
+      scene.background = null;
       this.scene = scene;
 
-      const camera = new PerspectiveCamera(50, 1, 0.1, 500);
+      const camera = new PerspectiveCamera(38, 1, 0.1, 100);
+      camera.position.set(-2.2, 0, 28);
+      camera.lookAt(-2.2, 0, 0);
       this.camera = camera;
 
       this.addLighting(scene);
-      this.map = this.createCityMap();
-      const shopObjects = this.createShop();
-      this.shop = shopObjects.shop;
-      this.doorHinge = shopObjects.doorHinge;
       const bookObjects = this.createBook();
       this.book = bookObjects.book;
       this.bookCoverHinge = bookObjects.coverHinge;
-      scene.add(this.map, this.shop, this.book);
+      this.bookPages = bookObjects.pages;
+      this.bookRearCover = bookObjects.rearCover;
+      this.bookEdge = bookObjects.edge;
+      this.pageSurface = bookObjects.pageSurface;
+      this.pageTurn = bookObjects.pageTurn;
+      this.pageTurnMesh = bookObjects.pageTurnMesh;
+      scene.add(this.book);
 
-      const renderer = new WebGLRenderer({ canvas, antialias: true, alpha: false });
+      const renderer = new WebGLRenderer({ canvas, antialias: true, alpha: true });
       this.renderer = renderer;
       renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
       renderer.shadowMap.enabled = true;
@@ -197,7 +258,7 @@ export class TestComponent implements AfterViewInit, OnDestroy {
       renderer.outputColorSpace = SRGBColorSpace;
       renderer.toneMapping = ACESFilmicToneMapping;
       renderer.toneMappingExposure = 1.12;
-      renderer.setClearColor('#dfe9e1');
+      renderer.setClearColor(0x000000, 0);
 
       this.resizeObserver = new ResizeObserver(() => this.resizeRenderer());
       this.resizeObserver.observe(stage);
@@ -210,326 +271,73 @@ export class TestComponent implements AfterViewInit, OnDestroy {
   }
 
   private addLighting(scene: Scene): void {
-    const hemi = new HemisphereLight(0xe9f4ee, 0x52473c, 1.15);
+    const hemi = new HemisphereLight(0xf7f2e8, 0x65533f, 1.8);
     scene.add(hemi);
 
-    const key = new DirectionalLight(0xfff1d7, 1.8);
-    key.position.set(-18, 30, 22);
+    const key = new DirectionalLight(0xfff0d4, 2.5);
+    key.position.set(-7, 12, 14);
     key.castShadow = true;
-    key.shadow.mapSize.set(2048, 2048);
-    key.shadow.camera.left = -42;
-    key.shadow.camera.right = 42;
-    key.shadow.camera.top = 42;
-    key.shadow.camera.bottom = -42;
+    key.shadow.mapSize.set(1536, 1536);
+    key.shadow.camera.left = -10;
+    key.shadow.camera.right = 10;
+    key.shadow.camera.top = 10;
+    key.shadow.camera.bottom = -10;
     key.shadow.camera.near = 1;
     key.shadow.camera.far = 100;
     key.shadow.bias = -0.0002;
     key.shadow.normalBias = 0.025;
     scene.add(key);
 
-    const fill = new DirectionalLight(0x9bc9ff, 0.65);
-    fill.position.set(16, 12, -12);
+    const fill = new DirectionalLight(0xb9d2ff, 0.8);
+    fill.position.set(8, 6, -10);
     scene.add(fill);
   }
 
-  private createCityMap(): Group {
-    const map = new Group();
-    map.position.y = -0.12;
-    const ground = new Mesh(new PlaneGeometry(180, 180), new MeshBasicMaterial({ color: '#e3eae0' }));
-    ground.rotation.x = -Math.PI / 2;
-    ground.receiveShadow = true;
-    map.add(ground);
-
-    const roadMaterial = new MeshBasicMaterial({ color: '#f5f0e7' });
-    const roadMarkMaterial = new MeshBasicMaterial({ color: '#d9d2c5' });
-    const roads = [
-      { x: 0, z: -24, width: 11, depth: 180 },
-      { x: -30, z: 0, width: 8, depth: 180, turn: Math.PI / 2 },
-      { x: 32, z: 0, width: 7, depth: 180, turn: Math.PI / 2 },
-      { x: 0, z: 28, width: 8, depth: 180 },
-      { x: -12, z: -4, width: 5, depth: 92, turn: -0.5 },
-    ];
-    for (const road of roads) {
-      const street = new Mesh(new PlaneGeometry(road.width, road.depth), roadMaterial);
-      street.rotation.x = -Math.PI / 2;
-      street.rotation.z = road.turn ?? 0;
-      street.position.set(road.x, 0.04, road.z);
-      map.add(street);
-
-      if (road.width > 7) {
-        const dash = new Mesh(new PlaneGeometry(0.24, 3.8), roadMarkMaterial);
-        dash.rotation.x = -Math.PI / 2;
-        dash.position.set(road.x, 0.06, road.z);
-        map.add(dash);
-      }
-    }
-
-    const blockColors = ['#dce8d6', '#d2e1d0', '#e8e3d6', '#cdddc9'];
-    const buildingMaterials = ['#d8bca0', '#e4d4bd', '#c8d4c2', '#e2c9b9'].map(
-      color => new MeshStandardMaterial({ color, roughness: 0.94 })
-    );
-    const roofMaterials = ['#a86f56', '#8d7460', '#b18465', '#738574'].map(
-      color => new MeshStandardMaterial({ color, roughness: 0.88 })
-    );
-    const windowMaterial = new MeshStandardMaterial({
-      color: '#a9c6c0',
-      roughness: 0.3,
-      metalness: 0.08,
-      emissive: '#30463f',
-      emissiveIntensity: 0.12,
-    });
-    const positions = [
-      [-54, -48, 18, 24],
-      [-28, -55, 18, 22],
-      [23, -53, 20, 23],
-      [54, -46, 17, 26],
-      [-55, -4, 18, 24],
-      [55, -2, 18, 21],
-      [-54, 47, 17, 26],
-      [-27, 54, 20, 23],
-      [29, 52, 19, 24],
-      [56, 46, 17, 24],
-    ];
-    positions.forEach(([x, z, width, depth], index) => {
-      const block = new Mesh(
-        new BoxGeometry(width, 0.25, depth),
-        new MeshBasicMaterial({ color: blockColors[index % blockColors.length] })
-      );
-      block.position.set(x, 0.13, z);
-      block.receiveShadow = true;
-      map.add(block);
-
-      const buildingWidth = width * 0.66;
-      const buildingDepth = depth * 0.62;
-      const buildingHeight = 4.5 + (index % 3) * 1.8;
-      const building = new Mesh(
-        new BoxGeometry(buildingWidth, buildingHeight, buildingDepth),
-        buildingMaterials[index % buildingMaterials.length]
-      );
-      building.position.set(x, 0.25 + buildingHeight / 2, z);
-      building.castShadow = true;
-      building.receiveShadow = true;
-      map.add(building);
-
-      const roof = new Mesh(
-        new BoxGeometry(buildingWidth + 0.5, 0.32, buildingDepth + 0.5),
-        roofMaterials[index % roofMaterials.length]
-      );
-      roof.position.set(x, 0.25 + buildingHeight + 0.16, z);
-      roof.castShadow = true;
-      roof.receiveShadow = true;
-      map.add(roof);
-
-      const windowGeometry = new BoxGeometry(1.15, 1.05, 0.12);
-      for (const windowX of [-buildingWidth * 0.23, buildingWidth * 0.23]) {
-        for (const windowY of [buildingHeight * 0.28, buildingHeight * 0.62]) {
-          const window = new Mesh(windowGeometry, windowMaterial);
-          window.position.set(x + windowX, 0.25 + windowY, z + buildingDepth / 2 + 0.07);
-          map.add(window);
-        }
-      }
-    });
-    const park = new Mesh(new PlaneGeometry(22, 18), new MeshBasicMaterial({ color: '#b9d7ad' }));
-    park.rotation.x = -Math.PI / 2;
-    park.position.set(-43, 0.02, -44);
-    map.add(park);
-    for (const [x, z, scale] of [
-      [-49, -48, 1.15],
-      [-38, -48, 0.9],
-      [-48, -40, 0.82],
-      [-39, -39, 1.08],
-    ]) {
-      this.addMapTree(map, x, z, scale);
-    }
-    this.addMapPin(map);
-    return map;
-  }
-
-  private addMapTree(parent: Group, x: number, z: number, scale: number): void {
-    const tree = new Group();
-    tree.position.set(x, 0.2, z);
-    tree.scale.setScalar(scale);
-
-    const trunk = new Mesh(
-      new CylinderGeometry(0.2, 0.28, 2.1, 8),
-      new MeshStandardMaterial({ color: '#8b6248', roughness: 0.94 })
-    );
-    trunk.position.y = 1.05;
-    trunk.castShadow = true;
-    tree.add(trunk);
-
-    const crown = new Mesh(
-      new CylinderGeometry(0.15, 1.45, 2.8, 7, 1),
-      new MeshStandardMaterial({ color: '#6f916f', roughness: 0.92 })
-    );
-    crown.position.y = 2.95;
-    crown.castShadow = true;
-    tree.add(crown);
-    parent.add(tree);
-  }
-
-  private addMapPin(parent: Group): void {
-    const pin = new Group();
-    pin.position.set(0, 0.4, 0);
-    const stem = new Mesh(
-      new CylinderGeometry(0.13, 0.24, 2.1, 16),
-      new MeshStandardMaterial({ color: '#c95c3d', roughness: 0.42 })
-    );
-    stem.position.y = 1;
-    const head = new Mesh(
-      new CylinderGeometry(0.78, 0.78, 0.28, 32),
-      new MeshStandardMaterial({ color: '#fff8eb', roughness: 0.36 })
-    );
-    head.position.y = 2.12;
-    head.rotation.x = Math.PI / 2;
-    const dot = new Mesh(
-      new CylinderGeometry(0.25, 0.25, 0.3, 24),
-      new MeshStandardMaterial({ color: '#c95c3d', roughness: 0.36 })
-    );
-    dot.position.set(0, 2.13, 0.08);
-    dot.rotation.x = Math.PI / 2;
-    pin.add(stem, head, dot);
-    parent.add(pin);
-    this.mapPin = pin;
-
-    const pulse = new Mesh(
-      new RingGeometry(1, 1.16, 48),
-      new MeshBasicMaterial({ color: '#c95c3d', transparent: true, opacity: 0.62, side: DoubleSide })
-    );
-    pulse.rotation.x = -Math.PI / 2;
-    pulse.position.y = 0.12;
-    parent.add(pulse);
-    this.mapPulse = pulse;
-  }
-
-  private createShop(): { shop: Group; doorHinge: Group } {
-    const shop = new Group();
-    shop.position.set(0, 0, 0);
-    const wall = new MeshStandardMaterial({ color: '#e6d6bd', roughness: 0.88 });
-    const trim = new MeshStandardMaterial({ color: '#f6eddf', roughness: 0.72 });
-    const wood = new MeshStandardMaterial({ color: '#a65c42', roughness: 0.72 });
-    const glass = new MeshStandardMaterial({ color: '#9dc5c0', roughness: 0.24, metalness: 0.04 });
-
-    const floor = new Mesh(new BoxGeometry(15, 0.5, 16), new MeshStandardMaterial({ color: '#c8b59a' }));
-    floor.position.set(0, 0.25, -1);
-    floor.receiveShadow = true;
-    shop.add(floor);
-
-    const backWall = new Mesh(new BoxGeometry(15, 10, 0.6), wall);
-    backWall.position.set(0, 5.4, -8.5);
-    shop.add(backWall);
-    const leftWall = new Mesh(new BoxGeometry(0.6, 10, 16), wall);
-    leftWall.position.set(-7.2, 5.3, -1);
-    shop.add(leftWall);
-    const rightWall = leftWall.clone();
-    rightWall.position.x = 7.2;
-    shop.add(rightWall);
-
-    const facadeLeft = new Mesh(new BoxGeometry(4.4, 9, 0.65), wall);
-    facadeLeft.position.set(-5.1, 4.8, 6.6);
-    shop.add(facadeLeft);
-    const facadeRight = facadeLeft.clone();
-    facadeRight.position.x = 5.1;
-    shop.add(facadeRight);
-    const header = new Mesh(new BoxGeometry(5.8, 3.1, 0.7), wall);
-    header.position.set(0, 8.35, 6.6);
-    shop.add(header);
-    const awning = new Mesh(new BoxGeometry(13, 0.35, 1.15), wood);
-    awning.position.set(0, 6.5, 6.9);
-    shop.add(awning);
-    const doorHinge = new Group();
-    doorHinge.position.set(-1.17, 0.5, 6.5);
-    const door = new Mesh(new BoxGeometry(2.35, 5.5, 0.28), wood);
-    door.position.set(1.17, 2.75, 0);
-    doorHinge.add(door);
-    shop.add(doorHinge);
-    const windowPane = new Mesh(new BoxGeometry(3, 3.5, 0.14), glass);
-    windowPane.position.set(-5.1, 4.2, 6.98);
-    shop.add(windowPane);
-    const rightWindow = windowPane.clone();
-    rightWindow.position.x = 5.1;
-    shop.add(rightWindow);
-
-    const sign = new Mesh(
-      new BoxGeometry(6.2, 1.3, 0.35),
-      new MeshStandardMaterial({ color: '#f6eddf', roughness: 0.74, map: this.createSignTexture() })
-    );
-    sign.position.set(0, 8.25, 7.02);
-    shop.add(sign);
-
-    const awningStripe = new MeshStandardMaterial({ color: '#e8cda7', roughness: 0.78 });
-    for (let index = 0; index < 10; index += 1) {
-      const stripe = new Mesh(new BoxGeometry(0.65, 0.38, 1.18), index % 2 ? trim : awningStripe);
-      stripe.position.set(-5.85 + index * 1.3, 6.5, 7.1);
-      shop.add(stripe);
-    }
-
-    for (const x of [-5.6, -3.8, 3.8, 5.6]) {
-      const strip = new Mesh(new BoxGeometry(0.11, 3.55, 0.1), trim);
-      strip.position.set(x, 4.2, 7.08);
-      shop.add(strip);
-    }
-
-    const table = new Mesh(new BoxGeometry(13, 0.45, 4), new MeshStandardMaterial({ color: '#8b5b45' }));
-    table.position.set(0, 2, -5.2);
-    table.castShadow = true;
-    shop.add(table);
-    const tableLegMaterial = new MeshStandardMaterial({ color: '#6e4939' });
-    for (const x of [-5.8, 5.8]) {
-      const leg = new Mesh(new BoxGeometry(0.38, 2, 0.38), tableLegMaterial);
-      leg.position.set(x, 1, -5.2);
-      shop.add(leg);
-    }
-
-    const bookSpot = new Mesh(new BoxGeometry(10.5, 0.1, 3.2), new MeshStandardMaterial({ color: '#d9c7ab' }));
-    bookSpot.position.set(-2.8, 2.29, -5.2);
-    shop.add(bookSpot);
-
-    return { shop, doorHinge };
-  }
-
-  private createSignTexture(): CanvasTexture {
-    const canvas = this.canvasRef.nativeElement.ownerDocument.createElement('canvas');
-    canvas.width = 1200;
-    canvas.height = 250;
-    const context = canvas.getContext('2d');
-    if (!context) throw new Error('No se pudo crear el rótulo de la tienda');
-
-    context.fillStyle = '#f5ecdc';
-    context.fillRect(0, 0, canvas.width, canvas.height);
-    context.strokeStyle = '#b57b5b';
-    context.lineWidth = 5;
-    context.strokeRect(18, 18, canvas.width - 36, canvas.height - 36);
-    context.textAlign = 'center';
-    context.fillStyle = '#27435a';
-    context.font = '600 76px Georgia, serif';
-    context.fillText('OFICIOS DE BARRIO', canvas.width / 2, 120, 1080);
-    context.fillStyle = '#a76443';
-    context.font = '600 24px sans-serif';
-    context.fillText('HISTORIAS Y SERVICIOS LOCALES', canvas.width / 2, 178, 1080);
-
-    const texture = new CanvasTexture(canvas);
-    texture.colorSpace = SRGBColorSpace;
-    return texture;
-  }
-
-  private createBook(): { book: Group; coverHinge: Group } {
+  private createBook(): {
+    book: Group;
+    coverHinge: Group;
+    pages: Mesh;
+    rearCover: Mesh;
+    edge: Mesh;
+    pageSurface: Mesh;
+    pageTurn: Group;
+    pageTurnMesh: Mesh;
+  } {
     const book = new Group();
-    book.position.set(-2.8, 4.8, -5.3);
+    book.position.set(-2.2, 0, 0);
     book.visible = false;
 
     const pageMaterial = new MeshStandardMaterial({ color: '#fffaf0', roughness: 0.92, side: DoubleSide });
     const pages = new Mesh(new BoxGeometry(7.7, 5.2, 0.23), pageMaterial);
+    pages.position.x = 1.925;
+    pages.scale.x = 0.5;
     pages.castShadow = true;
     pages.receiveShadow = true;
     book.add(pages);
 
     const pageSurface = new Mesh(
       new PlaneGeometry(7.35, 4.85),
-      new MeshBasicMaterial({ map: this.createOpenPagesTexture(), side: DoubleSide })
+      new MeshStandardMaterial({ map: this.createOpenPagesTexture(), roughness: 0.94, side: DoubleSide })
     );
-    pageSurface.position.z = 0.13;
+    pageSurface.position.set(1.8375, 0, 0.13);
+    pageSurface.scale.x = 0.5;
+    (pageSurface.material as MeshStandardMaterial).map?.repeat.set(0.5, 1);
+    (pageSurface.material as MeshStandardMaterial).map?.offset.set(0.5, 0);
     book.add(pageSurface);
+
+    const pageTurn = new Group();
+    pageTurn.position.set(0, 0, 0.16);
+    const pageTurnGeometry = new PlaneGeometry(3.675, 4.85, 24, 1);
+    this.pageTurnBasePositions = Float32Array.from(pageTurnGeometry.getAttribute('position').array);
+    const pageTurnMesh = new Mesh(
+      pageTurnGeometry,
+      new MeshStandardMaterial({ map: this.createOpenPagesTexture(), roughness: 0.94, side: DoubleSide })
+    );
+    pageTurnMesh.position.x = 1.8375;
+    pageTurnMesh.castShadow = true;
+    pageTurn.add(pageTurnMesh);
+    pageTurn.visible = false;
+    book.add(pageTurn);
 
     const spine = new Mesh(
       new BoxGeometry(0.45, 5.4, 0.32),
@@ -542,33 +350,79 @@ export class TestComponent implements AfterViewInit, OnDestroy {
       new BoxGeometry(7.95, 5.45, 0.23),
       new MeshStandardMaterial({ color: '#102d52', roughness: 0.58 })
     );
-    rearCover.position.z = -0.29;
+    rearCover.position.set(1.9875, 0, -0.29);
+    rearCover.scale.x = 0.5;
     book.add(rearCover);
 
     const coverHinge = new Group();
-    coverHinge.position.set(-3.95, 0, 0.28);
+    coverHinge.position.set(0, 0, 0.28);
     const cover = new Mesh(
-      new BoxGeometry(7.9, 5.4, 0.22),
-      new MeshStandardMaterial({
-        color: '#174b87',
-        roughness: 0.42,
-        map: this.createCoverTexture(),
-        side: DoubleSide,
-      })
+      new BoxGeometry(3.9, 5.4, 0.22),
+      new MeshStandardMaterial({ color: '#174b87', roughness: 0.42 })
     );
-    cover.position.set(3.95, 0, 0);
+    cover.position.set(1.95, 0, 0);
     cover.castShadow = true;
     coverHinge.add(cover);
+
+    const coverArtwork = new Mesh(
+      new PlaneGeometry(3.78, 5.28),
+      new MeshStandardMaterial({ map: this.createCoverTexture(), roughness: 0.42 })
+    );
+    coverArtwork.position.set(1.95, 0, 0.113);
+    coverHinge.add(coverArtwork);
+
+    const innerCover = new Mesh(
+      new PlaneGeometry(3.78, 5.28),
+      new MeshStandardMaterial({ color: '#e6d7bd', roughness: 0.9 })
+    );
+    innerCover.position.set(1.95, 0, -0.113);
+    innerCover.rotation.y = Math.PI;
+    coverHinge.add(innerCover);
     book.add(coverHinge);
 
     const goldEdge = new Mesh(
       new BoxGeometry(7.8, 0.08, 0.07),
       new MeshStandardMaterial({ color: '#d8bd81', metalness: 0.42, roughness: 0.4 })
     );
-    goldEdge.position.set(0, -2.55, -0.1);
+    goldEdge.position.set(1.95, -2.55, -0.1);
+    goldEdge.scale.x = 0.5;
     book.add(goldEdge);
 
-    return { book, coverHinge };
+    return { book, coverHinge, pages, rearCover, edge: goldEdge, pageSurface, pageTurn, pageTurnMesh };
+  }
+
+  private deformPage(angle: number): void {
+    const geometry = this.pageTurnMesh?.geometry;
+    const base = this.pageTurnBasePositions;
+    if (!geometry || !base) return;
+    const positions = geometry.getAttribute('position') as BufferAttribute;
+    const curl = Math.sin(Math.abs(angle)) * 0.62;
+    for (let index = 0; index < positions.count; index += 1) {
+      const x = base[index * 3];
+      const progress = (x + 3.675 / 2) / 3.675;
+      positions.setXYZ(index, x, base[index * 3 + 1], curl * Math.sin(Math.PI * progress));
+    }
+    positions.needsUpdate = true;
+    geometry.computeVertexNormals();
+  }
+
+  private refreshOpenPages(): void {
+    if (!this.pageSurface) return;
+    const material = this.pageSurface.material as MeshStandardMaterial;
+    material.map?.dispose();
+    material.map = this.createOpenPagesTexture();
+    material.needsUpdate = true;
+  }
+
+  private refreshPageTurnTexture(): void {
+    if (!this.pageTurnMesh) return;
+    const material = this.pageTurnMesh.material as MeshStandardMaterial;
+    material.map?.dispose();
+    material.map = this.createOpenPagesTexture();
+    material.map.repeat.set(0.5, 1);
+    material.map.offset.set(0.5, 0);
+    material.map.needsUpdate = true;
+    material.needsUpdate = true;
   }
 
   private createOpenPagesTexture(): CanvasTexture {
@@ -614,15 +468,20 @@ export class TestComponent implements AfterViewInit, OnDestroy {
       context.setLineDash([]);
     });
 
+    const currentPage = story.pages[this.selectedPage()] ?? story.pages[0];
     context.fillStyle = '#a76443';
     context.font = '600 25px Georgia, serif';
-    context.fillText(story.book.featureEyebrow, 780, 105, 530);
+    context.fillText(`${story.book.featureEyebrow}  /  ${currentPage.number}`, 780, 105, 530);
     context.fillStyle = '#18395e';
     context.font = '700 44px Georgia, serif';
-    context.fillText(story.book.featureTitle, 780, 205, 530);
+    context.fillText(currentPage.title, 780, 205, 530);
     context.fillStyle = '#5b5d5a';
     context.font = '400 26px Georgia, serif';
-    story.book.featureLines.forEach((line, index) => context.fillText(line, 780, 310 + index * 40, 530));
+    context.fillText(currentPage.description, 780, 270, 530);
+    context.font = '400 22px Georgia, serif';
+    this.wrapCanvasText(context, currentPage.detail, 530)
+      .slice(0, 5)
+      .forEach((line, index) => context.fillText(line, 780, 330 + index * 36, 530));
 
     context.fillStyle = '#dbe7db';
     context.beginPath();
@@ -647,34 +506,50 @@ export class TestComponent implements AfterViewInit, OnDestroy {
     return texture;
   }
 
+  private wrapCanvasText(context: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
+    const lines: string[] = [];
+    let line = '';
+    for (const word of text.split(/\s+/)) {
+      const candidate = line ? `${line} ${word}` : word;
+      if (line && context.measureText(candidate).width > maxWidth) {
+        lines.push(line);
+        line = word;
+      } else {
+        line = candidate;
+      }
+    }
+    if (line) lines.push(line);
+    return lines;
+  }
+
   private createCoverTexture(): CanvasTexture {
     const canvas = this.canvasRef.nativeElement.ownerDocument.createElement('canvas');
-    canvas.width = 1024;
-    canvas.height = 720;
+    canvas.width = 720;
+    canvas.height = 1000;
     const context = canvas.getContext('2d');
     if (!context) throw new Error('No se pudo crear la portada del libro');
 
-    const gradient = context.createLinearGradient(0, 0, 1024, 720);
+    const gradient = context.createLinearGradient(0, 0, 720, 1000);
     gradient.addColorStop(0, '#245e9b');
     gradient.addColorStop(1, '#102d52');
     context.fillStyle = gradient;
     context.fillRect(0, 0, canvas.width, canvas.height);
     context.strokeStyle = '#c7aa71';
     context.lineWidth = 5;
-    context.strokeRect(42, 42, 940, 636);
+    context.strokeRect(36, 36, 648, 928);
 
     context.fillStyle = '#dec890';
     context.textAlign = 'center';
     context.font = '600 28px Georgia, serif';
     const story = this.storyData();
     if (!story) throw new Error('No hay datos cargados para la portada');
-    context.fillText(story.edition, 512, 205, 850);
+    context.fillText(story.edition, 360, 260, 620);
     context.fillStyle = '#fffaf0';
-    context.font = '700 75px Georgia, serif';
-    context.fillText(story.book.coverTitle, 512, 330, 850);
+    context.font = '700 62px Georgia, serif';
+    context.fillText(story.book.coverTitle, 360, 455, 620);
     context.fillStyle = '#dec890';
-    context.font = 'italic 29px Georgia, serif';
-    context.fillText(story.book.coverSubtitle, 512, 510, 850);
+    context.font = 'italic 26px Georgia, serif';
+    context.fillText(story.book.coverSubtitle, 360, 610, 620);
 
     const texture = new CanvasTexture(canvas);
     texture.colorSpace = SRGBColorSpace;
@@ -682,75 +557,45 @@ export class TestComponent implements AfterViewInit, OnDestroy {
   }
 
   private updateScene(elapsed: number): void {
-    if (!this.camera || !this.map || !this.shop || !this.book || !this.bookCoverHinge || !this.doorHinge) return;
-    const camera = this.camera;
-    const phaseOne = this.segment(elapsed, 0, 4.2);
-    const phaseTwo = this.segment(elapsed, 4.2, 7.1);
-    const phaseThree = this.segment(elapsed, 7.1, 9.3);
-    const phaseFour = this.segment(elapsed, 9.3, this.duration);
+    if (
+      !this.camera ||
+      !this.book ||
+      !this.bookCoverHinge ||
+      !this.bookPages ||
+      !this.bookRearCover ||
+      !this.bookEdge ||
+      !this.pageSurface
+    )
+      return;
+    const progress = this.ease(this.segment(elapsed, 0, this.duration));
+    const mobile = this.camera.aspect < 0.8;
+    const menuWidth = Math.min(440, Math.max(350, window.innerWidth * 0.3));
+    const bookWidthRatio = mobile ? 0.91 : 0.9 * (1 - menuWidth / window.innerWidth);
+    const distance = 8.3 / (2 * Math.tan((this.camera.fov * Math.PI) / 360) * this.camera.aspect * bookWidthRatio);
+    const targetX = mobile ? -2.2 : -0.25;
 
-    const cameraPosition = new Vector3();
-    const lookTarget = new Vector3();
-    if (elapsed < 4.2) {
-      cameraPosition.set(
-        MathUtils.lerp(-24, 0, this.ease(phaseOne)),
-        MathUtils.lerp(76, 34, this.ease(phaseOne)),
-        MathUtils.lerp(116, 43, this.ease(phaseOne))
-      );
-      lookTarget.set(0, 0, 0);
-      this.phaseLabel.set(this.storyData()?.intro.title ?? 'Una ciudad de posibilidades');
-    } else if (elapsed < 7.1) {
-      cameraPosition.set(
-        MathUtils.lerp(0, 0, this.ease(phaseTwo)),
-        MathUtils.lerp(34, 12, this.ease(phaseTwo)),
-        MathUtils.lerp(43, 18, this.ease(phaseTwo))
-      );
-      lookTarget.set(0, MathUtils.lerp(0, 3.5, this.ease(phaseTwo)), 0);
-      this.phaseLabel.set('Acercándonos a la tienda');
-    } else if (elapsed < 9.3) {
-      cameraPosition.set(
-        0,
-        MathUtils.lerp(12, 5.4, this.ease(phaseThree)),
-        MathUtils.lerp(18, 1, this.ease(phaseThree))
-      );
-      lookTarget.set(0, 3.8, MathUtils.lerp(0, -5.2, this.ease(phaseThree)));
-      this.phaseLabel.set('Entrando a descubrir una historia');
-    } else {
-      cameraPosition.set(
-        0,
-        MathUtils.lerp(5.4, 7.2, this.ease(phaseFour)),
-        MathUtils.lerp(1, 3.5, this.ease(phaseFour))
-      );
-      lookTarget.set(0, 4.8, -5.2);
-      this.phaseLabel.set(elapsed < 11.7 ? 'Abriendo el libro azul' : 'El índice de la historia');
+    this.camera.position.set(targetX, 0, MathUtils.lerp(distance * 1.35, distance, progress));
+    this.camera.lookAt(targetX, 0, 0);
+    this.book.visible = true;
+    this.book.position.z = MathUtils.lerp(-1.8, 0, progress);
+    this.book.scale.setScalar(MathUtils.lerp(0.84, 1.08, progress));
+    const openProgress = this.ease(this.segment(elapsed, 2.4, 6.9));
+    const leaves: [Mesh, number][] = [
+      [this.bookPages, 1.925],
+      [this.bookRearCover, 1.9875],
+      [this.bookEdge, 1.95],
+      [this.pageSurface, 1.8375],
+    ];
+    for (const [leaf, startX] of leaves) {
+      leaf.scale.x = MathUtils.lerp(0.5, 1, openProgress);
+      leaf.position.x = MathUtils.lerp(startX, 0, openProgress);
     }
-
-    camera.position.copy(cameraPosition);
-    camera.lookAt(lookTarget);
-    camera.updateProjectionMatrix();
-
-    if (this.mapPin) {
-      this.mapPin.scale.setScalar(1 + Math.sin(elapsed * 3.5) * 0.08);
-      this.mapPin.visible = elapsed < 7.5;
+    const pageTexture = (this.pageSurface.material as MeshStandardMaterial).map;
+    if (pageTexture) {
+      pageTexture.repeat.x = MathUtils.lerp(0.5, 1, openProgress);
+      pageTexture.offset.x = MathUtils.lerp(0.5, 0, openProgress);
     }
-    if (this.mapPulse) {
-      const pulse = (elapsed * 0.55) % 1;
-      this.mapPulse.scale.setScalar(0.55 + pulse * 1.45);
-      const material = this.mapPulse.material as MeshBasicMaterial;
-      material.opacity = 0.62 * (1 - pulse);
-      this.mapPulse.visible = elapsed < 7.5;
-    }
-
-    const storeScale = elapsed < 4.2 ? 1 : MathUtils.lerp(1, 0.96, this.ease(phaseThree));
-    this.shop.scale.setScalar(storeScale);
-    this.shop.visible = elapsed < 10;
-    this.doorHinge.rotation.y = MathUtils.lerp(0, -1.15, this.ease(phaseThree));
-
-    this.book.visible = elapsed >= 8.2;
-    const bookReveal = this.ease(this.segment(elapsed, 8.2, 10.2));
-    this.book.scale.setScalar(MathUtils.lerp(0.08, 1, bookReveal));
-    this.book.position.y = 4.8 + Math.sin(elapsed * 2.2) * 0.035 * bookReveal;
-    this.bookCoverHinge.rotation.y = MathUtils.lerp(0, Math.PI * 0.49, this.ease(this.segment(elapsed, 9.5, 11.7)));
+    this.bookCoverHinge.rotation.y = Math.PI * openProgress;
   }
 
   private segment(value: number, start: number, end: number): number {
@@ -758,7 +603,7 @@ export class TestComponent implements AfterViewInit, OnDestroy {
   }
 
   private ease(value: number): number {
-    return value * value * (3 - 2 * value);
+    return value * value * value * (value * (value * 6 - 15) + 10);
   }
 
   private resizeRenderer(): void {
@@ -768,16 +613,16 @@ export class TestComponent implements AfterViewInit, OnDestroy {
     const { width, height } = this.stageRef.nativeElement.getBoundingClientRect();
     if (!width || !height) return;
 
-    renderer.setSize(width, height, false);
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
+    this.updateScene(this.isPlaying() ? (performance.now() - this.animationStart) / 1000 : this.duration);
+    renderer.setSize(width, height, false);
     renderer.render(this.scene!, camera);
   }
 
   private finishAnimation(): void {
     this.isPlaying.set(false);
     this.showIndex.set(true);
-    this.phaseLabel.set('El índice de la historia');
     this.renderer?.render(this.scene!, this.camera!);
   }
 }
