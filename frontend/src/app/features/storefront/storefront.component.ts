@@ -4,6 +4,7 @@ import { RouterLink, ActivatedRoute } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { DEFAULT_CURRENCY, formatCurrency } from '../../core/config/currency';
 import { ApiService } from '../../core/services/api.service';
+import { SeoService } from '../../core/services/seo.service';
 import { Business } from '../../core/models/business.model';
 import { CatalogProduct } from '../../core/models/catalog.model';
 import { createOrderMessage, createWhatsAppOrderUrl } from './storefront-order';
@@ -16,6 +17,7 @@ import { createOrderMessage, createWhatsAppOrderUrl } from './storefront-order';
 })
 export class StorefrontComponent implements OnInit {
   private readonly api = inject(ApiService);
+  private readonly seo = inject(SeoService);
   private readonly route = inject(ActivatedRoute);
 
   readonly business = signal<Business | null>(null);
@@ -59,6 +61,7 @@ export class StorefrontComponent implements OnInit {
     }).subscribe({
       next: result => {
         this.business.set(result.business);
+        this.seo.updateForBusiness(result.business, 'store');
         this.products.set(result.products);
         this.loading.set(false);
       },

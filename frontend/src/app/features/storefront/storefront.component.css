@@ -1330,3 +1330,13 @@
     transition-duration: .01ms !important;
   }
 }
+.breadcrumbs {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.75rem clamp(1rem, 4vw, 4rem);
+  color: var(--store-muted, #6b7280);
+  font-size: 0.75rem;
+}
+
+.breadcrumbs a:hover { color: var(--store-ink, #1f2937); }

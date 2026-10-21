@@ -1,5 +1,10 @@
 User-agent: *
 Allow: /
 Disallow: /api/
+Disallow: /admin/
+Disallow: /business/*/admin
+Disallow: /business/*/login
+Disallow: /customer/
+Disallow: /owner/
 
 Sitemap: https://reservorio.app/sitemap.xml

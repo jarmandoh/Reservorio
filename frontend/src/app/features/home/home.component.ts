@@ -23,6 +23,7 @@ import { Business } from '../../core/models/business.model';
 import { BusinessPage } from '../../core/services/api.service';
 import { CategoryFiltersComponent, HomeFilters } from './category-filters/category-filters.component';
 import { BusinessCardComponent } from './business-card/business-card.component';
+import { StatsBarComponent, StatsBarItem } from '../../shared/components/stats-bar/stats-bar.component';
 
 // Fallback estático mientras no haya datos en la API
 const FALLBACK_BUSINESSES: Business[] = [
@@ -49,7 +50,7 @@ const DEFAULT_CATEGORIES = ['Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci�
 @Component({
   selector: 'app-home',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, RouterLink, CategoryFiltersComponent, BusinessCardComponent],
+  imports: [CommonModule, RouterLink, CategoryFiltersComponent, BusinessCardComponent, StatsBarComponent],
   template: `
     <div class="min-h-screen bg-surface flex flex-col">
       <!-- ══ HERO ═══════════════════════════════════════════════════════ -->
@@ -57,14 +58,14 @@ const DEFAULT_CATEGORIES = ['Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci�
         class="relative overflow-hidden text-white bg-gradient-to-br from-brand-strong via-primary to-primary-container"
       >
         <!-- Decorative circles -->
-        <div class="absolute -top-20 -right-20 w-72 h-72 rounded-full opacity-10" style="background:white"></div>
-        <div class="absolute -bottom-10 -left-16 w-48 h-48 rounded-full opacity-10" style="background:white"></div>
+        <div class="hero-decoration hero-decoration-top absolute -top-20 -right-20 w-72 h-72 rounded-full opacity-10"></div>
+        <div class="hero-decoration hero-decoration-bottom absolute -bottom-10 -left-16 w-48 h-48 rounded-full opacity-10"></div>
 
         <div class="relative max-w-4xl mx-auto px-6 pt-12 pb-10">
           <!-- Top nav -->
           <div class="flex items-center justify-between mb-10">
             <div class="g-nav-logo flex items-center gap-2">
-              <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background:rgba(255,255,255,.2)">
+              <div class="hero-logo-mark w-8 h-8 rounded-lg flex items-center justify-center">
                 <span class="material-icons-round text-base">calendar_month</span>
               </div>
               <span class="font-display font-bold text-lg tracking-tight">Resérvame</span>
@@ -74,7 +75,6 @@ const DEFAULT_CATEGORIES = ['Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci�
                 @if (accountDisplayName()) {
                   <button
                     class="g-nav-btn flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition max-w-[180px]"
-                    style="background:rgba(255,255,255,.15);backdrop-filter:blur(8px)"
                     (click)="goAccount()"
                     [attr.aria-label]="'Cuenta de ' + accountDisplayName()"
                     title="{{ accountDisplayName() }}"
@@ -85,7 +85,6 @@ const DEFAULT_CATEGORIES = ['Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci�
                 } @else {
                   <button
                     class="g-nav-btn flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition"
-                    style="background:rgba(255,255,255,.15);backdrop-filter:blur(8px)"
                     (click)="toggleAccountMenu($event)"
                     [attr.aria-expanded]="showAccountMenu()"
                     aria-label="Mi cuenta"
@@ -155,20 +154,8 @@ const DEFAULT_CATEGORIES = ['Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci�
             </p>
           </div>
 
-          <!-- Stats bar -->
-          <div class="flex items-center gap-6 mt-6 text-sm opacity-75">
-            <div class="g-stat flex items-center gap-1.5">
-              <span class="material-icons-round text-base">store</span>
-              <span>{{ displayedBusinesses().length }} negocio{{ displayedBusinesses().length !== 1 ? 's' : '' }}</span>
-            </div>
-            <div class="g-stat flex items-center gap-1.5">
-              <span class="material-icons-round text-base">schedule</span>
-              <span>{{ totalAvailable() }} franjas libres</span>
-            </div>
-            <div class="g-stat flex items-center gap-1.5">
-              <span class="material-icons-round text-base">bolt</span>
-              <span>Confirmación inmediata</span>
-            </div>
+          <div class="mt-6">
+            <app-stats-bar [stats]="heroStats()" />
           </div>
         </div>
       </header>
@@ -210,7 +197,7 @@ const DEFAULT_CATEGORIES = ['Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci�
               }
             </p>
           </div>
-          <button class="btn-tertiary btn-sm gap-1.5" (click)="resetFilters()">
+          <button type="button" class="btn-tertiary btn-sm gap-1.5" (click)="resetFilters()">
             <span class="material-icons-round text-base">tune</span>
             Filtros
           </button>
@@ -296,6 +283,28 @@ const DEFAULT_CATEGORIES = ['Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci�
         -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
         overflow: hidden;
+      }
+
+      .hero-decoration {
+        background: #fff;
+      }
+
+      .hero-logo-mark {
+        background: rgba(255, 255, 255, 0.2);
+      }
+
+      .g-nav-btn {
+        background: rgba(255, 255, 255, 0.15);
+        backdrop-filter: blur(8px);
+        transition: background-color 160ms ease, transform 160ms ease;
+      }
+
+      .g-nav-btn:hover {
+        background: rgba(255, 255, 255, 0.25);
+      }
+
+      .g-nav-btn:active {
+        transform: scale(0.98);
       }
 
       .business-grid {
@@ -406,6 +415,39 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
 
   totalAvailable(): number {
     return this.displayedBusinesses().reduce((sum, b) => sum + b.available, 0);
+  }
+
+  heroStats(): StatsBarItem[] {
+    const visibleBusinesses = this.displayedBusinesses();
+    const businessCount = this.totalBusinessCount() || visibleBusinesses.length;
+    const highlyRated = visibleBusinesses.filter(business => business.rating >= 4).length;
+
+    return [
+      {
+        icon: 'store',
+        value: `${businessCount}`,
+        label: 'negocios disponibles',
+        detail: 'Encuentra una opción cerca de ti',
+      },
+      {
+        icon: 'schedule',
+        value: `${this.totalAvailable()}`,
+        label: 'horarios libres',
+        detail: 'Consulta disponibilidad en tiempo real',
+      },
+      {
+        icon: 'star',
+        value: `${highlyRated}`,
+        label: 'negocios 4+ estrellas',
+        detail: 'Calificados por la comunidad',
+      },
+      {
+        icon: 'event_available',
+        value: '24/7',
+        label: 'reservas online',
+        detail: 'Agenda cuando quieras',
+      },
+    ];
   }
 
   ngOnInit(): void {

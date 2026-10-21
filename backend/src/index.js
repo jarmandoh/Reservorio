@@ -52,6 +52,7 @@ const ratingsRoutes = require('./routes/ratings.routes');
 const adminRoutes = require('./routes/admin.routes');
 const analyticsRoutes = require('./routes/analytics.routes');
 const realtimeRoutes = require('./routes/realtime.routes');
+const businessesService = require('./services/businesses.service');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
 
 const app = express();
@@ -273,6 +274,50 @@ app.use('/api/tags', tagsRoutes);
 app.use('/api/ux-tips', uxRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/realtime', realtimeRoutes);
+
+function escapeXml(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+app.get('/sitemap.xml', async (_req, res) => {
+  const origin = String(process.env.FRONTEND_URL || 'https://reservorio.app').replace(/\/+$/, '');
+  try {
+    const result = await businessesService.listBusinesses({});
+    const urls = [
+      { path: '/', priority: '1.0' },
+      { path: '/privacy', priority: '0.5' },
+      ...result.data.flatMap(business => [
+        { path: `/business/${encodeURIComponent(business.id)}`, priority: '0.8', lastmod: business.updatedAt },
+        { path: `/store/${encodeURIComponent(business.id)}`, priority: '0.7', lastmod: business.updatedAt },
+      ]),
+    ];
+    const body = urls
+      .map(({ path: urlPath, priority, lastmod }) => {
+        const date = lastmod ? new Date(lastmod).toISOString().slice(0, 10) : '';
+        return [
+          '  <url>',
+          `    <loc>${escapeXml(`${origin}${urlPath}`)}</loc>`,
+          date ? `    <lastmod>${date}</lastmod>` : '',
+          `    <priority>${priority}</priority>`,
+          '  </url>',
+        ]
+          .filter(Boolean)
+          .join('\n');
+      })
+      .join('\n');
+    res.set('Content-Type', 'application/xml; charset=utf-8');
+    res.set('Cache-Control', 'public, max-age=300');
+    return res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${body}\n</urlset>`);
+  } catch (error) {
+    logger.error('[sitemap] no se pudo generar:', error.message);
+    return res.status(503).type('application/xml').send('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>');
+  }
+});
 
 // ── Health check ─────────────────────────────────────────────────────────────
 app.get('/health', async (_req, res) => {

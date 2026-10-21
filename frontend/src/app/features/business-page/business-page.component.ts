@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { catchError, forkJoin, of } from 'rxjs';
 import { ApiService } from '../../core/services/api.service';
+import { SeoService } from '../../core/services/seo.service';
 import { Business } from '../../core/models/business.model';
 import { CatalogProduct } from '../../core/models/catalog.model';
 import { createWhatsAppOrderUrl } from '../storefront/storefront-order';
@@ -36,18 +37,70 @@ import { ReservationManagerComponent } from './reservation-manager.component';
           <a routerLink="/">Volver al inicio</a>
         </section>
       } @else if (business(); as store) {
+        <nav class="breadcrumbs" aria-label="Migas de pan">
+          <a routerLink="/">Reservorio</a><span aria-hidden="true">›</span><span aria-current="page">{{ store.name }}</span>
+        </nav>
         <header class="business-nav" [class.is-scrolled]="headerScrolled()">
           <a class="back-link" routerLink="/" aria-label="Volver al inicio"
             ><span class="material-icons-round">arrow_back</span><span>Inicio</span></a
           >
           <a class="business-brand" [class.is-visible]="headerScrolled()" [attr.aria-hidden]="!headerScrolled()" href="#inicio" (click)="scrollToSection($event, 'inicio')">
             @if (store.logo) {
-              <img [src]="store.logo" [alt]="'Logo de ' + store.name" />
+              <img [src]="store.logo" [alt]="'Logo de ' + store.name" width="64" height="64" />
             }
             <span>{{ store.name }}</span>
           </a>
           <a class="nav-contact" href="#contacto" (click)="scrollToSection($event, 'contacto')">Contacto</a>
         </header>
+
+        @if (qrOpen()) {
+          <aside class="qr-card" aria-labelledby="qr-card-title">
+            <div class="qr-card-topline">
+              <div>
+                <p class="qr-eyebrow">COMPARTE ESTE NEGOCIO</p>
+                <h2 id="qr-card-title">Su código QR</h2>
+              </div>
+              <button type="button" class="qr-close" aria-label="Ocultar código QR" (click)="qrOpen.set(false)">
+                <span class="material-icons-round">close</span>
+              </button>
+            </div>
+            <div class="qr-code-shell">
+              @if (qrImageUrl(); as qrUrl) {
+                <img
+                  class="qr-image"
+                  [src]="qrUrl"
+                  [alt]="'Código QR para visitar ' + store.name"
+                  width="360"
+                  height="360"
+                  (error)="qrImageError.set(true)"
+                />
+                <div class="qr-center-logo" aria-hidden="true">
+                  <img src="assets/imgs/reservorio-logo.jpg" alt="" width="48" height="48" />
+                </div>
+              }
+              @if (qrImageError()) {
+                <p class="qr-error" role="status">No pudimos cargar el código QR. Intenta actualizar la página.</p>
+              }
+            </div>
+            <p class="qr-help">Escanéalo para abrir directamente la página de {{ store.name }}.</p>
+            <p class="qr-url">{{ qrPayload() }}</p>
+            <button type="button" class="qr-upgrade" (click)="requestQrBranding()">
+              <span class="material-icons-round">workspace_premium</span>
+              <span>Personalizar con el logo del negocio</span>
+              <span class="qr-upgrade-badge">Plan de marca</span>
+            </button>
+            @if (qrUpgradeNotice()) {
+              <p class="qr-upgrade-notice" role="status">
+                La personalización con el logo del negocio se habilita al contratar el plan de marca.
+              </p>
+            }
+          </aside>
+        } @else {
+          <button type="button" class="qr-launcher" aria-label="Mostrar código QR" (click)="qrOpen.set(true)">
+            <span class="material-icons-round">qr_code_2</span>
+            <span>QR</span>
+          </button>
+        }
 
         <section
           id="inicio"
@@ -55,7 +108,7 @@ import { ReservationManagerComponent } from './reservation-manager.component';
           [style.background]="store.gradient || 'linear-gradient(135deg,#12335d,#2476b9)'"
         >
           @if (store.storeCoverImage) {
-            <img class="hero-image" [src]="store.storeCoverImage" [alt]="'Espacio de ' + store.name" />
+            <img class="hero-image" [src]="store.storeCoverImage" [alt]="'Espacio de ' + store.name" width="1600" height="900" />
           }
           <div class="hero-shade"></div>
           <div class="hero-content">
@@ -251,6 +304,22 @@ import { ReservationManagerComponent } from './reservation-manager.component';
         -webkit-backdrop-filter: none;
         transition: color 300ms ease, background 300ms ease, border-color 300ms ease, box-shadow 300ms ease, backdrop-filter 300ms ease;
       }
+
+      .breadcrumbs {
+        position: absolute;
+        z-index: 5;
+        top: 1rem;
+        left: 50%;
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+        width: min(1180px, calc(100% - 2rem));
+        transform: translateX(-50%);
+        color: rgba(255, 255, 255, 0.78);
+        font-size: 0.75rem;
+      }
+
+      .breadcrumbs a:hover { color: #fff; }
       .business-nav.is-scrolled {
         color: var(--business-ink);
         border-bottom-color: var(--business-border);
@@ -297,6 +366,186 @@ import { ReservationManagerComponent } from './reservation-manager.component';
         border-radius: 0.75rem;
         background: white;
         object-fit: cover;
+      }
+      .qr-card,
+      .qr-launcher {
+        position: fixed;
+        z-index: 25;
+      }
+      .qr-card {
+        top: 6.25rem;
+        right: 1.25rem;
+        width: min(18rem, calc(100vw - 2rem));
+        padding: 1rem;
+        border: 1px solid rgba(255, 255, 255, 0.65);
+        border-radius: 1.25rem;
+        background: color-mix(in srgb, var(--business-surface) 94%, transparent);
+        box-shadow: 0 22px 60px rgba(18, 32, 51, 0.2);
+        backdrop-filter: blur(20px) saturate(140%);
+        animation: qr-arrive 420ms cubic-bezier(0.2, 0.75, 0.25, 1) both;
+      }
+      .qr-card-topline {
+        display: flex;
+        align-items: start;
+        justify-content: space-between;
+        gap: 1rem;
+      }
+      .qr-eyebrow {
+        margin: 0 0 0.25rem;
+        color: var(--color-primary, #005bbf);
+        font-size: 0.58rem;
+        font-weight: 800;
+        letter-spacing: 0.13em;
+      }
+      .qr-card h2 {
+        margin: 0;
+        font: 800 1.15rem/1.1 'Manrope', 'Inter', system-ui, sans-serif;
+        letter-spacing: -0.03em;
+      }
+      .qr-close {
+        display: grid;
+        width: 2rem;
+        height: 2rem;
+        place-items: center;
+        border: 1px solid var(--business-border);
+        border-radius: 0.65rem;
+        color: var(--business-muted);
+        background: var(--business-surface);
+        cursor: pointer;
+      }
+      .qr-close:hover,
+      .qr-close:focus-visible {
+        color: var(--business-ink);
+        border-color: #9cb7d2;
+      }
+      .qr-close .material-icons-round {
+        font-size: 1.05rem;
+      }
+      .qr-code-shell {
+        position: relative;
+        display: grid;
+        min-height: 15rem;
+        margin: 0.9rem auto 0.75rem;
+        place-items: center;
+        overflow: hidden;
+        border: 1px solid var(--business-border);
+        border-radius: 0.95rem;
+        background: white;
+      }
+      .qr-image {
+        display: block;
+        width: 100%;
+        aspect-ratio: 1;
+        object-fit: contain;
+        image-rendering: pixelated;
+      }
+      .qr-center-logo {
+        position: absolute;
+        display: grid;
+        width: 3.25rem;
+        height: 3.25rem;
+        padding: 0.3rem;
+        place-items: center;
+        border: 0.28rem solid white;
+        border-radius: 0.9rem;
+        background: white;
+        box-shadow: 0 2px 10px rgba(18, 32, 51, 0.22);
+      }
+      .qr-center-logo img {
+        width: 100%;
+        height: 100%;
+        border-radius: 0.6rem;
+        object-fit: cover;
+      }
+      .qr-help,
+      .qr-url,
+      .qr-upgrade-notice {
+        margin: 0;
+        color: var(--business-muted);
+        font-size: 0.72rem;
+        line-height: 1.5;
+      }
+      .qr-url {
+        margin-top: 0.45rem;
+        overflow: hidden;
+        color: var(--business-ink);
+        font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+        font-size: 0.62rem;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .qr-upgrade {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        align-items: center;
+        gap: 0.45rem;
+        width: 100%;
+        margin-top: 0.8rem;
+        padding: 0.65rem 0.7rem;
+        border: 1px solid #c7d8e8;
+        border-radius: 0.8rem;
+        color: #315e91;
+        background: var(--business-accent-soft);
+        font: inherit;
+        font-size: 0.67rem;
+        font-weight: 750;
+        text-align: left;
+        cursor: pointer;
+      }
+      .qr-upgrade:hover,
+      .qr-upgrade:focus-visible {
+        border-color: #83a9ca;
+        background: color-mix(in srgb, var(--business-accent-soft) 72%, white);
+      }
+      .qr-upgrade .material-icons-round {
+        font-size: 1.1rem;
+      }
+      .qr-upgrade-badge {
+        align-self: start;
+        color: #7e5a18;
+        font-size: 0.53rem;
+        font-weight: 800;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+      }
+      .qr-upgrade-notice {
+        margin-top: 0.55rem;
+        color: #7e5a18;
+        font-size: 0.67rem;
+      }
+      .qr-error {
+        padding: 1rem;
+        color: #7e3030;
+        font-size: 0.75rem;
+        text-align: center;
+      }
+      .qr-launcher {
+        top: 7rem;
+        right: 1.25rem;
+        display: inline-flex;
+        min-width: 3.25rem;
+        min-height: 3.25rem;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.05rem;
+        border: 1px solid rgba(255, 255, 255, 0.75);
+        border-radius: 1rem;
+        color: white;
+        background: var(--color-primary, #005bbf);
+        box-shadow: 0 12px 30px rgba(18, 32, 51, 0.22);
+        font: inherit;
+        font-size: 0.55rem;
+        font-weight: 800;
+        cursor: pointer;
+        animation: qr-arrive 420ms cubic-bezier(0.2, 0.75, 0.25, 1) both;
+      }
+      .qr-launcher:hover,
+      .qr-launcher:focus-visible {
+        transform: translateY(-2px);
+      }
+      .qr-launcher .material-icons-round {
+        font-size: 1.35rem;
       }
       .nav-contact {
         justify-self: end;
@@ -646,6 +895,16 @@ import { ReservationManagerComponent } from './reservation-manager.component';
           transform: translateY(0);
         }
       }
+      @keyframes qr-arrive {
+        from {
+          opacity: 0;
+          transform: translateX(1rem);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
       @media (max-width: 760px) {
         .business-hero {
           min-height: 600px;
@@ -671,6 +930,18 @@ import { ReservationManagerComponent } from './reservation-manager.component';
         .business-nav {
           grid-template-columns: auto 1fr auto;
           padding: 0 1rem;
+        }
+        .qr-card {
+          top: auto;
+          right: 0.75rem;
+          bottom: 0.75rem;
+          left: 0.75rem;
+          width: auto;
+        }
+        .qr-launcher {
+          top: auto;
+          right: 0.75rem;
+          bottom: 0.75rem;
         }
         .business-brand {
           font-size: 0.78rem !important;
@@ -710,7 +981,9 @@ import { ReservationManagerComponent } from './reservation-manager.component';
           transition-duration: 0.01ms;
         }
         .primary-action,
-        .secondary-action {
+        .secondary-action,
+        .qr-card,
+        .qr-launcher {
           transition-duration: 0.01ms;
         }
       }
@@ -719,6 +992,7 @@ import { ReservationManagerComponent } from './reservation-manager.component';
 })
 export class BusinessPageComponent implements OnInit {
   private readonly api = inject(ApiService);
+  private readonly seo = inject(SeoService);
   private readonly route = inject(ActivatedRoute);
   readonly business = signal<Business | null>(null);
   readonly products = signal<CatalogProduct[]>([]);
@@ -728,7 +1002,22 @@ export class BusinessPageComponent implements OnInit {
   readonly reservationOpen = signal(false);
   readonly selectedService = signal('');
   readonly headerScrolled = signal(false);
+  readonly qrOpen = signal(true);
+  readonly qrImageError = signal(false);
+  readonly qrUpgradeNotice = signal(false);
   readonly bookingEnabled = computed(() => this.business()?.businessType === 'appointment');
+  readonly qrPayload = computed(() => {
+    const id = this.business()?.id;
+    if (!id) return '';
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    return `${origin}/business/${encodeURIComponent(id)}`;
+  });
+  readonly qrImageUrl = computed(() => {
+    const payload = this.qrPayload();
+    return payload
+      ? `https://api.qrserver.com/v1/create-qr-code/?size=360x360&margin=16&data=${encodeURIComponent(payload)}`
+      : '';
+  });
 
   @HostListener('window:scroll')
   onWindowScroll(): void {
@@ -761,6 +1050,8 @@ export class BusinessPageComponent implements OnInit {
     }).subscribe({
       next: result => {
         this.business.set(result.business);
+        this.seo.updateForBusiness(result.business, 'business');
+        this.qrImageError.set(false);
         this.products.set(result.products.filter(product => product.active));
         this.services.set(
           result.services.map(name => ({
@@ -793,5 +1084,9 @@ export class BusinessPageComponent implements OnInit {
   closeBooking(): void {
     this.reservationOpen.set(false);
     this.selectedService.set('');
+  }
+
+  requestQrBranding(): void {
+    this.qrUpgradeNotice.set(true);
   }
 }

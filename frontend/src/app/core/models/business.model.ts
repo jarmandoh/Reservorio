@@ -31,6 +31,7 @@ export interface Business {
   verified?: boolean;
   cancellationPolicy?: string;
   businessOwner?: Owner;
+  updatedAt?: string;
 }
 
 export interface NewBusinessPayload {

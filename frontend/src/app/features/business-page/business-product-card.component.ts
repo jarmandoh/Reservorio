@@ -12,7 +12,7 @@ import { DEFAULT_CURRENCY, formatCurrency } from '../../core/config/currency';
     <article class="product-card group">
       <div class="product-image-wrap">
         @if (product.imageUrl) {
-          <img [src]="product.imageUrl" [alt]="product.name" loading="lazy" />
+          <img [src]="product.imageUrl" [alt]="product.name" width="640" height="640" loading="lazy" />
         } @else {
           <span class="material-icons-round product-placeholder" aria-hidden="true">inventory_2</span>
         }

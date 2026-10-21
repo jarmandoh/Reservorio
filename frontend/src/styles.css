@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+:where(a, button, [role='button']):hover {
+  text-decoration: none !important;
+}
+
 /* ── Base ─────────────────────────────────────────────────────────────────── */
 
 :root {

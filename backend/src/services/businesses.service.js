@@ -98,6 +98,7 @@ function safenegocio(b) {
     active: b.active,
     verified: !!b.verified,
     cancellationPolicy: b.cancellation_policy ?? '',
+    updatedAt: b.updated_at ?? undefined,
     available: 0,
     total: 0,
     routePath: `/booking/${b.id}`,

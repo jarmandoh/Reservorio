@@ -24,6 +24,8 @@ import { Business } from '../../../core/models/business.model';
             class="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-105"
             [src]="business.storeCoverImage"
             [alt]="'Imagen de ' + business.name"
+            width="640"
+            height="360"
             loading="lazy"
           />
           <div class="absolute inset-0 bg-gradient-to-t from-black/65 via-black/10 to-black/10"></div>
@@ -42,6 +44,8 @@ import { Business } from '../../../core/models/business.model';
                 class="h-11 w-11 shrink-0 rounded-xl border border-white/50 bg-white object-cover shadow-sm"
                 [src]="business.logo"
                 [alt]="'Logo de ' + business.name"
+                width="44"
+                height="44"
                 loading="lazy"
               />
             } @else {

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 export type BusinessOpenState = 'any' | 'open' | 'closed';
@@ -35,31 +35,46 @@ const EMPTY_FILTERS: HomeFilters = {
           <span class="material-icons-round" aria-hidden="true">restart_alt</span>
           Limpiar filtros
         </button>
+        <button
+          type="button"
+          class="mobile-toggle"
+          [attr.aria-expanded]="filtersExpanded()"
+          aria-controls="business-filter-content"
+          (click)="filtersExpanded.update(expanded => !expanded)"
+        >
+          <span>Filtros</span>
+          <span class="material-icons-round" aria-hidden="true">expand_more</span>
+        </button>
       </div>
 
-      <label class="filter-field search-field" for="business-search">
-        <span class="field-label">Buscar negocios</span>
-        <span class="input-wrap">
-          <span class="material-icons-round" aria-hidden="true">search</span>
-          <input
-            id="business-search"
-            type="search"
-            placeholder="Nombre, servicio o categoría"
-            [ngModel]="searchQuery"
-            (ngModelChange)="searchQueryChange.emit($event)"
-            aria-label="Buscar negocios"
-          />
-        </span>
-      </label>
+      <div id="business-filter-content" class="filter-content" [class.filter-content-collapsed]="!filtersExpanded()">
+        <label class="filter-field search-field" for="business-search">
+          <span class="field-label">Buscar negocios</span>
+          <span class="input-wrap">
+            <span class="material-icons-round" aria-hidden="true">search</span>
+            <input
+              id="business-search"
+              name="business-search"
+              type="search"
+              autocomplete="off"
+              placeholder="Ej. barbería o masaje…"
+              [ngModel]="searchQuery"
+              (ngModelChange)="searchQueryChange.emit($event)"
+              aria-label="Buscar negocios"
+            />
+          </span>
+        </label>
 
-      <div class="filter-controls">
+        <div class="filter-controls">
         <label class="filter-field location-field">
           <span class="field-label">Ubicación</span>
           <span class="input-wrap">
             <span class="material-icons-round" aria-hidden="true">location_on</span>
             <input
+              name="business-location"
               type="search"
-              placeholder="Ciudad, barrio o zona"
+              autocomplete="off"
+              placeholder="Ej. Chapinero o Bogotá…"
               [ngModel]="filters.location"
               (ngModelChange)="update({ location: $event })"
               aria-label="Filtrar por ubicación"
@@ -71,6 +86,7 @@ const EMPTY_FILTERS: HomeFilters = {
           <span class="field-label">Categoría</span>
           <span class="select-wrap">
             <select
+              name="business-category"
               [ngModel]="filters.category"
               (ngModelChange)="update({ category: $event })"
               aria-label="Filtrar por categoría"
@@ -87,6 +103,7 @@ const EMPTY_FILTERS: HomeFilters = {
           <span class="field-label">Calificación</span>
           <span class="select-wrap">
             <select
+              name="business-rating"
               [ngModel]="filters.minimumRating"
               (ngModelChange)="update({ minimumRating: +$event })"
               aria-label="Calificación mínima"
@@ -104,6 +121,7 @@ const EMPTY_FILTERS: HomeFilters = {
           <span class="field-label">Estado</span>
           <span class="select-wrap">
             <select
+              name="business-open-state"
               [ngModel]="filters.openState"
               (ngModelChange)="update({ openState: $event })"
               aria-label="Filtrar por horario"
@@ -121,6 +139,7 @@ const EMPTY_FILTERS: HomeFilters = {
           <span class="toggle-icon material-icons-round" aria-hidden="true">event_available</span>
           <span>Permite reservar</span>
         </label>
+        </div>
       </div>
 
       @if (hasFilters) {
@@ -201,6 +220,25 @@ const EMPTY_FILTERS: HomeFilters = {
         justify-content: space-between;
         gap: 1rem;
         margin-bottom: 1rem;
+      }
+      .mobile-toggle {
+        display: none;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.5rem 0.65rem;
+        border: 1px solid var(--filter-border);
+        border-radius: 0.625rem;
+        color: var(--filter-text);
+        background: var(--filter-control);
+        font-size: 0.78rem;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .mobile-toggle .material-icons-round {
+        transition: transform 160ms ease;
+      }
+      .mobile-toggle[aria-expanded='true'] .material-icons-round {
+        transform: rotate(180deg);
       }
       .filter-eyebrow {
         margin: 0 0 0.25rem;
@@ -403,6 +441,39 @@ const EMPTY_FILTERS: HomeFilters = {
           font-size: 1.2rem;
         }
       }
+      @media (max-width: 640px) {
+        .filter-heading {
+          margin-bottom: 0;
+        }
+        .clear-button {
+          margin-left: auto;
+        }
+        .mobile-toggle {
+          display: inline-flex;
+        }
+        .filter-content {
+          max-height: 32rem;
+          overflow: hidden;
+          margin-top: 1rem;
+          opacity: 1;
+          transition: max-height 220ms ease, margin-top 220ms ease, opacity 160ms ease;
+        }
+        input[type='search'],
+        select {
+          font-size: 1rem;
+        }
+        .filter-content-collapsed {
+          max-height: 0;
+          margin-top: 0;
+          opacity: 0;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .filter-content,
+        .mobile-toggle .material-icons-round {
+          transition: none;
+        }
+      }
     `,
   ],
 })
@@ -413,6 +484,7 @@ export class CategoryFiltersComponent {
   @Output() filtersChange = new EventEmitter<HomeFilters>();
   @Output() searchQueryChange = new EventEmitter<string>();
   @Output() clearAll = new EventEmitter<void>();
+  readonly filtersExpanded = signal(false);
 
   get hasFilters(): boolean {
     return (
