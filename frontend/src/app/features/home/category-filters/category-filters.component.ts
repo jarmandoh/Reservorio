@@ -1,22 +1,14 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
-export type BusinessOpenState = 'any' | 'open' | 'closed';
-
 export interface HomeFilters {
   category: string;
   location: string;
-  minimumRating: number;
-  bookableOnly: boolean;
-  openState: BusinessOpenState;
 }
 
 const EMPTY_FILTERS: HomeFilters = {
   category: 'Todos',
   location: '',
-  minimumRating: 0,
-  bookableOnly: false,
-  openState: 'any',
 };
 
 @Component({
@@ -28,13 +20,8 @@ const EMPTY_FILTERS: HomeFilters = {
     <section class="filter-panel" aria-label="Filtros de negocios">
       <div class="filter-heading">
         <div>
-          <p class="filter-eyebrow">Encuentra tu próxima reserva</p>
-          <h2>Explora negocios</h2>
+          <h2>Encuentra el negocio que necesitas</h2>
         </div>
-        <button type="button" class="clear-button" [disabled]="!hasFilters" (click)="clearFilters()">
-          <span class="material-icons-round" aria-hidden="true">restart_alt</span>
-          Limpiar filtros
-        </button>
         <button
           type="button"
           class="mobile-toggle"
@@ -86,64 +73,53 @@ const EMPTY_FILTERS: HomeFilters = {
 
         <label class="filter-field">
           <span class="field-label">Categoría</span>
-          <span class="select-wrap">
-            <select
+          <span class="autocomplete-wrap">
+            <span class="material-icons-round autocomplete-icon" aria-hidden="true">category</span>
+            <input
+              id="business-category"
               name="business-category"
               class="filter-control"
-              [ngModel]="filters.category"
-              (ngModelChange)="update({ category: $event })"
+              type="search"
+              autocomplete="off"
+              placeholder="Todas las categorías"
+              [ngModel]="categoryQuery()"
+              (ngModelChange)="onCategoryInput($event)"
+              (focus)="categoryOpen.set(true)"
+              (blur)="closeCategorySuggestions()"
+              (keydown)="onCategoryKeydown($event)"
+              role="combobox"
+              aria-autocomplete="list"
+              aria-controls="business-category-suggestions"
+              [attr.aria-expanded]="categoryOpen()"
+              [attr.aria-activedescendant]="activeCategoryId()"
               aria-label="Filtrar por categoría"
-            >
-              @for (category of categories; track category) {
-                <option [value]="category">{{ category }}</option>
-              }
-            </select>
-            <span class="material-icons-round" aria-hidden="true">expand_more</span>
+            />
+            @if (categoryOpen()) {
+              <div id="business-category-suggestions" class="autocomplete-menu" role="listbox">
+                @for (category of categorySuggestions(); track category; let index = $index) {
+                  <button
+                    type="button"
+                    class="autocomplete-option"
+                    [class.autocomplete-option-active]="activeCategoryIndex() === index"
+                    [id]="categoryOptionId(index)"
+                    role="option"
+                    [attr.aria-selected]="filters.category === category"
+                    (mousedown)="$event.preventDefault()"
+                    (click)="selectCategory(category)"
+                  >
+                    <span>{{ category }}</span>
+                    @if (filters.category === category) {
+                      <span class="material-icons-round" aria-hidden="true">check</span>
+                    }
+                  </button>
+                } @empty {
+                  <span class="autocomplete-empty">No encontramos categorías.</span>
+                }
+              </div>
+            }
           </span>
         </label>
 
-        <label class="filter-field">
-          <span class="field-label">Calificación</span>
-          <span class="select-wrap">
-            <select
-              name="business-rating"
-              class="filter-control"
-              [ngModel]="filters.minimumRating"
-              (ngModelChange)="update({ minimumRating: +$event })"
-              aria-label="Calificación mínima"
-            >
-              <option [ngValue]="0">Cualquier calificación</option>
-              <option [ngValue]="3">3+ estrellas</option>
-              <option [ngValue]="4">4+ estrellas</option>
-              <option [ngValue]="4.5">4.5+ estrellas</option>
-            </select>
-            <span class="material-icons-round" aria-hidden="true">expand_more</span>
-          </span>
-        </label>
-
-        <label class="filter-field">
-          <span class="field-label">Estado</span>
-          <span class="select-wrap">
-            <select
-              name="business-open-state"
-              class="filter-control"
-              [ngModel]="filters.openState"
-              (ngModelChange)="update({ openState: $event })"
-              aria-label="Filtrar por horario"
-            >
-              <option value="any">Cualquier horario</option>
-              <option value="open">Abierto ahora</option>
-              <option value="closed">Cerrado ahora</option>
-            </select>
-            <span class="material-icons-round" aria-hidden="true">expand_more</span>
-          </span>
-        </label>
-
-        <label class="booking-toggle" [class.booking-toggle-active]="filters.bookableOnly">
-          <input type="checkbox" [ngModel]="filters.bookableOnly" (ngModelChange)="update({ bookableOnly: $event })" />
-          <span class="toggle-icon material-icons-round" aria-hidden="true">event_available</span>
-          <span>Permite reservar</span>
-        </label>
         </div>
       </div>
 
@@ -165,23 +141,10 @@ const EMPTY_FILTERS: HomeFilters = {
               ><span class="material-icons-round" aria-hidden="true">place</span>{{ filters.location }}</span
             >
           }
-          @if (filters.minimumRating) {
-            <span class="filter-chip"
-              ><span class="material-icons-round" aria-hidden="true">star</span>{{ filters.minimumRating }}+
-              estrellas</span
-            >
-          }
-          @if (filters.bookableOnly) {
-            <span class="filter-chip"
-              ><span class="material-icons-round" aria-hidden="true">event_available</span>Permite reservar</span
-            >
-          }
-          @if (filters.openState !== 'any') {
-            <span class="filter-chip"
-              ><span class="status-dot" [class.status-dot-open]="filters.openState === 'open'"></span
-              >{{ filters.openState === 'open' ? 'Abierto ahora' : 'Cerrado ahora' }}</span
-            >
-          }
+          <button type="button" class="clear-button" (click)="clearFilters()">
+            <span class="material-icons-round" aria-hidden="true">restart_alt</span>
+            Limpiar filtros
+          </button>
         </div>
       }
     </section>
@@ -255,7 +218,7 @@ const EMPTY_FILTERS: HomeFilters = {
       }
       h2 {
         margin: 0;
-        color: var(--color-on-surface);
+        color: var(--filter-text);
         font-size: 1.125rem;
         font-weight: 700;
       }
@@ -284,7 +247,7 @@ const EMPTY_FILTERS: HomeFilters = {
       }
       .filter-controls {
         display: grid;
-        grid-template-columns: minmax(180px, 1.4fr) repeat(3, minmax(145px, 1fr)) auto;
+        grid-template-columns: repeat(2, minmax(180px, 1fr));
         align-items: end;
         gap: 0.65rem;
       }
@@ -303,7 +266,8 @@ const EMPTY_FILTERS: HomeFilters = {
         font-weight: 600;
       }
       .input-wrap,
-      .select-wrap {
+      .select-wrap,
+      .autocomplete-wrap {
         position: relative;
         display: flex;
         align-items: center;
@@ -314,7 +278,8 @@ const EMPTY_FILTERS: HomeFilters = {
         background: var(--filter-control);
       }
       .input-wrap:focus-within,
-      .select-wrap:focus-within {
+      .select-wrap:focus-within,
+      .autocomplete-wrap:focus-within {
         border-color: var(--color-primary);
         box-shadow: 0 0 0 3px rgba(0, 91, 191, 0.14);
       }
@@ -346,10 +311,79 @@ const EMPTY_FILTERS: HomeFilters = {
       .input-wrap input {
         padding-left: 0.4rem;
       }
+      .autocomplete-icon {
+        position: absolute;
+        left: 0.7rem;
+        color: var(--filter-muted);
+        font-size: 1.05rem;
+        pointer-events: none;
+      }
+      .autocomplete-wrap input {
+        padding-left: 2.25rem;
+      }
+      .autocomplete-menu {
+        position: absolute;
+        z-index: 20;
+        display: block;
+        top: calc(100% + 0.35rem);
+        right: 0;
+        left: 0;
+        max-height: 16rem;
+        overflow-y: auto;
+        padding: 0.35rem;
+        border: 1px solid var(--filter-border);
+        border-radius: 0.75rem;
+        background: var(--filter-surface);
+        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.18);
+      }
+      .autocomplete-option {
+        display: flex;
+        width: 100%;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        padding: 0.65rem 0.75rem;
+        border: 0;
+        border-radius: 0.5rem;
+        color: var(--filter-text);
+        background: transparent;
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+      }
+      .autocomplete-option:hover,
+      .autocomplete-option-active,
+      .autocomplete-option:focus-visible {
+        outline: none;
+        color: var(--color-primary);
+        background: var(--filter-hover);
+      }
+      .autocomplete-option .material-icons-round {
+        font-size: 1rem;
+      }
+      .autocomplete-empty {
+        display: block;
+        padding: 0.75rem;
+        color: var(--filter-muted);
+        font-size: 0.8rem;
+      }
+      .autocomplete-empty {
+        display: block;
+        padding: 0.75rem;
+        color: var(--filter-muted);
+        font-size: 0.8rem;
+      }
       select {
         appearance: none;
         padding-right: 1.9rem;
         cursor: pointer;
+      }
+      select.filter-control option {
+        color: var(--filter-text);
+        background: var(--filter-control);
+      }
+      :host-context(.dark) select.filter-control {
+        color-scheme: dark;
       }
       .select-wrap > .material-icons-round {
         position: absolute;
@@ -357,34 +391,6 @@ const EMPTY_FILTERS: HomeFilters = {
         color: var(--filter-muted);
         font-size: 1.1rem;
         pointer-events: none;
-      }
-      .booking-toggle {
-        display: flex;
-        height: 42px;
-        align-items: center;
-        gap: 0.45rem;
-        padding: 0 0.7rem;
-        border: 1px solid var(--filter-border);
-        border-radius: 0.625rem;
-        color: var(--filter-muted);
-        background: var(--filter-control);
-        font-size: 0.75rem;
-        font-weight: 600;
-        white-space: nowrap;
-        cursor: pointer;
-      }
-      .booking-toggle input {
-        width: 15px;
-        height: 15px;
-        accent-color: var(--color-primary);
-      }
-      .booking-toggle-active {
-        border-color: rgba(0, 91, 191, 0.35);
-        color: var(--color-primary);
-        background: var(--filter-hover);
-      }
-      .toggle-icon {
-        font-size: 1.05rem;
       }
       .applied-filters {
         display: flex;
@@ -416,15 +422,6 @@ const EMPTY_FILTERS: HomeFilters = {
       .filter-chip .material-icons-round {
         font-size: 0.85rem;
       }
-      .status-dot {
-        width: 0.45rem;
-        height: 0.45rem;
-        border-radius: 50%;
-        background: #f59e0b;
-      }
-      .status-dot-open {
-        background: #16a34a;
-      }
       @media (max-width: 900px) {
         .filter-controls {
           grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -443,29 +440,19 @@ const EMPTY_FILTERS: HomeFilters = {
         .location-field {
           grid-column: auto;
         }
-        .booking-toggle {
-          justify-content: flex-start;
-        }
-        .clear-button {
-          font-size: 0;
-        }
-        .clear-button .material-icons-round {
-          font-size: 1.2rem;
-        }
+        .clear-button { font-size: 0.72rem; }
+        .clear-button .material-icons-round { font-size: 1rem; }
       }
       @media (max-width: 640px) {
         .filter-heading {
           margin-bottom: 0;
-        }
-        .clear-button {
-          margin-left: auto;
         }
         .mobile-toggle {
           display: inline-flex;
         }
         .filter-content {
           max-height: 32rem;
-          overflow: hidden;
+          overflow: visible;
           margin-top: 1rem;
           opacity: 1;
           transition: max-height 220ms ease, margin-top 220ms ease, opacity 160ms ease;
@@ -476,6 +463,7 @@ const EMPTY_FILTERS: HomeFilters = {
         }
         .filter-content-collapsed {
           max-height: 0;
+          overflow: hidden;
           margin-top: 0;
           opacity: 0;
         }
@@ -497,15 +485,65 @@ export class CategoryFiltersComponent {
   @Output() searchQueryChange = new EventEmitter<string>();
   @Output() clearAll = new EventEmitter<void>();
   readonly filtersExpanded = signal(false);
+  readonly categoryQuery = signal('');
+  readonly categoryOpen = signal(false);
+  readonly activeCategoryIndex = signal(-1);
+
+  onCategoryInput(value: string): void {
+    this.categoryQuery.set(value);
+    this.categoryOpen.set(true);
+    this.activeCategoryIndex.set(-1);
+    const category = this.categories.find(item => this.normalizeCategory(item) === this.normalizeCategory(value));
+    this.update({ category: category ?? 'Todos' });
+  }
+
+  categorySuggestions(): string[] {
+    const query = this.normalizeCategory(this.categoryQuery());
+    return this.categories.filter(category => !query || this.normalizeCategory(category).includes(query));
+  }
+
+  onCategoryKeydown(event: KeyboardEvent): void {
+    const suggestions = this.categorySuggestions();
+    if (event.key === 'Escape') {
+      this.categoryOpen.set(false);
+      return;
+    }
+    if (event.key === 'ArrowDown' && suggestions.length) {
+      event.preventDefault();
+      this.activeCategoryIndex.update(index => Math.min(index + 1, suggestions.length - 1));
+    } else if (event.key === 'ArrowUp' && suggestions.length) {
+      event.preventDefault();
+      this.activeCategoryIndex.update(index => Math.max(index - 1, 0));
+    } else if (event.key === 'Enter' && this.activeCategoryIndex() >= 0) {
+      event.preventDefault();
+      this.selectCategory(suggestions[this.activeCategoryIndex()]);
+    }
+  }
+
+  selectCategory(category: string): void {
+    this.categoryQuery.set(category === 'Todos' ? '' : category);
+    this.categoryOpen.set(false);
+    this.activeCategoryIndex.set(-1);
+    this.update({ category });
+  }
+
+  categoryOptionId(index: number): string {
+    return `business-category-option-${index}`;
+  }
+
+  activeCategoryId(): string | null {
+    return this.activeCategoryIndex() >= 0 ? this.categoryOptionId(this.activeCategoryIndex()) : null;
+  }
+
+  closeCategorySuggestions(): void {
+    setTimeout(() => this.categoryOpen.set(false), 100);
+  }
 
   get hasFilters(): boolean {
     return (
       !!this.searchQuery ||
       this.filters.category !== 'Todos' ||
-      !!this.filters.location ||
-      this.filters.minimumRating > 0 ||
-      this.filters.bookableOnly ||
-      this.filters.openState !== 'any'
+      !!this.filters.location
     );
   }
 
@@ -514,7 +552,14 @@ export class CategoryFiltersComponent {
   }
 
   clearFilters(): void {
+    this.categoryQuery.set('');
+    this.categoryOpen.set(false);
+    this.activeCategoryIndex.set(-1);
     this.clearAll.emit();
     this.filtersChange.emit({ ...EMPTY_FILTERS });
+  }
+
+  private normalizeCategory(value: string): string {
+    return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
   }
 }

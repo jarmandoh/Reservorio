@@ -376,7 +376,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   businesses: Business[] = [];
   categories = ['Todos', ...DEFAULT_CATEGORIES];
   searchQuery = '';
-  filters: HomeFilters = { category: 'Todos', location: '', minimumRating: 0, bookableOnly: false, openState: 'any' };
+  filters: HomeFilters = { category: 'Todos', location: '' };
   readonly loading = signal(true);
   readonly negocioLoading = signal(false);
   readonly loadingMore = signal(false);
@@ -392,11 +392,6 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       const matchCat = this.filters.category === 'Todos' || negocio.category === this.filters.category;
       const matchLocation =
         !this.filters.location || negocio.location.toLowerCase().includes(this.filters.location.toLowerCase());
-      const matchRating = negocio.rating >= this.filters.minimumRating;
-      const matchBooking = !this.filters.bookableOnly || negocio.businessType === 'appointment';
-      const openNow = this.isOpenNow(negocio.schedule);
-      const matchOpenState =
-        this.filters.openState === 'any' || (this.filters.openState === 'open' ? openNow === true : openNow === false);
       const matchQ =
         !q ||
         negocio.name.toLowerCase().includes(q) ||
@@ -405,12 +400,12 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
         negocio.tags.some(t => t.toLowerCase().includes(q)) ||
         negocio.category.toLowerCase().includes(q) ||
         (negocio.profession ?? '').toLowerCase().includes(q);
-      return matchCat && matchLocation && matchRating && matchBooking && matchOpenState && matchQ;
+      return matchCat && matchLocation && matchQ;
     });
   }
 
   displayedBusinesses(): Business[] {
-    return this.filtered();
+    return this.filtered().sort((left, right) => this.openPriority(left) - this.openPriority(right));
   }
 
   totalAvailable(): number {
@@ -484,7 +479,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
 
   clearAllFilters(): void {
     this.searchQuery = '';
-    this.filters = { category: 'Todos', location: '', minimumRating: 0, bookableOnly: false, openState: 'any' };
+    this.filters = { category: 'Todos', location: '' };
     if (this.searchReloadTimer) clearTimeout(this.searchReloadTimer);
     if (this.filterReloadTimer) clearTimeout(this.filterReloadTimer);
     this.loadBusinesses();
@@ -493,10 +488,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   hasActiveFilters(): boolean {
     return (
       this.filters.category !== 'Todos' ||
-      !!this.filters.location ||
-      this.filters.minimumRating > 0 ||
-      this.filters.bookableOnly ||
-      this.filters.openState !== 'any'
+      !!this.filters.location
     );
   }
 
@@ -535,6 +527,11 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     return closing < opening
       ? currentMinutes >= opening || currentMinutes < closing
       : currentMinutes >= opening && currentMinutes < closing;
+  }
+
+  private openPriority(business: Business): number {
+    const openNow = this.isOpenNow(business.schedule);
+    return openNow === true ? 0 : openNow === null ? 1 : 2;
   }
 
   private loadCategories(): void {
@@ -737,7 +734,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
 
   resetFilters(): void {
     this.searchQuery = '';
-    this.filters = { category: 'Todos', location: '', minimumRating: 0, bookableOnly: false, openState: 'any' };
+    this.filters = { category: 'Todos', location: '' };
     this.loadBusinesses();
   }
 
