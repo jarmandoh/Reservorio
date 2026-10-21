@@ -153,17 +153,36 @@
   .form-input,
   .form-select,
   .form-textarea {
-    @apply w-full border-0 border-b-2 border-transparent rounded-t-md px-4 py-3
-           text-base focus:outline-none transition;
+    @apply w-full rounded-xl px-4 py-3 text-base transition-colors duration-200;
     min-height: 3rem;
     background-color: #f1f4fa;
     color: #181c20;
+    border: 1px solid #c8cfdb;
+    box-shadow: inset 0 1px 1px rgb(24 28 32 / 4%);
+  }
+  .form-input:hover,
+  .form-select:hover,
+  .form-textarea:hover {
+    border-color: #9da8b8;
   }
   .form-input:focus,
   .form-select:focus,
   .form-textarea:focus {
+    outline: none !important;
     background-color: #ffffff;
-    border-bottom-color: #005bc0;
+    border-color: #1a73e8;
+    box-shadow: 0 0 0 3px rgb(26 115 232 / 16%), inset 0 1px 1px rgb(24 28 32 / 4%);
+  }
+  .form-input[aria-invalid='true'],
+  .form-select[aria-invalid='true'],
+  .form-textarea[aria-invalid='true'] {
+    border-color: #ba1a1a;
+  }
+  .form-input[aria-invalid='true']:focus,
+  .form-select[aria-invalid='true']:focus,
+  .form-textarea[aria-invalid='true']:focus {
+    border-color: #ba1a1a;
+    box-shadow: 0 0 0 3px rgb(186 26 26 / 16%), inset 0 1px 1px rgb(24 28 32 / 4%);
   }
   .form-input::placeholder,
   .form-select::placeholder,
@@ -172,6 +191,37 @@
   }
   .form-textarea {
     @apply resize-y min-h-[80px];
+  }
+
+  /* Campos nativos sin la clase de formulario: mantiene un focus consistente en toda la app. */
+  input:not(.form-input):not(.filter-control):where(:not([type='checkbox']):not([type='radio']):not([type='hidden']):not([type='file']):not([type='color']):not([type='range']):not([type='search'])),
+  select:not(.form-select):not(.filter-control),
+  textarea:not(.form-textarea):not(.filter-control) {
+    min-height: 3rem;
+    border: 1px solid #c8cfdb;
+    border-radius: 0.75rem;
+    background-color: #f1f4fa;
+    color: #181c20;
+    transition: border-color 200ms ease, box-shadow 200ms ease, background-color 200ms ease;
+  }
+  input:not(.form-input):not(.filter-control):where(:not([type='checkbox']):not([type='radio']):not([type='hidden']):not([type='file']):not([type='color']):not([type='range']):not([type='search'])):focus,
+  select:not(.form-select):not(.filter-control):focus,
+  textarea:not(.form-textarea):not(.filter-control):focus {
+    outline: none !important;
+    border-color: #1a73e8;
+    background-color: #ffffff;
+    box-shadow: 0 0 0 3px rgb(26 115 232 / 16%);
+  }
+  input:not(.form-input):not(.filter-control):where(:not([type='checkbox']):not([type='radio']):not([type='hidden']):not([type='file']):not([type='color']):not([type='range']):not([type='search']))[aria-invalid='true'],
+  select:not(.form-select):not(.filter-control)[aria-invalid='true'],
+  textarea:not(.form-textarea):not(.filter-control)[aria-invalid='true'] {
+    border-color: #ba1a1a;
+  }
+  input:not(.form-input):not(.filter-control):where(:not([type='checkbox']):not([type='radio']):not([type='hidden']):not([type='file']):not([type='color']):not([type='range']):not([type='search']))[aria-invalid='true']:focus,
+  select:not(.form-select):not(.filter-control)[aria-invalid='true']:focus,
+  textarea:not(.form-textarea):not(.filter-control)[aria-invalid='true']:focus {
+    border-color: #ba1a1a;
+    box-shadow: 0 0 0 3px rgb(186 26 26 / 16%);
   }
   .form-label {
     @apply block text-xs font-semibold tracking-widest uppercase mb-1;
@@ -415,12 +465,56 @@
 .dark .form-textarea {
   background-color: #202a36;
   color: #e6e9ee;
+  border-color: #465365;
+  box-shadow: inset 0 1px 1px rgb(0 0 0 / 18%);
+}
+.dark input:not(.form-input):not(.filter-control):where(:not([type='checkbox']):not([type='radio']):not([type='hidden']):not([type='file']):not([type='color']):not([type='range']):not([type='search'])),
+.dark select:not(.form-select):not(.filter-control),
+.dark textarea:not(.form-textarea):not(.filter-control) {
+  border-color: #465365;
+  background-color: #202a36;
+  color: #e6e9ee;
+}
+.dark input:not(.form-input):not(.filter-control):where(:not([type='checkbox']):not([type='radio']):not([type='hidden']):not([type='file']):not([type='color']):not([type='range']):not([type='search'])):focus,
+.dark select:not(.form-select):not(.filter-control):focus,
+.dark textarea:not(.form-textarea):not(.filter-control):focus {
+  border-color: #8fb5ff;
+  background-color: #161d27;
+  box-shadow: 0 0 0 3px rgb(143 186 255 / 18%);
+}
+.dark input:not(.form-input):not(.filter-control):where(:not([type='checkbox']):not([type='radio']):not([type='hidden']):not([type='file']):not([type='color']):not([type='range']):not([type='search']))[aria-invalid='true'],
+.dark select:not(.form-select):not(.filter-control)[aria-invalid='true'],
+.dark textarea:not(.form-textarea):not(.filter-control)[aria-invalid='true'] {
+  border-color: #ffb4ab;
+}
+.dark input:not(.form-input):not(.filter-control):where(:not([type='checkbox']):not([type='radio']):not([type='hidden']):not([type='file']):not([type='color']):not([type='range']):not([type='search']))[aria-invalid='true']:focus,
+.dark select:not(.form-select):not(.filter-control)[aria-invalid='true']:focus,
+.dark textarea:not(.form-textarea):not(.filter-control)[aria-invalid='true']:focus {
+  border-color: #ffb4ab;
+  box-shadow: 0 0 0 3px rgb(255 180 171 / 18%);
+}
+.dark .form-input:hover,
+.dark .form-select:hover,
+.dark .form-textarea:hover {
+  border-color: #65758b;
 }
 .dark .form-input:focus,
 .dark .form-select:focus,
 .dark .form-textarea:focus {
   background-color: #161d27;
-  border-bottom-color: #8fb5ff;
+  border-color: #8fb5ff;
+  box-shadow: 0 0 0 3px rgb(143 186 255 / 18%), inset 0 1px 1px rgb(0 0 0 / 18%);
+}
+.dark .form-input[aria-invalid='true'],
+.dark .form-select[aria-invalid='true'],
+.dark .form-textarea[aria-invalid='true'] {
+  border-color: #ffb4ab;
+}
+.dark .form-input[aria-invalid='true']:focus,
+.dark .form-select[aria-invalid='true']:focus,
+.dark .form-textarea[aria-invalid='true']:focus {
+  border-color: #ffb4ab;
+  box-shadow: 0 0 0 3px rgb(255 180 171 / 18%), inset 0 1px 1px rgb(0 0 0 / 18%);
 }
 .dark .form-label {
   color: #b8bfc9;

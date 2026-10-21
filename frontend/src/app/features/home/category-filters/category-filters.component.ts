@@ -55,6 +55,7 @@ const EMPTY_FILTERS: HomeFilters = {
             <input
               id="business-search"
               name="business-search"
+              class="filter-control"
               type="search"
               autocomplete="off"
               placeholder="Ej. barbería o masaje…"
@@ -72,6 +73,7 @@ const EMPTY_FILTERS: HomeFilters = {
             <span class="material-icons-round" aria-hidden="true">location_on</span>
             <input
               name="business-location"
+              class="filter-control"
               type="search"
               autocomplete="off"
               placeholder="Ej. Chapinero o Bogotá…"
@@ -87,6 +89,7 @@ const EMPTY_FILTERS: HomeFilters = {
           <span class="select-wrap">
             <select
               name="business-category"
+              class="filter-control"
               [ngModel]="filters.category"
               (ngModelChange)="update({ category: $event })"
               aria-label="Filtrar por categoría"
@@ -104,6 +107,7 @@ const EMPTY_FILTERS: HomeFilters = {
           <span class="select-wrap">
             <select
               name="business-rating"
+              class="filter-control"
               [ngModel]="filters.minimumRating"
               (ngModelChange)="update({ minimumRating: +$event })"
               aria-label="Calificación mínima"
@@ -122,6 +126,7 @@ const EMPTY_FILTERS: HomeFilters = {
           <span class="select-wrap">
             <select
               name="business-open-state"
+              class="filter-control"
               [ngModel]="filters.openState"
               (ngModelChange)="update({ openState: $event })"
               aria-label="Filtrar por horario"
@@ -311,7 +316,7 @@ const EMPTY_FILTERS: HomeFilters = {
       .input-wrap:focus-within,
       .select-wrap:focus-within {
         border-color: var(--color-primary);
-        box-shadow: 0 0 0 3px rgba(0, 91, 191, 0.1);
+        box-shadow: 0 0 0 3px rgba(0, 91, 191, 0.14);
       }
       .input-wrap > .material-icons-round {
         margin-left: 0.7rem;
@@ -330,6 +335,13 @@ const EMPTY_FILTERS: HomeFilters = {
         background: transparent;
         font: inherit;
         font-size: 0.78rem;
+      }
+      .filter-control:focus,
+      .filter-control:focus-visible {
+        outline: none !important;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none !important;
       }
       .input-wrap input {
         padding-left: 0.4rem;
