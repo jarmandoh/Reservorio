@@ -272,6 +272,20 @@ export class AuthService {
     );
   }
 
+  registerCustomerWithPassword(email: string, password: string, name: string): Observable<ApiResponse<{ token?: string; confirmationRequired?: boolean }>> {
+    return from(this.supabase.signUp(email, password, name)).pipe(
+      map(({ data, error }) => {
+        if (error) throw error;
+        return {
+          ok: true,
+          status: 201,
+          data: { token: data.session?.access_token, confirmationRequired: !data.session },
+        };
+      }),
+      tap(res => { if (res.data?.token) this.setCustomerToken(res.data.token); })
+    );
+  }
+
   loginCustomer(email: string, phone: string): Observable<ApiResponse<{ token: string; customer: Customer }>> {
     return this.api.loginCustomer(email, phone).pipe(
       tap(res => {
