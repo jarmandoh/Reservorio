@@ -44,6 +44,18 @@ import { AuthCardComponent } from '../../shared/components/auth-card/auth-card.c
       <button type="button" class="w-full rounded-xl border border-outline-variant px-4 py-3 font-semibold" (click)="loginGoogle()" [disabled]="loading()">
         Continuar con Google
       </button>
+      <button type="button" class="w-full rounded-xl border border-outline-variant px-4 py-3 font-semibold" (click)="requestOtp()" [disabled]="loading()">
+        Enviar código de acceso por email
+      </button>
+      @if (otpRequested()) {
+        <div>
+          <label class="form-label">Código recibido por email</label>
+          <input type="text" inputmode="numeric" maxlength="8" class="form-input w-full" formControlName="code" />
+          <button type="button" class="mt-2 w-full rounded-xl bg-primary px-4 py-3 text-white font-semibold" (click)="verifyOtp()" [disabled]="loading() || form.controls.code.invalid">
+            Verificar código
+          </button>
+        </div>
+      }
     </app-auth-card>
   `,
 })
@@ -55,11 +67,52 @@ export class OwnerLoginComponent {
 
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
+  readonly otpRequested = signal(false);
 
   readonly form = this.fb.group({
     email: ['', [Validators.required, Validators.email]],
     password: ['', [Validators.required, Validators.minLength(6)]],
+    code: [{ value: '', disabled: true }, [Validators.required, Validators.pattern(/^\\d{4,8}$/)]],
   });
+
+  requestOtp(): void {
+    const email = this.form.controls.email.value?.trim();
+    if (!email || this.form.controls.email.invalid) {
+      this.error.set('Introduce un correo válido antes de solicitar el código.');
+      return;
+    }
+    this.loading.set(true);
+    this.error.set(null);
+    this.auth.requestEmailOtp(email).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: () => {
+        this.loading.set(false);
+        this.otpRequested.set(true);
+        this.form.controls.code.enable();
+      },
+      error: err => {
+        this.loading.set(false);
+        this.error.set(err instanceof Error ? err.message : 'No se pudo enviar el código.');
+      },
+    });
+  }
+
+  verifyOtp(): void {
+    const email = this.form.controls.email.value?.trim() ?? '';
+    const code = this.form.controls.code.value?.trim() ?? '';
+    if (!email || !code) return;
+    this.loading.set(true);
+    this.error.set(null);
+    this.auth.verifyEmailOtp(email, code, 'owner').pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: () => {
+        this.loading.set(false);
+        this.router.navigate(['/owner/dashboard']);
+      },
+      error: err => {
+        this.loading.set(false);
+        this.error.set(err instanceof Error ? err.message : 'Código inválido o cuenta sin permisos de propietario.');
+      },
+    });
+  }
 
   loginGoogle(): void {
     this.loading.set(true);
