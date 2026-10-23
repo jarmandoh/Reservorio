@@ -10,9 +10,10 @@ export const adminGuard: CanActivateFn = () => {
   // si nunca hubo sesión, redirige al login para permitir autenticarse.
   const purged = auth.purgeInvalidTokens();
   const hasJwt = !!auth.getAdminToken();
-  const hasLegacy = auth.isUnlocked();
 
-  if (hasJwt || hasLegacy) return true;
+  // No aceptar la antigua bandera local: el acceso administrativo debe tener
+  // un JWT emitido por el backend o una sesión Supabase validada.
+  if (hasJwt) return true;
 
   if (purged.length > 0) router.navigate(['/']);
   else router.navigate(['/jh-login']);
