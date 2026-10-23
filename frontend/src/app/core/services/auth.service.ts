@@ -216,16 +216,14 @@ export class AuthService {
     if (this.supabase.enabled) {
       return from(this.supabase.signInWithPassword(email, password)).pipe(
         map(({ data, error }) => {
-          if (error || !data.session?.access_token) {
-            throw new Error('Credenciales inválidas');
-          }
+          if (error || !data.session?.access_token) throw error ?? new Error('Credenciales inválidas');
           return { ok: true, status: 200, data: { token: data.session.access_token } };
         }),
         tap(res => this.setOwnerToken(res.data!.token)),
-        catchError(err => {
-          this.clearOwnerToken();
-          return throwError(() => err);
-        })
+        catchError(() => this.api.loginOwner(email, password).pipe(
+          tap(res => { if (res.data?.token) this.setOwnerToken(res.data.token); }),
+          catchError(err => { this.clearOwnerToken(); return throwError(() => err); })
+        ))
       );
     }
 
@@ -282,7 +280,7 @@ export class AuthService {
 
   requestCustomerOtp(email: string): Observable<ApiResponse<{ message?: string; debugCode?: string }>> {
     if (this.supabase.enabled) {
-      return from(this.supabase.signInWithOtp(email, false)).pipe(
+      return from(this.supabase.signInWithOtp(email, true)).pipe(
         map(({ error }) => {
           if (error) throw error;
           return { ok: true, status: 200, data: { message: 'Si el correo está registrado, recibirás un código de acceso.' } };
@@ -307,7 +305,7 @@ export class AuthService {
 
   requestCustomerMagicLink(email: string): Observable<ApiResponse<{ message?: string; debugToken?: string }>> {
     if (this.supabase.enabled) {
-      return from(this.supabase.signInWithMagicLink(email, `${window.location.origin}/customer/verify`)).pipe(
+      return from(this.supabase.signInWithMagicLink(email, `${window.location.origin}/customer/verify`, true)).pipe(
         map(({ error }) => {
           if (error) throw error;
           return {
