@@ -178,6 +178,15 @@ export class AuthService {
     );
   }
 
+  requestRoleMagicLink(email: string): Observable<void> {
+    return from(this.supabase.signInWithMagicLink(email, `${window.location.origin}/auth/callback`, false)).pipe(
+      map(({ error }) => {
+        if (error) throw error;
+        return undefined;
+      })
+    );
+  }
+
   requestEmailOtp(email: string, shouldCreateUser = false): Observable<void> {
     return from(this.supabase.signInWithOtp(email, shouldCreateUser)).pipe(
       map(({ error }) => {
