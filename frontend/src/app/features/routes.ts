@@ -17,6 +17,10 @@ export const featureRoutes: Routes = [
   ...businessRoutes,
   ...adminRoutes,
   {
+    path: 'loading',
+    loadComponent: () => import('./loading/loading.component').then(m => m.LoadingComponent),
+  },
+  {
     path: '**',
     loadComponent: () => import('./not-found/not-found.component').then(m => m.NotFoundComponent),
   },

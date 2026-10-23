@@ -114,8 +114,8 @@ export class LoginComponent implements OnInit {
     this.form.markAllAsTouched();
     if (this.form.invalid) return;
 
-    this.loading.set(true);
-    this.loginError.set(false);
+    // Navigate to a dedicated loading screen to give feedback during auth
+    this.router.navigate(['/loading']);
 
     const pin = this.form.value.pin!;
     this.auth.loginAdmin(pin).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
