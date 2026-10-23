@@ -150,6 +150,24 @@ export class AuthService {
     );
   }
 
+  activateSupabaseSession(): Observable<'customer' | 'owner' | 'admin'> {
+    return from(this.supabase.getSession()).pipe(
+      switchMap(({ data, error }) => {
+        if (error || !data.session?.access_token) return throwError(() => error ?? new Error('No hay sesión activa'));
+        return this.api.getAuthMe(data.session.access_token).pipe(
+          map(response => {
+            const role = response.data?.role;
+            if (role === 'admin') this.setAdminToken(data.session!.access_token);
+            else if (role === 'owner') this.setOwnerToken(data.session!.access_token);
+            else if (role === 'customer') this.setCustomerToken(data.session!.access_token);
+            else throw new Error('Tu cuenta no tiene un rol habilitado');
+            return role;
+          })
+        );
+      })
+    );
+  }
+
   loginWithGoogle(role: 'customer' | 'owner' | 'admin' = 'customer'): Observable<void> {
     return from(this.supabase.signInWithGoogle(`${window.location.origin}/auth/callback?role=${role}`)).pipe(
       map(({ error }) => {
