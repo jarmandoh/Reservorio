@@ -60,6 +60,9 @@ import { PinAuthCardComponent } from '../../shared/components/pin-auth-card/pin-
         <button type="button" class="mt-2 w-full rounded-xl border border-outline-variant px-4 py-3 font-semibold" (click)="requestOtp()" [disabled]="loading()">
           Enviar código por email
         </button>
+        <button type="button" class="mt-2 w-full rounded-xl border border-outline-variant px-4 py-3 font-semibold" (click)="requestMagicLink()" [disabled]="loading()">
+          Enviar enlace mágico
+        </button>
         @if (otpRequested()) {
           <label class="form-label mt-3 block" for="admin-code">Código de verificación</label>
           <input id="admin-code" type="text" inputmode="numeric" maxlength="8" class="form-input w-full" formControlName="code" />
@@ -135,6 +138,26 @@ export class LoginComponent implements OnInit {
         this.loading.set(false);
         this.otpRequested.set(true);
         this.form.controls.code.enable();
+      },
+      error: () => {
+        this.loading.set(false);
+        this.loginError.set(true);
+      },
+    });
+  }
+
+  requestMagicLink(): void {
+    const email = this.form.controls.email.value?.trim() ?? '';
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      this.loginError.set(true);
+      return;
+    }
+    this.loading.set(true);
+    this.loginError.set(false);
+    this.auth.requestRoleMagicLink(email).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: () => {
+        this.loading.set(false);
+        this.loginError.set(false);
       },
       error: () => {
         this.loading.set(false);
