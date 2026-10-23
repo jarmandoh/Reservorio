@@ -41,6 +41,9 @@ import { AuthCardComponent } from '../../shared/components/auth-card/auth-card.c
         <label class="form-label">Contraseña</label>
         <input type="password" class="form-input w-full" formControlName="password" />
       </div>
+      <button type="button" class="w-full rounded-xl border border-outline-variant px-4 py-3 font-semibold" (click)="loginGoogle()" [disabled]="loading()">
+        Continuar con Google
+      </button>
     </app-auth-card>
   `,
 })
@@ -58,6 +61,18 @@ export class OwnerLoginComponent {
     password: ['', [Validators.required, Validators.minLength(6)]],
   });
 
+  loginGoogle(): void {
+    this.loading.set(true);
+    this.error.set(null);
+    this.auth.loginWithGoogle('owner').pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: () => this.loading.set(false),
+      error: err => {
+        this.loading.set(false);
+        this.error.set(err instanceof Error ? err.message : 'No se pudo iniciar sesión con Google.');
+      },
+    });
+  }
+
   submit(): void {
     if (this.form.invalid) return;
     this.loading.set(true);
@@ -68,8 +83,12 @@ export class OwnerLoginComponent {
       .loginOwner(email!, password!)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: () => {
+        next: res => {
           this.loading.set(false);
+          if (res.data?.confirmationRequired) {
+            this.error.set('Cuenta creada. Confirma tu correo y luego inicia sesión.');
+            return;
+          }
           this.router.navigate(['/owner/dashboard']);
         },
         error: err => {
