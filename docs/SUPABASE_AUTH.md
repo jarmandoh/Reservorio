@@ -1,44 +1,101 @@
 # Autenticación con Supabase en Reservorio
 
-Reservorio usa Supabase Auth para validar identidades y conserva la base de datos de negocio existente. El navegador solo usa la **publishable key**. La API valida cada access token con `GET /auth/v1/user` antes de resolver el rol y el ID interno.
+Esta rama integra Supabase Auth con el backend Express y las sesiones actuales de Reservorio. Angular usa la publishable key pública; el backend valida cada access token contra `GET /auth/v1/user` y resuelve el rol con datos internos. Nunca se expone una secret/service-role key.
 
-## Roles y asignación
+## Roles y reglas de asignación
 
-- **customer**: se crea el registro interno en `customers` al primer acceso válido. Se admite email/password, Google, OTP y magic link.
-- **owner**: el email autenticado debe existir previamente en `owners`. El alta de propietario sigue el flujo administrativo de creación de owner; no se permite que el cliente elija el rol.
-- **admin**: se asigna exclusivamente en `app_metadata.role = "admin"`, desde un contexto administrativo confiable (Dashboard/servidor). Nunca usar `user_metadata` para conceder permisos.
-- **business-admin**: mantiene su autenticación PIN específica por negocio y sus permisos por `businessId`.
+- **customer**: el registro de cliente conserva sus datos en `customers`. Puede registrarse con contraseña opcional, Google, OTP o magic link. Al autenticar por primera vez, `GET /api/auth/me` resuelve o crea su perfil interno.
+- **owner**: el registro crea el perfil de negocio mediante el endpoint existente y luego la identidad de Supabase. El inicio de sesión acepta contraseña, Google y OTP. El backend vincula por email con la fila ya existente en `owners`; no se concede el rol por metadatos editables.
+- **admin**: puede mantener el PIN validado por backend, o usar Google/OTP con un usuario al que un administrador haya asignado `app_metadata.role = "admin"` desde un entorno confiable.
+- **business-admin**: conserva su PIN por negocio y su JWT limitado a `businessId`; no se convierte automáticamente en owner.
 
-El backend ejecuta la resolución inicial bajo el contexto RLS interno `auth`; después, el middleware instala el contexto correspondiente al rol ya verificado.
+Los roles no se eligen desde el formulario. La API comprueba el rol real en cada ruta protegida; los guards Angular son solo una capa de navegación.
 
-## Métodos disponibles en el cliente Angular
+## Flujos implementados
 
-El servicio `SupabaseAuthService` expone:
+| Tipo de usuario | Contraseña | Google | Código email (OTP) | Magic link |
+|---|---:|---:|---:|---:|
+| Cliente | Sí, opcional al registrarse | Sí | Sí | Sí |
+| Propietario | Sí | Sí | Sí | Servicio disponible |
+| Administrador | PIN por API; Auth password disponible | Sí | Sí | Servicio disponible |
 
-- `signInWithPassword(email, password)`
-- `signUp(email, password, name)`
-- `signInWithGoogle(redirectTo)`
-- `signInWithOtp(email)` + `verifyEmailOtp(email, token)`
-- `signInWithMagicLink(email, redirectTo)`
-- `getSession()` y `signOut()`
+- OAuth y enlaces de correo vuelven a `/auth/callback` o `/customer/verify`.
+- El callback llama a `GET /api/auth/me` y redirige según el rol que resuelve el backend.
+- `AuthService.logout()` cierra la sesión local y la sesión de Supabase.
+- El login antiguo de propietarios sigue como fallback para cuentas anteriores.
 
-Los guards existentes `adminGuard`, `ownerGuard`, `customerGuard` y `businessGuard` continúan protegiendo las rutas. La API también valida el rol; un guard del navegador nunca sustituye la autorización del servidor.
+## Configuración del proyecto Supabase
 
-## Configuración
+Proyecto usado por defecto en los environments:
 
-1. En Supabase → Authentication → Sign In / Providers, habilita Email y Google.
-2. En Authentication → URL Configuration, define Site URL y añade las URLs exactas de retorno:
-   - `http://localhost:4200/customer/verify`
-   - `https://TU-DOMINIO/customer/verify`
-   - la ruta de retorno de OAuth que use la pantalla de login.
-3. Para Google, crea un OAuth Client ID de tipo Web en Google Cloud. Configura como Authorized redirect URI la URL de callback que muestra el proveedor Google de Supabase. Copia Client ID y Client Secret en la configuración del proveedor Google de Supabase.
-4. Configura el runtime del frontend (`window.__APP_CONFIG__`) con:
-   - `supabaseUrl=https://afgoyjoasxjnsliblsde.supabase.co`
-   - `supabasePublishableKey=sb_publishable_...`
-5. En `backend/.env`, define `SUPABASE_URL` y `SUPABASE_PUBLISHABLE_KEY` con los mismos valores públicos. Reinicia el backend.
+- URL: `https://afgoyjoasxjnsliblsde.supabase.co`
+- La publishable key está en `environment.ts` y `environment.prod.ts`; es pública por diseño y puede reemplazarse mediante `window.__APP_CONFIG__`.
+- En el backend define `SUPABASE_URL` y `SUPABASE_PUBLISHABLE_KEY` en las variables de entorno del hosting.
 
-No configures `service_role` ni una secret key en el frontend. Para los administradores, concede `app_metadata.role=admin` desde el servidor o Dashboard; jamás desde un formulario público.
+### Proveedor Email
 
-## Nota sobre OTP y magic link
+1. Supabase → Authentication → Sign In / Providers → Email: habilita email/password y OTP.
+2. Para que la pantalla de código funcione, en Authentication → Email Templates → Magic Link usa una plantilla que incluya `{{ .Token }}`, por ejemplo:
 
-Supabase utiliza el mismo método `signInWithOtp`: sin `emailRedirectTo` envía un código que se canjea con `verifyEmailOtp`; con `emailRedirectTo` envía un enlace de acceso. Configura las plantillas de email para incluir el token/código correspondiente. El proveedor Email debe estar habilitado y tener SMTP configurado para producción.
+   ```html
+   <h2>Tu código de acceso a Reservorio</h2>
+   <p>Introduce este código para continuar: <strong>{{ .Token }}</strong></p>
+   ```
+
+3. Configura SMTP de producción para la entrega fiable de correos. La entrega de emails de prueba de Supabase tiene límites.
+4. La plantilla Magic Link puede usar el enlace de confirmación de Supabase; mantén configurada la URL de retorno permitida.
+
+### Proveedor Google
+
+1. En Google Cloud Console crea un OAuth Client ID de tipo Web.
+2. En Supabase → Authentication → Sign In / Providers → Google, activa el proveedor y copia Client ID y Client Secret.
+3. En Google Cloud, agrega como Authorized redirect URI la URL callback que muestra Supabase para el proveedor. Para este proyecto será:
+   `https://afgoyjoasxjnsliblsde.supabase.co/auth/v1/callback`
+4. Activa Google en Supabase y guarda los cambios.
+
+### URLs permitidas
+
+En Supabase → Authentication → URL Configuration:
+
+- Site URL: `https://reservorio.app`
+- Redirect URLs:
+  - `http://localhost:4200/auth/callback`
+  - `http://localhost:4200/customer/verify`
+  - `https://reservorio.app/auth/callback`
+  - `https://reservorio.app/customer/verify`
+
+Añade las URLs exactas de cualquier dominio adicional de preview o producción. Supabase solo redirige a destinos permitidos.
+
+## Variables del backend
+
+Añade en el hosting/backend:
+
+```env
+SUPABASE_URL=https://afgoyjoasxjnsliblsde.supabase.co
+SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
+```
+
+No uses `SUPABASE_SERVICE_ROLE_KEY` en Angular ni como sustituto de la publishable key para validar sesiones. No subas credenciales privadas al repositorio.
+
+## Roles de administración
+
+Para habilitar a un administrador en Supabase, un administrador de proyecto debe asignar `app_metadata.role = "admin"` usando Dashboard o una operación server-side confiable. Nunca lo pongas en `user_metadata`, porque el usuario puede editar esos metadatos. Después de cambiar `app_metadata`, el usuario debe renovar su sesión para recibir los claims actualizados.
+
+## Seguridad y RLS
+
+La API de Reservorio conserva acceso a PostgreSQL mediante su conexión backend y establece el contexto RLS interno antes de consultar. No se añadieron políticas genéricas a las 21 tablas existentes con RLS porque eso podría exponer datos de clientes, reservas, pagos o negocios. Antes de habilitar acceso directo a esas tablas desde el navegador, hay que diseñar políticas específicas de propiedad y relación para cada tabla y verificar los permisos de Data API.
+
+La tabla `user_profiles` creada previamente mantiene RLS y la política de lectura del perfil propio. No contiene secretos ni sustituye la tabla de perfiles de negocio.
+
+## Verificación manual recomendada
+
+1. Crear un cliente sin contraseña: debe recibir OTP y entrar a `/customer/history`.
+2. Crear un cliente con contraseña: confirmar el email si el proyecto exige confirmación y probar acceso por contraseña.
+3. Iniciar sesión de cliente con Google y comprobar que vuelve a `/auth/callback`.
+4. Crear un propietario y confirmar el email antes de entrar a `/owner/dashboard`.
+5. Probar propietario con contraseña, OTP y Google.
+6. Probar administrador con PIN backend y, si está asignado en `app_metadata`, con OTP o Google.
+7. Intentar usar una sesión de cliente en una ruta de propietario/admin: la API debe responder 403.
+8. Cerrar sesión y confirmar que Supabase elimina la sesión persistida.
+
+La activación de Google y el SMTP son tareas del Dashboard del proyecto; no pueden completarse desde el código del repositorio.
