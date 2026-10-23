@@ -7,6 +7,7 @@ import { StorageService } from '../services/storage.service';
 import { ToastService } from '../services/toast.service';
 import { AuthService } from '../services/auth.service';
 import { SessionStore } from '../state/session.store';
+import { SupabaseAuthService } from '../services/supabase-auth.service';
 
 function isTokenValid(token: string | null): boolean {
   if (!token) return false;
@@ -57,13 +58,14 @@ function getActiveToken(storage: StorageService, url: string): string | null {
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const storage = inject(StorageService);
+  const supabase = inject(SupabaseAuthService);
 
   // Solo para llamadas a la API
   const isApi = req.url.startsWith(environment.apiUrl) || req.url.startsWith('/api');
   if (isApi) {
     // Inyecta Authorization si no existe y hay token disponible
     if (!req.headers.has('Authorization')) {
-      const token = getActiveToken(storage, req.url);
+      const token = getActiveToken(storage, req.url) ?? supabase.accessToken();
       if (token) {
         req = req.clone({ setHeaders: { Authorization: `Bearer ${token}` } });
       }

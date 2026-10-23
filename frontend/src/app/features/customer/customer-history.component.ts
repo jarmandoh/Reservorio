@@ -211,13 +211,32 @@ export class CustomerHistoryComponent implements OnInit {
     this.token = this.auth.getCustomerToken();
     this.customerId = (this.auth.getCustomerPayload()?.customerId as string | undefined) ?? null;
 
-    if (!this.token || !this.customerId) {
+    if (!this.token) {
       this.auth.clearCustomerToken();
       this.router.navigate(['/customer/login']);
       return;
     }
 
-    this.loadHistory(this.page());
+    if (this.customerId) {
+      this.loadHistory(this.page());
+      return;
+    }
+
+    // Los tokens de Supabase no incluyen el id interno de customers.
+    this.api
+      .getCustomerMe(this.token)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: customer => {
+          this.customerId = customer.id;
+          this.customer.set(customer);
+          this.loadHistory(this.page());
+        },
+        error: () => {
+          this.auth.clearCustomerToken();
+          this.router.navigate(['/customer/login']);
+        },
+      });
   }
 
   loadHistory(page: number): void {

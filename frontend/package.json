@@ -28,6 +28,7 @@
     "@angular/platform-browser-dynamic": "^22.0.1",
     "@angular/router": "^22.0.1",
     "@angular/service-worker": "22.0.1",
+    "@supabase/supabase-js": "^2.118.0",
     "gsap": "^3.14.2",
     "leaflet": "^1.9.4",
     "rxjs": "~7.8.0",

@@ -4,6 +4,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../core/services/auth.service';
 import { AuthCardComponent } from '../../shared/components/auth-card/auth-card.component';
+import { SupabaseAuthService } from '../../core/services/supabase-auth.service';
 
 @Component({
   selector: 'app-customer-magic-verify',
@@ -33,6 +34,7 @@ export class CustomerMagicVerifyComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly supabase = inject(SupabaseAuthService);
 
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
@@ -42,6 +44,18 @@ export class CustomerMagicVerifyComponent implements OnInit {
   ngOnInit(): void {
     if (this.auth.isCustomerUnlocked()) {
       this.router.navigate(['/customer/history']);
+      return;
+    }
+
+    if (this.supabase.enabled) {
+      this.supabase.getSession().then(({ data, error }) => {
+        if (error || !data.session?.access_token) {
+          this.error.set('Enlace inválido o caducado. Solicita uno nuevo.');
+          return;
+        }
+        this.auth.setCustomerToken(data.session.access_token);
+        this.router.navigate(['/customer/history']);
+      });
       return;
     }
 

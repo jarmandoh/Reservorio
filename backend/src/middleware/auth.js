@@ -3,11 +3,20 @@
 const { verify } = require('./jwt');
 const db = require('../db');
 const { runWithRlsContext } = require('../db-context');
+const { resolveAuthPayload } = require('../services/supabase-auth.service');
 
 function getBearerToken(req) {
   const header = String(req.headers.authorization || '');
   if (!header.startsWith('Bearer ')) return null;
   return header.slice(7).trim();
+}
+
+async function resolveToken(token) {
+  try {
+    return verify(token);
+  } catch {
+    return resolveAuthPayload(token);
+  }
 }
 
 function requireAuth(req, res, next) {
@@ -16,12 +25,13 @@ function requireAuth(req, res, next) {
     return res.status(401).json({ ok: false, message: 'Token requerido' });
   }
 
-  try {
-    req.authPayload = verify(token);
-    return runWithRlsContext(req.authPayload, next);
-  } catch (err) {
-    return res.status(401).json({ ok: false, message: 'Token invalido o expirado' });
-  }
+  return resolveToken(token)
+    .then(payload => {
+      if (!payload) return res.status(401).json({ ok: false, message: 'Token invalido o expirado' });
+      req.authPayload = payload;
+      return runWithRlsContext(req.authPayload, next);
+    })
+    .catch(() => res.status(401).json({ ok: false, message: 'Token invalido o expirado' }));
 }
 
 function requireAdmin(req, res, next) {
@@ -109,16 +119,16 @@ async function requireBusinessAuth(req, res, next) {
     return res.status(401).json({ ok: false, message: 'Token requerido' });
   }
 
-  try {
-    req.authPayload = verify(token);
-  } catch (err) {
-    return res.status(401).json({ ok: false, message: 'Token invalido o expirado' });
-  }
-
-  return runWithRlsContext(req.authPayload, async () => {
-    if (!(await canAccessBusiness(req, res))) return;
-    next();
-  });
+  return resolveToken(token)
+    .then(async payload => {
+      if (!payload) return res.status(401).json({ ok: false, message: 'Token invalido o expirado' });
+      req.authPayload = payload;
+      return runWithRlsContext(req.authPayload, async () => {
+        if (!(await canAccessBusiness(req, res))) return;
+        next();
+      });
+    })
+    .catch(() => res.status(401).json({ ok: false, message: 'Token invalido o expirado' }));
 }
 
 module.exports = {

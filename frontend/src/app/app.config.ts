@@ -17,7 +17,12 @@ export const appConfig: ApplicationConfig = {
       routes,
       withComponentInputBinding(),
       withInMemoryScrolling({ scrollPositionRestoration: 'top', anchorScrolling: 'enabled' }),
-      withViewTransitions()
+      withViewTransitions({
+        onViewTransitionCreated: ({ transition }) => {
+          // Una navegación nueva puede cancelar la transición anterior de forma esperable.
+          transition.finished.catch(() => undefined);
+        },
+      })
     ),
     provideHttpClient(withInterceptors([authInterceptor, errorInterceptor])),
     // provideZonelessChangeDetection(), // <- activa zoneless (P3) cuando se quite zone.js

@@ -1,5 +1,5 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
-import { Observable, of, throwError } from 'rxjs';
+import { Observable, from, of, throwError } from 'rxjs';
 import { catchError, map, tap } from 'rxjs/operators';
 import { ApiResponse, Customer } from '../models/reservation.model';
 import { Business } from '../models/business.model';
@@ -7,6 +7,7 @@ import { OwnerAuthPayload } from '../models/owner.model';
 import { SessionStore } from '../state/session.store';
 import { ApiService } from './api.service';
 import { StorageService } from './storage.service';
+import { SupabaseAuthService } from './supabase-auth.service';
 
 const SESSION_KEY = 'reservorio_unlocked';
 const PIN_KEY = 'reservorio_admin_pin';
@@ -21,6 +22,7 @@ export class AuthService {
   private readonly api = inject(ApiService);
   private readonly sessionStore = inject(SessionStore);
   private readonly storage = inject(StorageService);
+  private readonly supabase = inject(SupabaseAuthService);
   private _unlocked = signal(this.storage.getItem(SESSION_KEY) === '1');
   readonly isUnlocked = computed(() => this._unlocked());
   readonly isOwnerUnlocked = computed(() => !!this.getOwnerToken());
@@ -149,6 +151,22 @@ export class AuthService {
   }
 
   loginOwner(email: string, password: string): Observable<ApiResponse<{ token: string }>> {
+    if (this.supabase.enabled) {
+      return from(this.supabase.signInWithPassword(email, password)).pipe(
+        map(({ data, error }) => {
+          if (error || !data.session?.access_token) {
+            throw new Error('Credenciales inválidas');
+          }
+          return { ok: true, status: 200, data: { token: data.session.access_token } };
+        }),
+        tap(res => this.setOwnerToken(res.data!.token)),
+        catchError(err => {
+          this.clearOwnerToken();
+          return throwError(() => err);
+        })
+      );
+    }
+
     return this.api.loginOwner(email, password).pipe(
       tap(res => {
         if (res.data?.token) this.setOwnerToken(res.data.token);
@@ -201,6 +219,19 @@ export class AuthService {
   }
 
   requestCustomerMagicLink(email: string): Observable<ApiResponse<{ message?: string; debugToken?: string }>> {
+    if (this.supabase.enabled) {
+      return from(this.supabase.signInWithMagicLink(email, `${window.location.origin}/customer/verify`)).pipe(
+        map(({ error }) => {
+          if (error) throw error;
+          return {
+            ok: true,
+            status: 200,
+            data: { message: 'Si el correo está registrado, recibirás un enlace de acceso.' },
+          };
+        }),
+        catchError(err => throwError(() => err))
+      );
+    }
     return this.api.requestCustomerMagicLink(email);
   }
 
