@@ -178,8 +178,8 @@ export class AuthService {
     );
   }
 
-  requestEmailOtp(email: string): Observable<void> {
-    return from(this.supabase.signInWithOtp(email, true)).pipe(
+  requestEmailOtp(email: string, shouldCreateUser = false): Observable<void> {
+    return from(this.supabase.signInWithOtp(email, shouldCreateUser)).pipe(
       map(({ error }) => {
         if (error) throw error;
         return undefined;
@@ -189,13 +189,18 @@ export class AuthService {
 
   verifyEmailOtp(email: string, code: string, role: 'customer' | 'owner' | 'admin' = 'customer'): Observable<string> {
     return from(this.supabase.verifyEmailOtp(email, code)).pipe(
-      map(({ data, error }) => {
-        if (error || !data.session?.access_token) throw error ?? new Error('No se pudo verificar el código');
+      switchMap(({ data, error }) => {
+        if (error || !data.session?.access_token) return throwError(() => error ?? new Error('No se pudo verificar el código'));
         const token = data.session.access_token;
-        if (role === 'owner') this.setOwnerToken(token);
-        else if (role === 'admin') this.setAdminToken(token);
-        else this.setCustomerToken(token);
-        return token;
+        return this.api.getAuthMe(token).pipe(
+          map(response => {
+            if (response.data?.role !== role) throw new Error('Esta cuenta no tiene permisos para este tipo de acceso.');
+            if (role === 'owner') this.setOwnerToken(token);
+            else if (role === 'admin') this.setAdminToken(token);
+            else this.setCustomerToken(token);
+            return token;
+          })
+        );
       })
     );
   }
