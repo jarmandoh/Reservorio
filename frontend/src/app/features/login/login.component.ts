@@ -1,7 +1,8 @@
-import { Component, signal, inject, OnInit } from '@angular/core';
+import { Component, signal, inject, OnInit, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators, AbstractControl } from '@angular/forms';
 import { Router } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../core/services/auth.service';
 import { PinAuthCardComponent } from '../../shared/components/pin-auth-card/pin-auth-card.component';
 
@@ -53,6 +54,9 @@ import { PinAuthCardComponent } from '../../shared/components/pin-auth-card/pin-
           </p>
         }
       </div>
+      <button type="button" class="w-full rounded-xl border border-outline-variant px-4 py-3 font-semibold" (click)="loginGoogle()" [disabled]="loading()">
+        Acceso administrativo con Google
+      </button>
     </app-pin-auth-card>
   `,
 })
@@ -60,6 +64,7 @@ export class LoginComponent implements OnInit {
   private auth = inject(AuthService);
   private router = inject(Router);
   private fb = inject(FormBuilder);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly loading = signal(false);
   readonly loginError = signal(false);
@@ -87,17 +92,26 @@ export class LoginComponent implements OnInit {
     this.loginError.set(false);
 
     const pin = this.form.value.pin!;
-    const ok = this.auth.login(pin);
-
-    setTimeout(() => {
-      this.loading.set(false);
-      if (ok) {
+    this.auth.loginAdmin(pin).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: () => {
+        this.loading.set(false);
         this.router.navigate(['/admin']);
-      } else {
+      },
+      error: () => {
+        this.loading.set(false);
         this.loginError.set(true);
         this.form.reset();
-      }
-    }, 350);
+      },
+    });
+  }
+
+  loginGoogle(): void {
+    this.loading.set(true);
+    this.loginError.set(false);
+    this.auth.loginWithGoogle('admin').pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: () => this.loading.set(false),
+      error: () => this.loading.set(false),
+    });
   }
 
   goBack(): void {
