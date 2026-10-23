@@ -38,8 +38,9 @@ Proyecto usado por defecto en los environments:
 2. Para que la pantalla de código funcione, en Authentication → Email Templates → Magic Link usa una plantilla que incluya `{{ .Token }}`, por ejemplo:
 
    ```html
-   <h2>Tu código de acceso a Reservorio</h2>
-   <p>Introduce este código para continuar: <strong>{{ .Token }}</strong></p>
+   <h2>Tu acceso a Reservorio</h2>
+   <p>Código de acceso: <strong>{{ .Token }}</strong></p>
+   <p>O abre este enlace seguro: <a href="{{ .ConfirmationURL }}">Iniciar sesión en Reservorio</a></p>
    ```
 
 3. Configura SMTP de producción para la entrega fiable de correos. La entrega de emails de prueba de Supabase tiene límites.
