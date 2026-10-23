@@ -1,11 +1,5 @@
 import { Injectable, signal } from '@angular/core';
-import {
-  createClient,
-  type AuthResponse,
-  type Session,
-  type SupabaseClient,
-  type User,
-} from '@supabase/supabase-js';
+import { createClient, type AuthResponse, type Session, type SupabaseClient, type User } from '@supabase/supabase-js';
 import { environment } from '../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
@@ -27,16 +21,15 @@ export class SupabaseAuthService {
 
   constructor() {
     if (!this.client) return;
-
-    void this.client.auth.getSession().then(({ data }) => {
-      this.accessToken.set(data.session?.access_token ?? null);
-      this.user.set(data.session?.user ?? null);
+    this.client.auth.onAuthStateChange((_event, session) => this.applySession(session));
+    void this.client.auth.getSession().then(({ data, error }) => {
+      if (!error) this.applySession(data.session);
     });
+  }
 
-    this.client.auth.onAuthStateChange((_event, session) => {
-      this.accessToken.set(session?.access_token ?? null);
-      this.user.set(session?.user ?? null);
-    });
+  private applySession(session: Session | null): void {
+    this.accessToken.set(session?.access_token ?? null);
+    this.user.set(session?.user ?? null);
   }
 
   get enabled(): boolean {
@@ -45,19 +38,19 @@ export class SupabaseAuthService {
 
   signInWithPassword(email: string, password: string): Promise<AuthResponse> {
     if (!this.client) return Promise.reject(new Error('Supabase Auth no está configurado'));
-    return this.client.auth.signInWithPassword({ email, password });
+    return this.client.auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
   }
 
   signUp(email: string, password: string, name: string): Promise<AuthResponse> {
     if (!this.client) return Promise.reject(new Error('Supabase Auth no está configurado'));
     return this.client.auth.signUp({
-      email,
+      email: email.trim().toLowerCase(),
       password,
-      options: { data: { full_name: name } },
+      options: { data: { full_name: name.trim() } },
     });
   }
 
-  signInWithGoogle(redirectTo: string): Promise<{ data: { provider: string; url: string | null }; error: Error | null }> {
+  signInWithGoogle(redirectTo: string) {
     if (!this.client) return Promise.reject(new Error('Supabase Auth no está configurado'));
     return this.client.auth.signInWithOAuth({
       provider: 'google',
@@ -65,28 +58,25 @@ export class SupabaseAuthService {
     });
   }
 
-  signInWithOtp(email: string, redirectTo?: string): Promise<{ data: { user: User | null; session: Session | null }; error: Error | null }> {
+  signInWithOtp(email: string, shouldCreateUser = false) {
     if (!this.client) return Promise.reject(new Error('Supabase Auth no está configurado'));
     return this.client.auth.signInWithOtp({
-      email,
-      options: {
-        shouldCreateUser: false,
-        ...(redirectTo ? { emailRedirectTo: redirectTo } : {}),
-      },
+      email: email.trim().toLowerCase(),
+      options: { shouldCreateUser },
+    });
+  }
+
+  signInWithMagicLink(email: string, redirectTo: string, shouldCreateUser = false) {
+    if (!this.client) return Promise.reject(new Error('Supabase Auth no está configurado'));
+    return this.client.auth.signInWithOtp({
+      email: email.trim().toLowerCase(),
+      options: { shouldCreateUser, emailRedirectTo: redirectTo },
     });
   }
 
   verifyEmailOtp(email: string, token: string): Promise<AuthResponse> {
     if (!this.client) return Promise.reject(new Error('Supabase Auth no está configurado'));
-    return this.client.auth.verifyOtp({ email, token, type: 'email' });
-  }
-
-  signInWithMagicLink(email: string, redirectTo: string): Promise<{ data: { user: User | null; session: Session | null }; error: Error | null }> {
-    if (!this.client) return Promise.reject(new Error('Supabase Auth no está configurado'));
-    return this.client.auth.signInWithOtp({
-      email,
-      options: { shouldCreateUser: false, emailRedirectTo: redirectTo },
-    });
+    return this.client.auth.verifyOtp({ email: email.trim().toLowerCase(), token: token.trim(), type: 'email' });
   }
 
   getSession(): Promise<{ data: { session: Session | null }; error: Error | null }> {
