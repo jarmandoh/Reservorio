@@ -238,4 +238,9 @@ router.post(
   }
 );
 
+/** GET /api/auth/me — devuelve el rol resuelto por el backend para la sesión actual. */
+router.get('/me', requireAuth, (req, res) => {
+  return res.status(200).json({ ok: true, data: req.authPayload });
+});
+
 module.exports = router;
