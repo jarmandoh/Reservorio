@@ -22,7 +22,7 @@ Los roles no se eligen desde el formulario. La API comprueba el rol real en cada
 - OAuth y enlaces de correo vuelven a `/auth/callback` o `/customer/verify`.
 - El callback llama a `GET /api/auth/me` y redirige según el rol que resuelve el backend.
 - `AuthService.logout()` cierra la sesión local y la sesión de Supabase.
-- El login antiguo de propietarios sigue como fallback para cuentas anteriores.
+- Las cuentas antiguas de propietarios deben migrarse/invitarse en Supabase Auth con el mismo email antes de iniciar sesión; no se usa el login legacy como bypass de la confirmación de correo.
 
 ## Configuración del proyecto Supabase
 
