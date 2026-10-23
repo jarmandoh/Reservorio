@@ -87,7 +87,7 @@ export class LoginComponent implements OnInit {
   readonly form = this.fb.group({
     pin: ['', [Validators.required, Validators.minLength(4)]],
     email: [''],
-    code: [{ value: '', disabled: true }, [Validators.required, Validators.pattern(/^\\d{4,8}$/)]],
+    code: [{ value: '', disabled: true }, [Validators.required, Validators.pattern(/^\d{4,8}$/)]],
   });
 
   ngOnInit(): void {
@@ -124,7 +124,7 @@ export class LoginComponent implements OnInit {
 
   requestOtp(): void {
     const email = this.form.controls.email.value?.trim() ?? '';
-    if (!email || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) {
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       this.loginError.set(true);
       return;
     }
