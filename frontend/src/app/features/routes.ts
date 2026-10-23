@@ -7,6 +7,10 @@ import { publicRoutes } from './routes/public.routes';
 
 /** Composición de rutas por dominio. Mantener la ruta comodín al final. */
 export const featureRoutes: Routes = [
+  {
+    path: 'auth/callback',
+    loadComponent: () => import('./auth-callback/auth-callback.component').then(m => m.AuthCallbackComponent),
+  },
   ...publicRoutes,
   ...customerRoutes,
   ...ownerRoutes,
