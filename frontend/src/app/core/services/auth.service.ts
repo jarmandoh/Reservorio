@@ -1,4 +1,4 @@
-import { Injectable, signal, computed, inject } from '@angular/core';
+import { Injectable, signal, computed, inject, effect } from '@angular/core';
 import { Observable, from, of, throwError } from 'rxjs';
 import { catchError, map, tap, switchMap } from 'rxjs/operators';
 import { ApiResponse, Customer } from '../models/reservation.model';
@@ -24,6 +24,29 @@ export class AuthService {
   private readonly storage = inject(StorageService);
   private readonly supabase = inject(SupabaseAuthService);
   private _unlocked = signal(this.storage.getItem(SESSION_KEY) === '1');
+
+  constructor() {
+    // Mantiene sincronizado el Bearer que usa HttpClient con los refresh automáticos
+    // de Supabase Auth (incluidos cambios de sesión en otras pestañas).
+    effect(() => {
+      const refreshedToken = this.supabase.accessToken();
+      const admin = this.storage.getItem(ADMIN_JWT);
+      const owner = this.storage.getItem(OWNER_JWT);
+      const customer = this.storage.getItem(CUSTOMER_JWT, 'local');
+
+      if (!refreshedToken) {
+        if (admin && this.isSupabaseToken(admin)) this.clearAdminToken();
+        if (owner && this.isSupabaseToken(owner)) this.clearOwnerToken();
+        if (customer && this.isSupabaseToken(customer)) this.clearCustomerToken();
+        return;
+      }
+
+      if (admin && this.isSupabaseToken(admin)) this.setAdminToken(refreshedToken);
+      else if (owner && this.isSupabaseToken(owner)) this.setOwnerToken(refreshedToken);
+      else if (customer && this.isSupabaseToken(customer)) this.setCustomerToken(refreshedToken);
+    });
+  }
+
   readonly isUnlocked = computed(() => this._unlocked());
   readonly isOwnerUnlocked = computed(() => !!this.getOwnerToken());
   readonly isCustomerUnlocked = computed(() => !!this.getCustomerToken());
