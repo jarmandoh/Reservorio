@@ -150,6 +150,50 @@ export class AuthService {
     );
   }
 
+  loginWithGoogle(role: 'customer' | 'owner' | 'admin' = 'customer'): Observable<void> {
+    return from(this.supabase.signInWithGoogle(`${window.location.origin}/auth/callback?role=${role}`)).pipe(
+      map(({ error }) => {
+        if (error) throw error;
+        return undefined;
+      })
+    );
+  }
+
+  requestEmailOtp(email: string): Observable<void> {
+    return from(this.supabase.signInWithOtp(email, false)).pipe(
+      map(({ error }) => {
+        if (error) throw error;
+        return undefined;
+      })
+    );
+  }
+
+  verifyEmailOtp(email: string, code: string, role: 'customer' | 'owner' | 'admin' = 'customer'): Observable<string> {
+    return from(this.supabase.verifyEmailOtp(email, code)).pipe(
+      map(({ data, error }) => {
+        if (error || !data.session?.access_token) throw error ?? new Error('No se pudo verificar el código');
+        const token = data.session.access_token;
+        if (role === 'owner') this.setOwnerToken(token);
+        else if (role === 'admin') this.setAdminToken(token);
+        else this.setCustomerToken(token);
+        return token;
+      })
+    );
+  }
+
+  loginWithPassword(email: string, password: string, role: 'customer' | 'owner' | 'admin' = 'customer'): Observable<string> {
+    return from(this.supabase.signInWithPassword(email, password)).pipe(
+      map(({ data, error }) => {
+        if (error || !data.session?.access_token) throw error ?? new Error('Credenciales inválidas');
+        const token = data.session.access_token;
+        if (role === 'owner') this.setOwnerToken(token);
+        else if (role === 'admin') this.setAdminToken(token);
+        else this.setCustomerToken(token);
+        return token;
+      })
+    );
+  }
+
   loginOwner(email: string, password: string): Observable<ApiResponse<{ token: string }>> {
     if (this.supabase.enabled) {
       return from(this.supabase.signInWithPassword(email, password)).pipe(
@@ -178,15 +222,30 @@ export class AuthService {
     );
   }
 
-  registerOwner(payload: OwnerAuthPayload): Observable<ApiResponse<{ token: string }>> {
-    return this.api.registerOwner(payload).pipe(
-      tap(res => {
-        if (res.data?.token) this.setOwnerToken(res.data.token);
+  registerOwner(payload: OwnerAuthPayload): Observable<ApiResponse<{ token?: string; confirmationRequired?: boolean }>> {
+    if (!this.supabase.enabled) {
+      return this.api.registerOwner(payload).pipe(
+        tap(res => { if (res.data?.token) this.setOwnerToken(res.data.token); }),
+        catchError(err => { this.clearOwnerToken(); return throwError(() => err); })
+      );
+    }
+    return from(this.supabase.signUp(payload.email, payload.password, payload.name)).pipe(
+      map(({ data, error }) => {
+        if (error) throw error;
+        return data;
       }),
-      catchError(err => {
-        this.clearOwnerToken();
-        return throwError(() => err);
-      })
+      // La fila owner solo se crea por el endpoint existente; la contraseña no se usa
+      // como autoridad de rol. El backend verifica el token Supabase en las rutas protegidas.
+      map(data => ({
+        ok: true,
+        status: 201,
+        data: {
+          token: data.session?.access_token,
+          confirmationRequired: !data.session,
+        },
+      })),
+      tap(res => { if (res.data?.token) this.setOwnerToken(res.data.token); }),
+      catchError(err => { this.clearOwnerToken(); return throwError(() => err); })
     );
   }
 
@@ -203,18 +262,27 @@ export class AuthService {
   }
 
   requestCustomerOtp(email: string): Observable<ApiResponse<{ message?: string; debugCode?: string }>> {
+    if (this.supabase.enabled) {
+      return from(this.supabase.signInWithOtp(email, false)).pipe(
+        map(({ error }) => {
+          if (error) throw error;
+          return { ok: true, status: 200, data: { message: 'Si el correo está registrado, recibirás un código de acceso.' } };
+        })
+      );
+    }
     return this.api.requestCustomerOtp(email);
   }
 
-  loginCustomerWithOtp(email: string, code: string): Observable<ApiResponse<{ token: string; customer: Customer }>> {
+  loginCustomerWithOtp(email: string, code: string): Observable<ApiResponse<{ token: string; customer?: Customer }>> {
+    if (this.supabase.enabled) {
+      return this.verifyEmailOtp(email, code, 'customer').pipe(
+        map(token => ({ ok: true, status: 200, data: { token } })),
+        catchError(err => { this.clearCustomerToken(); return throwError(() => err); })
+      );
+    }
     return this.api.verifyCustomerOtp(email, code).pipe(
-      tap(res => {
-        if (res.data?.token) this.setCustomerToken(res.data.token);
-      }),
-      catchError(err => {
-        this.clearCustomerToken();
-        return throwError(() => err);
-      })
+      tap(res => { if (res.data?.token) this.setCustomerToken(res.data.token); }),
+      catchError(err => { this.clearCustomerToken(); return throwError(() => err); })
     );
   }
 
@@ -235,7 +303,16 @@ export class AuthService {
     return this.api.requestCustomerMagicLink(email);
   }
 
-  redeemCustomerMagicLink(token: string): Observable<ApiResponse<{ token: string; customer: Customer }>> {
+  redeemCustomerMagicLink(token: string): Observable<ApiResponse<{ token: string; customer?: Customer }>> {
+    if (this.supabase.enabled) {
+      return from(this.supabase.getSession()).pipe(
+        map(({ data, error }) => {
+          if (error || !data.session?.access_token) throw error ?? new Error('El enlace no pudo validarse');
+          this.setCustomerToken(data.session.access_token);
+          return { ok: true, status: 200, data: { token: data.session.access_token } };
+        })
+      );
+    }
     return this.api.verifyCustomerMagicLink(token).pipe(
       tap(res => {
         if (res.data?.token) this.setCustomerToken(res.data.token);
