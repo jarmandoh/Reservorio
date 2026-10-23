@@ -1,6 +1,6 @@
-import { Injectable, signal, computed, inject } from '@angular/core';
+import { Injectable, signal, computed, inject, effect } from '@angular/core';
 import { Observable, from, of, throwError } from 'rxjs';
-import { catchError, map, tap } from 'rxjs/operators';
+import { catchError, map, tap, switchMap } from 'rxjs/operators';
 import { ApiResponse, Customer } from '../models/reservation.model';
 import { Business } from '../models/business.model';
 import { OwnerAuthPayload } from '../models/owner.model';
@@ -24,6 +24,29 @@ export class AuthService {
   private readonly storage = inject(StorageService);
   private readonly supabase = inject(SupabaseAuthService);
   private _unlocked = signal(this.storage.getItem(SESSION_KEY) === '1');
+
+  constructor() {
+    // Mantiene sincronizado el Bearer que usa HttpClient con los refresh automáticos
+    // de Supabase Auth (incluidos cambios de sesión en otras pestañas).
+    effect(() => {
+      const refreshedToken = this.supabase.accessToken();
+      const admin = this.storage.getItem(ADMIN_JWT);
+      const owner = this.storage.getItem(OWNER_JWT);
+      const customer = this.storage.getItem(CUSTOMER_JWT, 'local');
+
+      if (!refreshedToken) {
+        if (admin && this.isSupabaseToken(admin)) this.clearAdminToken();
+        if (owner && this.isSupabaseToken(owner)) this.clearOwnerToken();
+        if (customer && this.isSupabaseToken(customer)) this.clearCustomerToken();
+        return;
+      }
+
+      if (admin && this.isSupabaseToken(admin)) this.setAdminToken(refreshedToken);
+      else if (owner && this.isSupabaseToken(owner)) this.setOwnerToken(refreshedToken);
+      else if (customer && this.isSupabaseToken(customer)) this.setCustomerToken(refreshedToken);
+    });
+  }
+
   readonly isUnlocked = computed(() => this._unlocked());
   readonly isOwnerUnlocked = computed(() => !!this.getOwnerToken());
   readonly isCustomerUnlocked = computed(() => !!this.getCustomerToken());
@@ -44,6 +67,7 @@ export class AuthService {
   }
 
   logout(): void {
+    void this.supabase.signOut();
     this.clearAllAuthTokens();
     this.storage.removeItem(SESSION_KEY);
     this._unlocked.set(false);
@@ -150,16 +174,91 @@ export class AuthService {
     );
   }
 
+  activateSupabaseSession(): Observable<'customer' | 'owner' | 'admin'> {
+    return from(this.supabase.getSession()).pipe(
+      switchMap(({ data, error }) => {
+        if (error || !data.session?.access_token) return throwError(() => error ?? new Error('No hay sesión activa'));
+        return this.api.getAuthMe(data.session.access_token).pipe(
+          map(response => {
+            const role = response.data?.role;
+            if (role === 'admin') this.setAdminToken(data.session!.access_token);
+            else if (role === 'owner') this.setOwnerToken(data.session!.access_token);
+            else if (role === 'customer') this.setCustomerToken(data.session!.access_token);
+            else throw new Error('Tu cuenta no tiene un rol habilitado');
+            return role;
+          })
+        );
+      })
+    );
+  }
+
+  loginWithGoogle(role: 'customer' | 'owner' | 'admin' = 'customer'): Observable<void> {
+    return from(this.supabase.signInWithGoogle(`${window.location.origin}/auth/callback?role=${role}`)).pipe(
+      map(({ error }) => {
+        if (error) throw error;
+        return undefined;
+      })
+    );
+  }
+
+  requestRoleMagicLink(email: string): Observable<void> {
+    return from(this.supabase.signInWithMagicLink(email, `${window.location.origin}/auth/callback`, false)).pipe(
+      map(({ error }) => {
+        if (error) throw error;
+        return undefined;
+      })
+    );
+  }
+
+  requestEmailOtp(email: string, shouldCreateUser = false): Observable<void> {
+    return from(this.supabase.signInWithOtp(email, shouldCreateUser)).pipe(
+      map(({ error }) => {
+        if (error) throw error;
+        return undefined;
+      })
+    );
+  }
+
+  verifyEmailOtp(email: string, code: string, role: 'customer' | 'owner' | 'admin' = 'customer'): Observable<string> {
+    return from(this.supabase.verifyEmailOtp(email, code)).pipe(
+      switchMap(({ data, error }) => {
+        if (error || !data.session?.access_token) return throwError(() => error ?? new Error('No se pudo verificar el código'));
+        const token = data.session.access_token;
+        return this.api.getAuthMe(token).pipe(
+          map(response => {
+            if (response.data?.role !== role) throw new Error('Esta cuenta no tiene permisos para este tipo de acceso.');
+            if (role === 'owner') this.setOwnerToken(token);
+            else if (role === 'admin') this.setAdminToken(token);
+            else this.setCustomerToken(token);
+            return token;
+          })
+        );
+      })
+    );
+  }
+
+  loginWithPassword(email: string, password: string, role: 'customer' | 'owner' | 'admin' = 'customer'): Observable<string> {
+    return from(this.supabase.signInWithPassword(email, password)).pipe(
+      switchMap(({ data, error }) => {
+        if (error || !data.session?.access_token) return throwError(() => error ?? new Error('Credenciales inválidas'));
+        const token = data.session.access_token;
+        return this.api.getAuthMe(token).pipe(
+          map(response => {
+            if (response.data?.role !== role) throw new Error('Esta cuenta no tiene permisos para este tipo de acceso.');
+            if (role === 'owner') this.setOwnerToken(token);
+            else if (role === 'admin') this.setAdminToken(token);
+            else this.setCustomerToken(token);
+            return token;
+          })
+        );
+      })
+    );
+  }
+
   loginOwner(email: string, password: string): Observable<ApiResponse<{ token: string }>> {
     if (this.supabase.enabled) {
-      return from(this.supabase.signInWithPassword(email, password)).pipe(
-        map(({ data, error }) => {
-          if (error || !data.session?.access_token) {
-            throw new Error('Credenciales inválidas');
-          }
-          return { ok: true, status: 200, data: { token: data.session.access_token } };
-        }),
-        tap(res => this.setOwnerToken(res.data!.token)),
+      return this.loginWithPassword(email, password, 'owner').pipe(
+        map(token => ({ ok: true, status: 200, data: { token } })),
         catchError(err => {
           this.clearOwnerToken();
           return throwError(() => err);
@@ -178,15 +277,45 @@ export class AuthService {
     );
   }
 
-  registerOwner(payload: OwnerAuthPayload): Observable<ApiResponse<{ token: string }>> {
+  registerOwner(payload: OwnerAuthPayload): Observable<ApiResponse<{ token?: string; confirmationRequired?: boolean }>> {
+    if (!this.supabase.enabled) {
+      return this.api.registerOwner(payload).pipe(
+        tap(res => { if (res.data?.token) this.setOwnerToken(res.data.token); }),
+        catchError(err => { this.clearOwnerToken(); return throwError(() => err); })
+      );
+    }
     return this.api.registerOwner(payload).pipe(
-      tap(res => {
-        if (res.data?.token) this.setOwnerToken(res.data.token);
+      map(() => payload),
+      // Primero se crea el registro interno; después Supabase crea la identidad verificada.
+      // El JWT legacy de respuesta nunca se guarda cuando Supabase está habilitado.
+      switchMap(owner => from(this.supabase.signUp(owner.email, owner.password, owner.name))),
+      map(({ data, error }) => {
+        if (error) throw error;
+        return {
+          ok: true,
+          status: 201,
+          data: {
+            token: data.session?.access_token,
+            confirmationRequired: !data.session,
+          },
+        };
       }),
-      catchError(err => {
-        this.clearOwnerToken();
-        return throwError(() => err);
-      })
+      tap(res => { if (res.data?.token) this.setOwnerToken(res.data.token); }),
+      catchError(err => { this.clearOwnerToken(); return throwError(() => err); })
+    );
+  }
+
+  registerCustomerWithPassword(email: string, password: string, name: string): Observable<ApiResponse<{ token?: string; confirmationRequired?: boolean }>> {
+    return from(this.supabase.signUp(email, password, name)).pipe(
+      map(({ data, error }) => {
+        if (error) throw error;
+        return {
+          ok: true,
+          status: 201,
+          data: { token: data.session?.access_token, confirmationRequired: !data.session },
+        };
+      }),
+      tap(res => { if (res.data?.token) this.setCustomerToken(res.data.token); })
     );
   }
 
@@ -203,24 +332,33 @@ export class AuthService {
   }
 
   requestCustomerOtp(email: string): Observable<ApiResponse<{ message?: string; debugCode?: string }>> {
+    if (this.supabase.enabled) {
+      return from(this.supabase.signInWithOtp(email, true)).pipe(
+        map(({ error }) => {
+          if (error) throw error;
+          return { ok: true, status: 200, data: { message: 'Si el correo está registrado, recibirás un código de acceso.' } };
+        })
+      );
+    }
     return this.api.requestCustomerOtp(email);
   }
 
-  loginCustomerWithOtp(email: string, code: string): Observable<ApiResponse<{ token: string; customer: Customer }>> {
+  loginCustomerWithOtp(email: string, code: string): Observable<ApiResponse<{ token: string; customer?: Customer }>> {
+    if (this.supabase.enabled) {
+      return this.verifyEmailOtp(email, code, 'customer').pipe(
+        map(token => ({ ok: true, status: 200, data: { token } })),
+        catchError(err => { this.clearCustomerToken(); return throwError(() => err); })
+      );
+    }
     return this.api.verifyCustomerOtp(email, code).pipe(
-      tap(res => {
-        if (res.data?.token) this.setCustomerToken(res.data.token);
-      }),
-      catchError(err => {
-        this.clearCustomerToken();
-        return throwError(() => err);
-      })
+      tap(res => { if (res.data?.token) this.setCustomerToken(res.data.token); }),
+      catchError(err => { this.clearCustomerToken(); return throwError(() => err); })
     );
   }
 
   requestCustomerMagicLink(email: string): Observable<ApiResponse<{ message?: string; debugToken?: string }>> {
     if (this.supabase.enabled) {
-      return from(this.supabase.signInWithMagicLink(email, `${window.location.origin}/customer/verify`)).pipe(
+      return from(this.supabase.signInWithMagicLink(email, `${window.location.origin}/customer/verify`, true)).pipe(
         map(({ error }) => {
           if (error) throw error;
           return {
@@ -235,7 +373,16 @@ export class AuthService {
     return this.api.requestCustomerMagicLink(email);
   }
 
-  redeemCustomerMagicLink(token: string): Observable<ApiResponse<{ token: string; customer: Customer }>> {
+  redeemCustomerMagicLink(token: string): Observable<ApiResponse<{ token: string; customer?: Customer }>> {
+    if (this.supabase.enabled) {
+      return from(this.supabase.getSession()).pipe(
+        map(({ data, error }) => {
+          if (error || !data.session?.access_token) throw error ?? new Error('El enlace no pudo validarse');
+          this.setCustomerToken(data.session.access_token);
+          return { ok: true, status: 200, data: { token: data.session.access_token } };
+        })
+      );
+    }
     return this.api.verifyCustomerMagicLink(token).pipe(
       tap(res => {
         if (res.data?.token) this.setCustomerToken(res.data.token);
@@ -372,6 +519,34 @@ export class AuthService {
     const admin = this.storage.getItem(ADMIN_JWT);
     const owner = this.storage.getItem(OWNER_JWT);
     const customer = this.storage.getItem(CUSTOMER_JWT, 'local');
+    const activeSupabaseToken = admin || owner || customer;
+
+    // Supabase renueva sus propios refresh tokens; el token nuevo debe copiarse
+    // al almacén por rol que usa el interceptor de la API de Reservorio.
+    if (activeSupabaseToken && this.isSupabaseToken(activeSupabaseToken)) {
+      return from(this.supabase.getSession()).pipe(
+        switchMap(({ data, error }) => {
+          if (error || !data.session?.access_token) return throwError(() => error ?? new Error('Sesión Supabase expirada'));
+          const token = data.session.access_token;
+          return this.api.getAuthMe(token).pipe(
+            map(response => {
+              const role = response.data?.role;
+              if (role === 'admin') this.setAdminToken(token);
+              else if (role === 'owner') this.setOwnerToken(token);
+              else if (role === 'customer') this.setCustomerToken(token);
+              else throw new Error('Rol de sesión no reconocido');
+              return undefined;
+            })
+          );
+        }),
+        catchError(() => {
+          this.clearAdminToken();
+          this.clearOwnerToken();
+          this.clearCustomerToken();
+          return of(undefined);
+        })
+      );
+    }
 
     let target: { token: string; apply: (t: string) => void; clear: () => void } | null = null;
     if (admin) {
@@ -409,6 +584,11 @@ export class AuthService {
         return of(undefined);
       })
     );
+  }
+
+  private isSupabaseToken(token: string): boolean {
+    const payload = this.decodeToken(token);
+    return typeof payload?.['iss'] === 'string' && String(payload['iss']).includes('.supabase.co/auth/v1');
   }
 
   decodeToken(token: string | null): { [key: string]: unknown } | null {

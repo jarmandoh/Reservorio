@@ -65,8 +65,12 @@ export class OwnerRegisterComponent {
       .registerOwner(payload)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: () => {
+        next: res => {
           this.loading.set(false);
+          if (res.data?.confirmationRequired) {
+            this.error.set('Cuenta creada. Confirma tu correo y luego inicia sesión.');
+            return;
+          }
           this.router.navigate(['/owner/dashboard']);
         },
         error: err => {

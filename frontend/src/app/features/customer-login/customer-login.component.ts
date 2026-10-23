@@ -7,7 +7,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { ApiService } from '../../core/services/api.service';
 import { AuthCardComponent } from '../../shared/components/auth-card/auth-card.component';
 
-type AuthMode = 'credentials' | 'otp';
+type AuthMode = 'credentials' | 'password' | 'otp';
 
 @Component({
   selector: 'app-customer-login',
@@ -36,7 +36,7 @@ type AuthMode = 'credentials' | 'otp';
         Volver al inicio
       </a>
 
-      <div class="mb-4 grid grid-cols-2 gap-2">
+      <div class="mb-4 grid grid-cols-3 gap-2">
         <button
           type="button"
           class="rounded-xl border px-3 py-2 text-sm font-semibold transition-colors"
@@ -51,6 +51,17 @@ type AuthMode = 'credentials' | 'otp';
         <button
           type="button"
           class="rounded-xl border px-3 py-2 text-sm font-semibold transition-colors"
+          [class.border-primary]="mode() === 'password'"
+          [class.text-primary]="mode() === 'password'"
+          [class.bg-primary/10]="mode() === 'password'"
+          [class.border-on-surface-variant/30]="mode() !== 'password'"
+          (click)="setMode('password')"
+        >
+          Contraseña
+        </button>
+        <button
+          type="button"
+          class="rounded-xl border px-3 py-2 text-sm font-semibold transition-colors"
           [class.border-primary]="mode() === 'otp'"
           [class.text-primary]="mode() === 'otp'"
           [class.bg-primary/10]="mode() === 'otp'"
@@ -60,6 +71,10 @@ type AuthMode = 'credentials' | 'otp';
           Código por email
         </button>
       </div>
+
+      <button type="button" class="mb-4 w-full rounded-xl border border-outline-variant px-4 py-3 font-semibold" (click)="loginGoogle()" [disabled]="loading()">
+        Continuar con Google
+      </button>
 
       <div>
         <label class="form-label" for="email">Correo electrónico</label>
@@ -106,6 +121,13 @@ type AuthMode = 'credentials' | 'otp';
               Recibe un enlace por correo
             </button>
           </p>
+        </div>
+      }
+
+      @if (mode() === 'password') {
+        <div>
+          <label class="form-label" for="password">Contraseña</label>
+          <input id="password" type="password" class="form-input w-full" formControlName="password" autocomplete="current-password" />
         </div>
       }
 
@@ -168,6 +190,7 @@ export class CustomerLoginComponent implements OnInit {
   readonly form = this.fb.group({
     email: ['', [Validators.required, Validators.email]],
     phone: ['', [Validators.required, Validators.minLength(7)]],
+    password: [{ value: '', disabled: true }, [Validators.required, Validators.minLength(6)]],
     code: [
       { value: '', disabled: true },
       [Validators.minLength(4), Validators.maxLength(8), Validators.pattern(/^\d{4,8}$/)],
@@ -176,11 +199,12 @@ export class CustomerLoginComponent implements OnInit {
 
   get submitLabel(): string {
     if (this.mode() === 'credentials') return 'Ver mi historial';
+    if (this.mode() === 'password') return 'Iniciar sesión';
     return this.codeRequested() ? 'Entrar con el código' : 'Enviar código';
   }
 
   get loadingLabel(): string {
-    if (this.mode() === 'credentials') return 'Comprobando…';
+    if (this.mode() === 'credentials' || this.mode() === 'password') return 'Comprobando…';
     return this.codeRequested() ? 'Verificando…' : 'Enviando código…';
   }
 
@@ -196,22 +220,33 @@ export class CustomerLoginComponent implements OnInit {
     }
   }
 
+  loginGoogle(): void {
+    this.loading.set(true);
+    this.error.set(null);
+    this.auth.loginWithGoogle('customer').pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: () => this.loading.set(false),
+      error: err => {
+        this.loading.set(false);
+        this.error.set(err instanceof Error ? err.message : 'No se pudo iniciar sesión con Google.');
+      },
+    });
+  }
+
   setMode(mode: AuthMode): void {
     this.mode.set(mode);
     this.error.set(null);
     this.notice.set(null);
     const phone = this.form.controls.phone;
+    const password = this.form.controls.password;
     const code = this.form.controls.code;
-    if (mode === 'otp') {
-      phone.disable();
-      code.disable();
-      this.codeRequested.set(false);
-    } else {
-      phone.enable();
-      code.disable();
-      this.codeRequested.set(false);
-    }
+    phone.disable();
+    password.disable();
+    code.disable();
+    if (mode === 'credentials') phone.enable();
+    if (mode === 'password') password.enable();
+    this.codeRequested.set(false);
     phone.updateValueAndValidity();
+    password.updateValueAndValidity();
     code.updateValueAndValidity();
   }
 
@@ -228,6 +263,27 @@ export class CustomerLoginComponent implements OnInit {
   submit(): void {
     if (this.loading() || this.form.invalid) return;
     const email = this.form.value.email?.trim();
+
+    if (this.mode() === 'password') {
+      const password = this.form.controls.password.value ?? '';
+      this.loading.set(true);
+      this.error.set(null);
+      this.auth.loginWithPassword(email ?? '', password, 'customer')
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: () => {
+            this.loading.set(false);
+            const redirect = this.redirectUrl;
+            if (redirect) this.router.navigateByUrl(redirect);
+            else this.router.navigate(['/customer/history']);
+          },
+          error: err => {
+            this.loading.set(false);
+            this.error.set(err instanceof Error ? err.message : 'Credenciales inválidas.');
+          },
+        });
+      return;
+    }
 
     if (this.mode() === 'credentials') {
       const phone = this.form.value.phone?.trim();

@@ -178,6 +178,12 @@ export class ApiService {
       .pipe(catchError(this.handleError));
   }
 
+  getAuthMe(token: string): Observable<ApiResponse<{ role: string; ownerId?: string; customerId?: string }>> {
+    return this.http.get<ApiResponse<{ role: string; ownerId?: string; customerId?: string }>>(
+      `${this.base}/auth/me`, this.authHeader(token)
+    ).pipe(catchError(this.handleError));
+  }
+
   // ── Multi-business (public) ───────────────────────────────────────────
   getBusinesses(params?: BusinessQuery): Observable<Business[]> {
     let httpParams = new HttpParams();

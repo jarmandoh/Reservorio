@@ -130,6 +130,14 @@ type AccountType = 'usuario' | 'negocio';
         </div>
       }
 
+      @if (accountType() === 'usuario') {
+        <div>
+          <label class="form-label" for="customer-password">Contraseña (opcional)</label>
+          <input id="customer-password" type="password" class="form-input w-full" formControlName="password" autocomplete="new-password" placeholder="Mínimo 6 caracteres" />
+          <p class="mt-1 text-xs text-on-surface-variant">También puedes crear tu cuenta y entrar con un código por correo.</p>
+        </div>
+      }
+
       @if (accountType() === 'negocio') {
         <div>
           <label class="form-label" for="password">Contraseña</label>
@@ -240,9 +248,8 @@ export class AccountCreateComponent {
     if (type === 'usuario') {
       phone.enable();
       phone.setValidators([Validators.required, Validators.minLength(7)]);
-      password.disable();
-      password.clearValidators();
-      password.setValue('');
+      password.enable();
+      password.setValidators([Validators.minLength(6)]);
       confirmPassword.disable();
       confirmPassword.clearValidators();
       confirmPassword.setValue('');
@@ -285,7 +292,28 @@ export class AccountCreateComponent {
         .pipe(takeUntilDestroyed(this.destroyRef))
         .subscribe({
           next: () => {
-            // Auto-intenta login OTP para dejar al usuario autenticado
+            const customerPassword = String(this.form.controls.password.value ?? '');
+            if (customerPassword) {
+              this.auth.registerCustomerWithPassword(email, customerPassword, name)
+                .pipe(takeUntilDestroyed(this.destroyRef))
+                .subscribe({
+                  next: result => {
+                    this.loading.set(false);
+                    if (result.data?.confirmationRequired) {
+                      this.notice.set('Cuenta creada. Confirma tu correo para activar el acceso.');
+                      setTimeout(() => this.router.navigate(['/customer/login']), 1800);
+                    } else {
+                      this.router.navigate(['/customer/history']);
+                    }
+                  },
+                  error: err => {
+                    this.loading.set(false);
+                    this.error.set(err instanceof Error ? err.message : 'No se pudo crear la contraseña. Puedes entrar con código por correo.');
+                  },
+                });
+              return;
+            }
+            // Si no define contraseña, se crea la cuenta y se envía un OTP por email.
             this.auth
               .requestCustomerOtp(email)
               .pipe(takeUntilDestroyed(this.destroyRef))
@@ -326,8 +354,13 @@ export class AccountCreateComponent {
         .registerOwner({ name, email, password })
         .pipe(takeUntilDestroyed(this.destroyRef))
         .subscribe({
-          next: () => {
+          next: result => {
             this.loading.set(false);
+            if (result.data?.confirmationRequired) {
+              this.notice.set('Cuenta de negocio creada. Confirma tu correo para activar el acceso.');
+              setTimeout(() => this.router.navigate(['/owner/login']), 1800);
+              return;
+            }
             this.router.navigate(['/owner/dashboard']);
           },
           error: err => {
