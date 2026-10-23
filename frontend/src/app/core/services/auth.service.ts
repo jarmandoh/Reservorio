@@ -236,10 +236,10 @@ export class AuthService {
     if (this.supabase.enabled) {
       return this.loginWithPassword(email, password, 'owner').pipe(
         map(token => ({ ok: true, status: 200, data: { token } })),
-        catchError(() => this.api.loginOwner(email, password).pipe(
-          tap(res => { if (res.data?.token) this.setOwnerToken(res.data.token); }),
-          catchError(err => { this.clearOwnerToken(); return throwError(() => err); })
-        ))
+        catchError(err => {
+          this.clearOwnerToken();
+          return throwError(() => err);
+        })
       );
     }
 
