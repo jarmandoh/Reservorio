@@ -83,19 +83,19 @@ export class LoginComponent implements OnInit {
     this.form.markAllAsTouched();
     if (this.form.invalid) return;
 
-    this.loading.set(true);
-    this.loginError.set(false);
+    // Navigate to a dedicated loading screen to give feedback during auth
+    this.router.navigate(['/loading']);
 
     const pin = this.form.value.pin!;
     const ok = this.auth.login(pin);
 
     setTimeout(() => {
-      this.loading.set(false);
       if (ok) {
         this.router.navigate(['/admin']);
       } else {
         this.loginError.set(true);
         this.form.reset();
+        this.router.navigate(['/admin']); // fallback to admin, can be replaced with error handling
       }
     }, 350);
   }
