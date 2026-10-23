@@ -515,8 +515,6 @@ export class AuthService {
         })
       );
     }
-    const owner = this.storage.getItem(OWNER_JWT);
-    const customer = this.storage.getItem(CUSTOMER_JWT, 'local');
 
     let target: { token: string; apply: (t: string) => void; clear: () => void } | null = null;
     if (admin) {
