@@ -72,7 +72,7 @@ export class OwnerLoginComponent {
   readonly form = this.fb.group({
     email: ['', [Validators.required, Validators.email]],
     password: ['', [Validators.required, Validators.minLength(6)]],
-    code: [{ value: '', disabled: true }, [Validators.required, Validators.pattern(/^\\d{4,8}$/)]],
+    code: [{ value: '', disabled: true }, [Validators.required, Validators.pattern(/^\d{4,8}$/)]],
   });
 
   requestOtp(): void {
