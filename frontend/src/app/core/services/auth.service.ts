@@ -207,25 +207,26 @@ export class AuthService {
 
   loginWithPassword(email: string, password: string, role: 'customer' | 'owner' | 'admin' = 'customer'): Observable<string> {
     return from(this.supabase.signInWithPassword(email, password)).pipe(
-      map(({ data, error }) => {
-        if (error || !data.session?.access_token) throw error ?? new Error('Credenciales inválidas');
+      switchMap(({ data, error }) => {
+        if (error || !data.session?.access_token) return throwError(() => error ?? new Error('Credenciales inválidas'));
         const token = data.session.access_token;
-        if (role === 'owner') this.setOwnerToken(token);
-        else if (role === 'admin') this.setAdminToken(token);
-        else this.setCustomerToken(token);
-        return token;
+        return this.api.getAuthMe(token).pipe(
+          map(response => {
+            if (response.data?.role !== role) throw new Error('Esta cuenta no tiene permisos para este tipo de acceso.');
+            if (role === 'owner') this.setOwnerToken(token);
+            else if (role === 'admin') this.setAdminToken(token);
+            else this.setCustomerToken(token);
+            return token;
+          })
+        );
       })
     );
   }
 
   loginOwner(email: string, password: string): Observable<ApiResponse<{ token: string }>> {
     if (this.supabase.enabled) {
-      return from(this.supabase.signInWithPassword(email, password)).pipe(
-        map(({ data, error }) => {
-          if (error || !data.session?.access_token) throw error ?? new Error('Credenciales inválidas');
-          return { ok: true, status: 200, data: { token: data.session.access_token } };
-        }),
-        tap(res => this.setOwnerToken(res.data!.token)),
+      return this.loginWithPassword(email, password, 'owner').pipe(
+        map(token => ({ ok: true, status: 200, data: { token } })),
         catchError(() => this.api.loginOwner(email, password).pipe(
           tap(res => { if (res.data?.token) this.setOwnerToken(res.data.token); }),
           catchError(err => { this.clearOwnerToken(); return throwError(() => err); })
