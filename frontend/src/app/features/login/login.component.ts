@@ -54,6 +54,20 @@ import { PinAuthCardComponent } from '../../shared/components/pin-auth-card/pin-
           </p>
         }
       </div>
+      <div class="mt-4 border-t border-outline-variant pt-4">
+        <label class="form-label" for="admin-email">Correo de administrador</label>
+        <input id="admin-email" type="email" class="form-input w-full" formControlName="email" placeholder="admin@dominio.com" />
+        <button type="button" class="mt-2 w-full rounded-xl border border-outline-variant px-4 py-3 font-semibold" (click)="requestOtp()" [disabled]="loading()">
+          Enviar código por email
+        </button>
+        @if (otpRequested()) {
+          <label class="form-label mt-3 block" for="admin-code">Código de verificación</label>
+          <input id="admin-code" type="text" inputmode="numeric" maxlength="8" class="form-input w-full" formControlName="code" />
+          <button type="button" class="mt-2 w-full rounded-xl bg-primary px-4 py-3 text-white font-semibold" (click)="verifyOtp()" [disabled]="loading() || form.controls.code.invalid">
+            Verificar código
+          </button>
+        }
+      </div>
       <button type="button" class="w-full rounded-xl border border-outline-variant px-4 py-3 font-semibold" (click)="loginGoogle()" [disabled]="loading()">
         Acceso administrativo con Google
       </button>
@@ -68,9 +82,12 @@ export class LoginComponent implements OnInit {
 
   readonly loading = signal(false);
   readonly loginError = signal(false);
+  readonly otpRequested = signal(false);
 
   readonly form = this.fb.group({
     pin: ['', [Validators.required, Validators.minLength(4)]],
+    email: [''],
+    code: [{ value: '', disabled: true }, [Validators.required, Validators.pattern(/^\\d{4,8}$/)]],
   });
 
   ngOnInit(): void {
@@ -101,6 +118,45 @@ export class LoginComponent implements OnInit {
         this.loading.set(false);
         this.loginError.set(true);
         this.form.reset();
+      },
+    });
+  }
+
+  requestOtp(): void {
+    const email = this.form.controls.email.value?.trim() ?? '';
+    if (!email || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) {
+      this.loginError.set(true);
+      return;
+    }
+    this.loading.set(true);
+    this.loginError.set(false);
+    this.auth.requestEmailOtp(email).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: () => {
+        this.loading.set(false);
+        this.otpRequested.set(true);
+        this.form.controls.code.enable();
+      },
+      error: () => {
+        this.loading.set(false);
+        this.loginError.set(true);
+      },
+    });
+  }
+
+  verifyOtp(): void {
+    const email = this.form.controls.email.value?.trim() ?? '';
+    const code = this.form.controls.code.value?.trim() ?? '';
+    if (!email || !code) return;
+    this.loading.set(true);
+    this.loginError.set(false);
+    this.auth.verifyEmailOtp(email, code, 'admin').pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: () => {
+        this.loading.set(false);
+        this.router.navigate(['/admin']);
+      },
+      error: () => {
+        this.loading.set(false);
+        this.loginError.set(true);
       },
     });
   }
