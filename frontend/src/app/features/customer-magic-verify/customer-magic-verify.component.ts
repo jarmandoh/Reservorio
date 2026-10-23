@@ -1,5 +1,6 @@
 import { Component, DestroyRef, OnInit, signal, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { ActivatedRoute, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../core/services/auth.service';
@@ -8,7 +9,7 @@ import { SupabaseAuthService } from '../../core/services/supabase-auth.service';
 
 @Component({
   selector: 'app-customer-magic-verify',
-  imports: [ReactiveFormsModule, AuthCardComponent],
+  imports: [ReactiveFormsModule, AuthCardComponent, RouterLink],
   template: `
     <app-auth-card
       title="Verificando acceso…"
@@ -53,8 +54,16 @@ export class CustomerMagicVerifyComponent implements OnInit {
           this.error.set('Enlace inválido o caducado. Solicita uno nuevo.');
           return;
         }
-        this.auth.setCustomerToken(data.session.access_token);
-        this.router.navigate(['/customer/history']);
+        this.auth.activateSupabaseSession().subscribe({
+          next: role => {
+            if (role !== 'customer') {
+              this.error.set('Esta cuenta no tiene permisos de cliente.');
+              return;
+            }
+            this.router.navigate(['/customer/history']);
+          },
+          error: () => this.error.set('No se pudo validar el rol de esta cuenta.'),
+        });
       });
       return;
     }
