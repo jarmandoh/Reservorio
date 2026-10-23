@@ -1,6 +1,6 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
 import { Observable, from, of, throwError } from 'rxjs';
-import { catchError, map, tap } from 'rxjs/operators';
+import { catchError, map, tap, switchMap } from 'rxjs/operators';
 import { ApiResponse, Customer } from '../models/reservation.model';
 import { Business } from '../models/business.model';
 import { OwnerAuthPayload } from '../models/owner.model';
@@ -160,7 +160,7 @@ export class AuthService {
   }
 
   requestEmailOtp(email: string): Observable<void> {
-    return from(this.supabase.signInWithOtp(email, false)).pipe(
+    return from(this.supabase.signInWithOtp(email, true)).pipe(
       map(({ error }) => {
         if (error) throw error;
         return undefined;
@@ -229,21 +229,22 @@ export class AuthService {
         catchError(err => { this.clearOwnerToken(); return throwError(() => err); })
       );
     }
-    return from(this.supabase.signUp(payload.email, payload.password, payload.name)).pipe(
+    return this.api.registerOwner(payload).pipe(
+      map(() => payload),
+      // Primero se crea el registro interno; después Supabase crea la identidad verificada.
+      // El JWT legacy de respuesta nunca se guarda cuando Supabase está habilitado.
+      switchMap(owner => from(this.supabase.signUp(owner.email, owner.password, owner.name))),
       map(({ data, error }) => {
         if (error) throw error;
-        return data;
+        return {
+          ok: true,
+          status: 201,
+          data: {
+            token: data.session?.access_token,
+            confirmationRequired: !data.session,
+          },
+        };
       }),
-      // La fila owner solo se crea por el endpoint existente; la contraseña no se usa
-      // como autoridad de rol. El backend verifica el token Supabase en las rutas protegidas.
-      map(data => ({
-        ok: true,
-        status: 201,
-        data: {
-          token: data.session?.access_token,
-          confirmationRequired: !data.session,
-        },
-      })),
       tap(res => { if (res.data?.token) this.setOwnerToken(res.data.token); }),
       catchError(err => { this.clearOwnerToken(); return throwError(() => err); })
     );
