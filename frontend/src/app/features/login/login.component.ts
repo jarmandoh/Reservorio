@@ -57,6 +57,11 @@ import { PinAuthCardComponent } from '../../shared/components/pin-auth-card/pin-
       <div class="mt-4 border-t border-outline-variant pt-4">
         <label class="form-label" for="admin-email">Correo de administrador</label>
         <input id="admin-email" type="email" class="form-input w-full" formControlName="email" placeholder="admin@dominio.com" />
+        <label class="form-label mt-3 block" for="admin-password">Contraseña de administrador</label>
+        <input id="admin-password" type="password" class="form-input w-full" formControlName="password" autocomplete="current-password" />
+        <button type="button" class="mt-2 w-full rounded-xl bg-primary px-4 py-3 text-white font-semibold" (click)="loginPassword()" [disabled]="loading() || !form.controls.email.value || !form.controls.password.value">
+          Iniciar sesión con contraseña
+        </button>
         <button type="button" class="mt-2 w-full rounded-xl border border-outline-variant px-4 py-3 font-semibold" (click)="requestOtp()" [disabled]="loading()">
           Enviar código por email
         </button>
@@ -90,6 +95,7 @@ export class LoginComponent implements OnInit {
   readonly form = this.fb.group({
     pin: ['', [Validators.required, Validators.minLength(4)]],
     email: [''],
+    password: [''],
     code: [{ value: '', disabled: true }, [Validators.required, Validators.pattern(/^\d{4,8}$/)]],
   });
 
@@ -121,6 +127,24 @@ export class LoginComponent implements OnInit {
         this.loading.set(false);
         this.loginError.set(true);
         this.form.reset();
+      },
+    });
+  }
+
+  loginPassword(): void {
+    const email = this.form.controls.email.value?.trim() ?? '';
+    const password = this.form.controls.password.value ?? '';
+    if (!email || !password) return;
+    this.loading.set(true);
+    this.loginError.set(false);
+    this.auth.loginWithPassword(email, password, 'admin').pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: () => {
+        this.loading.set(false);
+        this.router.navigate(['/admin']);
+      },
+      error: () => {
+        this.loading.set(false);
+        this.loginError.set(true);
       },
     });
   }
