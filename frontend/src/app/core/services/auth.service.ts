@@ -487,6 +487,36 @@ export class AuthService {
     const admin = this.storage.getItem(ADMIN_JWT);
     const owner = this.storage.getItem(OWNER_JWT);
     const customer = this.storage.getItem(CUSTOMER_JWT, 'local');
+    const activeSupabaseToken = admin || owner || customer;
+
+    // Supabase renueva sus propios refresh tokens; el token nuevo debe copiarse
+    // al almacén por rol que usa el interceptor de la API de Reservorio.
+    if (activeSupabaseToken && this.isSupabaseToken(activeSupabaseToken)) {
+      return from(this.supabase.getSession()).pipe(
+        switchMap(({ data, error }) => {
+          if (error || !data.session?.access_token) return throwError(() => error ?? new Error('Sesión Supabase expirada'));
+          const token = data.session.access_token;
+          return this.api.getAuthMe(token).pipe(
+            map(response => {
+              const role = response.data?.role;
+              if (role === 'admin') this.setAdminToken(token);
+              else if (role === 'owner') this.setOwnerToken(token);
+              else if (role === 'customer') this.setCustomerToken(token);
+              else throw new Error('Rol de sesión no reconocido');
+              return undefined;
+            })
+          );
+        }),
+        catchError(() => {
+          this.clearAdminToken();
+          this.clearOwnerToken();
+          this.clearCustomerToken();
+          return of(undefined);
+        })
+      );
+    }
+    const owner = this.storage.getItem(OWNER_JWT);
+    const customer = this.storage.getItem(CUSTOMER_JWT, 'local');
 
     let target: { token: string; apply: (t: string) => void; clear: () => void } | null = null;
     if (admin) {
@@ -524,6 +554,11 @@ export class AuthService {
         return of(undefined);
       })
     );
+  }
+
+  private isSupabaseToken(token: string): boolean {
+    const payload = this.decodeToken(token);
+    return typeof payload?.['iss'] === 'string' && String(payload['iss']).includes('.supabase.co/auth/v1');
   }
 
   decodeToken(token: string | null): { [key: string]: unknown } | null {
