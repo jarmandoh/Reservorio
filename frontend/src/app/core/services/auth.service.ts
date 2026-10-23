@@ -44,6 +44,7 @@ export class AuthService {
   }
 
   logout(): void {
+    void this.supabase.signOut();
     this.clearAllAuthTokens();
     this.storage.removeItem(SESSION_KEY);
     this._unlocked.set(false);
