@@ -94,7 +94,7 @@ export class LoginComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    if (this.auth.isUnlocked()) {
+    if (this.auth.getAdminToken()) {
       this.router.navigate(['/admin']);
     }
   }
