@@ -354,8 +354,13 @@ export class AccountCreateComponent {
         .registerOwner({ name, email, password })
         .pipe(takeUntilDestroyed(this.destroyRef))
         .subscribe({
-          next: () => {
+          next: result => {
             this.loading.set(false);
+            if (result.data?.confirmationRequired) {
+              this.notice.set('Cuenta de negocio creada. Confirma tu correo para activar el acceso.');
+              setTimeout(() => this.router.navigate(['/owner/login']), 1800);
+              return;
+            }
             this.router.navigate(['/owner/dashboard']);
           },
           error: err => {
