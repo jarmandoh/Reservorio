@@ -47,6 +47,9 @@ import { AuthCardComponent } from '../../shared/components/auth-card/auth-card.c
       <button type="button" class="w-full rounded-xl border border-outline-variant px-4 py-3 font-semibold" (click)="requestOtp()" [disabled]="loading()">
         Enviar código de acceso por email
       </button>
+      <button type="button" class="w-full rounded-xl border border-outline-variant px-4 py-3 font-semibold" (click)="requestMagicLink()" [disabled]="loading()">
+        Enviar enlace mágico por email
+      </button>
       @if (otpRequested()) {
         <div>
           <label class="form-label">Código recibido por email</label>
@@ -92,6 +95,26 @@ export class OwnerLoginComponent {
       error: err => {
         this.loading.set(false);
         this.error.set(err instanceof Error ? err.message : 'No se pudo enviar el código.');
+      },
+    });
+  }
+
+  requestMagicLink(): void {
+    const email = this.form.controls.email.value?.trim();
+    if (!email || this.form.controls.email.invalid) {
+      this.error.set('Introduce un correo válido antes de solicitar el enlace.');
+      return;
+    }
+    this.loading.set(true);
+    this.error.set(null);
+    this.auth.requestRoleMagicLink(email).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: () => {
+        this.loading.set(false);
+        this.error.set('Si el correo está registrado, recibirás un enlace para iniciar sesión.');
+      },
+      error: err => {
+        this.loading.set(false);
+        this.error.set(err instanceof Error ? err.message : 'No se pudo enviar el enlace.');
       },
     });
   }
