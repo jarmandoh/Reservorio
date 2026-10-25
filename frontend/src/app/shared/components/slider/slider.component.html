@@ -1,0 +1,40 @@
+<div
+  class="presentation-container relative overflow-hidden"
+  [attr.data-current]="currentSlide()"
+>
+  <!-- Diapositivas -->
+  @for (img of images; track $index; let idx = $index) {
+    <div
+      class="slide absolute inset-0 transition-opacity duration-600"
+      [attr.data-index]="idx"
+      [style.opacity]="idx === currentSlide() ? 1 : 0"
+      style="object-fit: cover;"
+    >
+      <img [src]="img" alt="Diapositiva {{ idx + 1 }}" class="w-full h-full" />
+    </div>
+  }
+
+  <!-- Controles -->
+  <button class="nav-btn prev" (click)="prev()" aria-label="Anterior">
+    <svg viewBox="0 0 24 24" class="w-6 h-6" stroke="currentColor" fill="none">
+      <polyline points="15 18 9 12 15 6" />
+    </svg>
+  </button>
+
+  <button class="nav-btn next" (click)="next()" aria-label="Siguiente">
+    <svg viewBox="0 0 24 24" class="w-6 h-6" stroke="currentColor" fill="none">
+      <polyline points="9 18 15 12 9 6" />
+    </svg>
+  </button>
+
+  <!-- Dots -->
+  <div class="dots-container flex justify-center gap-2 mt-4">
+    @for (image of images; track $index; let i = $index) {
+      <button
+        class="dot h-2 w-2 rounded-full"
+        [class.active]="i === currentSlide()"
+        (click)="goTo(i)"
+        [attr.aria-label]="'Ir a diapositiva ' + (i + 1)"
+      ></button>
+    }
+</div>

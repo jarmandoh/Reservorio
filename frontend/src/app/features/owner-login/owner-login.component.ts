@@ -41,20 +41,40 @@ import { AuthCardComponent } from '../../shared/components/auth-card/auth-card.c
         <label class="form-label">Contraseña</label>
         <input type="password" class="form-input w-full" formControlName="password" />
       </div>
-      <button type="button" class="w-full rounded-xl border border-outline-variant px-4 py-3 font-semibold" (click)="loginGoogle()" [disabled]="loading()">
+      <button
+        type="button"
+        class="w-full rounded-xl border border-outline-variant px-4 py-3 font-semibold"
+        (click)="loginGoogle()"
+        [disabled]="loading()"
+      >
         Continuar con Google
       </button>
-      <button type="button" class="w-full rounded-xl border border-outline-variant px-4 py-3 font-semibold" (click)="requestOtp()" [disabled]="loading()">
+      <button
+        type="button"
+        class="w-full rounded-xl border border-outline-variant px-4 py-3 font-semibold"
+        (click)="requestOtp()"
+        [disabled]="loading()"
+      >
         Enviar código de acceso por email
       </button>
-      <button type="button" class="w-full rounded-xl border border-outline-variant px-4 py-3 font-semibold" (click)="requestMagicLink()" [disabled]="loading()">
+      <button
+        type="button"
+        class="w-full rounded-xl border border-outline-variant px-4 py-3 font-semibold"
+        (click)="requestMagicLink()"
+        [disabled]="loading()"
+      >
         Enviar enlace mágico por email
       </button>
       @if (otpRequested()) {
         <div>
           <label class="form-label">Código recibido por email</label>
           <input type="text" inputmode="numeric" maxlength="8" class="form-input w-full" formControlName="code" />
-          <button type="button" class="mt-2 w-full rounded-xl bg-primary px-4 py-3 text-white font-semibold" (click)="verifyOtp()" [disabled]="loading() || form.controls.code.invalid">
+          <button
+            type="button"
+            class="mt-2 w-full rounded-xl bg-primary px-4 py-3 text-white font-semibold"
+            (click)="verifyOtp()"
+            [disabled]="loading() || form.controls.code.invalid"
+          >
             Verificar código
           </button>
         </div>
@@ -86,17 +106,20 @@ export class OwnerLoginComponent {
     }
     this.loading.set(true);
     this.error.set(null);
-    this.auth.requestEmailOtp(email).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: () => {
-        this.loading.set(false);
-        this.otpRequested.set(true);
-        this.form.controls.code.enable();
-      },
-      error: err => {
-        this.loading.set(false);
-        this.error.set(err instanceof Error ? err.message : 'No se pudo enviar el código.');
-      },
-    });
+    this.auth
+      .requestEmailOtp(email)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.loading.set(false);
+          this.otpRequested.set(true);
+          this.form.controls.code.enable();
+        },
+        error: err => {
+          this.loading.set(false);
+          this.error.set(err instanceof Error ? err.message : 'No se pudo enviar el código.');
+        },
+      });
   }
 
   requestMagicLink(): void {
@@ -107,16 +130,19 @@ export class OwnerLoginComponent {
     }
     this.loading.set(true);
     this.error.set(null);
-    this.auth.requestRoleMagicLink(email).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: () => {
-        this.loading.set(false);
-        this.error.set('Si el correo está registrado, recibirás un enlace para iniciar sesión.');
-      },
-      error: err => {
-        this.loading.set(false);
-        this.error.set(err instanceof Error ? err.message : 'No se pudo enviar el enlace.');
-      },
-    });
+    this.auth
+      .requestRoleMagicLink(email)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.loading.set(false);
+          this.error.set('Si el correo está registrado, recibirás un enlace para iniciar sesión.');
+        },
+        error: err => {
+          this.loading.set(false);
+          this.error.set(err instanceof Error ? err.message : 'No se pudo enviar el enlace.');
+        },
+      });
   }
 
   verifyOtp(): void {
@@ -125,28 +151,34 @@ export class OwnerLoginComponent {
     if (!email || !code) return;
     this.loading.set(true);
     this.error.set(null);
-    this.auth.verifyEmailOtp(email, code, 'owner').pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: () => {
-        this.loading.set(false);
-        this.router.navigate(['/owner/dashboard']);
-      },
-      error: err => {
-        this.loading.set(false);
-        this.error.set(err instanceof Error ? err.message : 'Código inválido o cuenta sin permisos de propietario.');
-      },
-    });
+    this.auth
+      .verifyEmailOtp(email, code, 'owner')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.loading.set(false);
+          this.router.navigate(['/owner/dashboard']);
+        },
+        error: err => {
+          this.loading.set(false);
+          this.error.set(err instanceof Error ? err.message : 'Código inválido o cuenta sin permisos de propietario.');
+        },
+      });
   }
 
   loginGoogle(): void {
     this.loading.set(true);
     this.error.set(null);
-    this.auth.loginWithGoogle('owner').pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: () => this.loading.set(false),
-      error: err => {
-        this.loading.set(false);
-        this.error.set(err instanceof Error ? err.message : 'No se pudo iniciar sesión con Google.');
-      },
-    });
+    this.auth
+      .loginWithGoogle('owner')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => this.loading.set(false),
+        error: err => {
+          this.loading.set(false);
+          this.error.set(err instanceof Error ? err.message : 'No se pudo iniciar sesión con Google.');
+        },
+      });
   }
 
   submit(): void {
@@ -161,10 +193,10 @@ export class OwnerLoginComponent {
       .subscribe({
         next: res => {
           this.loading.set(false);
-          if (res.data?.confirmationRequired) {
+          /* if (res.data?.confirmationRequired) {
             this.error.set('Cuenta creada. Confirma tu correo y luego inicia sesión.');
             return;
-          }
+          } */
           this.router.navigate(['/owner/dashboard']);
         },
         error: err => {
