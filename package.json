@@ -14,6 +14,11 @@
     "format:fix": "turbo run format:fix"
   },
   "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.72.0",
+    "@typescript-eslint/parser": "^8.72.0",
+    "eslint": "^10.13.0",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.9.10",
     "turbo": "^2.5.0"
   }
 }

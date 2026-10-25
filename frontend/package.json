@@ -9,7 +9,9 @@
     "test": "ng test",
     "e2e": "playwright test",
     "format:check": "prettier --check \"../(frontend|backend|docs)/**/*.{ts,html,js,json,md,yml,yaml,scss,css}\"",
-    "format:fix": "prettier --write \"../(frontend|backend|docs)/**/*.{ts,html,js,json,md,yml,yaml,scss,css}\""
+    "format:fix": "prettier --write \"../(frontend|backend|docs)/**/*.{ts,html,js,json,md,yml,yaml,scss,css}\"",
+    "lint": "eslint \"frontend/**/*.{ts,tsx,js,jsx}\" --quiet",
+    "coverage": "vitest run --coverage"
   },
   "private": true,
   "packageManager": "pnpm@9.15.0",
