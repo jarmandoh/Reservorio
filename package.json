@@ -2,7 +2,7 @@
   "name": "reservorio-workspace",
   "private": true,
   "version": "1.0.0",
-  "packageManager": "pnpm@9.15.0",
+  "packageManager": "pnpm@12.15.0",
   "engines": {
     "node": ">=22.22.3",
     "pnpm": ">=9.15.0"

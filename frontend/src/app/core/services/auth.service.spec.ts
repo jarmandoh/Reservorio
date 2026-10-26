@@ -1,7 +1,9 @@
 import { TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
 import { of, throwError } from 'rxjs';
 import { AuthService } from './auth.service';
 import { ApiService } from './api.service';
+import { SupabaseAuthService } from './supabase-auth.service';
 
 describe('AuthService auth flows', () => {
   let service: AuthService;
@@ -14,7 +16,11 @@ describe('AuthService auth flows', () => {
     api = { loginOwner: loginOwnerSpy } as unknown as ApiService;
 
     TestBed.configureTestingModule({
-      providers: [AuthService, { provide: ApiService, useValue: api }],
+      providers: [
+        AuthService,
+        { provide: ApiService, useValue: api },
+        { provide: SupabaseAuthService, useValue: { enabled: false, accessToken: signal(null) } },
+      ],
     });
 
     service = TestBed.inject(AuthService);

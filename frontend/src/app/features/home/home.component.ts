@@ -154,9 +154,9 @@ const DEFAULT_CATEGORIES = ['Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci√
             </p>
           </div>
 
-          <div class="mt-6">
+          <!-- <div class="mt-6">
             <app-stats-bar [stats]="heroStats()" />
-          </div>
+          </div> -->
         </div>
       </header>
 
