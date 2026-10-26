@@ -214,3 +214,6 @@ jobs:
       - name: Run E2E tests
         working-directory: frontend
         run: pnpm e2e
+
+      - name: Security audit (pnpm audit)
+        run: pnpm run security:check

@@ -64,3 +64,4 @@ coverage/
 *.tar.gz
 tmp/
 temp/
+*.txt
