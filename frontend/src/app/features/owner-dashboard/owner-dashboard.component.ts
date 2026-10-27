@@ -15,66 +15,7 @@ import { BusinessListComponent } from '../../shared/components/business-list/bus
   imports: [CommonModule, ReactiveFormsModule, BusinessFormComponent, BusinessListComponent],
   template: `
     <!-- <app-skip-link></app-skip-link> -->
-      <main id="main-content" role="main" class="max-w-5xl mx-auto space-y-6">
-        <header class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 class="font-display text-3xl font-bold">Panel de dueños</h1>
-            <p class="text-sm text-on-surface-variant">Gestiona tus negocios y crea nuevas fichas.</p>
-          </div>
-          <button class="btn-tertiary" (click)="logout()">Cerrar sesión</button>
-        </header>
-
-        <section class="grid gap-4 sm:grid-cols-[1fr_auto]">
-          <div class="card p-5">
-            <h2 class="font-semibold text-lg">Tus negocios</h2>
-            <p class="text-sm text-on-surface-variant mt-1">Visualiza el listado de tus negocios registrados.</p>
-          </div>
-          <button class="btn-primary btn-lg self-start" (click)="openCreateModal()">Nuevo negocio</button>
-        </section>
-
-        <section class="grid gap-4">
-          @if (loading()) {
-            <div class="card p-5 space-y-3">
-              @for (i of [1, 2, 3]; track i) {
-                <div class="skeleton h-16 rounded-xl"></div>
-              }
-            </div>
-          } @else if (!businesses().length) {
-            <div class="card p-5 text-center">
-              <p class="text-sm text-on-surface-variant">No tienes negocios aún. Crea uno para comenzar.</p>
-            </div>
-          } @else {
-            <app-business-list
-              [businesses]="businesses()"
-              (view)="openBusiness($event)"
-              (edit)="editBusiness($event)"
-            />
-          }
-        </section>
-
-        @if (showModal()) {
-          <div class="fixed inset-0 z-50 bg-black/50 p-4 flex items-center justify-center">
-            <div class="w-full max-w-2xl rounded-3xl bg-surface p-6 shadow-xl">
-              <div class="flex items-center justify-between gap-4 mb-4">
-                <div>
-                  <h2 class="font-semibold text-xl">{{ editingBusiness() ? 'Editar negocio' : 'Crear negocio' }}</h2>
-                  <p class="text-sm text-on-surface-variant">Usa tu cuenta de dueño para manejar tu negocio.</p>
-                </div>
-                <button class="btn-ghost" (click)="closeModal()" aria-label="Cerrar modal">✕</button>
-              </div>
-
-              <app-business-form
-                [formGroup]="businessForm"
-                submitLabel="Guardar negocio"
-                [saving]="saving()"
-                [isSubmitDisabled]="businessForm.invalid || saving()"
-                (submit)="saveBusiness()"
-                (cancel)="closeModal()"
-              />
-            </div>
-          </div>
-        }
-      </main>
+    <main id="main-content" role="main" class="max-w-5xl mx-auto space-y-6">
       <header class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 class="font-display text-3xl font-bold">Panel de dueños</h1>
@@ -103,11 +44,7 @@ import { BusinessListComponent } from '../../shared/components/business-list/bus
             <p class="text-sm text-on-surface-variant">No tienes negocios aún. Crea uno para comenzar.</p>
           </div>
         } @else {
-          <app-business-list
-            [businesses]="businesses()"
-            (view)="openBusiness($event)"
-            (edit)="editBusiness($event)"
-          />
+          <app-business-list [businesses]="businesses()" (view)="openBusiness($event)" (edit)="editBusiness($event)" />
         }
       </section>
 
@@ -133,6 +70,61 @@ import { BusinessListComponent } from '../../shared/components/business-list/bus
           </div>
         </div>
       }
+    </main>
+    <header class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h1 class="font-display text-3xl font-bold">Panel de dueños</h1>
+        <p class="text-sm text-on-surface-variant">Gestiona tus negocios y crea nuevas fichas.</p>
+      </div>
+      <button class="btn-tertiary" (click)="logout()">Cerrar sesión</button>
+    </header>
+
+    <section class="grid gap-4 sm:grid-cols-[1fr_auto]">
+      <div class="card p-5">
+        <h2 class="font-semibold text-lg">Tus negocios</h2>
+        <p class="text-sm text-on-surface-variant mt-1">Visualiza el listado de tus negocios registrados.</p>
+      </div>
+      <button class="btn-primary btn-lg self-start" (click)="openCreateModal()">Nuevo negocio</button>
+    </section>
+
+    <section class="grid gap-4">
+      @if (loading()) {
+        <div class="card p-5 space-y-3">
+          @for (i of [1, 2, 3]; track i) {
+            <div class="skeleton h-16 rounded-xl"></div>
+          }
+        </div>
+      } @else if (!businesses().length) {
+        <div class="card p-5 text-center">
+          <p class="text-sm text-on-surface-variant">No tienes negocios aún. Crea uno para comenzar.</p>
+        </div>
+      } @else {
+        <app-business-list [businesses]="businesses()" (view)="openBusiness($event)" (edit)="editBusiness($event)" />
+      }
+    </section>
+
+    @if (showModal()) {
+      <div class="fixed inset-0 z-50 bg-black/50 p-4 flex items-center justify-center">
+        <div class="w-full max-w-2xl rounded-3xl bg-surface p-6 shadow-xl">
+          <div class="flex items-center justify-between gap-4 mb-4">
+            <div>
+              <h2 class="font-semibold text-xl">{{ editingBusiness() ? 'Editar negocio' : 'Crear negocio' }}</h2>
+              <p class="text-sm text-on-surface-variant">Usa tu cuenta de dueño para manejar tu negocio.</p>
+            </div>
+            <button class="btn-ghost" (click)="closeModal()" aria-label="Cerrar modal">✕</button>
+          </div>
+
+          <app-business-form
+            [formGroup]="businessForm"
+            submitLabel="Guardar negocio"
+            [saving]="saving()"
+            [isSubmitDisabled]="businessForm.invalid || saving()"
+            (submit)="saveBusiness()"
+            (cancel)="closeModal()"
+          />
+        </div>
+      </div>
+    }
   `,
 })
 export class OwnerDashboardComponent implements OnInit {

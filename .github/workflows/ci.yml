@@ -16,16 +16,16 @@ permissions:
 jobs:
   lint:
     name: Lint & format
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
         with:
-          version: 9.15.0
+          version: 12.15.0
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version-file: .node-version
           cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
       - name: Install frontend deps (for prettier)
@@ -37,36 +37,29 @@ jobs:
 
   backend:
     name: Backend tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: reservorio
-          POSTGRES_PASSWORD: reservorio_pass
-          POSTGRES_DB: reservorio
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U reservorio -d reservorio"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
     env:
-      DATABASE_URL: postgres://reservorio:reservorio_pass@localhost:5432/reservorio
+      DATABASE_URL: postgres://reservorio_test:reservorio_test_pass@localhost:5432/reservorio_test
+      TEST_DATABASE_URL: postgres://reservorio_test:reservorio_test_pass@localhost:5432/reservorio_test
       JWT_SECRET: ${{ secrets.JWT_SECRET || 'ci-test-secret-with-32-chars-min' }}
       ADMIN_PIN: '1234'
     steps:
       - uses: actions/checkout@v4
 
+      - name: Start local PostgreSQL 16
+        run: |
+          sudo systemctl start postgresql
+          sudo -u postgres psql -c "CREATE ROLE reservorio_test LOGIN SUPERUSER PASSWORD 'reservorio_test_pass';"
+          sudo -u postgres createdb --owner=reservorio_test reservorio_test
+
       - uses: pnpm/action-setup@v4
         with:
-          version: 9.15.0
+          version: 12.15.0
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version-file: .node-version
           cache: pnpm
           cache-dependency-path: backend/pnpm-lock.yaml
 
@@ -76,7 +69,9 @@ jobs:
 
       - name: Apply migrations
         working-directory: backend
-        run: pnpm db:migrate
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/init.sql
+          pnpm db:migrate
 
       - name: Run tests (incl. integration with real PostgreSQL)
         working-directory: backend
@@ -96,23 +91,20 @@ jobs:
           path: backend/coverage
           if-no-files-found: warn
 
-      - name: Docker build (smoke)
-        run: docker build -t reservorio-backend:ci ./backend
-
   frontend:
     name: Frontend build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
       - uses: pnpm/action-setup@v4
         with:
-          version: 9.15.0
+          version: 12.15.0
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version-file: .node-version
           cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
 
@@ -140,36 +132,19 @@ jobs:
         working-directory: frontend
         run: pnpm build
 
-      - name: Docker build (smoke)
-        run: docker build -t reservorio-frontend:ci ./frontend
-
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: frontend-dist
-          path: frontend/dist/frontend
+          path: frontend/dist/frontend/browser
           if-no-files-found: error
 
   e2e:
     name: E2E (Playwright)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: reservorio
-          POSTGRES_PASSWORD: reservorio_pass
-          POSTGRES_DB: reservorio
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U reservorio -d reservorio"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
     env:
-      DATABASE_URL: postgres://reservorio:reservorio_pass@localhost:5432/reservorio
+      DATABASE_URL: postgres://reservorio_test:reservorio_test_pass@localhost:5432/reservorio_test
       JWT_SECRET: ${{ secrets.JWT_SECRET || 'e2e-test-secret-with-32-chars-min' }}
       ADMIN_PIN: '1234'
       PLAYWRIGHT_ADMIN_PIN: '1234'
@@ -179,13 +154,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Start local PostgreSQL 16
+        run: |
+          sudo systemctl start postgresql
+          sudo -u postgres psql -c "CREATE ROLE reservorio_test LOGIN SUPERUSER PASSWORD 'reservorio_test_pass';"
+          sudo -u postgres createdb --owner=reservorio_test reservorio_test
+
       - uses: pnpm/action-setup@v4
         with:
-          version: 9.15.0
+          version: 12.15.0
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version-file: .node-version
           cache: pnpm
           cache-dependency-path: |
             backend/pnpm-lock.yaml
@@ -197,7 +178,9 @@ jobs:
 
       - name: Apply migrations
         working-directory: backend
-        run: pnpm db:migrate
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/init.sql
+          pnpm db:migrate
 
       - name: Install frontend dependencies
         working-directory: frontend

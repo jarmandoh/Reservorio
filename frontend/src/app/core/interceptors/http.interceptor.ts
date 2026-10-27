@@ -15,7 +15,7 @@ function isTokenValid(token: string | null): boolean {
     const parts = token.split('.');
     if (parts.length !== 3) return false;
     const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-    const padded = base64.padEnd(base64.length + (4 - (base64.length % 4)) % 4, '=');
+    const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
     const data = JSON.parse(atob(padded));
     return typeof data?.exp === 'number' && data.exp * 1000 > Date.now();
   } catch {
@@ -29,7 +29,7 @@ function decodePayload(token: string | null): Record<string, unknown> | null {
     const parts = token.split('.');
     if (parts.length !== 3) return null;
     const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-    const padded = base64.padEnd(base64.length + (4 - (base64.length % 4)) % 4, '=');
+    const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
     return JSON.parse(atob(padded));
   } catch {
     return null;
@@ -226,7 +226,8 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
               }
 
               const redirect = getRedirectForExpiry(router, role || undefined, businessId || undefined);
-              const message = err.error?.message || 'Token inválido o expirado. Sesión cerrada, vuelve a iniciar sesión.';
+              const message =
+                err.error?.message || 'Token inválido o expirado. Sesión cerrada, vuelve a iniciar sesión.';
 
               toast.show(message, 'error');
 

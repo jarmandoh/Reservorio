@@ -25,8 +25,8 @@ Navegador
     ▼
 ┌─────────────────────────────────────────┐
 │  Frontend  (Angular 22 + Tailwind CSS)  │
-│  Servido por Nginx en el puerto 80      │
-│  Nginx proxea /api/* → backend:3000     │
+│  Archivos estáticos (Nginx del host)   │
+│  Nginx proxea /api/* → localhost:3000  │
 └──────────────┬──────────────────────────┘
                │ HTTP / JSON
                ▼
@@ -39,12 +39,11 @@ Navegador
                ▼
 ┌──────────────────────────────────────────┐
 │  PostgreSQL 16                           │
-│  Puerto 5432 (solo accesible en red      │
-│  interna Docker)                         │
+│  Puerto 5432 (host o servicio gestionado)│
 └──────────────────────────────────────────┘
 ```
 
-Todos los servicios corren en la red Docker interna `reservorio-net`. El puerto 5432 de PostgreSQL **no está expuesto al host en producción** — se accede exclusivamente desde el backend.
+El frontend y el backend se ejecutan en el host; PostgreSQL puede ser local o gestionado. En producción, limita el acceso público a HTTPS y deja PostgreSQL y el puerto de la API en una red privada/firewall.
 
 ---
 
@@ -117,14 +116,14 @@ Los tokens se generan con `sign(payload)`, firma **HS256**. Expiración: **2 hor
 
 ### Migraciones SQL versionadas
 
-`backend/db/init.sql` sigue siendo la fuente para contenedores nuevos; el schema existente y CI se evoluciona con migraciones numeradas en `backend/db/migrations/`:
+`backend/db/init.sql` inicializa una base vacía; los cambios posteriores se aplican con migraciones numeradas en `backend/db/migrations/`:
 
 ```bash
 pnpm db:migrate            # aplica pendientes (idempotente; registra en schema_migrations)
 pnpm db:migrate:create -- nombre_cambio   # crea el siguiente NNNN_*.sql
 ```
 
-El contenedor backend (`Dockerfile`) ejecuta `node db/migrate.js` antes de arrancar, por lo que un despliegue sobre un volumen existente recibe los cambios automáticamente. Cada migración corre en una transacción y nunca se repite. Nuevos cambios al schema: primero migración **y**, si afecta a contenedores nuevos, también `init.sql`.
+Ejecuta `pnpm db:migrate` antes de iniciar o actualizar el backend. Cada migración corre en una transacción y nunca se repite. Nuevos cambios al schema van en una migración; actualiza `init.sql` solo cuando cambia la inicialización de una base vacía.
 
 ### Schema de la base de datos (fuente única: `backend/db/init.sql`)
 
@@ -349,10 +348,10 @@ Los avisos internos (`notifications`) con `customerId` se copian por email al cl
 
 ## 7. Agregar un nuevo negocio manualmente (SQL)
 
-Si necesitas insertar un negocio directamente en la base de datos (por ejemplo, para pruebas o migración de datos), puedes conectarte al contenedor:
+Si necesitas insertar un negocio directamente en la base de datos (por ejemplo, para pruebas o migración de datos), conéctate al host indicado por `DATABASE_URL`:
 
 ```bash
-docker exec -it reservorio-db psql -U reservorio -d reservorio
+psql "$DATABASE_URL"
 ```
 
 Para hashear un PIN antes de insertarlo:

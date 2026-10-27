@@ -11,11 +11,9 @@ const DEFAULT_CURRENCY = String(process.env.DEFAULT_CURRENCY || 'COP')
   .trim()
   .toUpperCase();
 
-const SUPPORTED_CURRENCIES = String(
-  process.env.SUPPORTED_CURRENCIES || 'COP,USD,EUR,MXN,BRL,ARS,CLP,PEN'
-)
+const SUPPORTED_CURRENCIES = String(process.env.SUPPORTED_CURRENCIES || 'COP,USD,EUR,MXN,BRL,ARS,CLP,PEN')
   .split(',')
-  .map((c) => c.trim().toUpperCase())
+  .map(c => c.trim().toUpperCase())
   .filter(Boolean);
 
 // Asegurar que el default siempre esté soportado

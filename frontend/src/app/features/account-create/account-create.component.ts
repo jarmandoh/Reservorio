@@ -133,8 +133,17 @@ type AccountType = 'usuario' | 'negocio';
       @if (accountType() === 'usuario') {
         <div>
           <label class="form-label" for="customer-password">Contraseña (opcional)</label>
-          <input id="customer-password" type="password" class="form-input w-full" formControlName="password" autocomplete="new-password" placeholder="Mínimo 6 caracteres" />
-          <p class="mt-1 text-xs text-on-surface-variant">También puedes crear tu cuenta y entrar con un código por correo.</p>
+          <input
+            id="customer-password"
+            type="password"
+            class="form-input w-full"
+            formControlName="password"
+            autocomplete="new-password"
+            placeholder="Mínimo 6 caracteres"
+          />
+          <p class="mt-1 text-xs text-on-surface-variant">
+            También puedes crear tu cuenta y entrar con un código por correo.
+          </p>
         </div>
       }
 
@@ -294,7 +303,8 @@ export class AccountCreateComponent {
           next: () => {
             const customerPassword = String(this.form.controls.password.value ?? '');
             if (customerPassword) {
-              this.auth.registerCustomerWithPassword(email, customerPassword, name)
+              this.auth
+                .registerCustomerWithPassword(email, customerPassword, name)
                 .pipe(takeUntilDestroyed(this.destroyRef))
                 .subscribe({
                   next: result => {
@@ -308,7 +318,11 @@ export class AccountCreateComponent {
                   },
                   error: err => {
                     this.loading.set(false);
-                    this.error.set(err instanceof Error ? err.message : 'No se pudo crear la contraseña. Puedes entrar con código por correo.');
+                    this.error.set(
+                      err instanceof Error
+                        ? err.message
+                        : 'No se pudo crear la contraseña. Puedes entrar con código por correo.'
+                    );
                   },
                 });
               return;

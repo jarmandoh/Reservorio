@@ -14,9 +14,9 @@ pnpm db:migrate
 pnpm db:migrate:create -- anadir_columna_x
 ```
 
-El runner (`backend/db/migrate.js`) requiere `DATABASE_URL` válida. En Docker el
-backend aplica `db:migrate` antes de arrancar (ver `backend/Dockerfile`), por lo que
-un despliegue sobre un volumen existente recibe los cambios de schema automáticamente.
+El runner (`backend/db/migrate.js`) requiere `DATABASE_URL` válida. En desarrollo y
+despliegues, aplica `pnpm db:migrate` antes de iniciar el backend para actualizar el
+schema existente.
 
 ## Retención de idempotencia
 

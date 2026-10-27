@@ -3,7 +3,6 @@
     "angular.ng-template",
     "editorconfig.editorconfig",
     "esbenp.prettier-vscode",
-    "dbaeumer.vscode-eslint",
-    "ms-azuretools.vscode-docker"
+    "dbaeumer.vscode-eslint"
   ]
 }

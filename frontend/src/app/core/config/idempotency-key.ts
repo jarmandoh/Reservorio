@@ -18,7 +18,9 @@ export function idempotencyAttempt(
   } catch {}
 
   const attempt = { fingerprint, key: crypto.randomUUID() };
-  try { sessionStorage.setItem(storageKey, JSON.stringify(attempt)); } catch {}
+  try {
+    sessionStorage.setItem(storageKey, JSON.stringify(attempt));
+  } catch {}
   return attempt;
 }
 

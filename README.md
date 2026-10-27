@@ -4,25 +4,24 @@ Sistema de reservas multi-negocio. Permite a clientes consultar disponibilidad y
 
 ## Stack tecnológico
 
-| Capa | Tecnología |
-|---|---|
-| Frontend | Angular 22 + Tailwind CSS, servido con Nginx |
-| Backend | Node.js 22 + Express |
-| Base de datos | PostgreSQL 16 |
-| Infraestructura | Docker + Docker Compose |
-| Autenticación | JWT (jsonwebtoken) + bcrypt |
-| Gestor de paquetes | pnpm 9 |
+| Capa               | Tecnología                                      |
+| ------------------ | ----------------------------------------------- |
+| Frontend           | Angular 22 + Tailwind CSS, salida estática      |
+| Backend            | Node.js 22 + Express                            |
+| Base de datos      | PostgreSQL 16                                   |
+| Infraestructura    | Node.js y PostgreSQL instalados o administrados |
+| Autenticación      | JWT (jsonwebtoken) + bcrypt                     |
+| Gestor de paquetes | pnpm 12.15.0 (fijado con Corepack)              |
 
 ---
 
 ## Requisitos previos
 
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (incluye Docker Compose)
+- Node.js `22.22.3` y Corepack
+- PostgreSQL 16 local o una instancia administrada
 - Git
 
-Para desarrollo local sin Docker se necesita adicionalmente Node.js 22.22.3 y una instancia de PostgreSQL.
-
-Se recomienda usar `nvm` o `fnm` para fijar la versión con los archivos `.nvmrc` y `.node-version` del repositorio.
+Se recomienda usar `nvm` o `fnm` para fijar Node.js con los archivos `.nvmrc` y `.node-version` del repositorio. pnpm `12.15.0` queda fijado en `package.json` mediante Corepack.
 
 ---
 
@@ -35,56 +34,45 @@ git clone <url-del-repositorio>
 cd Reservorio
 ```
 
-### 2. Instalar dependencias del entorno local
+### 2. Instalar dependencias
 
 ```bash
 corepack enable
 pnpm install
 ```
 
-En cada proyecto:
+La instalación desde la raíz instala las dependencias de backend y frontend del workspace.
 
-```bash
-cd backend
-pnpm install
-
-cd ../frontend
-pnpm install
-```
-
-### 3. Crear el archivo de variables de entorno
+### 3. Configurar el backend
 
 ```bash
 cp backend/.env.example backend/.env
 ```
 
-Edita `backend/.env` y configura los valores descritos en la siguiente sección.
+Edita `backend/.env` y configura `DATABASE_URL`, `JWT_SECRET`, `ADMIN_PIN` y `FRONTEND_URL` según el entorno.
 
-### 4. Levantar los servicios
-
-```bash
-docker compose up --build
-```
-
-La primera vez Docker descargará las imágenes, instalará dependencias y ejecutará el schema SQL automáticamente. Al terminar:
-
-| Servicio | URL |
-|---|---|
-| Frontend (app) | http://localhost |
-| API REST | http://localhost:3000/api |
-| PostgreSQL | localhost:5432 |
-
-Para detener todos los servicios:
+Para una base PostgreSQL nueva, inicializa el esquema y ejecuta las migraciones:
 
 ```bash
-docker compose down
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f backend/db/init.sql
+pnpm --filter reservorio-backend db:migrate
 ```
 
-Para detener y **eliminar los datos** (volumen de la base de datos):
+No vuelvas a cargar `init.sql` en una base existente; en despliegues posteriores aplica solo las migraciones pendientes.
+
+### 4. Iniciar la aplicación
+
+En dos terminales desde la raíz:
 
 ```bash
-docker compose down -v
+pnpm --filter reservorio-backend dev
 ```
+
+```bash
+pnpm --filter frontend start
+```
+
+Frontend: http://localhost:4200 · API: http://localhost:3000/api · PostgreSQL: según `DATABASE_URL`.
 
 ---
 
@@ -92,24 +80,24 @@ docker compose down -v
 
 El backend lee su configuración desde `backend/.env`. Crea ese archivo basándote en la siguiente tabla:
 
-| Variable | Requerida | Descripción | Ejemplo |
-|---|---|---|---|
-| `DATABASE_URL` | Sí | Cadena de conexión a PostgreSQL | `postgres://reservorio:reservorio_pass@localhost:5432/reservorio` |
-| `JWT_SECRET` | Sí | Clave secreta para firmar tokens JWT. Usa una cadena larga y aleatoria en producción. | `mi_clave_super_secreta_2026` |
-| `ADMIN_PIN` | No | PIN numérico para el panel de administración global (se compara contra su hash bcrypt). Por defecto: `1234`. | `9876` |
-| `ADMIN_PIN_HASH` | No | Hash bcrypt del PIN de admin; si se define, se usa para autenticar y `ADMIN_PIN` queda ignorado. | `$2b$10$...` |
-| `REFRESH_GRACE` | No | Horas de ventana de gracia para reemitir un token expirado vía `POST /api/auth/refresh`. Por defecto: `6`. | `6` |
-| `ENABLE_REMINDER_WORKER` | No | `1` activa el worker de recordatorios (email/SMS 24 h antes de la reserva). | `1` |
-| `REMINDER_WINDOW_HOURS` / `REMINDER_INTERVAL_MINUTES` | No | Ventana previa a la reserva (24) y cadencia del worker (60). | `24` / `60` |
-| `PORT` | No | Puerto en que escucha el backend. Por defecto: `3000`. | `3000` |
-| `CORS_ORIGINS` | No | Orígenes permitidos por CORS, separados por coma. | `http://localhost,https://midominio.com` |
-| `FRONTEND_URL` | Sí | URL pública del frontend (se usa en los magic-links de cliente). | `http://localhost:4200` |
-| `EMAIL_PROVIDER` / `EMAIL_WEBHOOK_URL` | No | Canal de email: `console` (defecto) o `http` hacia un webhook. | `email` |
-| `SMS_PROVIDER` / `SMS_WEBHOOK_URL` | No | Canal de SMS para OTP y recordatorios. | `sms` |
-| `OTP_DEBUG` | No | Exponer el código/token OTP en la respuesta. **Solo desarrollo/test.** | `1` |
-| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_TOKENS_KEY` | No | OAuth de Google Sheets. | — |
+| Variable                                                          | Requerida | Descripción                                                                                                  | Ejemplo                                                           |
+| ----------------------------------------------------------------- | --------- | ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------- |
+| `DATABASE_URL`                                                    | Sí        | Cadena de conexión a PostgreSQL                                                                              | `postgres://reservorio:reservorio_pass@localhost:5432/reservorio` |
+| `JWT_SECRET`                                                      | Sí        | Clave secreta para firmar tokens JWT. Usa una cadena larga y aleatoria en producción.                        | `mi_clave_super_secreta_2026`                                     |
+| `ADMIN_PIN`                                                       | No        | PIN numérico para el panel de administración global (se compara contra su hash bcrypt). Por defecto: `1234`. | `9876`                                                            |
+| `ADMIN_PIN_HASH`                                                  | No        | Hash bcrypt del PIN de admin; si se define, se usa para autenticar y `ADMIN_PIN` queda ignorado.             | `$2b$10$...`                                                      |
+| `REFRESH_GRACE`                                                   | No        | Horas de ventana de gracia para reemitir un token expirado vía `POST /api/auth/refresh`. Por defecto: `6`.   | `6`                                                               |
+| `ENABLE_REMINDER_WORKER`                                          | No        | `1` activa el worker de recordatorios (email/SMS 24 h antes de la reserva).                                  | `1`                                                               |
+| `REMINDER_WINDOW_HOURS` / `REMINDER_INTERVAL_MINUTES`             | No        | Ventana previa a la reserva (24) y cadencia del worker (60).                                                 | `24` / `60`                                                       |
+| `PORT`                                                            | No        | Puerto en que escucha el backend. Por defecto: `3000`.                                                       | `3000`                                                            |
+| `CORS_ORIGINS`                                                    | No        | Orígenes permitidos por CORS, separados por coma.                                                            | `http://localhost,https://midominio.com`                          |
+| `FRONTEND_URL`                                                    | Sí        | URL pública del frontend (se usa en los magic-links de cliente).                                             | `http://localhost:4200`                                           |
+| `EMAIL_PROVIDER` / `EMAIL_WEBHOOK_URL`                            | No        | Canal de email: `console` (defecto) o `http` hacia un webhook.                                               | `email`                                                           |
+| `SMS_PROVIDER` / `SMS_WEBHOOK_URL`                                | No        | Canal de SMS para OTP y recordatorios.                                                                       | `sms`                                                             |
+| `OTP_DEBUG`                                                       | No        | Exponer el código/token OTP en la respuesta. **Solo desarrollo/test.**                                       | `1`                                                               |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_TOKENS_KEY` | No        | OAuth de Google Sheets.                                                                                      | —                                                                 |
 
-> **Nota:** `backend/.env.example` es la fuente de verdad con todos los valores, incluidas las cabeceras de webhook (`EMAIL_WEBHOOK_HEADERS`, `SMS_WEBHOOK_HEADERS`). En el entorno Docker, `DATABASE_URL` ya se inyecta automáticamente desde `docker-compose.yml`; solo es necesario configurarla manualmente para desarrollo local.
+> **Nota:** `backend/.env.example` es la fuente de verdad con todos los valores, incluidas las cabeceras de webhook (`EMAIL_WEBHOOK_HEADERS`, `SMS_WEBHOOK_HEADERS`). Define `DATABASE_URL` para cualquier entorno donde se ejecute el backend.
 
 ---
 
@@ -121,13 +109,11 @@ Reservorio/
 ├── .node-version
 ├── .npmrc
 ├── .pnpmrc
-├── docker-compose.yml
 ├── .env.production.example
 ├── .github/
 │   └── workflows/ci.yml
 ├── backend/
 │   ├── .env.example
-│   ├── Dockerfile
 │   ├── package.json
 │   ├── pnpm-lock.yaml
 │   ├── scripts/
@@ -181,7 +167,6 @@ Reservorio/
 │       └── utils/
 │           └── crypto.js
 ├── frontend/
-│   ├── Dockerfile
 │   ├── nginx.conf
 │   ├── package.json
 │   ├── pnpm-lock.yaml
@@ -201,20 +186,15 @@ Reservorio/
 
 ---
 
-## Desarrollo local (sin Docker)
+## Desarrollo local
 
 ### Base de datos
 
-Levanta solo el contenedor de PostgreSQL:
+Configura `DATABASE_URL` en `backend/.env`. Para una instancia local vacía, aplica el esquema base una vez:
 
 ```bash
-docker-compose up db
-```
-
-O usa una instancia local de PostgreSQL y ejecuta el schema manualmente:
-
-```bash
-psql -U reservorio -d reservorio -f backend/db/init.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f backend/db/init.sql
+pnpm --filter reservorio-backend db:migrate
 ```
 
 ### Backend
@@ -240,12 +220,8 @@ La aplicación Angular arrancará en `http://localhost:4200` con proxy hacia `ht
 ### Arranque con scripts del repositorio
 
 ```bash
-chmod +x scripts/dev.sh scripts/prod.sh
+chmod +x scripts/dev.sh
 ./scripts/dev.sh
-```
-
-```bash
-./scripts/prod.sh
 ```
 
 ---
@@ -268,9 +244,9 @@ chmod +x scripts/dev.sh scripts/prod.sh
 
 ### Health check y métricas
 
-| Endpoint | Descripción |
-|---|---|
-| `GET /health` | Estado del servicio y conexión a PostgreSQL |
+| Endpoint       | Descripción                                                                                                 |
+| -------------- | ----------------------------------------------------------------------------------------------------------- |
+| `GET /health`  | Estado del servicio y conexión a PostgreSQL                                                                 |
 | `GET /metrics` | Uptime, nº de requests, errores del proceso, **desglose por status code**, uso de memoria y versión de Node |
 
 Cada request emite un log **estructurado en JSON** (con `requestId`, método, URL, status y duración en ms). El `requestId` también se devuelve en la cabecera `X-Request-Id` para correlacionar errores.
@@ -282,24 +258,25 @@ DATABASE_URL="postgres://reservorio:reservorio_pass@localhost:5432/reservorio" \
   ./backend/scripts/backup.sh
 ```
 
-El script genera un dump de `pg_dump` con marca de tiempo en `backend/backups/`, conserva los últimos **14 días** por defecto y se puede programar con cron. Instrucciones completas dentro del propio script.
+El script genera un dump custom compatible con `pg_restore`, con marca de tiempo en `backend/backups/`; conserva los últimos **14 días** por defecto y se puede programar con cron. Para restaurar en una base staging aislada, define `RESTORE_DATABASE_URL`, `MAINTENANCE_DATABASE_URL` y `DB_NAME` y ejecuta `backend/scripts/restore.sh`. Instrucciones completas en [DEPLOY.md](DEPLOY.md).
 
 ### CI/CD
 
 El pipeline de GitHub Actions (`.github/workflows/ci.yml`) ejecuta en cada push/PR:
-- Tests del backend sobre un **service container de PostgreSQL real** (`pnpm db:migrate` carga el schema y `RUN_INTEGRATION=1` + `DATABASE_URL` activan la suite de integración).
+
+- Tests del backend sobre PostgreSQL 16 instalado en el runner (`init.sql`, `pnpm db:migrate` y `RUN_INTEGRATION=1` activan la suite de integración).
 - Build del frontend (`pnpm build`) y publica el artefacto `dist`.
 
-> **Migraciones**: en desarrollo/CI se gestionan con `pnpm db:migrate` (ver `backend/db/migrations/`); en Docker el backend las aplica automáticamente antes de arrancar.
+> **Migraciones**: en desarrollo y despliegues se aplican con `pnpm db:migrate` antes de iniciar o actualizar el backend (ver `backend/db/migrations/`).
 
 ---
 
 ## Documentación adicional
 
-| Documento | Descripción |
-|---|---|
-| [docs/API.md](docs/API.md) | Referencia completa de todos los endpoints REST |
-| [docs/DEVELOPERS.md](docs/DEVELOPERS.md) | Arquitectura interna y convenciones de código |
-| [docs/GUIA-ADMIN.md](docs/GUIA-ADMIN.md) | Guía de uso del panel para administradores de negocio |
-| [mejoras-futuras.md](mejoras-futuras.md) | Listado priorizado de mejoras y recomendaciones |
+| Documento                                      | Descripción                                            |
+| ---------------------------------------------- | ------------------------------------------------------ |
+| [docs/API.md](docs/API.md)                     | Referencia completa de todos los endpoints REST        |
+| [docs/DEVELOPERS.md](docs/DEVELOPERS.md)       | Arquitectura interna y convenciones de código          |
+| [docs/GUIA-ADMIN.md](docs/GUIA-ADMIN.md)       | Guía de uso del panel para administradores de negocio  |
+| [mejoras-futuras.md](mejoras-futuras.md)       | Listado priorizado de mejoras y recomendaciones        |
 | [SECURITY_CHECKLIST.md](SECURITY_CHECKLIST.md) | Revisión de seguridad y despliegue antes de producción |

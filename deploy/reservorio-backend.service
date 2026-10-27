@@ -1,0 +1,22 @@
+[Unit]
+Description=Reservorio API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=reservorio
+Group=reservorio
+WorkingDirectory=/opt/reservorio/backend
+Environment=NODE_ENV=production
+ExecStartPre=/usr/bin/node /opt/reservorio/backend/db/migrate.js
+ExecStart=/usr/bin/node /opt/reservorio/backend/src/index.js
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

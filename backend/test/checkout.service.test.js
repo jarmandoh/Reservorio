@@ -5,13 +5,19 @@ const { db, state } = createIdempotencyDb();
 jest.doMock('../src/db', () => db);
 jest.doMock('../src/services/syncService', () => ({ syncInBackground: jest.fn() }));
 jest.doMock('../src/services/realtime.service', () => ({ broadcastBookingCreated: jest.fn() }));
-jest.doMock('../src/services/notifications.service', () => ({ deliverExternalNotification: jest.fn().mockResolvedValue(undefined) }));
+jest.doMock('../src/services/notifications.service', () => ({
+  deliverExternalNotification: jest.fn().mockResolvedValue(undefined),
+}));
 
 const { checkoutForBusiness } = require('../src/services/checkout.service');
 
 describe('checkout.service idempotency', () => {
   const payload = {
-    franja: '10:00', cliente: 'Ana', telefono: '600000000', servicio: 'Corte', email: 'ana@example.test',
+    franja: '10:00',
+    cliente: 'Ana',
+    telefono: '600000000',
+    servicio: 'Corte',
+    email: 'ana@example.test',
   };
 
   beforeEach(() => {

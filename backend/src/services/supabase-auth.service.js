@@ -5,9 +5,7 @@ const db = require('../db');
 const { runWithRlsContext } = require('../db-context');
 
 const baseUrl = String(process.env.SUPABASE_URL || '').replace(/\/+$/, '');
-const publishableKey = String(
-  process.env.SUPABASE_PUBLISHABLE_KEY || ''
-).trim();
+const publishableKey = String(process.env.SUPABASE_PUBLISHABLE_KEY || '').trim();
 
 function isConfigured() {
   return Boolean(baseUrl && publishableKey);
@@ -54,9 +52,9 @@ async function resolveAuthPayload(accessToken) {
 
     // El cliente puede autenticarse por password, Google, OTP o magic-link.
     // Si su identidad de Auth es nueva, se crea su perfil interno de cliente.
-    const displayName = String(
-      user.user_metadata?.full_name || user.user_metadata?.name || email.split('@')[0]
-    ).trim().slice(0, 160);
+    const displayName = String(user.user_metadata?.full_name || user.user_metadata?.name || email.split('@')[0])
+      .trim()
+      .slice(0, 160);
     const customer = await db.query(
       `INSERT INTO customers (id, name, email, phone)
        VALUES ($1, $2, $3, '')

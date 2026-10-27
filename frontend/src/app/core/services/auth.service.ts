@@ -222,11 +222,13 @@ export class AuthService {
   verifyEmailOtp(email: string, code: string, role: 'customer' | 'owner' | 'admin' = 'customer'): Observable<string> {
     return from(this.supabase.verifyEmailOtp(email, code)).pipe(
       switchMap(({ data, error }) => {
-        if (error || !data.session?.access_token) return throwError(() => error ?? new Error('No se pudo verificar el código'));
+        if (error || !data.session?.access_token)
+          return throwError(() => error ?? new Error('No se pudo verificar el código'));
         const token = data.session.access_token;
         return this.api.getAuthMe(token).pipe(
           map(response => {
-            if (response.data?.role !== role) throw new Error('Esta cuenta no tiene permisos para este tipo de acceso.');
+            if (response.data?.role !== role)
+              throw new Error('Esta cuenta no tiene permisos para este tipo de acceso.');
             if (role === 'owner') this.setOwnerToken(token);
             else if (role === 'admin') this.setAdminToken(token);
             else this.setCustomerToken(token);
@@ -237,14 +239,19 @@ export class AuthService {
     );
   }
 
-  loginWithPassword(email: string, password: string, role: 'customer' | 'owner' | 'admin' = 'customer'): Observable<string> {
+  loginWithPassword(
+    email: string,
+    password: string,
+    role: 'customer' | 'owner' | 'admin' = 'customer'
+  ): Observable<string> {
     return from(this.supabase.signInWithPassword(email, password)).pipe(
       switchMap(({ data, error }) => {
         if (error || !data.session?.access_token) return throwError(() => error ?? new Error('Credenciales inválidas'));
         const token = data.session.access_token;
         return this.api.getAuthMe(token).pipe(
           map(response => {
-            if (response.data?.role !== role) throw new Error('Esta cuenta no tiene permisos para este tipo de acceso.');
+            if (response.data?.role !== role)
+              throw new Error('Esta cuenta no tiene permisos para este tipo de acceso.');
             if (role === 'owner') this.setOwnerToken(token);
             else if (role === 'admin') this.setAdminToken(token);
             else this.setCustomerToken(token);
@@ -277,11 +284,18 @@ export class AuthService {
     );
   }
 
-  registerOwner(payload: OwnerAuthPayload): Observable<ApiResponse<{ token?: string; confirmationRequired?: boolean }>> {
+  registerOwner(
+    payload: OwnerAuthPayload
+  ): Observable<ApiResponse<{ token?: string; confirmationRequired?: boolean }>> {
     if (!this.supabase.enabled) {
       return this.api.registerOwner(payload).pipe(
-        tap(res => { if (res.data?.token) this.setOwnerToken(res.data.token); }),
-        catchError(err => { this.clearOwnerToken(); return throwError(() => err); })
+        tap(res => {
+          if (res.data?.token) this.setOwnerToken(res.data.token);
+        }),
+        catchError(err => {
+          this.clearOwnerToken();
+          return throwError(() => err);
+        })
       );
     }
     return this.api.registerOwner(payload).pipe(
@@ -300,12 +314,21 @@ export class AuthService {
           },
         };
       }),
-      tap(res => { if (res.data?.token) this.setOwnerToken(res.data.token); }),
-      catchError(err => { this.clearOwnerToken(); return throwError(() => err); })
+      tap(res => {
+        if (res.data?.token) this.setOwnerToken(res.data.token);
+      }),
+      catchError(err => {
+        this.clearOwnerToken();
+        return throwError(() => err);
+      })
     );
   }
 
-  registerCustomerWithPassword(email: string, password: string, name: string): Observable<ApiResponse<{ token?: string; confirmationRequired?: boolean }>> {
+  registerCustomerWithPassword(
+    email: string,
+    password: string,
+    name: string
+  ): Observable<ApiResponse<{ token?: string; confirmationRequired?: boolean }>> {
     return from(this.supabase.signUp(email, password, name)).pipe(
       map(({ data, error }) => {
         if (error) throw error;
@@ -315,7 +338,9 @@ export class AuthService {
           data: { token: data.session?.access_token, confirmationRequired: !data.session },
         };
       }),
-      tap(res => { if (res.data?.token) this.setCustomerToken(res.data.token); })
+      tap(res => {
+        if (res.data?.token) this.setCustomerToken(res.data.token);
+      })
     );
   }
 
@@ -336,7 +361,11 @@ export class AuthService {
       return from(this.supabase.signInWithOtp(email, true)).pipe(
         map(({ error }) => {
           if (error) throw error;
-          return { ok: true, status: 200, data: { message: 'Si el correo está registrado, recibirás un código de acceso.' } };
+          return {
+            ok: true,
+            status: 200,
+            data: { message: 'Si el correo está registrado, recibirás un código de acceso.' },
+          };
         })
       );
     }
@@ -347,12 +376,20 @@ export class AuthService {
     if (this.supabase.enabled) {
       return this.verifyEmailOtp(email, code, 'customer').pipe(
         map(token => ({ ok: true, status: 200, data: { token } })),
-        catchError(err => { this.clearCustomerToken(); return throwError(() => err); })
+        catchError(err => {
+          this.clearCustomerToken();
+          return throwError(() => err);
+        })
       );
     }
     return this.api.verifyCustomerOtp(email, code).pipe(
-      tap(res => { if (res.data?.token) this.setCustomerToken(res.data.token); }),
-      catchError(err => { this.clearCustomerToken(); return throwError(() => err); })
+      tap(res => {
+        if (res.data?.token) this.setCustomerToken(res.data.token);
+      }),
+      catchError(err => {
+        this.clearCustomerToken();
+        return throwError(() => err);
+      })
     );
   }
 
@@ -526,7 +563,8 @@ export class AuthService {
     if (activeSupabaseToken && this.isSupabaseToken(activeSupabaseToken)) {
       return from(this.supabase.getSession()).pipe(
         switchMap(({ data, error }) => {
-          if (error || !data.session?.access_token) return throwError(() => error ?? new Error('Sesión Supabase expirada'));
+          if (error || !data.session?.access_token)
+            return throwError(() => error ?? new Error('Sesión Supabase expirada'));
           const token = data.session.access_token;
           return this.api.getAuthMe(token).pipe(
             map(response => {
@@ -577,7 +615,10 @@ export class AuthService {
       catchError(err => {
         // Error 401 del refresh implica sesión irreparable -> cerrar sesión
         const msg = err instanceof Error ? err.message : String(err);
-        const isUnauthorized = msg.toLowerCase().includes('token') || msg.toLowerCase().includes('sesión') || msg.toLowerCase().includes('expirada');
+        const isUnauthorized =
+          msg.toLowerCase().includes('token') ||
+          msg.toLowerCase().includes('sesión') ||
+          msg.toLowerCase().includes('expirada');
         if (isUnauthorized) {
           target!.clear();
         }
@@ -599,7 +640,7 @@ export class AuthService {
       const payload = parts[1];
       // Maneja base64url y padding
       const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
-      const padded = base64.padEnd(base64.length + (4 - (base64.length % 4)) % 4, '=');
+      const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
       return JSON.parse(atob(padded));
     } catch {
       return null;

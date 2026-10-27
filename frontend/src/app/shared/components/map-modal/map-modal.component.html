@@ -15,7 +15,9 @@
         Lat: <strong>{{ selectedCoords()?.lat?.toFixed(5) }}</strong
         >, Lng: <strong>{{ selectedCoords()?.lng?.toFixed(5) }}</strong>
       </span>
-      <button class="btn-confirm" (click)="confirmSelection()" aria-label="Confirmar ubicación">Confirmar Selección</button>
+      <button class="btn-confirm" (click)="confirmSelection()" aria-label="Confirmar ubicación">
+        Confirmar Selección
+      </button>
     } @else {
       <span class="coords-info placeholder">Haz clic en el mapa para marcar un punto</span>
     }

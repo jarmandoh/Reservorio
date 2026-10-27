@@ -1,11 +1,11 @@
 # Frontend — Reservorio
 
-Aplicación web de **Reservorio** construida con **Angular 22** (Standalone Components), **Tailwind CSS 3**, **GSAP** y **Leaflet**. Servida en producción por Nginx.
+Aplicación web de **Reservorio** construida con **Angular 22** (Standalone Components), **Tailwind CSS 3**, **GSAP** y **Leaflet**. En producción se compila como archivos estáticos para un servidor web.
 
 ## Requisitos
 
 - Node.js `>=22.22.3`
-- pnpm `>=9.15.0`
+- pnpm `12.15.0` (fijado en `package.json`)
 
 ## Puesta en marcha
 
@@ -28,7 +28,7 @@ apiUrl: window.__APP_CONFIG__?.apiUrl ?? 'http://localhost:3000/api'; // dev
 apiUrl: window.__APP_CONFIG__?.apiUrl ?? '/api'; // prod
 ```
 
-En Docker, `docker-compose.yml` inyecta `API_URL` en el HTML servido, lo que permite apuntar al dominio real sin recompilar.
+En producción `apiUrl` usa `/api` por defecto; configura tu servidor web para enviar `/api` al backend. El valor puede ajustarse en `src/index.html` antes de compilar.
 
 ## Estructura
 

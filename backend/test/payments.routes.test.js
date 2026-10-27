@@ -9,7 +9,9 @@ const express = require('express');
 const { createIdempotencyDb } = require('./helpers/idempotency-db');
 const { db, state } = createIdempotencyDb();
 jest.doMock('../src/db', () => db);
-jest.doMock('../src/services/notifications.service', () => ({ deliverExternalNotification: jest.fn().mockResolvedValue(undefined) }));
+jest.doMock('../src/services/notifications.service', () => ({
+  deliverExternalNotification: jest.fn().mockResolvedValue(undefined),
+}));
 
 const paymentsRoutes = require('../src/routes/payments.routes');
 
@@ -70,15 +72,18 @@ describe('Payments API', () => {
   });
 
   test('POST /api/payments accepts alternative payment methods', async () => {
-    const response = await request(app).post('/api/payments').send({
-      bookingId: 'booking-paypal',
-      providerId: 'negocio_1',
-      customerId: 'cliente_1',
-      amount: 89,
-      currency: 'EUR',
-      method: 'paypal',
-      status: 'pending',
-    }).set('Idempotency-Key', 'payment-create-2');
+    const response = await request(app)
+      .post('/api/payments')
+      .send({
+        bookingId: 'booking-paypal',
+        providerId: 'negocio_1',
+        customerId: 'cliente_1',
+        amount: 89,
+        currency: 'EUR',
+        method: 'paypal',
+        status: 'pending',
+      })
+      .set('Idempotency-Key', 'payment-create-2');
 
     expect(response.status).toBe(201);
     expect(response.body.ok).toBe(true);
@@ -86,16 +91,19 @@ describe('Payments API', () => {
   });
 
   test('POST /api/payments/checkout creates a checkout intent in dev fallback mode', async () => {
-    const response = await request(app).post('/api/payments/checkout').send({
-      bookingId: 'booking-456',
-      providerId: 'negocio_1',
-      customerId: 'cliente_1',
-      amount: 120,
-      currency: 'EUR',
-      method: 'card',
-      successUrl: 'http://localhost:4200/payment/success?bookingId=booking-456',
-      cancelUrl: 'http://localhost:4200/payment/cancel?bookingId=booking-456',
-    }).set('Idempotency-Key', 'checkout-create-1');
+    const response = await request(app)
+      .post('/api/payments/checkout')
+      .send({
+        bookingId: 'booking-456',
+        providerId: 'negocio_1',
+        customerId: 'cliente_1',
+        amount: 120,
+        currency: 'EUR',
+        method: 'card',
+        successUrl: 'http://localhost:4200/payment/success?bookingId=booking-456',
+        cancelUrl: 'http://localhost:4200/payment/cancel?bookingId=booking-456',
+      })
+      .set('Idempotency-Key', 'checkout-create-1');
 
     expect(response.status).toBe(200);
     expect(response.body.ok).toBe(true);
@@ -104,7 +112,10 @@ describe('Payments API', () => {
 
   test('POST /api/payments/webhook accepts a completed session event', async () => {
     state.payments.set('pay-webhook', {
-      ...insertedPayment, id: 'pay-webhook', booking_id: 'booking-456', status: 'pending',
+      ...insertedPayment,
+      id: 'pay-webhook',
+      booking_id: 'booking-456',
+      status: 'pending',
     });
 
     const payload = {

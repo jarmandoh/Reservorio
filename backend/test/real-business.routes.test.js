@@ -2,20 +2,26 @@
 
 process.env.JWT_SECRET = 'test-secret';
 
-// ── Tests de integración con PostgreSQL real (vía Docker) ──────────────────
+const RUN_INTEGRATION = process.env.RUN_INTEGRATION === '1';
+if (RUN_INTEGRATION) {
+  const { getTestDatabaseUrl } = require('./helpers/test-database-url');
+  process.env.DATABASE_URL = getTestDatabaseUrl(process.env.TEST_DATABASE_URL);
+}
+
+// ── Tests de integración con PostgreSQL real ────────────────────────────────
 // Se omiten en `npm test` normal y solo corren cuando se activan explícitamente:
 //
-//   docker compose -f docker-compose.test.yml up -d
-//   $env:DATABASE_URL = 'postgres://reservorio_test:reservorio_test_pass@localhost:5434/reservorio_test'
-//   $env:RUN_INTEGRATION = '1'
-//   npm test -- test/real-business.routes.test.js
+// Usa únicamente una base desechable local llamada reservorio_test; los tests ejecutan TRUNCATE.
+//   export TEST_DATABASE_URL='postgres://reservorio_test:pass@127.0.0.1:5432/reservorio_test'
+//   export DATABASE_URL="$TEST_DATABASE_URL"
+//   psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/init.sql
+//   pnpm db:migrate
+//   export RUN_INTEGRATION=1
+//   pnpm test -- test/real-business.routes.test.js
 //
 // Cubren los bugs #2 y #3 que los tests con BD mockeada no podían detectar:
 // restricciones reales (índice único de doble reserva) y flujo de pago completo
 // (booking confirmado + notificación persistida).
-
-const RUN_INTEGRATION =
-  process.env.RUN_INTEGRATION === '1' && /^postgres(ql)?:\/\//.test(process.env.DATABASE_URL || '');
 
 const request = require('supertest');
 const express = require('express');
@@ -122,7 +128,7 @@ maybeDescribe('Integración con PostgreSQL real', () => {
     expect(booking.status).toBe(201);
     const bookingId = booking.body.data.id;
 
-    const payment = await request(app).post('/api/payments').send({
+    const payment = await request(app).post('/api/payments').set('Idempotency-Key', 'integration-payment-create').send({
       bookingId,
       providerId: BUSINESS_ID,
       customerId: CUSTOMER_ID,

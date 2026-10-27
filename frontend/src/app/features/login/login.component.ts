@@ -56,27 +56,71 @@ import { PinAuthCardComponent } from '../../shared/components/pin-auth-card/pin-
       </div>
       <div class="mt-4 border-t border-outline-variant pt-4">
         <label class="form-label" for="admin-email">Correo de administrador</label>
-        <input id="admin-email" type="email" class="form-input w-full" formControlName="email" placeholder="admin@dominio.com" />
+        <input
+          id="admin-email"
+          type="email"
+          class="form-input w-full"
+          formControlName="email"
+          placeholder="admin@dominio.com"
+        />
         <label class="form-label mt-3 block" for="admin-password">Contraseña de administrador</label>
-        <input id="admin-password" type="password" class="form-input w-full" formControlName="password" autocomplete="current-password" />
-        <button type="button" class="mt-2 w-full rounded-xl bg-primary px-4 py-3 text-white font-semibold" (click)="loginPassword()" [disabled]="loading() || !form.controls.email.value || !form.controls.password.value">
+        <input
+          id="admin-password"
+          type="password"
+          class="form-input w-full"
+          formControlName="password"
+          autocomplete="current-password"
+        />
+        <button
+          type="button"
+          class="mt-2 w-full rounded-xl bg-primary px-4 py-3 text-white font-semibold"
+          (click)="loginPassword()"
+          [disabled]="loading() || !form.controls.email.value || !form.controls.password.value"
+        >
           Iniciar sesión con contraseña
         </button>
-        <button type="button" class="mt-2 w-full rounded-xl border border-outline-variant px-4 py-3 font-semibold" (click)="requestOtp()" [disabled]="loading()">
+        <button
+          type="button"
+          class="mt-2 w-full rounded-xl border border-outline-variant px-4 py-3 font-semibold"
+          (click)="requestOtp()"
+          [disabled]="loading()"
+        >
           Enviar código por email
         </button>
-        <button type="button" class="mt-2 w-full rounded-xl border border-outline-variant px-4 py-3 font-semibold" (click)="requestMagicLink()" [disabled]="loading()">
+        <button
+          type="button"
+          class="mt-2 w-full rounded-xl border border-outline-variant px-4 py-3 font-semibold"
+          (click)="requestMagicLink()"
+          [disabled]="loading()"
+        >
           Enviar enlace mágico
         </button>
         @if (otpRequested()) {
           <label class="form-label mt-3 block" for="admin-code">Código de verificación</label>
-          <input id="admin-code" type="text" inputmode="numeric" maxlength="8" class="form-input w-full" formControlName="code" />
-          <button type="button" class="mt-2 w-full rounded-xl bg-primary px-4 py-3 text-white font-semibold" (click)="verifyOtp()" [disabled]="loading() || form.controls.code.invalid">
+          <input
+            id="admin-code"
+            type="text"
+            inputmode="numeric"
+            maxlength="8"
+            class="form-input w-full"
+            formControlName="code"
+          />
+          <button
+            type="button"
+            class="mt-2 w-full rounded-xl bg-primary px-4 py-3 text-white font-semibold"
+            (click)="verifyOtp()"
+            [disabled]="loading() || form.controls.code.invalid"
+          >
             Verificar código
           </button>
         }
       </div>
-      <button type="button" class="w-full rounded-xl border border-outline-variant px-4 py-3 font-semibold" (click)="loginGoogle()" [disabled]="loading()">
+      <button
+        type="button"
+        class="w-full rounded-xl border border-outline-variant px-4 py-3 font-semibold"
+        (click)="loginGoogle()"
+        [disabled]="loading()"
+      >
         Acceso administrativo con Google
       </button>
     </app-pin-auth-card>
@@ -118,17 +162,20 @@ export class LoginComponent implements OnInit {
     this.router.navigate(['/loading']);
 
     const pin = this.form.value.pin!;
-    this.auth.loginAdmin(pin).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: () => {
-        this.loading.set(false);
-        this.router.navigate(['/admin']);
-      },
-      error: () => {
-        this.loading.set(false);
-        this.loginError.set(true);
-        this.form.reset();
-      },
-    });
+    this.auth
+      .loginAdmin(pin)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.loading.set(false);
+          this.router.navigate(['/admin']);
+        },
+        error: () => {
+          this.loading.set(false);
+          this.loginError.set(true);
+          this.form.reset();
+        },
+      });
   }
 
   loginPassword(): void {
@@ -137,16 +184,19 @@ export class LoginComponent implements OnInit {
     if (!email || !password) return;
     this.loading.set(true);
     this.loginError.set(false);
-    this.auth.loginWithPassword(email, password, 'admin').pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: () => {
-        this.loading.set(false);
-        this.router.navigate(['/admin']);
-      },
-      error: () => {
-        this.loading.set(false);
-        this.loginError.set(true);
-      },
-    });
+    this.auth
+      .loginWithPassword(email, password, 'admin')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.loading.set(false);
+          this.router.navigate(['/admin']);
+        },
+        error: () => {
+          this.loading.set(false);
+          this.loginError.set(true);
+        },
+      });
   }
 
   requestOtp(): void {
@@ -157,17 +207,20 @@ export class LoginComponent implements OnInit {
     }
     this.loading.set(true);
     this.loginError.set(false);
-    this.auth.requestEmailOtp(email).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: () => {
-        this.loading.set(false);
-        this.otpRequested.set(true);
-        this.form.controls.code.enable();
-      },
-      error: () => {
-        this.loading.set(false);
-        this.loginError.set(true);
-      },
-    });
+    this.auth
+      .requestEmailOtp(email)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.loading.set(false);
+          this.otpRequested.set(true);
+          this.form.controls.code.enable();
+        },
+        error: () => {
+          this.loading.set(false);
+          this.loginError.set(true);
+        },
+      });
   }
 
   requestMagicLink(): void {
@@ -178,16 +231,19 @@ export class LoginComponent implements OnInit {
     }
     this.loading.set(true);
     this.loginError.set(false);
-    this.auth.requestRoleMagicLink(email).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: () => {
-        this.loading.set(false);
-        this.loginError.set(false);
-      },
-      error: () => {
-        this.loading.set(false);
-        this.loginError.set(true);
-      },
-    });
+    this.auth
+      .requestRoleMagicLink(email)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.loading.set(false);
+          this.loginError.set(false);
+        },
+        error: () => {
+          this.loading.set(false);
+          this.loginError.set(true);
+        },
+      });
   }
 
   verifyOtp(): void {
@@ -196,25 +252,31 @@ export class LoginComponent implements OnInit {
     if (!email || !code) return;
     this.loading.set(true);
     this.loginError.set(false);
-    this.auth.verifyEmailOtp(email, code, 'admin').pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: () => {
-        this.loading.set(false);
-        this.router.navigate(['/admin']);
-      },
-      error: () => {
-        this.loading.set(false);
-        this.loginError.set(true);
-      },
-    });
+    this.auth
+      .verifyEmailOtp(email, code, 'admin')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.loading.set(false);
+          this.router.navigate(['/admin']);
+        },
+        error: () => {
+          this.loading.set(false);
+          this.loginError.set(true);
+        },
+      });
   }
 
   loginGoogle(): void {
     this.loading.set(true);
     this.loginError.set(false);
-    this.auth.loginWithGoogle('admin').pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: () => this.loading.set(false),
-      error: () => this.loading.set(false),
-    });
+    this.auth
+      .loginWithGoogle('admin')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => this.loading.set(false),
+        error: () => this.loading.set(false),
+      });
   }
 
   goBack(): void {

@@ -38,13 +38,20 @@ import { ReservationManagerComponent } from './reservation-manager.component';
         </section>
       } @else if (business(); as store) {
         <nav class="breadcrumbs" aria-label="Migas de pan">
-          <a routerLink="/">Reservorio</a><span aria-hidden="true">›</span><span aria-current="page">{{ store.name }}</span>
+          <a routerLink="/">Reservorio</a><span aria-hidden="true">›</span
+          ><span aria-current="page">{{ store.name }}</span>
         </nav>
         <header class="business-nav" [class.is-scrolled]="headerScrolled()">
           <a class="back-link" routerLink="/" aria-label="Volver al inicio"
             ><span class="material-icons-round">arrow_back</span><span>Inicio</span></a
           >
-          <a class="business-brand" [class.is-visible]="headerScrolled()" [attr.aria-hidden]="!headerScrolled()" href="#inicio" (click)="scrollToSection($event, 'inicio')">
+          <a
+            class="business-brand"
+            [class.is-visible]="headerScrolled()"
+            [attr.aria-hidden]="!headerScrolled()"
+            href="#inicio"
+            (click)="scrollToSection($event, 'inicio')"
+          >
             @if (store.logo) {
               <img [src]="store.logo" [alt]="'Logo de ' + store.name" width="64" height="64" />
             }
@@ -108,7 +115,13 @@ import { ReservationManagerComponent } from './reservation-manager.component';
           [style.background]="store.gradient || 'linear-gradient(135deg,#12335d,#2476b9)'"
         >
           @if (store.storeCoverImage) {
-            <img class="hero-image" [src]="store.storeCoverImage" [alt]="'Espacio de ' + store.name" width="1600" height="900" />
+            <img
+              class="hero-image"
+              [src]="store.storeCoverImage"
+              [alt]="'Espacio de ' + store.name"
+              width="1600"
+              height="900"
+            />
           }
           <div class="hero-shade"></div>
           <div class="hero-content">
@@ -228,7 +241,9 @@ import { ReservationManagerComponent } from './reservation-manager.component';
             <div>
               <p class="section-eyebrow">CONTACTO · PLANEA TU VISITA</p>
               <h2 id="contact-heading">Estamos aquí para ayudarte.</h2>
-              <p class="contact-intro">Encuentra cómo llegar, consulta los horarios o comunícate directamente con el negocio.</p>
+              <p class="contact-intro">
+                Encuentra cómo llegar, consulta los horarios o comunícate directamente con el negocio.
+              </p>
             </div>
             <div class="contact-details">
               @if (store.location) {
@@ -302,7 +317,12 @@ import { ReservationManagerComponent } from './reservation-manager.component';
         box-shadow: none;
         backdrop-filter: none;
         -webkit-backdrop-filter: none;
-        transition: color 300ms ease, background 300ms ease, border-color 300ms ease, box-shadow 300ms ease, backdrop-filter 300ms ease;
+        transition:
+          color 300ms ease,
+          background 300ms ease,
+          border-color 300ms ease,
+          box-shadow 300ms ease,
+          backdrop-filter 300ms ease;
       }
 
       .breadcrumbs {
@@ -319,7 +339,9 @@ import { ReservationManagerComponent } from './reservation-manager.component';
         font-size: 0.75rem;
       }
 
-      .breadcrumbs a:hover { color: #fff; }
+      .breadcrumbs a:hover {
+        color: #fff;
+      }
       .business-nav.is-scrolled {
         color: var(--business-ink);
         border-bottom-color: var(--business-border);
@@ -351,7 +373,9 @@ import { ReservationManagerComponent } from './reservation-manager.component';
         pointer-events: none;
         text-overflow: ellipsis;
         transform: translateY(-0.55rem) scale(0.96);
-        transition: opacity 300ms ease, transform 380ms cubic-bezier(0.2, 0.75, 0.25, 1);
+        transition:
+          opacity 300ms ease,
+          transform 380ms cubic-bezier(0.2, 0.75, 0.25, 1);
         white-space: nowrap;
       }
       .business-brand.is-visible {
@@ -399,7 +423,11 @@ import { ReservationManagerComponent } from './reservation-manager.component';
       }
       .qr-card h2 {
         margin: 0;
-        font: 800 1.15rem/1.1 'Manrope', 'Inter', system-ui, sans-serif;
+        font:
+          800 1.15rem/1.1 'Manrope',
+          'Inter',
+          system-ui,
+          sans-serif;
         letter-spacing: -0.03em;
       }
       .qr-close {
@@ -614,10 +642,16 @@ import { ReservationManagerComponent } from './reservation-manager.component';
       .hero-title {
         max-width: 14ch;
         margin: 1.2rem 0 0.7rem;
-        font: 800 clamp(2.5rem, 7vw, 5.2rem)/0.98 'Manrope', 'Inter', system-ui, sans-serif;
+        font:
+          800 clamp(2.5rem, 7vw, 5.2rem)/0.98 'Manrope',
+          'Inter',
+          system-ui,
+          sans-serif;
         letter-spacing: -0.04em;
         transform-origin: left center;
-        transition: opacity 320ms ease, transform 420ms cubic-bezier(0.2, 0.75, 0.25, 1);
+        transition:
+          opacity 320ms ease,
+          transform 420ms cubic-bezier(0.2, 0.75, 0.25, 1);
       }
       .hero-title.title-transferred {
         opacity: 0.16;
@@ -721,7 +755,11 @@ import { ReservationManagerComponent } from './reservation-manager.component';
       .contact-section h2 {
         margin: 0;
         color: var(--business-ink);
-        font: 750 clamp(1.6rem, 3vw, 2.4rem)/1.08 'Manrope', 'Inter', system-ui, sans-serif;
+        font:
+          750 clamp(1.6rem, 3vw, 2.4rem)/1.08 'Manrope',
+          'Inter',
+          system-ui,
+          sans-serif;
         letter-spacing: -0.025em;
       }
       .section-note,
@@ -784,7 +822,11 @@ import { ReservationManagerComponent } from './reservation-manager.component';
         border: 1px solid #cbd9e8;
         border-radius: 1.3rem;
         color: #315e91;
-        font: 800 1.6rem 'Manrope', 'Inter', system-ui, sans-serif;
+        font:
+          800 1.6rem 'Manrope',
+          'Inter',
+          system-ui,
+          sans-serif;
         text-align: center;
         transform: rotate(-5deg);
       }

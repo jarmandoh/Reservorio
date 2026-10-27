@@ -1,14 +1,11 @@
-<div
-  class="presentation-container relative overflow-hidden"
-  [attr.data-current]="currentSlide()"
->
+<div class="presentation-container relative overflow-hidden" [attr.data-current]="currentSlide()">
   <!-- Diapositivas -->
   @for (img of images; track $index; let idx = $index) {
     <div
       class="slide absolute inset-0 transition-opacity duration-600"
       [attr.data-index]="idx"
       [style.opacity]="idx === currentSlide() ? 1 : 0"
-      style="object-fit: cover;"
+      style="object-fit: cover"
     >
       <img [src]="img" alt="Diapositiva {{ idx + 1 }}" class="w-full h-full" />
     </div>
@@ -37,4 +34,5 @@
         [attr.aria-label]="'Ir a diapositiva ' + (i + 1)"
       ></button>
     }
+  </div>
 </div>

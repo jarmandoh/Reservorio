@@ -42,8 +42,8 @@ export const publicRoutes: Routes = [
     path: 'test',
     loadComponent: () => import('../test/test.component').then(m => m.TestComponent),
   },
-    {
-      path: 'presentaciones',
-      loadComponent: () => import('../presentaciones/presentaciones.component').then(m => m.PresentacionesComponent),
-    },
-  ];
+  {
+    path: 'presentaciones',
+    loadComponent: () => import('../presentaciones/presentaciones.component').then(m => m.PresentacionesComponent),
+  },
+];

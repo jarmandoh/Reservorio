@@ -308,10 +308,7 @@ export class CustomerHistoryComponent implements OnInit {
   }
 
   paymentLabel(b: CustomerHistoryBooking): string {
-    const amount =
-      b.paymentAmount != null
-        ? formatCurrency(b.paymentAmount, b.paymentCurrency ?? undefined)
-        : '';
+    const amount = b.paymentAmount != null ? formatCurrency(b.paymentAmount, b.paymentCurrency ?? undefined) : '';
     const status =
       b.paymentStatus === 'paid'
         ? 'Pagado'

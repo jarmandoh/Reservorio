@@ -30,7 +30,14 @@ export class StorefrontComponent implements OnInit {
   readonly currency = DEFAULT_CURRENCY;
   readonly formatCurrency = formatCurrency;
 
-  readonly categories = computed(() => ['Todos', ...new Set(this.products().map(product => product.category).filter(Boolean))]);
+  readonly categories = computed(() => [
+    'Todos',
+    ...new Set(
+      this.products()
+        .map(product => product.category)
+        .filter(Boolean)
+    ),
+  ]);
   readonly visibleProducts = computed(() =>
     this.selectedCategory() === 'Todos'
       ? this.products()
@@ -104,7 +111,10 @@ export class StorefrontComponent implements OnInit {
   }
 
   whatsappContactUrl(phone: string): string | null {
-    return createWhatsAppOrderUrl(phone, `Hola, quisiera más información sobre ${this.business()?.name ?? 'la tienda'}.`);
+    return createWhatsAppOrderUrl(
+      phone,
+      `Hola, quisiera más información sobre ${this.business()?.name ?? 'la tienda'}.`
+    );
   }
 
   closeCart(): void {

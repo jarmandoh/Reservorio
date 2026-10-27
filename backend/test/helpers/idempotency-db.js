@@ -19,9 +19,15 @@ function createIdempotencyDb() {
       const id = `${scope}\0${key}`;
       if (state.idempotency.has(id)) return { rows: [], rowCount: 0 };
       state.idempotency.set(id, {
-        scope, key, request_hash: requestHash, owner_token: ownerToken,
-        state: 'processing', lease_until: new Date(Date.now() + leaseSeconds * 1000),
-        response_status: null, response_body: null, updated_at: new Date(),
+        scope,
+        key,
+        request_hash: requestHash,
+        owner_token: ownerToken,
+        state: 'processing',
+        lease_until: new Date(Date.now() + leaseSeconds * 1000),
+        response_status: null,
+        response_body: null,
+        updated_at: new Date(),
       });
       return { rows: [{ key }], rowCount: 1 };
     }
@@ -42,7 +48,8 @@ function createIdempotencyDb() {
     if (text.startsWith('UPDATE idempotency_requests SET owner_token')) {
       const [scope, key, ownerToken, leaseSeconds] = values;
       Object.assign(state.idempotency.get(`${scope}\0${key}`), {
-        owner_token: ownerToken, lease_until: new Date(Date.now() + leaseSeconds * 1000),
+        owner_token: ownerToken,
+        lease_until: new Date(Date.now() + leaseSeconds * 1000),
       });
       return { rows: [], rowCount: 1 };
     }
@@ -64,9 +71,17 @@ function createIdempotencyDb() {
     if (text.startsWith('INSERT INTO payments')) {
       const checkout = text.includes("'pending', $8, $9");
       const payment = {
-        id: values[0], booking_id: values[1], provider_id: values[2], customer_id: values[3],
-        amount: values[4], currency: values[5], method: values[6], status: checkout ? 'pending' : values[7],
-        idempotency_scope: values[checkout ? 7 : 8], idempotency_key: values[checkout ? 8 : 9], checkout_session_id: null,
+        id: values[0],
+        booking_id: values[1],
+        provider_id: values[2],
+        customer_id: values[3],
+        amount: values[4],
+        currency: values[5],
+        method: values[6],
+        status: checkout ? 'pending' : values[7],
+        idempotency_scope: values[checkout ? 7 : 8],
+        idempotency_key: values[checkout ? 8 : 9],
+        checkout_session_id: null,
       };
       state.payments.set(payment.id, payment);
       return { rows: [], rowCount: 1 };

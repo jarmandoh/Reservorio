@@ -1,6 +1,7 @@
 # Checklist de seguridad y despliegue
 
 Estado por ítem:
+
 - ✅ **Implementado / verificado en el código** (sin acción).
 - 🟠 **Operativo**: solo requiere que configures un valor en el `.env` o en el despliegue (bloquea el arranque en producción si falla la validación).
 - ⬜ **Pendiente** de implementar.
@@ -34,17 +35,11 @@ Estado por ítem:
 - [x] **Build de producción** ✅ `pnpm exec ng build --configuration production` verde (PWA/SEO incluidos).
 - [x] **`nginx.conf`** ✅ HSTS + CSP + cabeceras anti-sniffing; cache para estáticos; SPA fallback.
 
-## Docker
-
-- [x] **Variables de `docker-compose.yml`** ✅ Compose valida/inyecta vars (env_file + defaults); revisado.
-- [x] **Volumen de PostgreSQL fuera de repositorio** ✅ `pgdata` (named volume) + `./backups` bind-mount, ambos fuera del control de versiones.
-- [x] **Sin puertos innecesarios expuestos** ✅ `db` (5432) y `backend` (3000) bindeados a `127.0.0.1`; solo `frontend` (80) queda público.
-
 ## Producción
 
-- [x] **Backend escucha solo en el puerto requerido** ✅ `PORT` (defecto 3000); en Docker solo alcanzable vía loopback del host.
-- [x] **Copias de seguridad de la BD** ✅ Servicio `backup` (dump `pg_dump -Fc -Z9` diario a `./backups/`, retención 14 días) + `backend/scripts/restore.sh`. 🟠 Probar una restauración real en el servidor antes de ir a producción.
-- [x] **HTTPS con reverse proxy/front door real** ✅ `nginx.conf` listo (HSTS incluido). 🟠 Aplicar TLS real en el despliegue (proxy/CDN de entrada) y abrir solo 443 externamente.
+- [x] **Backend y base de datos en red privada** ✅ El servicio systemd usa el puerto configurado; restringir los puertos 3000 y 5432 en el firewall.
+- [x] **Copias de seguridad de la BD** ✅ `backend/scripts/backup.sh` crea dumps custom con retención de 14 días. 🟠 Programar backup, configurar copia externa y ensayar restauración real.
+- [x] **HTTPS con reverse proxy/front door real** ✅ Nginx aplica cabeceras de seguridad; Caddy del host puede terminar TLS. 🟠 Configurar DNS/TLS y abrir solo 80/443 externamente.
 
 ## Tareas operativas para el despliegue (resumen)
 
@@ -52,4 +47,4 @@ Estado por ítem:
 2. Configurar `FRONTEND_URL`, `CORS_ORIGINS`, `STRIPE_WEBHOOK_SECRET`, credenciales Google/Sheets.
 3. Verificar `OTP_DEBUG` apagado y `ENABLE_REMINDER_WORKER` según desees.
 4. Abrir solo el puerto 443 y terminar TLS en el reverse proxy/front door.
-5. Probar `docker compose run --rm backup` y `backend/scripts/restore.sh` en el servidor.
+5. Programar `backend/scripts/backup.sh` y ensayar `backend/scripts/restore.sh` en un destino de staging.

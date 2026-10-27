@@ -50,7 +50,7 @@ const DEFAULT_CATEGORIES = ['Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci�
 @Component({
   selector: 'app-home',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, RouterLink, CategoryFiltersComponent, BusinessCardComponent, StatsBarComponent],
+  imports: [CommonModule, RouterLink, CategoryFiltersComponent, BusinessCardComponent],
   template: `
     <div class="min-h-screen bg-surface flex flex-col">
       <!-- ══ HERO ═══════════════════════════════════════════════════════ -->
@@ -58,8 +58,12 @@ const DEFAULT_CATEGORIES = ['Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci�
         class="relative overflow-hidden text-white bg-gradient-to-br from-brand-strong via-primary to-primary-container"
       >
         <!-- Decorative circles -->
-        <div class="hero-decoration hero-decoration-top absolute -top-20 -right-20 w-72 h-72 rounded-full opacity-10"></div>
-        <div class="hero-decoration hero-decoration-bottom absolute -bottom-10 -left-16 w-48 h-48 rounded-full opacity-10"></div>
+        <div
+          class="hero-decoration hero-decoration-top absolute -top-20 -right-20 w-72 h-72 rounded-full opacity-10"
+        ></div>
+        <div
+          class="hero-decoration hero-decoration-bottom absolute -bottom-10 -left-16 w-48 h-48 rounded-full opacity-10"
+        ></div>
 
         <div class="relative max-w-4xl mx-auto px-6 pt-12 pb-10">
           <!-- Top nav -->
@@ -296,7 +300,9 @@ const DEFAULT_CATEGORIES = ['Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci�
       .g-nav-btn {
         background: rgba(255, 255, 255, 0.15);
         backdrop-filter: blur(8px);
-        transition: background-color 160ms ease, transform 160ms ease;
+        transition:
+          background-color 160ms ease,
+          transform 160ms ease;
       }
 
       .g-nav-btn:hover {
@@ -486,10 +492,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   hasActiveFilters(): boolean {
-    return (
-      this.filters.category !== 'Todos' ||
-      !!this.filters.location
-    );
+    return this.filters.category !== 'Todos' || !!this.filters.location;
   }
 
   private isOpenNow(schedule?: string): boolean | null {

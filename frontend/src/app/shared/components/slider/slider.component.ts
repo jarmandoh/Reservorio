@@ -29,10 +29,7 @@ export class SliderComponent {
   currentSlide = signal(0);
   autoplay = signal(true);
 
-
   constructor() {
-
-
     /* --- autoplay loop --- */
     effect(() => {
       const play = this.autoplay();
@@ -44,12 +41,12 @@ export class SliderComponent {
 
   /* --- navegación --- */
   next() {
-    this.currentSlide.update((x) => (x + 1) % this.slideCount);
+    this.currentSlide.update(x => (x + 1) % this.slideCount);
     // Se mantiene la sombra cuando se avanza
   }
   /* --- navegación --- */
   prev() {
-    this.currentSlide.update((x) => (x - 1 + this.slideCount) % this.slideCount);
+    this.currentSlide.update(x => (x - 1 + this.slideCount) % this.slideCount);
     // Se mantiene la sombra cuando se retrocede
   }
   goTo(i: number) {
@@ -57,6 +54,6 @@ export class SliderComponent {
   }
 
   toggleAutoplay() {
-    this.autoplay.update((x) => !x);
+    this.autoplay.update(x => !x);
   }
 }

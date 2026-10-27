@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# backup.sh — copia de seguridad de la base de datos PostgreSQL (pg_dump).
+# backup.sh — copia de seguridad PostgreSQL en formato custom de pg_dump.
 #
 # Requisitos: psql/pg_dump instalados y DATABASE_URL en el entorno.
 #
@@ -15,8 +15,8 @@
 #   30 3 * * *  cd /opt/reservorio && DATABASE_URL="$PGURL" ./scripts/backup.sh >> /var/log/reservorio-backup.log 2>&1
 #
 # Restauración:
-#   pg_restore -d "$DATABASE_URL" < backups/reservorio_YYYYMMDD_HHMMSS.sql
-#   (o: psql "$DATABASE_URL" < backups/reservorio_YYYYMMDD_HHMMSS.sql)
+#   RESTORE_DATABASE_URL="$TARGET_URL" MAINTENANCE_DATABASE_URL="$ADMIN_URL" \
+#     DB_NAME=reservorio ./scripts/restore.sh backups/reservorio_YYYYMMDD_HHMMSS.dump
 
 set -euo pipefail
 
@@ -37,12 +37,16 @@ fi
 mkdir -p "$BACKUP_DIR"
 
 STAMP="$(date +%Y%m%d_%H%M%S)"
-FILE="$BACKUP_DIR/reservorio_${STAMP}.sql"
+FILE="$BACKUP_DIR/reservorio_${STAMP}.dump"
+TMP_FILE="${FILE}.tmp"
+trap 'rm -f "$TMP_FILE"' EXIT HUP INT TERM
 
 echo "[backup] Iniciando dump -> $FILE"
-pg_dump "$DATABASE_URL" --format=plain --no-owner --file="$FILE"
+pg_dump "$DATABASE_URL" --format=custom --no-owner --no-privileges --file="$TMP_FILE"
+mv "$TMP_FILE" "$FILE"
+trap - EXIT HUP INT TERM
 
 echo "[backup] Limpiando backups con más de ${RETENTION} días"
-find "$BACKUP_DIR" -name 'reservorio_*.sql' -mtime "+${RETENTION}" -delete
+find "$BACKUP_DIR" -type f \( -name 'reservorio_*.dump' -o -name 'reservorio_*.sql' \) -mtime "+${RETENTION}" -delete
 
 echo "[backup] Completado. Fichero: $FILE"

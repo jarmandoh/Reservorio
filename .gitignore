@@ -20,8 +20,6 @@ tmp/
 temp/
 mejoras.md
 temp.md
-tmp_pgdata
-tmp_pgdata/*
 playwright-report/
 playwright-report/*
 test-results/
@@ -47,8 +45,7 @@ desktop.ini
 *.swo
 *~
 
-# Docker
-pgdata/
+# Local database backups
 backups/
 
 # Angular

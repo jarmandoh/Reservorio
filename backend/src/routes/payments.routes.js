@@ -21,7 +21,7 @@ const allowedPaymentMethods = ['card', 'paypal', 'transfer', 'cash'];
 const currencyValidator = body('currency')
   .optional()
   .trim()
-  .custom((value) => {
+  .custom(value => {
     if (!value) return true;
     if (!SUPPORTED_CURRENCIES.includes(String(value).trim().toUpperCase())) {
       throw new Error(`currency debe ser uno de: ${SUPPORTED_CURRENCIES.join(', ')}`);

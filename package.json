@@ -5,7 +5,7 @@
   "packageManager": "pnpm@12.15.0",
   "engines": {
     "node": ">=22.22.3",
-    "pnpm": ">=9.15.0"
+    "pnpm": ">=12.15.0 <13"
   },
   "scripts": {
     "build": "turbo run build",
@@ -20,6 +20,7 @@
     "@typescript-eslint/parser": "^8.72.0",
     "eslint": "^10.13.0",
     "eslint-config-prettier": "^10.1.8",
+    "husky": "^9.1.7",
     "prettier": "^3.9.10",
     "turbo": "^2.11.10"
   }

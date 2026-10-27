@@ -13,11 +13,11 @@ Los roles no se eligen desde el formulario. La API comprueba el rol real en cada
 
 ## Flujos implementados
 
-| Tipo de usuario | Contraseña | Google | Código email (OTP) | Magic link |
-|---|---:|---:|---:|---:|
-| Cliente | Sí, opcional al registrarse | Sí | Sí | Sí |
-| Propietario | Sí | Sí | Sí | Servicio disponible |
-| Administrador | PIN por API; Auth password disponible | Sí | Sí | Servicio disponible |
+| Tipo de usuario |                            Contraseña | Google | Código email (OTP) |          Magic link |
+| --------------- | ------------------------------------: | -----: | -----------------: | ------------------: |
+| Cliente         |           Sí, opcional al registrarse |     Sí |                 Sí |                  Sí |
+| Propietario     |                                    Sí |     Sí |                 Sí | Servicio disponible |
+| Administrador   | PIN por API; Auth password disponible |     Sí |                 Sí | Servicio disponible |
 
 - OAuth y enlaces de correo vuelven a `/auth/callback` o `/customer/verify`.
 - El callback llama a `GET /api/auth/me` y redirige según el rol que resuelve el backend.

@@ -5,8 +5,8 @@ API REST de **Reservorio**: sistema de reservas multi-negocio. Construida con **
 ## Requisitos
 
 - Node.js `>=22.22.3` (ver `.nvmrc` / `.node-version` en la raíz del repositorio)
-- pnpm `>=9.15.0`
-- PostgreSQL 16 (o el contenedor `db` de `docker-compose.yml`)
+- pnpm `12.15.0` (fijado en `package.json`)
+- PostgreSQL 16 local o un servicio PostgreSQL administrado
 
 ## Puesta en marcha
 
@@ -16,7 +16,12 @@ cp .env.example .env        # ajusta los valores según tu entorno
 pnpm run dev                # arranca con nodemon en http://localhost:3000
 ```
 
-En Docker la base de datos se levanta con `docker compose up db`, y `DATABASE_URL` ya se inyecta desde `docker-compose.yml`.
+Configura `DATABASE_URL` en `.env` para apuntar a tu instancia PostgreSQL. En una base vacía, carga la estructura inicial y aplica las migraciones:
+
+```bash
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/init.sql
+pnpm db:migrate
+```
 
 ## Estructura
 
@@ -135,7 +140,7 @@ pnpm db:migrate            # aplica las pendientes de db/migrations/ (idempotent
 pnpm db:migrate:create -- nombre  # crea el siguiente NNNN_*.sql
 ```
 
-`db/init.sql` es la baseline del esquema inicial y registra `init.sql` en `schema_migrations`. Las migraciones nuevas comienzan en `0001` y el `Dockerfile` las aplica antes de arrancar. Las bases locales creadas con el historial anterior deben recrearse desde `init.sql` antes de continuar.
+`db/init.sql` es la baseline del esquema inicial y registra `init.sql` en `schema_migrations`. Ejecuta `pnpm db:migrate` antes de iniciar el backend para aplicar cambios pendientes. Las bases locales creadas con el historial anterior deben recrearse desde `init.sql` antes de continuar.
 
 ## Notificaciones email/SMS (`channels.js`)
 
@@ -155,7 +160,7 @@ pnpm test:integration     # requiere Postgres real (RUN_INTEGRATION=1 + DATABASE
 
 ## Variables de entorno
 
-Recuerda: también están documentadas en `.env.example` y `docker-compose.yml`.
+Recuerda: también están documentadas en `.env.example`.
 
 | Variable                                                                     | Descripción                                                                            |
 | ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |

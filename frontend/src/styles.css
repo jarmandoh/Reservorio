@@ -31,16 +31,36 @@
   --radius-2xl: 1.5rem;
 }
 
-.bg-primary { background-color: var(--color-primary); }
-.text-primary { color: var(--color-primary); }
-.bg-secondary { background-color: var(--color-secondary); }
-.text-secondary { color: var(--color-secondary); }
-.bg-tertiary { background-color: var(--color-tertiary); }
-.text-tertiary { color: var(--color-tertiary); }
-.bg-success { background-color: var(--color-success); }
-.text-success { color: var(--color-success); }
-.bg-error { background-color: var(--color-error); }
-.text-error { color: var(--color-error); }
+.bg-primary {
+  background-color: var(--color-primary);
+}
+.text-primary {
+  color: var(--color-primary);
+}
+.bg-secondary {
+  background-color: var(--color-secondary);
+}
+.text-secondary {
+  color: var(--color-secondary);
+}
+.bg-tertiary {
+  background-color: var(--color-tertiary);
+}
+.text-tertiary {
+  color: var(--color-tertiary);
+}
+.bg-success {
+  background-color: var(--color-success);
+}
+.text-success {
+  color: var(--color-success);
+}
+.bg-error {
+  background-color: var(--color-error);
+}
+.text-error {
+  color: var(--color-error);
+}
 /* Evita CLS por FOIT: usa fallback system mientras carga Manrope/Inter */
 @layer base {
   html {
@@ -171,7 +191,9 @@
     outline: none !important;
     background-color: #ffffff;
     border-color: #1a73e8;
-    box-shadow: 0 0 0 3px rgb(26 115 232 / 16%), inset 0 1px 1px rgb(24 28 32 / 4%);
+    box-shadow:
+      0 0 0 3px rgb(26 115 232 / 16%),
+      inset 0 1px 1px rgb(24 28 32 / 4%);
   }
   .form-input[aria-invalid='true'],
   .form-select[aria-invalid='true'],
@@ -182,7 +204,9 @@
   .form-select[aria-invalid='true']:focus,
   .form-textarea[aria-invalid='true']:focus {
     border-color: #ba1a1a;
-    box-shadow: 0 0 0 3px rgb(186 26 26 / 16%), inset 0 1px 1px rgb(24 28 32 / 4%);
+    box-shadow:
+      0 0 0 3px rgb(186 26 26 / 16%),
+      inset 0 1px 1px rgb(24 28 32 / 4%);
   }
   .form-input::placeholder,
   .form-select::placeholder,
@@ -194,7 +218,11 @@
   }
 
   /* Campos nativos sin la clase de formulario: mantiene un focus consistente en toda la app. */
-  input:not(.form-input):not(.filter-control):where(:not([type='checkbox']):not([type='radio']):not([type='hidden']):not([type='file']):not([type='color']):not([type='range']):not([type='search'])),
+  input:not(.form-input):not(.filter-control):where(
+      :not([type='checkbox']):not([type='radio']):not([type='hidden']):not([type='file']):not([type='color']):not(
+          [type='range']
+        ):not([type='search'])
+    ),
   select:not(.form-select):not(.filter-control),
   textarea:not(.form-textarea):not(.filter-control) {
     min-height: 3rem;
@@ -202,9 +230,16 @@
     border-radius: 0.75rem;
     background-color: #f1f4fa;
     color: #181c20;
-    transition: border-color 200ms ease, box-shadow 200ms ease, background-color 200ms ease;
+    transition:
+      border-color 200ms ease,
+      box-shadow 200ms ease,
+      background-color 200ms ease;
   }
-  input:not(.form-input):not(.filter-control):where(:not([type='checkbox']):not([type='radio']):not([type='hidden']):not([type='file']):not([type='color']):not([type='range']):not([type='search'])):focus,
+  input:not(.form-input):not(.filter-control):where(
+      :not([type='checkbox']):not([type='radio']):not([type='hidden']):not([type='file']):not([type='color']):not(
+          [type='range']
+        ):not([type='search'])
+    ):focus,
   select:not(.form-select):not(.filter-control):focus,
   textarea:not(.form-textarea):not(.filter-control):focus {
     outline: none !important;
@@ -212,12 +247,20 @@
     background-color: #ffffff;
     box-shadow: 0 0 0 3px rgb(26 115 232 / 16%);
   }
-  input:not(.form-input):not(.filter-control):where(:not([type='checkbox']):not([type='radio']):not([type='hidden']):not([type='file']):not([type='color']):not([type='range']):not([type='search']))[aria-invalid='true'],
+  input:not(.form-input):not(.filter-control):where(
+      :not([type='checkbox']):not([type='radio']):not([type='hidden']):not([type='file']):not([type='color']):not(
+          [type='range']
+        ):not([type='search'])
+    )[aria-invalid='true'],
   select:not(.form-select):not(.filter-control)[aria-invalid='true'],
   textarea:not(.form-textarea):not(.filter-control)[aria-invalid='true'] {
     border-color: #ba1a1a;
   }
-  input:not(.form-input):not(.filter-control):where(:not([type='checkbox']):not([type='radio']):not([type='hidden']):not([type='file']):not([type='color']):not([type='range']):not([type='search']))[aria-invalid='true']:focus,
+  input:not(.form-input):not(.filter-control):where(
+      :not([type='checkbox']):not([type='radio']):not([type='hidden']):not([type='file']):not([type='color']):not(
+          [type='range']
+        ):not([type='search'])
+    )[aria-invalid='true']:focus,
   select:not(.form-select):not(.filter-control)[aria-invalid='true']:focus,
   textarea:not(.form-textarea):not(.filter-control)[aria-invalid='true']:focus {
     border-color: #ba1a1a;
@@ -468,26 +511,46 @@
   border-color: #465365;
   box-shadow: inset 0 1px 1px rgb(0 0 0 / 18%);
 }
-.dark input:not(.form-input):not(.filter-control):where(:not([type='checkbox']):not([type='radio']):not([type='hidden']):not([type='file']):not([type='color']):not([type='range']):not([type='search'])),
+.dark
+  input:not(.form-input):not(.filter-control):where(
+    :not([type='checkbox']):not([type='radio']):not([type='hidden']):not([type='file']):not([type='color']):not(
+        [type='range']
+      ):not([type='search'])
+  ),
 .dark select:not(.form-select):not(.filter-control),
 .dark textarea:not(.form-textarea):not(.filter-control) {
   border-color: #465365;
   background-color: #202a36;
   color: #e6e9ee;
 }
-.dark input:not(.form-input):not(.filter-control):where(:not([type='checkbox']):not([type='radio']):not([type='hidden']):not([type='file']):not([type='color']):not([type='range']):not([type='search'])):focus,
+.dark
+  input:not(.form-input):not(.filter-control):where(
+    :not([type='checkbox']):not([type='radio']):not([type='hidden']):not([type='file']):not([type='color']):not(
+        [type='range']
+      ):not([type='search'])
+  ):focus,
 .dark select:not(.form-select):not(.filter-control):focus,
 .dark textarea:not(.form-textarea):not(.filter-control):focus {
   border-color: #8fb5ff;
   background-color: #161d27;
   box-shadow: 0 0 0 3px rgb(143 186 255 / 18%);
 }
-.dark input:not(.form-input):not(.filter-control):where(:not([type='checkbox']):not([type='radio']):not([type='hidden']):not([type='file']):not([type='color']):not([type='range']):not([type='search']))[aria-invalid='true'],
+.dark
+  input:not(.form-input):not(.filter-control):where(
+    :not([type='checkbox']):not([type='radio']):not([type='hidden']):not([type='file']):not([type='color']):not(
+        [type='range']
+      ):not([type='search'])
+  )[aria-invalid='true'],
 .dark select:not(.form-select):not(.filter-control)[aria-invalid='true'],
 .dark textarea:not(.form-textarea):not(.filter-control)[aria-invalid='true'] {
   border-color: #ffb4ab;
 }
-.dark input:not(.form-input):not(.filter-control):where(:not([type='checkbox']):not([type='radio']):not([type='hidden']):not([type='file']):not([type='color']):not([type='range']):not([type='search']))[aria-invalid='true']:focus,
+.dark
+  input:not(.form-input):not(.filter-control):where(
+    :not([type='checkbox']):not([type='radio']):not([type='hidden']):not([type='file']):not([type='color']):not(
+        [type='range']
+      ):not([type='search'])
+  )[aria-invalid='true']:focus,
 .dark select:not(.form-select):not(.filter-control)[aria-invalid='true']:focus,
 .dark textarea:not(.form-textarea):not(.filter-control)[aria-invalid='true']:focus {
   border-color: #ffb4ab;
@@ -503,7 +566,9 @@
 .dark .form-textarea:focus {
   background-color: #161d27;
   border-color: #8fb5ff;
-  box-shadow: 0 0 0 3px rgb(143 186 255 / 18%), inset 0 1px 1px rgb(0 0 0 / 18%);
+  box-shadow:
+    0 0 0 3px rgb(143 186 255 / 18%),
+    inset 0 1px 1px rgb(0 0 0 / 18%);
 }
 .dark .form-input[aria-invalid='true'],
 .dark .form-select[aria-invalid='true'],
@@ -514,7 +579,9 @@
 .dark .form-select[aria-invalid='true']:focus,
 .dark .form-textarea[aria-invalid='true']:focus {
   border-color: #ffb4ab;
-  box-shadow: 0 0 0 3px rgb(255 180 171 / 18%), inset 0 1px 1px rgb(0 0 0 / 18%);
+  box-shadow:
+    0 0 0 3px rgb(255 180 171 / 18%),
+    inset 0 1px 1px rgb(0 0 0 / 18%);
 }
 .dark .form-label {
   color: #b8bfc9;

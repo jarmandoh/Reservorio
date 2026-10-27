@@ -18,9 +18,15 @@ import { RouterLink } from '@angular/router';
     </nav>
   `,
   styles: [
-    `.sidebar { width: 200px; }
-     a { text-decoration: none; }
-    `],
+    `
+      .sidebar {
+        width: 200px;
+      }
+      a {
+        text-decoration: none;
+      }
+    `,
+  ],
 })
 export class SidebarComponent {
   @Input() items: { label: string; link: string }[] = [];

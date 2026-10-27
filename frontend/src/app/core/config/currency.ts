@@ -43,11 +43,7 @@ export function normalizeCurrency(code?: string | null): CurrencyCode {
   return isValidCurrency(upper) ? upper : (DEFAULT_CURRENCY as CurrencyCode);
 }
 
-export function formatCurrency(
-  amount: number,
-  currency: string = DEFAULT_CURRENCY,
-  locale?: string
-): string {
+export function formatCurrency(amount: number, currency: string = DEFAULT_CURRENCY, locale?: string): string {
   const code = normalizeCurrency(currency);
   const loc = locale || CURRENCY_LOCALES[code] || 'es-CO';
   return new Intl.NumberFormat(loc, { style: 'currency', currency: code }).format(amount);

@@ -3,14 +3,20 @@
 const { createIdempotencyDb } = require('./helpers/idempotency-db');
 const { db, state } = createIdempotencyDb();
 jest.doMock('../src/db', () => db);
-jest.doMock('../src/services/notifications.service', () => ({ deliverExternalNotification: jest.fn().mockResolvedValue(undefined) }));
+jest.doMock('../src/services/notifications.service', () => ({
+  deliverExternalNotification: jest.fn().mockResolvedValue(undefined),
+}));
 
 const payments = require('../src/services/payments.service');
 
 describe('payments idempotency', () => {
   const paymentPayload = {
-    bookingId: 'booking-1', providerId: 'business-1', customerId: 'customer-1', amount: 25000,
-    currency: 'COP', method: 'card',
+    bookingId: 'booking-1',
+    providerId: 'business-1',
+    customerId: 'customer-1',
+    amount: 25000,
+    currency: 'COP',
+    method: 'card',
   };
 
   beforeEach(() => {
@@ -48,16 +54,33 @@ describe('payments idempotency', () => {
 
   test('procesa un webhook de pago una sola vez', async () => {
     state.payments.set('pay-webhook', {
-      id: 'pay-webhook', booking_id: 'booking-1', provider_id: 'business-1', customer_id: 'customer-1',
-      amount: 25000, currency: 'COP', method: 'card', status: 'pending',
+      id: 'pay-webhook',
+      booking_id: 'booking-1',
+      provider_id: 'business-1',
+      customer_id: 'customer-1',
+      amount: 25000,
+      currency: 'COP',
+      method: 'card',
+      status: 'pending',
     });
     const webhook = {
       event: {
-        id: 'evt-1', type: 'checkout.session.completed',
-        data: { object: {
-          id: 'cs-1', payment_status: 'paid', amount_total: 2500000, currency: 'cop',
-          metadata: { bookingId: 'booking-1', providerId: 'business-1', customerId: 'customer-1', paymentId: 'pay-webhook' },
-        } },
+        id: 'evt-1',
+        type: 'checkout.session.completed',
+        data: {
+          object: {
+            id: 'cs-1',
+            payment_status: 'paid',
+            amount_total: 2500000,
+            currency: 'cop',
+            metadata: {
+              bookingId: 'booking-1',
+              providerId: 'business-1',
+              customerId: 'customer-1',
+              paymentId: 'pay-webhook',
+            },
+          },
+        },
       },
     };
 

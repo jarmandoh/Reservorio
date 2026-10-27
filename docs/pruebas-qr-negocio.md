@@ -4,13 +4,13 @@ Este documento sirve para validar el QR mostrado en la página pública de cada 
 
 ## Datos rápidos
 
-| Campo | Valor |
-| --- | --- |
-| Frontend local | `http://localhost:4200` |
-| Ruta pública | `/business/:businessId` |
-| Negocio de prueba existente | `reservorio-test-business` |
-| URL de prueba | `http://localhost:4200/business/reservorio-test-business` |
-| Logo usado por defecto | [`frontend/src/assets/imgs/reservorio-logo.jpg`](../frontend/src/assets/imgs/reservorio-logo.jpg) |
+| Campo                       | Valor                                                                                             |
+| --------------------------- | ------------------------------------------------------------------------------------------------- |
+| Frontend local              | `http://localhost:4200`                                                                           |
+| Ruta pública                | `/business/:businessId`                                                                           |
+| Negocio de prueba existente | `reservorio-test-business`                                                                        |
+| URL de prueba               | `http://localhost:4200/business/reservorio-test-business`                                         |
+| Logo usado por defecto      | [`frontend/src/assets/imgs/reservorio-logo.jpg`](../frontend/src/assets/imgs/reservorio-logo.jpg) |
 
 El QR debe contener exactamente esta URL cuando se pruebe con el negocio incluido en los datos de prueba:
 
@@ -65,11 +65,11 @@ La integración de cobro todavía no está definida porque el proyecto no tiene 
 
 Comprueba la página en estas resoluciones:
 
-| Resolución | Resultado esperado |
-| --- | --- |
+| Resolución   | Resultado esperado                                                 |
+| ------------ | ------------------------------------------------------------------ |
 | `1440 × 900` | Tarjeta fija en el lado derecho, sin tapar el contenido principal. |
-| `768 × 1024` | Tarjeta visible y usable junto al contenido. |
-| `390 × 844` | Tarjeta anclada abajo, con ancho adaptado a la pantalla. |
+| `768 × 1024` | Tarjeta visible y usable junto al contenido.                       |
+| `390 × 844`  | Tarjeta anclada abajo, con ancho adaptado a la pantalla.           |
 
 ### 5. Caso de error
 

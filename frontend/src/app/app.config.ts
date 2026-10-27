@@ -3,7 +3,6 @@ import { provideRouter, withInMemoryScrolling, withViewTransitions, withComponen
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideServiceWorker } from '@angular/service-worker';
 
-
 import { routes } from './app.routes';
 import { authInterceptor, errorInterceptor } from './core/interceptors/http.interceptor';
 

@@ -19,7 +19,7 @@ import { Business } from '../../../core/models/business.model';
       }
     </div>
   `,
-  styles: []
+  styles: [],
 })
 export class BusinessListComponent {
   @Input() businesses: Business[] = [];

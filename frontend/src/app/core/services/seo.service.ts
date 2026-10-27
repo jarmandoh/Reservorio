@@ -198,7 +198,9 @@ export class SeoService {
   }
 
   private cleanText(value: string | undefined): string {
-    return String(value ?? '').replace(/\s+/g, ' ').trim();
+    return String(value ?? '')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
   private truncate(value: string, maxLength: number): string {

@@ -7,15 +7,18 @@
 
 ```markdown
 ## Description
+
 - Brief description of the change (max 200 chars)
 
 ## Checklist
+
 - [ ] Code follows lint rules.
 - [ ] Unit tests pass.
 - [ ] Coverage ≥ 80 %.
 - [ ] Updated docs if needed.
 
 ## Related Issues
+
 - Closes #123
 - Ref: PR #45
 ```

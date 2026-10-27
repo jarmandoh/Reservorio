@@ -3,7 +3,7 @@
 /**
  * Logger estructurado basado en pino.
  *
- * - Emite JSON por línea (stdout) listo para ser recogido por Docker/journald
+ * - Emite JSON por línea (stdout) listo para ser recogido por journald
  *   o un agregador con `prettyPrint` en desarrollo.
  * - Añade contexto de servicio y un minimum ojo con NODE_ENV=test para no
  *   ensuciar la salida de los tests: en tests todo se reduce a warnings.

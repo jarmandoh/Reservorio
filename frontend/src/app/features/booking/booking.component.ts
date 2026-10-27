@@ -1606,9 +1606,12 @@ export class BookingComponent implements OnInit, OnDestroy {
     };
     this.paymentAttempt = idempotencyAttempt(`payment:${bookingId}`, this.paymentAttempt, checkoutPayload);
     this.api
-      .createCheckoutSession({
-        ...checkoutPayload,
-      }, this.paymentAttempt.key)
+      .createCheckoutSession(
+        {
+          ...checkoutPayload,
+        },
+        this.paymentAttempt.key
+      )
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: result => {

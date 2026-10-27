@@ -72,7 +72,12 @@ type AuthMode = 'credentials' | 'password' | 'otp';
         </button>
       </div>
 
-      <button type="button" class="mb-4 w-full rounded-xl border border-outline-variant px-4 py-3 font-semibold" (click)="loginGoogle()" [disabled]="loading()">
+      <button
+        type="button"
+        class="mb-4 w-full rounded-xl border border-outline-variant px-4 py-3 font-semibold"
+        (click)="loginGoogle()"
+        [disabled]="loading()"
+      >
         Continuar con Google
       </button>
 
@@ -127,7 +132,13 @@ type AuthMode = 'credentials' | 'password' | 'otp';
       @if (mode() === 'password') {
         <div>
           <label class="form-label" for="password">Contraseña</label>
-          <input id="password" type="password" class="form-input w-full" formControlName="password" autocomplete="current-password" />
+          <input
+            id="password"
+            type="password"
+            class="form-input w-full"
+            formControlName="password"
+            autocomplete="current-password"
+          />
         </div>
       }
 
@@ -223,13 +234,16 @@ export class CustomerLoginComponent implements OnInit {
   loginGoogle(): void {
     this.loading.set(true);
     this.error.set(null);
-    this.auth.loginWithGoogle('customer').pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: () => this.loading.set(false),
-      error: err => {
-        this.loading.set(false);
-        this.error.set(err instanceof Error ? err.message : 'No se pudo iniciar sesión con Google.');
-      },
-    });
+    this.auth
+      .loginWithGoogle('customer')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => this.loading.set(false),
+        error: err => {
+          this.loading.set(false);
+          this.error.set(err instanceof Error ? err.message : 'No se pudo iniciar sesión con Google.');
+        },
+      });
   }
 
   setMode(mode: AuthMode): void {
@@ -268,7 +282,8 @@ export class CustomerLoginComponent implements OnInit {
       const password = this.form.controls.password.value ?? '';
       this.loading.set(true);
       this.error.set(null);
-      this.auth.loginWithPassword(email ?? '', password, 'customer')
+      this.auth
+        .loginWithPassword(email ?? '', password, 'customer')
         .pipe(takeUntilDestroyed(this.destroyRef))
         .subscribe({
           next: () => {

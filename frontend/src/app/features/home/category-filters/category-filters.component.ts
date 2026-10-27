@@ -54,72 +54,71 @@ const EMPTY_FILTERS: HomeFilters = {
         </label>
 
         <div class="filter-controls">
-        <label class="filter-field location-field">
-          <span class="field-label">Ubicación</span>
-          <span class="input-wrap">
-            <span class="material-icons-round" aria-hidden="true">location_on</span>
-            <input
-              name="business-location"
-              class="filter-control"
-              type="search"
-              autocomplete="off"
-              placeholder="Ej. Chapinero o Bogotá…"
-              [ngModel]="filters.location"
-              (ngModelChange)="update({ location: $event })"
-              aria-label="Filtrar por ubicación"
-            />
-          </span>
-        </label>
+          <label class="filter-field location-field">
+            <span class="field-label">Ubicación</span>
+            <span class="input-wrap">
+              <span class="material-icons-round" aria-hidden="true">location_on</span>
+              <input
+                name="business-location"
+                class="filter-control"
+                type="search"
+                autocomplete="off"
+                placeholder="Ej. Chapinero o Bogotá…"
+                [ngModel]="filters.location"
+                (ngModelChange)="update({ location: $event })"
+                aria-label="Filtrar por ubicación"
+              />
+            </span>
+          </label>
 
-        <label class="filter-field">
-          <span class="field-label">Categoría</span>
-          <span class="autocomplete-wrap">
-            <span class="material-icons-round autocomplete-icon" aria-hidden="true">category</span>
-            <input
-              id="business-category"
-              name="business-category"
-              class="filter-control"
-              type="search"
-              autocomplete="off"
-              placeholder="Todas las categorías"
-              [ngModel]="categoryQuery()"
-              (ngModelChange)="onCategoryInput($event)"
-              (focus)="categoryOpen.set(true)"
-              (blur)="closeCategorySuggestions()"
-              (keydown)="onCategoryKeydown($event)"
-              role="combobox"
-              aria-autocomplete="list"
-              aria-controls="business-category-suggestions"
-              [attr.aria-expanded]="categoryOpen()"
-              [attr.aria-activedescendant]="activeCategoryId()"
-              aria-label="Filtrar por categoría"
-            />
-            @if (categoryOpen()) {
-              <div id="business-category-suggestions" class="autocomplete-menu" role="listbox">
-                @for (category of categorySuggestions(); track category; let index = $index) {
-                  <button
-                    type="button"
-                    class="autocomplete-option"
-                    [class.autocomplete-option-active]="activeCategoryIndex() === index"
-                    [id]="categoryOptionId(index)"
-                    role="option"
-                    [attr.aria-selected]="filters.category === category"
-                    (mousedown)="$event.preventDefault()"
-                    (click)="selectCategory(category)"
-                  >
-                    <span>{{ category }}</span>
-                    @if (filters.category === category) {
-                      <span class="material-icons-round" aria-hidden="true">check</span>
-                    }
-                  </button>
-                } @empty {
-                  <span class="autocomplete-empty">No encontramos categorías.</span>
-                }
-              </div>
-            }
-          </span>
-        </label>
-
+          <label class="filter-field">
+            <span class="field-label">Categoría</span>
+            <span class="autocomplete-wrap">
+              <span class="material-icons-round autocomplete-icon" aria-hidden="true">category</span>
+              <input
+                id="business-category"
+                name="business-category"
+                class="filter-control"
+                type="search"
+                autocomplete="off"
+                placeholder="Todas las categorías"
+                [ngModel]="categoryQuery()"
+                (ngModelChange)="onCategoryInput($event)"
+                (focus)="categoryOpen.set(true)"
+                (blur)="closeCategorySuggestions()"
+                (keydown)="onCategoryKeydown($event)"
+                role="combobox"
+                aria-autocomplete="list"
+                aria-controls="business-category-suggestions"
+                [attr.aria-expanded]="categoryOpen()"
+                [attr.aria-activedescendant]="activeCategoryId()"
+                aria-label="Filtrar por categoría"
+              />
+              @if (categoryOpen()) {
+                <div id="business-category-suggestions" class="autocomplete-menu" role="listbox">
+                  @for (category of categorySuggestions(); track category; let index = $index) {
+                    <button
+                      type="button"
+                      class="autocomplete-option"
+                      [class.autocomplete-option-active]="activeCategoryIndex() === index"
+                      [id]="categoryOptionId(index)"
+                      role="option"
+                      [attr.aria-selected]="filters.category === category"
+                      (mousedown)="$event.preventDefault()"
+                      (click)="selectCategory(category)"
+                    >
+                      <span>{{ category }}</span>
+                      @if (filters.category === category) {
+                        <span class="material-icons-round" aria-hidden="true">check</span>
+                      }
+                    </button>
+                  } @empty {
+                    <span class="autocomplete-empty">No encontramos categorías.</span>
+                  }
+                </div>
+              }
+            </span>
+          </label>
         </div>
       </div>
 
@@ -440,8 +439,12 @@ const EMPTY_FILTERS: HomeFilters = {
         .location-field {
           grid-column: auto;
         }
-        .clear-button { font-size: 0.72rem; }
-        .clear-button .material-icons-round { font-size: 1rem; }
+        .clear-button {
+          font-size: 0.72rem;
+        }
+        .clear-button .material-icons-round {
+          font-size: 1rem;
+        }
       }
       @media (max-width: 640px) {
         .filter-heading {
@@ -455,7 +458,10 @@ const EMPTY_FILTERS: HomeFilters = {
           overflow: visible;
           margin-top: 1rem;
           opacity: 1;
-          transition: max-height 220ms ease, margin-top 220ms ease, opacity 160ms ease;
+          transition:
+            max-height 220ms ease,
+            margin-top 220ms ease,
+            opacity 160ms ease;
         }
         input[type='search'],
         select {
@@ -540,11 +546,7 @@ export class CategoryFiltersComponent {
   }
 
   get hasFilters(): boolean {
-    return (
-      !!this.searchQuery ||
-      this.filters.category !== 'Todos' ||
-      !!this.filters.location
-    );
+    return !!this.searchQuery || this.filters.category !== 'Todos' || !!this.filters.location;
   }
 
   update(patch: Partial<HomeFilters>): void {
@@ -560,6 +562,10 @@ export class CategoryFiltersComponent {
   }
 
   private normalizeCategory(value: string): string {
-    return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+    return value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
   }
 }

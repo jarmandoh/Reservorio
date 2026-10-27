@@ -35,8 +35,7 @@ export function filterBusinesses(rows: readonly Business[], query: string, statu
       business.name.toLowerCase().includes(normalizedQuery) ||
       business.category.toLowerCase().includes(normalizedQuery) ||
       (business.location ?? '').toLowerCase().includes(normalizedQuery);
-    const matchesStatus =
-      !normalizedStatus || (business.active ? 'activo' : 'inactivo').includes(normalizedStatus);
+    const matchesStatus = !normalizedStatus || (business.active ? 'activo' : 'inactivo').includes(normalizedStatus);
     return matchesQuery && matchesStatus;
   });
 }

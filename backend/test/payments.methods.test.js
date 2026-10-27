@@ -7,7 +7,9 @@ const express = require('express');
 const { createIdempotencyDb } = require('./helpers/idempotency-db');
 const { db, state } = createIdempotencyDb();
 jest.doMock('../src/db', () => db);
-jest.doMock('../src/services/notifications.service', () => ({ deliverExternalNotification: jest.fn().mockResolvedValue(undefined) }));
+jest.doMock('../src/services/notifications.service', () => ({
+  deliverExternalNotification: jest.fn().mockResolvedValue(undefined),
+}));
 
 const { sign } = require('../src/middleware/jwt');
 const paymentsRoutes = require('../src/routes/payments.routes');
@@ -72,15 +74,18 @@ describe('payments — más canales y confirmación manual', () => {
   });
 
   test('POST /checkout con método transfer devuelve instrucciones bancarias sin pasarela', async () => {
-    const res = await request(buildApp()).post('/api/payments/checkout').send({
-      bookingId: 'b1',
-      providerId: 'neg1',
-      customerId: 'c1',
-      amount: 30,
-      currency: 'EUR',
-      method: 'transfer',
-      status: 'pending',
-    }).set('Idempotency-Key', 'methods-transfer-1');
+    const res = await request(buildApp())
+      .post('/api/payments/checkout')
+      .send({
+        bookingId: 'b1',
+        providerId: 'neg1',
+        customerId: 'c1',
+        amount: 30,
+        currency: 'EUR',
+        method: 'transfer',
+        status: 'pending',
+      })
+      .set('Idempotency-Key', 'methods-transfer-1');
 
     expect(res.status).toBe(200);
     expect(res.body.data.method).toBe('transfer');
@@ -90,14 +95,17 @@ describe('payments — más canales y confirmación manual', () => {
   });
 
   test('POST /checkout con método cash devuelve instrucciones en efectivo', async () => {
-    const res = await request(buildApp()).post('/api/payments/checkout').send({
-      bookingId: 'b1',
-      providerId: 'neg1',
-      customerId: 'c1',
-      amount: 30,
-      currency: 'EUR',
-      method: 'cash',
-    }).set('Idempotency-Key', 'methods-cash-1');
+    const res = await request(buildApp())
+      .post('/api/payments/checkout')
+      .send({
+        bookingId: 'b1',
+        providerId: 'neg1',
+        customerId: 'c1',
+        amount: 30,
+        currency: 'EUR',
+        method: 'cash',
+      })
+      .set('Idempotency-Key', 'methods-cash-1');
 
     expect(res.status).toBe(200);
     expect(res.body.data.method).toBe('cash');
@@ -105,30 +113,36 @@ describe('payments — más canales y confirmación manual', () => {
   });
 
   test('POST /checkout con card sin Stripe devuelve flujo dev', async () => {
-    const res = await request(buildApp()).post('/api/payments/checkout').send({
-      bookingId: 'b1',
-      providerId: 'neg1',
-      customerId: 'c1',
-      amount: 30,
-      currency: 'EUR',
-      method: 'card',
-    }).set('Idempotency-Key', 'methods-card-1');
+    const res = await request(buildApp())
+      .post('/api/payments/checkout')
+      .send({
+        bookingId: 'b1',
+        providerId: 'neg1',
+        customerId: 'c1',
+        amount: 30,
+        currency: 'EUR',
+        method: 'card',
+      })
+      .set('Idempotency-Key', 'methods-card-1');
 
     expect(res.status).toBe(200);
     expect(res.body.data.checkoutUrl).toContain('dev=1');
   });
 
   test('POST /checkout acepta URLs de retorno del frontend configurado', async () => {
-    const res = await request(buildApp()).post('/api/payments/checkout').send({
-      bookingId: 'b1',
-      providerId: 'neg1',
-      customerId: 'c1',
-      amount: 30,
-      currency: 'EUR',
-      method: 'card',
-      successUrl: 'http://localhost:4200/payment/success?bookingId=b1',
-      cancelUrl: 'http://localhost:4200/payment/cancel?bookingId=b1',
-    }).set('Idempotency-Key', 'methods-card-url-1');
+    const res = await request(buildApp())
+      .post('/api/payments/checkout')
+      .send({
+        bookingId: 'b1',
+        providerId: 'neg1',
+        customerId: 'c1',
+        amount: 30,
+        currency: 'EUR',
+        method: 'card',
+        successUrl: 'http://localhost:4200/payment/success?bookingId=b1',
+        cancelUrl: 'http://localhost:4200/payment/cancel?bookingId=b1',
+      })
+      .set('Idempotency-Key', 'methods-card-url-1');
 
     expect(res.status).toBe(200);
     expect(res.body.data.checkoutUrl).toContain('http://localhost:4200/payment/success');
@@ -171,16 +185,19 @@ describe('payments — más canales y confirmación manual', () => {
   test('POST /checkout exige origen HTTPS y URLs HTTPS en producción', async () => {
     process.env.NODE_ENV = 'production';
     process.env.FRONTEND_URL = 'https://reservorio.example';
-    const validResponse = await request(buildApp()).post('/api/payments/checkout').send({
-      bookingId: 'b1',
-      providerId: 'neg1',
-      customerId: 'c1',
-      amount: 30,
-      currency: 'EUR',
-      method: 'card',
-      successUrl: 'https://reservorio.example/payment/success?bookingId=b1',
-      cancelUrl: 'https://reservorio.example/payment/cancel?bookingId=b1',
-    }).set('Idempotency-Key', 'methods-prod-1');
+    const validResponse = await request(buildApp())
+      .post('/api/payments/checkout')
+      .send({
+        bookingId: 'b1',
+        providerId: 'neg1',
+        customerId: 'c1',
+        amount: 30,
+        currency: 'EUR',
+        method: 'card',
+        successUrl: 'https://reservorio.example/payment/success?bookingId=b1',
+        cancelUrl: 'https://reservorio.example/payment/cancel?bookingId=b1',
+      })
+      .set('Idempotency-Key', 'methods-prod-1');
 
     expect(validResponse.status).toBe(200);
 

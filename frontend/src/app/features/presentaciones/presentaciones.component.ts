@@ -7,6 +7,6 @@ import { SliderComponent } from '../../shared/components/slider/slider.component
   selector: 'app-presentaciones',
   templateUrl: './presentaciones.component.html',
   styleUrl: './presentaciones.component.css',
-  imports: [CommonModule, SliderComponent]
+  imports: [CommonModule, SliderComponent],
 })
 export class PresentacionesComponent {}

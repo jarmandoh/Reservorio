@@ -179,9 +179,12 @@ export class ApiService {
   }
 
   getAuthMe(token: string): Observable<ApiResponse<{ role: string; ownerId?: string; customerId?: string }>> {
-    return this.http.get<ApiResponse<{ role: string; ownerId?: string; customerId?: string }>>(
-      `${this.base}/auth/me`, this.authHeader(token)
-    ).pipe(catchError(this.handleError));
+    return this.http
+      .get<ApiResponse<{ role: string; ownerId?: string; customerId?: string }>>(
+        `${this.base}/auth/me`,
+        this.authHeader(token)
+      )
+      .pipe(catchError(this.handleError));
   }
 
   // ── Multi-business (public) ───────────────────────────────────────────
@@ -261,12 +264,10 @@ export class ApiService {
 
   getCatalogProducts(businessId: string, manage = false, token?: string): Observable<CatalogProduct[]> {
     const url = `${this.base}/businesses/${encodeURIComponent(businessId)}/products${manage ? '/manage' : ''}`;
-    return this.http
-      .get<ApiResponse<CatalogProduct[]>>(url, token ? this.authHeader(token) : {})
-      .pipe(
-        map(response => response.data ?? []),
-        catchError(this.handleError)
-      );
+    return this.http.get<ApiResponse<CatalogProduct[]>>(url, token ? this.authHeader(token) : {}).pipe(
+      map(response => response.data ?? []),
+      catchError(this.handleError)
+    );
   }
 
   getCatalogImageSignature(
@@ -289,10 +290,7 @@ export class ApiService {
       );
   }
 
-  uploadCatalogImage(
-    signature: CloudinaryUploadSignature,
-    file: File
-  ): Observable<CloudinaryUploadedImage> {
+  uploadCatalogImage(signature: CloudinaryUploadSignature, file: File): Observable<CloudinaryUploadedImage> {
     const form = new FormData();
     form.append('file', file);
     form.append('api_key', signature.apiKey);
@@ -728,7 +726,11 @@ export class ApiService {
       .pipe(catchError(this.handleError));
   }
 
-  private handleError(err: HttpErrorResponse): Observable<never> {
+  private handleError(err: HttpErrorResponse | Error): Observable<never> {
+    if (!(err instanceof HttpErrorResponse)) {
+      return throwError(() => new Error(err.message || 'Error inesperado'));
+    }
+
     const msg = err.error?.message ?? err.error?.errors?.join(', ') ?? `HTTP ${err.status}`;
     return throwError(() => new Error(msg));
   }

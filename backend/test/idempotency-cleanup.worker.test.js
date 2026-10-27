@@ -1,8 +1,6 @@
 'use strict';
 
-const mockQuery = jest.fn()
-  .mockResolvedValueOnce({ rowCount: 4 })
-  .mockResolvedValueOnce({ rowCount: 2 });
+const mockQuery = jest.fn().mockResolvedValueOnce({ rowCount: 4 }).mockResolvedValueOnce({ rowCount: 2 });
 jest.doMock('../src/db', () => ({ query: mockQuery }));
 jest.doMock('../src/logger', () => ({ warn: jest.fn() }));
 

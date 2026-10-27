@@ -1242,11 +1242,18 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
       successUrl,
       cancelUrl,
     };
-    this.checkoutAttempt = idempotencyAttempt(`business-admin-payment:${booking.id}`, this.checkoutAttempt, checkoutPayload);
+    this.checkoutAttempt = idempotencyAttempt(
+      `business-admin-payment:${booking.id}`,
+      this.checkoutAttempt,
+      checkoutPayload
+    );
     this.businessAdminService
-      .createCheckoutSession({
-        ...checkoutPayload,
-      }, this.checkoutAttempt.key)
+      .createCheckoutSession(
+        {
+          ...checkoutPayload,
+        },
+        this.checkoutAttempt.key
+      )
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: data => {

@@ -28,9 +28,10 @@ async function cleanupExpiredIdempotencyRecords() {
 }
 
 function startIdempotencyCleanupWorker() {
-  const cleanup = () => cleanupExpiredIdempotencyRecords().catch(error => {
-    logger.warn('[idempotency] no se pudo limpiar registros expirados:', error.message);
-  });
+  const cleanup = () =>
+    cleanupExpiredIdempotencyRecords().catch(error => {
+      logger.warn('[idempotency] no se pudo limpiar registros expirados:', error.message);
+    });
   void cleanup();
   const interval = setInterval(cleanup, CLEANUP_INTERVAL_MS);
   interval.unref();

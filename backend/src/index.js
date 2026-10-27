@@ -158,7 +158,7 @@ const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:4200,http:
 app.use(
   cors({
     origin: (origin, cb) => {
-      // Permitir requests sin origen (eg. Postman, Docker health checks)
+      // Permitir requests sin origen (eg. Postman y sondas de salud)
       if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
       cb(new Error(`CORS: origen no permitido → ${origin}`));
     },
@@ -237,7 +237,7 @@ app.use((req, res, next) => {
       const labels = { method: req.method, route, status: String(res.statusCode) };
       httpRequestsTotal.inc(labels);
       httpRequestDuration.observe(labels, durationMs / 1000);
-    } catch { }
+    } catch {}
 
     const level = res.statusCode >= 500 ? 'error' : res.statusCode >= 400 ? 'warn' : 'info';
     logger[level](
@@ -312,10 +312,17 @@ app.get('/sitemap.xml', async (_req, res) => {
       .join('\n');
     res.set('Content-Type', 'application/xml; charset=utf-8');
     res.set('Cache-Control', 'public, max-age=300');
-    return res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${body}\n</urlset>`);
+    return res.send(
+      `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${body}\n</urlset>`
+    );
   } catch (error) {
     logger.error('[sitemap] no se pudo generar:', error.message);
-    return res.status(503).type('application/xml').send('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>');
+    return res
+      .status(503)
+      .type('application/xml')
+      .send(
+        '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>'
+      );
   }
 });
 
@@ -407,7 +414,7 @@ function setupGracefulShutdown(server) {
     if (reminderIntervalRef) {
       try {
         clearInterval(reminderIntervalRef);
-      } catch { }
+      } catch {}
       reminderIntervalRef = null;
     }
     if (idempotencyCleanupIntervalRef) {

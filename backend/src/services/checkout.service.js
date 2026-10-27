@@ -16,7 +16,9 @@ async function checkoutForBusiness(businessId, payload = {}, idempotencyKey) {
     telefono: String(payload.telefono ?? '').trim(),
     servicio: String(payload.servicio ?? '').trim(),
     notas: String(payload.notas ?? '').trim(),
-    email: String(payload.email ?? payload._customerEmail ?? '').trim().toLowerCase(),
+    email: String(payload.email ?? payload._customerEmail ?? '')
+      .trim()
+      .toLowerCase(),
     dataConsent: payload.dataConsent === true,
     marketingConsent: payload.marketingConsent === true,
     customerId: String(payload._customerId ?? '').trim(),
@@ -33,7 +35,12 @@ async function checkoutForBusiness(businessId, payload = {}, idempotencyKey) {
   } catch (error) {
     return { ok: false, status: 500, message: error.message || 'No se pudo iniciar la reserva' };
   }
-  if (!claimed.claim) return { ...claimed.result, ...(claimed.inProgress ? { inProgress: true } : {}), ...(claimed.replayed ? { replayed: true } : {}) };
+  if (!claimed.claim)
+    return {
+      ...claimed.result,
+      ...(claimed.inProgress ? { inProgress: true } : {}),
+      ...(claimed.replayed ? { replayed: true } : {}),
+    };
 
   let client;
   let booking;
@@ -48,7 +55,14 @@ async function checkoutForBusiness(businessId, payload = {}, idempotencyKey) {
       `INSERT INTO reservations (business_id, franja, disponibilidad, cliente, telefono, servicio, notas)
        VALUES ($1, $2, 'Reservado', $3, $4, $5, $6)
        RETURNING id`,
-      [data.businessId, clean(data.franja), clean(data.cliente), clean(data.telefono), clean(data.servicio), clean(data.notas)]
+      [
+        data.businessId,
+        clean(data.franja),
+        clean(data.cliente),
+        clean(data.telefono),
+        clean(data.servicio),
+        clean(data.notas),
+      ]
     );
     const actualReservationId = reservationRows[0]?.id;
     if (!actualReservationId) throw new Error('No se pudo recuperar la reserva creada');
@@ -86,12 +100,23 @@ async function checkoutForBusiness(businessId, payload = {}, idempotencyKey) {
     await client.query(
       `INSERT INTO notifications (id, business_id, booking_id, type, channel, title, message, status)
        VALUES ($1, $2, $3, 'booking_created', 'in_app', 'Nueva reserva', $4, 'queued')`,
-      [businessNoticeId, data.businessId, bookingId, `${data.cliente || 'Un cliente'} pidió la franja de las ${data.franja}.`]
+      [
+        businessNoticeId,
+        data.businessId,
+        bookingId,
+        `${data.cliente || 'Un cliente'} pidió la franja de las ${data.franja}.`,
+      ]
     );
     await client.query(
       `INSERT INTO notifications (id, business_id, customer_id, booking_id, type, channel, title, message, status)
        VALUES ($1, $2, $3, $4, 'booking_created', 'in_app', 'Nueva reserva', $5, 'queued')`,
-      [customerNoticeId, data.businessId, customerId, bookingId, `Nueva solicitud para ${data.servicio || '-'} en ${date} · ${data.franja}.`]
+      [
+        customerNoticeId,
+        data.businessId,
+        customerId,
+        bookingId,
+        `Nueva solicitud para ${data.servicio || '-'} en ${date} · ${data.franja}.`,
+      ]
     );
     customerNotification = {
       id: customerNoticeId,
@@ -111,12 +136,20 @@ async function checkoutForBusiness(businessId, payload = {}, idempotencyKey) {
     await idempotency.complete(client, claimed.claim, result);
     await client.query('COMMIT');
 
-    try { syncInBackground(data.businessId, 'reservations'); } catch {}
-    try { broadcastBookingCreated(booking); } catch {}
-    try { deliverExternalNotification(customerNotification).catch(() => {}); } catch {}
+    try {
+      syncInBackground(data.businessId, 'reservations');
+    } catch {}
+    try {
+      broadcastBookingCreated(booking);
+    } catch {}
+    try {
+      deliverExternalNotification(customerNotification).catch(() => {});
+    } catch {}
     return result;
   } catch (error) {
-    try { await client?.query('ROLLBACK'); } catch {}
+    try {
+      await client?.query('ROLLBACK');
+    } catch {}
     await idempotency.release(claimed.claim);
     if (String(error.code) === '23505') {
       return { ok: false, status: 409, message: 'Franja no disponible' };

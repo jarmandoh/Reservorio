@@ -125,12 +125,25 @@ async function createPayment(payload = {}, idempotencyKey) {
   const scope = `payment-create:${bookingId}`;
   let claimed;
   try {
-    claimed = await idempotency.claim(scope, idempotencyKey, { bookingId, providerId, customerId, amount, currency, method, status });
+    claimed = await idempotency.claim(scope, idempotencyKey, {
+      bookingId,
+      providerId,
+      customerId,
+      amount,
+      currency,
+      method,
+      status,
+    });
   } catch (error) {
     logger.error('[payments] createPayment: no se pudo reservar la clave idempotente:', error.message);
     return { ok: false, status: 500, message: 'Error al registrar el pago en la base de datos' };
   }
-  if (!claimed.claim) return { ...claimed.result, ...(claimed.inProgress ? { inProgress: true } : {}), ...(claimed.replayed ? { replayed: true } : {}) };
+  if (!claimed.claim)
+    return {
+      ...claimed.result,
+      ...(claimed.inProgress ? { inProgress: true } : {}),
+      ...(claimed.replayed ? { replayed: true } : {}),
+    };
 
   const payment = {
     id: `pay-${Date.now()}-${randomUUID().slice(0, 8)}`,
@@ -163,7 +176,9 @@ async function createPayment(payload = {}, idempotencyKey) {
     await client.query('COMMIT');
     return result;
   } catch (error) {
-    try { await client?.query('ROLLBACK'); } catch {}
+    try {
+      await client?.query('ROLLBACK');
+    } catch {}
     await idempotency.release(claimed.claim);
     logger.error('[payments] createPayment falló:', error.message);
     return { ok: false, status: 500, message: 'Error al registrar el pago en la base de datos' };
@@ -196,16 +211,8 @@ function getCheckoutReturnUrls(payload, bookingId) {
   if (process.env.NODE_ENV === 'production' && frontendOrigin.protocol !== 'https:') return null;
 
   const urls = [
-    [
-      payload.successUrl,
-      `/payment/success?bookingId=${encodeURIComponent(bookingId)}`,
-      '/payment/success',
-    ],
-    [
-      payload.cancelUrl,
-      `/payment/cancel?bookingId=${encodeURIComponent(bookingId)}`,
-      '/payment/cancel',
-    ],
+    [payload.successUrl, `/payment/success?bookingId=${encodeURIComponent(bookingId)}`, '/payment/success'],
+    [payload.cancelUrl, `/payment/cancel?bookingId=${encodeURIComponent(bookingId)}`, '/payment/cancel'],
   ];
 
   const validatedUrls = urls.map(([providedUrl, fallbackPath, expectedPath]) => {
@@ -262,7 +269,15 @@ async function insertPaymentNotification(client, payment, message) {
   await client.query(
     `INSERT INTO notifications (id, business_id, customer_id, booking_id, type, channel, title, message, status)
      VALUES ($1, $2, $3, $4, $5, 'in_app', $6, $7, 'queued')`,
-    [notification.id, notification.businessId, notification.customerId, notification.bookingId, notification.type, notification.title, notification.message]
+    [
+      notification.id,
+      notification.businessId,
+      notification.customerId,
+      notification.bookingId,
+      notification.type,
+      notification.title,
+      notification.message,
+    ]
   );
   return notification;
 }
@@ -298,7 +313,9 @@ async function updatePaymentStatus(id, status) {
 
     const row = rows[0];
     if (transitioned && status === 'paid' && row.booking_id) {
-      await client.query("UPDATE bookings SET status = 'confirmed', updated_at = now() WHERE id = $1", [row.booking_id]);
+      await client.query("UPDATE bookings SET status = 'confirmed', updated_at = now() WHERE id = $1", [
+        row.booking_id,
+      ]);
       notification = await insertPaymentNotification(
         client,
         row,
@@ -309,7 +326,9 @@ async function updatePaymentStatus(id, status) {
     if (notification) deliverExternalNotification(notification).catch(() => {});
     return { ok: true, status: 200, data: mapPayment(row) };
   } catch (error) {
-    try { await client?.query('ROLLBACK'); } catch {}
+    try {
+      await client?.query('ROLLBACK');
+    } catch {}
     logger.error('[payments] updatePaymentStatus falló:', error.message);
     return { ok: false, status: 500, message: error.message };
   } finally {
@@ -344,12 +363,25 @@ async function createCheckoutSession(payload = {}, idempotencyKey) {
   const scope = `payment-checkout:${bookingId}`;
   let claimed;
   try {
-    claimed = await idempotency.claim(scope, idempotencyKey, { bookingId, providerId, customerId, amount, currency, method, ...returnUrls });
+    claimed = await idempotency.claim(scope, idempotencyKey, {
+      bookingId,
+      providerId,
+      customerId,
+      amount,
+      currency,
+      method,
+      ...returnUrls,
+    });
   } catch (error) {
     logger.error('[payments] createCheckoutSession: no se pudo reservar la clave idempotente:', error.message);
     return { ok: false, status: 500, message: 'Error al iniciar el checkout en la base de datos' };
   }
-  if (!claimed.claim) return { ...claimed.result, ...(claimed.inProgress ? { inProgress: true } : {}), ...(claimed.replayed ? { replayed: true } : {}) };
+  if (!claimed.claim)
+    return {
+      ...claimed.result,
+      ...(claimed.inProgress ? { inProgress: true } : {}),
+      ...(claimed.replayed ? { replayed: true } : {}),
+    };
 
   const payment = {
     id: `pay-${Date.now()}-${randomUUID().slice(0, 8)}`,
@@ -380,7 +412,9 @@ async function createCheckoutSession(payload = {}, idempotencyKey) {
     if (!paymentRow) throw new Error('No se pudo recuperar el pago asociado a la clave');
     await client.query('COMMIT');
   } catch (error) {
-    try { await client?.query('ROLLBACK'); } catch {}
+    try {
+      await client?.query('ROLLBACK');
+    } catch {}
     await idempotency.release(claimed.claim);
     logger.error('[payments] crear registro de checkout falló:', error.message);
     return { ok: false, status: 500, message: 'Error al registrar el pago en la base de datos' };
@@ -403,7 +437,9 @@ async function createCheckoutSession(payload = {}, idempotencyKey) {
       await finalClient.query('COMMIT');
       return result;
     } catch (error) {
-      try { await finalClient?.query('ROLLBACK'); } catch {}
+      try {
+        await finalClient?.query('ROLLBACK');
+      } catch {}
       await idempotency.release(claimed.claim);
       throw error;
     } finally {
@@ -477,15 +513,18 @@ async function createCheckoutSession(payload = {}, idempotencyKey) {
         ? await stripeClient.checkout.sessions.retrieve(paymentRow.checkout_session_id)
         : await stripeClient.checkout.sessions.create(params, { idempotencyKey: stripeIdempotencyKey });
 
-      return finalize({
-        ok: true,
-        status: 200,
-        data: {
-          sessionId: session.id,
-          checkoutUrl: session.url,
-          paymentId: paymentRow.id,
+      return finalize(
+        {
+          ok: true,
+          status: 200,
+          data: {
+            sessionId: session.id,
+            checkoutUrl: session.url,
+            paymentId: paymentRow.id,
+          },
         },
-      }, session.id);
+        session.id
+      );
     } catch (error) {
       await idempotency.release(claimed.claim);
       logger.error('[payments] Stripe checkout falló:', error.message);
@@ -494,15 +533,18 @@ async function createCheckoutSession(payload = {}, idempotencyKey) {
   }
 
   const sessionId = paymentRow.checkout_session_id || `dev_session_${paymentRow.id}`;
-  return finalize({
-    ok: true,
-    status: 200,
-    data: {
-      sessionId,
-      checkoutUrl: `${successUrl}&dev=1&session_id=${encodeURIComponent(sessionId)}`,
-      paymentId: paymentRow.id,
+  return finalize(
+    {
+      ok: true,
+      status: 200,
+      data: {
+        sessionId,
+        checkoutUrl: `${successUrl}&dev=1&session_id=${encodeURIComponent(sessionId)}`,
+        paymentId: paymentRow.id,
+      },
     },
-  }, sessionId);
+    sessionId
+  );
 }
 
 async function processWebhook({ rawBody, signature, event }) {
@@ -560,7 +602,12 @@ async function processWebhook({ rawBody, signature, event }) {
     return { ok: false, status: 500, message: 'DATABASE_URL no configurado; no se puede deduplicar el webhook' };
   }
 
-  const eventId = String(payloadEvent.id || `payload-${createHash('sha256').update(rawBody || JSON.stringify(payloadEvent)).digest('hex')}`);
+  const eventId = String(
+    payloadEvent.id ||
+      `payload-${createHash('sha256')
+        .update(rawBody || JSON.stringify(payloadEvent))
+        .digest('hex')}`
+  );
   let client;
   let notification = null;
   let persistedPayment;
@@ -617,7 +664,9 @@ async function processWebhook({ rawBody, signature, event }) {
     if (notification) deliverExternalNotification(notification).catch(() => {});
     return { ok: true, status: 200, data: mapPayment(persistedPayment) };
   } catch (error) {
-    try { await client?.query('ROLLBACK'); } catch {}
+    try {
+      await client?.query('ROLLBACK');
+    } catch {}
     logger.error('[payments] webhook: error al confirmar el pago en BD:', error.message);
     return { ok: false, status: 500, message: 'Error al confirmar el pago en la base de datos' };
   } finally {

@@ -1,12 +1,12 @@
 node_modules/
+.angular/
 dist/
 coverage/
 backups/
 pgdata/
 .env
 .env.*
-pnpm-lock.yaml
-package-lock.json
+**/pnpm-lock.yaml
 playwright-report/
 test-results/
 tmp_pgdata/

@@ -8,13 +8,19 @@ const LEASE_SECONDS = 120;
 function canonicalize(value) {
   if (Array.isArray(value)) return value.map(canonicalize);
   if (value && typeof value === 'object') {
-    return Object.fromEntries(Object.keys(value).sort().map(key => [key, canonicalize(value[key])]));
+    return Object.fromEntries(
+      Object.keys(value)
+        .sort()
+        .map(key => [key, canonicalize(value[key])])
+    );
   }
   return value;
 }
 
 function requestHash(payload) {
-  return createHash('sha256').update(JSON.stringify(canonicalize(payload))).digest('hex');
+  return createHash('sha256')
+    .update(JSON.stringify(canonicalize(payload)))
+    .digest('hex');
 }
 
 async function claim(scope, key, payload) {
@@ -57,7 +63,11 @@ async function claim(scope, key, payload) {
     if (new Date(existing.lease_until).getTime() > Date.now()) {
       await client.query('ROLLBACK');
       return {
-        result: { ok: false, status: 409, message: 'La solicitud con esta clave sigue en proceso; reintenta en unos segundos' },
+        result: {
+          ok: false,
+          status: 409,
+          message: 'La solicitud con esta clave sigue en proceso; reintenta en unos segundos',
+        },
         inProgress: true,
       };
     }
@@ -71,7 +81,9 @@ async function claim(scope, key, payload) {
     await client.query('COMMIT');
     return { claim: { scope, key: cleanKey, ownerToken } };
   } catch (error) {
-    try { await client.query('ROLLBACK'); } catch {}
+    try {
+      await client.query('ROLLBACK');
+    } catch {}
     throw error;
   } finally {
     client.release();
