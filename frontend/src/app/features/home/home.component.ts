@@ -161,10 +161,8 @@ const CATEGORIES = ['Todos', 'Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci
             <div class="skeleton rounded-2xl h-52"></div>
           }
         </div>
-      }
-
-      <!-- Empty state -->
-      @if (!loading() && !filtered().length) {
+      } @else if (!filtered().length) {
+        <!-- Empty state -->
         <div class="flex flex-col items-center justify-center gap-4 py-20 text-center">
           <div class="w-20 h-20 rounded-full bg-surface-low flex items-center justify-center">
             <span class="material-icons-round text-4xl text-outline">search_off</span>
@@ -175,10 +173,8 @@ const CATEGORIES = ['Todos', 'Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci
           </p>
           <button class="btn-secondary btn-sm" (click)="resetFilters()">Limpiar filtros</button>
         </div>
-      }
-
-      <!-- Business cards -->
-      @if (!loading()) {
+      } @else {
+        <!-- Business cards -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           @for (biz of filtered(); track biz.id) {
             <div role="button" tabindex="0"
