@@ -150,11 +150,11 @@ const DEFAULT_CATEGORIES = ['Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci√
           <!-- Hero text -->
           <div class="flex flex-col gap-3 mb-8">
             <h1 class="g-title font-display font-bold text-[2rem] sm:text-[2.75rem] leading-tight">
-              Reserva en segundos,<br />
-              <span class="text-primary-fixed-dim">vive sin esperas</span>
+              Encuentra negocios y servicios,<br />
+              <span class="text-primary-fixed-dim">cerca de ti...</span>
             </h1>
             <p class="g-sub text-base opacity-80 max-w-md">
-              Encuentra negocios cerca de ti y agenda tu cita al instante.
+              Reservas y agendamientos en segundos.
             </p>
           </div>
 
