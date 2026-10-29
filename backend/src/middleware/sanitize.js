@@ -25,9 +25,10 @@ function isValidPhone(phone) {
  * Middleware de validación para POST /reservations
  */
 function validateReservation(req, res, next) {
-  const { franja, cliente, telefono, servicio } = req.body ?? {};
+  const { businessId, franja, cliente, telefono, servicio } = req.body ?? {};
   const errors = [];
 
+  if (!businessId || !clean(businessId)) errors.push('businessId es obligatorio');
   if (!franja || !clean(franja)) errors.push('franja es obligatorio');
   if (!cliente || !clean(cliente)) errors.push('cliente es obligatorio');
   if (!telefono) errors.push('telefono es obligatorio');
@@ -39,6 +40,7 @@ function validateReservation(req, res, next) {
 
   // Sanitize sobre req.body para el siguiente handler
   req.body = {
+    businessId: clean(businessId),
     franja: clean(franja),
     cliente: clean(cliente),
     telefono: clean(telefono),

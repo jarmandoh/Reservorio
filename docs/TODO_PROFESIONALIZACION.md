@@ -11,7 +11,7 @@ Lista priorizada de faltantes técnicos y operativos para mejorar la estabilidad
 
 ## P1 — Reducir riesgo operativo
 
-- [ ] **Automatizar despliegue y smoke de staging.** Publicar una versión identificada por commit, ejecutar migraciones y pruebas de humo sobre el dominio de staging, y documentar cómo volver a la versión anterior. **Cierre:** una versión no llega a producción si fallan salud, login, reserva o checkout en modo de prueba.
+- [ ] **Automatizar despliegue y smoke de staging.** Publicar una versión identificada por commit, aplicar el esquema y ejecutar pruebas de humo sobre el dominio de staging, y documentar cómo volver a la versión anterior. **Cierre:** una versión no llega a producción si fallan salud, login, reserva o checkout en modo de prueba.
 - [ ] **Añadir alertas a las métricas existentes.** Conectar `/metrics` y health checks con un tablero y alertas de disponibilidad, latencia, errores 5xx, saturación de PostgreSQL/Redis, fallos de notificaciones y antigüedad del último backup. **Cierre:** cada alerta tiene umbral, responsable y pasos de diagnóstico; probar al menos una alerta en staging.
 - [ ] **Automatizar la gestión de vulnerabilidades.** Ejecutar auditoría de dependencias y detección de secretos en cada PR; habilitar actualizaciones automáticas revisables. **Cierre:** vulnerabilidades críticas/altas bloquean el merge o tienen una excepción documentada con vencimiento.
 - [ ] **Definir el contrato de la API.** Mantener una especificación OpenAPI alineada con rutas, autenticación, validaciones y errores; añadir validación o pruebas de contrato para endpoints críticos. **Cierre:** la especificación se revisa en CI y deja de depender de actualizar a mano páginas divergentes de `docs/API.md`.

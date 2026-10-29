@@ -22,5 +22,9 @@ describe('Auth brute-force protection', () => {
     expect(blocked.status).toBe(429);
     expect(blocked.body.ok).toBe(false);
     expect(blocked.body.message).toContain('inténtalo más tarde');
+    expect(Number.isInteger(blocked.body.retryAfter)).toBe(true);
+    expect(blocked.body.retryAfter).toBeGreaterThan(0);
+    expect(blocked.body.retryAfter).toBeLessThanOrEqual(15 * 60);
+    expect(Number(blocked.headers['retry-after'])).toBe(blocked.body.retryAfter);
   });
 });

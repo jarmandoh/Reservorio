@@ -1,5 +1,6 @@
--- Reservorio — schema inicial
--- Se ejecuta automáticamente al crear el contenedor por primera vez.
+-- Reservorio — esquema completo e idempotente
+-- Único archivo SQL del proyecto. Se puede aplicar sobre una base vacía o existente
+-- con `psql -f db/init.sql` o `pnpm db:migrate`.
 
 CREATE TABLE IF NOT EXISTS businesses (
   id          TEXT PRIMARY KEY,
@@ -457,10 +458,141 @@ INSERT INTO tags (name) VALUES
 ('Popular')
 ON CONFLICT (name) DO NOTHING;
 
--- Marca el esquema inicial completo; las siguientes migraciones empiezan en 0001.
-CREATE TABLE IF NOT EXISTS schema_migrations (
-  name       TEXT PRIMARY KEY,
-  applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
+-- ── Row Level Security (RLS) ────────────────────────────────────────────────
+-- Los claims se fijan por conexión desde src/db.js.
+
+CREATE OR REPLACE FUNCTION app_rls_role() RETURNS text
+LANGUAGE sql STABLE AS $$ SELECT COALESCE(NULLIF(current_setting('app.rls.role', true), ''), 'anon') $$;
+
+CREATE OR REPLACE FUNCTION app_rls_business_id() RETURNS text
+LANGUAGE sql STABLE AS $$ SELECT NULLIF(current_setting('app.rls.business_id', true), '') $$;
+
+CREATE OR REPLACE FUNCTION app_rls_owner_id() RETURNS text
+LANGUAGE sql STABLE AS $$ SELECT NULLIF(current_setting('app.rls.owner_id', true), '') $$;
+
+CREATE OR REPLACE FUNCTION app_rls_customer_id() RETURNS text
+LANGUAGE sql STABLE AS $$ SELECT NULLIF(current_setting('app.rls.customer_id', true), '') $$;
+
+CREATE OR REPLACE FUNCTION app_rls_business_access(target_business_id text) RETURNS boolean
+LANGUAGE sql STABLE AS $$
+  SELECT app_rls_role() = 'admin'
+      OR (app_rls_role() = 'business-admin' AND app_rls_business_id() = target_business_id)
+      OR (app_rls_role() = 'owner' AND EXISTS (
+        SELECT 1 FROM business_owners
+        WHERE business_id = target_business_id AND owner_id = app_rls_owner_id()
+      ));
+$$;
+
+ALTER TABLE businesses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE business_owners ENABLE ROW LEVEL SECURITY;
+ALTER TABLE owners ENABLE ROW LEVEL SECURITY;
+ALTER TABLE services ENABLE ROW LEVEL SECURITY;
+ALTER TABLE reservations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE customer_login_codes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE bookings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE analytics_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE business_categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE schedules ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tags ENABLE ROW LEVEL SECURITY;
+ALTER TABLE business_tags ENABLE ROW LEVEL SECURITY;
+ALTER TABLE products ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ratings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE idempotency_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE payment_webhook_events ENABLE ROW LEVEL SECURITY;
+
+-- Evita que el propietario de las tablas omita RLS accidentalmente.
+ALTER TABLE businesses FORCE ROW LEVEL SECURITY;
+ALTER TABLE business_owners FORCE ROW LEVEL SECURITY;
+ALTER TABLE owners FORCE ROW LEVEL SECURITY;
+ALTER TABLE services FORCE ROW LEVEL SECURITY;
+ALTER TABLE reservations FORCE ROW LEVEL SECURITY;
+ALTER TABLE customers FORCE ROW LEVEL SECURITY;
+ALTER TABLE customer_login_codes FORCE ROW LEVEL SECURITY;
+ALTER TABLE bookings FORCE ROW LEVEL SECURITY;
+ALTER TABLE notifications FORCE ROW LEVEL SECURITY;
+ALTER TABLE payments FORCE ROW LEVEL SECURITY;
+ALTER TABLE analytics_events FORCE ROW LEVEL SECURITY;
+ALTER TABLE categories FORCE ROW LEVEL SECURITY;
+ALTER TABLE business_categories FORCE ROW LEVEL SECURITY;
+ALTER TABLE schedules FORCE ROW LEVEL SECURITY;
+ALTER TABLE tags FORCE ROW LEVEL SECURITY;
+ALTER TABLE business_tags FORCE ROW LEVEL SECURITY;
+ALTER TABLE products FORCE ROW LEVEL SECURITY;
+ALTER TABLE ratings FORCE ROW LEVEL SECURITY;
+ALTER TABLE idempotency_requests FORCE ROW LEVEL SECURITY;
+ALTER TABLE payment_webhook_events FORCE ROW LEVEL SECURITY;
+
+-- Permite volver a ejecutar init.sql sobre una base existente sin duplicar políticas.
+DO $$
+DECLARE
+  table_name text;
+BEGIN
+  FOREACH table_name IN ARRAY ARRAY[
+    'businesses', 'business_owners', 'owners', 'services', 'reservations',
+    'customers', 'customer_login_codes', 'bookings', 'notifications', 'payments',
+    'analytics_events', 'categories', 'business_categories', 'schedules', 'tags',
+    'business_tags', 'products', 'ratings', 'idempotency_requests', 'payment_webhook_events'
+  ] LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON %I', table_name || '_rls', table_name);
+  END LOOP;
+END $$;
+
+CREATE POLICY businesses_rls ON businesses USING (
+  (app_rls_role() = 'anon' AND active)
+  OR app_rls_business_access(id)
 );
-INSERT INTO schema_migrations (name) VALUES ('init.sql')
-ON CONFLICT (name) DO NOTHING;
+CREATE POLICY business_owners_rls ON business_owners USING (
+  app_rls_role() = 'admin' OR owner_id = app_rls_owner_id() OR business_id = app_rls_business_id()
+);
+CREATE POLICY owners_rls ON owners USING (app_rls_role() IN ('admin', 'auth') OR id = app_rls_owner_id());
+CREATE POLICY services_rls ON services USING (
+  (app_rls_role() = 'anon' AND active) OR app_rls_business_access(business_id)
+);
+CREATE POLICY reservations_rls ON reservations USING (
+  app_rls_role() = 'anon' OR app_rls_business_access(business_id)
+);
+CREATE POLICY customers_rls ON customers USING (
+  app_rls_role() IN ('admin', 'anon', 'auth') OR id = app_rls_customer_id()
+);
+CREATE POLICY customer_login_codes_rls ON customer_login_codes USING (
+  app_rls_role() IN ('admin', 'auth') OR customer_id = app_rls_customer_id()
+);
+CREATE POLICY bookings_rls ON bookings USING (
+  app_rls_role() IN ('admin', 'anon')
+  OR customer_id = app_rls_customer_id()
+  OR app_rls_business_access(provider_id)
+);
+CREATE POLICY notifications_rls ON notifications USING (
+  app_rls_role() IN ('admin', 'anon')
+  OR customer_id = app_rls_customer_id()
+  OR app_rls_business_access(business_id)
+);
+CREATE POLICY payments_rls ON payments USING (
+  app_rls_role() IN ('admin', 'anon')
+  OR customer_id = app_rls_customer_id()
+  OR app_rls_business_access(provider_id)
+);
+CREATE POLICY analytics_events_rls ON analytics_events USING (
+  app_rls_role() IN ('admin', 'anon') OR app_rls_business_access(business_id)
+);
+CREATE POLICY categories_rls ON categories USING (true);
+CREATE POLICY business_categories_rls ON business_categories USING (
+  app_rls_role() = 'anon' OR app_rls_business_access(business_id)
+);
+CREATE POLICY schedules_rls ON schedules USING (
+  app_rls_role() = 'anon' OR app_rls_business_access(business_id)
+);
+CREATE POLICY tags_rls ON tags USING (true);
+CREATE POLICY business_tags_rls ON business_tags USING (
+  app_rls_role() = 'anon' OR app_rls_business_access(business_id)
+);
+CREATE POLICY products_rls ON products USING (
+  (app_rls_role() = 'anon' AND active) OR app_rls_business_access(business_id)
+);
+CREATE POLICY ratings_rls ON ratings USING (app_rls_role() IN ('admin', 'anon') OR app_rls_business_access(business_id));
+CREATE POLICY idempotency_requests_rls ON idempotency_requests USING (app_rls_role() IN ('admin', 'anon'));
+CREATE POLICY payment_webhook_events_rls ON payment_webhook_events USING (app_rls_role() IN ('admin', 'anon'));

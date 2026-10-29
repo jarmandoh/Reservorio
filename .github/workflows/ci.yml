@@ -67,11 +67,9 @@ jobs:
         working-directory: backend
         run: pnpm install --frozen-lockfile
 
-      - name: Apply migrations
+      - name: Apply schema
         working-directory: backend
-        run: |
-          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/init.sql
-          pnpm db:migrate
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/init.sql
 
       - name: Run tests (incl. integration with real PostgreSQL)
         working-directory: backend
@@ -176,11 +174,9 @@ jobs:
         working-directory: backend
         run: pnpm install --frozen-lockfile
 
-      - name: Apply migrations
+      - name: Apply schema
         working-directory: backend
-        run: |
-          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/init.sql
-          pnpm db:migrate
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/init.sql
 
       - name: Install frontend dependencies
         working-directory: frontend

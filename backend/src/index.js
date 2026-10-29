@@ -14,6 +14,7 @@ const logger = require('./logger');
 const cache = require('./cache');
 const promClient = require('prom-client');
 const { runWithRlsContext } = require('./db-context');
+const { tooManyRequests } = require('./middleware/rate-limit');
 
 // ── Prometheus registry ──────────────────────────────────────────────────────
 const promRegistry = new promClient.Registry();
@@ -151,7 +152,7 @@ app.use(
 );
 
 // ── CORS ────────────────────────────────────────────────────────────────────
-const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:4200,http://localhost:3000')
+const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:4200,http://localhost:3000,http://localhost:85323,http://localhot:54322')
   .split(',')
   .map(o => o.trim());
 
@@ -164,6 +165,14 @@ app.use(
     },
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
+    exposedHeaders: [
+      'Retry-After',
+      'RateLimit',
+      'RateLimit-Limit',
+      'RateLimit-Remaining',
+      'RateLimit-Reset',
+      'RateLimit-Policy',
+    ],
   })
 );
 
@@ -199,7 +208,7 @@ const limiter = rateLimit({
   store: redisStore,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { ok: false, message: 'Demasiadas peticiones, inténtalo más tarde.' },
+  handler: tooManyRequests('Demasiadas peticiones, inténtalo más tarde.'),
 });
 app.use('/api/', limiter);
 
@@ -237,7 +246,7 @@ app.use((req, res, next) => {
       const labels = { method: req.method, route, status: String(res.statusCode) };
       httpRequestsTotal.inc(labels);
       httpRequestDuration.observe(labels, durationMs / 1000);
-    } catch {}
+    } catch { }
 
     const level = res.statusCode >= 500 ? 'error' : res.statusCode >= 400 ? 'warn' : 'info';
     logger[level](
@@ -414,7 +423,7 @@ function setupGracefulShutdown(server) {
     if (reminderIntervalRef) {
       try {
         clearInterval(reminderIntervalRef);
-      } catch {}
+      } catch { }
       reminderIntervalRef = null;
     }
     if (idempotencyCleanupIntervalRef) {

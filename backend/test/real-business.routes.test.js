@@ -15,7 +15,6 @@ if (RUN_INTEGRATION) {
 //   export TEST_DATABASE_URL='postgres://reservorio_test:pass@127.0.0.1:5432/reservorio_test'
 //   export DATABASE_URL="$TEST_DATABASE_URL"
 //   psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/init.sql
-//   pnpm db:migrate
 //   export RUN_INTEGRATION=1
 //   pnpm test -- test/real-business.routes.test.js
 //

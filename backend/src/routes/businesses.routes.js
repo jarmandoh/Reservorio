@@ -15,6 +15,7 @@ const {
 const { handleValidation } = require('../middleware/validation');
 const businessesService = require('../services/businesses.service');
 const checkoutService = require('../services/checkout.service');
+const { tooManyRequests } = require('../middleware/rate-limit');
 
 const router = express.Router();
 
@@ -24,7 +25,7 @@ const pinLimiter = rateLimit({
   max: 10,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { ok: false, message: 'Demasiados intentos de PIN, inténtalo más tarde.' },
+  handler: tooManyRequests('Demasiados intentos de PIN, inténtalo más tarde.'),
 });
 
 const businessCreateValidators = [

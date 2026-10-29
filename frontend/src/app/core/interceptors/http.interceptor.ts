@@ -56,6 +56,42 @@ function getActiveToken(storage: StorageService, url: string): string | null {
   return null;
 }
 
+/** Segundos que el usuario debe esperar tras un 429, si el backend los informa. */
+export function retryAfterSeconds(err: HttpErrorResponse): number | null {
+  const fromBody = Number(err.error?.retryAfter);
+  if (Number.isFinite(fromBody) && fromBody > 0) return Math.ceil(fromBody);
+
+  const retryAfterHeader = err.headers?.get('Retry-After');
+  if (retryAfterHeader) {
+    const seconds = Number(retryAfterHeader);
+    if (Number.isFinite(seconds) && seconds > 0) return Math.ceil(seconds);
+
+    const date = Date.parse(retryAfterHeader);
+    if (!Number.isNaN(date)) {
+      const diff = Math.ceil((date - Date.now()) / 1000);
+      if (diff > 0) return diff;
+    }
+  }
+
+  const resetHeader = Number(err.headers?.get('RateLimit-Reset'));
+  if (Number.isFinite(resetHeader) && resetHeader > 0) return Math.ceil(resetHeader);
+
+  return null;
+}
+
+/** Formatea una espera en segundos como texto legible en español. */
+export function formatRetryWait(seconds: number): string {
+  const total = Math.max(1, Math.round(seconds));
+  if (total < 60) return `${total} segundo${total === 1 ? '' : 's'}`;
+
+  const minutes = Math.ceil(total / 60);
+  if (minutes < 60) return `${minutes} minuto${minutes === 1 ? '' : 's'}`;
+
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return rest ? `${hours} h ${rest} min` : `${hours} h`;
+}
+
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const storage = inject(StorageService);
   const supabase = inject(SupabaseAuthService);
@@ -240,7 +276,14 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
             // El componente de login mostrará su propio mensaje
           }
         } else if (err.status === 429) {
-          toast.show(err.error?.message || 'Demasiadas peticiones, inténtalo más tarde', 'error');
+          const waitSeconds = retryAfterSeconds(err);
+          const baseMessage = err.error?.message || 'Demasiadas peticiones, inténtalo más tarde';
+          const message = waitSeconds
+            ? `${baseMessage} Podrás reintentarlo en ${formatRetryWait(waitSeconds)}.`
+            : baseMessage;
+          const duration = waitSeconds ? Math.min(15000, Math.max(6000, waitSeconds * 1000)) : 6000;
+
+          toast.show(message, 'error', duration);
         } else if (err.status >= 500) {
           // Evita spam en GETs públicos cacheables
           if (!req.url.includes('/businesses') || req.method !== 'GET') {

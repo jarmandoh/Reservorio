@@ -5,6 +5,7 @@
     <title>Reservorio · Reserva cita online en tus negocios favoritos</title>
     <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <link rel="icon" type="image/x-icon" href="favicon.ico" />
     <meta
       name="description"
       content="Encuentra negocios locales, consulta horarios y reserva citas online en Colombia. Elige tu servicio, confirma tu horario y organiza tu visita sin esperas."
@@ -93,17 +94,11 @@
     <noscript>
       <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round&display=swap" rel="stylesheet" />
     </noscript>
-    <!-- Preload del chunk crítico para LCP (Beasties inlineCritical lo convertirá en stylesheet) -->
+    <!-- Preload de la fuente base (Inter, usada por el body). Manrope se carga
+         bajo demanda: solo la usan las páginas de negocio/storefront. -->
     <link
       rel="preload"
       href="https://fonts.gstatic.com/s/inter/v20/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa1ZL7.woff2"
-      as="font"
-      type="font/woff2"
-      crossorigin
-    />
-    <link
-      rel="preload"
-      href="https://fonts.gstatic.com/s/manrope/v20/xn7gYHE41ni1AdIRggexSg.woff2"
       as="font"
       type="font/woff2"
       crossorigin

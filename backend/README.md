@@ -16,12 +16,13 @@ cp .env.example .env        # ajusta los valores según tu entorno
 pnpm run dev                # arranca con nodemon en http://localhost:3000
 ```
 
-Configura `DATABASE_URL` en `.env` para apuntar a tu instancia PostgreSQL. En una base vacía, carga la estructura inicial y aplica las migraciones:
+Configura `DATABASE_URL` en `.env` para apuntar a tu instancia PostgreSQL. En una base vacía o existente, aplica el esquema único e idempotente:
 
 ```bash
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/init.sql
-pnpm db:migrate
 ```
+
+También puedes ejecutar `pnpm db:migrate`, que aplica el mismo `db/init.sql` en una transacción con lock distribuido.
 
 ## Estructura
 
@@ -133,14 +134,13 @@ Referencia completa de contratos: [docs/API.md](../docs/API.md).
 - PIN admin comparado con **bcrypt** (hash derivado de `ADMIN_PIN` o `ADMIN_PIN_HASH`); PINs de negocio con bcrypt (cost 10); códigos OTP/magic-link guardados **solo como hash SHA-256**.
 - En producción aborta con alerta si `OTP_DEBUG=1`.
 
-## Migraciones SQL
+## Esquema SQL
 
 ```bash
-pnpm db:migrate            # aplica las pendientes de db/migrations/ (idempotente, en transacciones)
-pnpm db:migrate:create -- nombre  # crea el siguiente NNNN_*.sql
+pnpm db:migrate    # aplica db/init.sql completo (idempotente, transaccional y con lock distribuido)
 ```
 
-`db/init.sql` es la baseline del esquema inicial y registra `init.sql` en `schema_migrations`. Ejecuta `pnpm db:migrate` antes de iniciar el backend para aplicar cambios pendientes. Las bases locales creadas con el historial anterior deben recrearse desde `init.sql` antes de continuar.
+`db/init.sql` es el único archivo SQL del esquema: contiene tablas, índices, datos iniciales, RLS y políticas. Es idempotente, por lo que se puede ejecutar sobre una base vacía o existente. Ejecuta `pnpm db:migrate` antes de iniciar o actualizar el backend.
 
 ## Notificaciones email/SMS (`channels.js`)
 

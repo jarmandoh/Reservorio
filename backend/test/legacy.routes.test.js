@@ -58,6 +58,19 @@ describe('Legacy routes', () => {
     expect(response.body.ok).toBe(true);
     expect(response.body.data.id).toBe(1);
     expect(db.query).toHaveBeenCalledTimes(2);
+    expect(db.query.mock.calls[1][1][0]).toBe('negocio1');
+  });
+
+  test('POST /api/reservations requires businessId', async () => {
+    const response = await request(app).post('/api/reservations').send({
+      franja: '09:00',
+      cliente: 'Juan',
+      telefono: '+1234567890',
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.body.ok).toBe(false);
+    expect(db.query).not.toHaveBeenCalled();
   });
 
   test('POST /api/reservations rejects a duplicate occupied slot', async () => {

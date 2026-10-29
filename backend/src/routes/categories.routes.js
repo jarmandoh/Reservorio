@@ -1,12 +1,13 @@
 'use strict';
 
 const express = require('express');
-const { body } = require('express-validator');
-const { sign } = require('../middleware/jwt');
+const { param } = require('express-validator');
 const { handleValidation } = require('../middleware/validation');
 const db = require('../db');
 
 const router = express.Router();
+
+const categoryIdValidator = [param('id').isInt({ min: 1 }).withMessage('ID de categoría inválido'), handleValidation];
 
 // ── GET /api/categories/all ────────────────────────────────────────────────
 router.get('/all', async (req, res) => {
@@ -20,7 +21,7 @@ router.get('/all', async (req, res) => {
 });
 
 // ── GET /api/categories/:id ────────────────────────────────────────────────
-router.get('/categories/:id', async (req, res) => {
+router.get('/:id', categoryIdValidator, async (req, res) => {
   const { id } = req.params;
   try {
     const { rows } = await db.query('SELECT * FROM categories WHERE id = $1', [id]);

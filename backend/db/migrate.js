@@ -1,12 +1,11 @@
 'use strict';
 
 /**
- * Runner de migraciones SQL — sin dependencias externas.
+ * Aplicador del esquema SQL — sin dependencias externas.
  *
- * Aplica en orden todos los archivos `*.sql` de `backend/db/migrations/` y registra
- * cada uno en la tabla `schema_migrations` (nombre + timestamp). Es idempotente:
- * una migración ya aplicada nunca se vuelve a ejecutar, y cada una corre dentro de
- * una transacción (si falla, se revierte).
+ * Ejecuta `backend/db/init.sql` completo dentro de una transacción. El archivo es
+ * idempotente, por lo que se puede ejecutar sobre una base vacía o sobre una base
+ * existente para aplicar cambios de esquema.
  *
  * Uso:
  *   node db/migrate.js
@@ -19,61 +18,35 @@ require('dotenv').config({ path: path.resolve(__dirname, '../.env'), quiet: true
 const { Client } = require('pg');
 
 const DATABASE_URL = process.env.DATABASE_URL || '';
-const MIGRATIONS_DIR = path.join(__dirname, 'migrations');
+const SCHEMA_FILE = path.join(__dirname, 'init.sql');
 
 if (!/^postgres(ql)?:\/\//.test(DATABASE_URL)) {
   console.error('[db:migrate] DATABASE_URL inválida o ausente. Define la variable de entorno antes de ejecutar.');
   process.exit(1);
 }
 
-const ADVISORY_LOCK_ID = 727727727; // evita migraciones concurrentes con --scale backend=3
+const ADVISORY_LOCK_ID = 727727727; // evita aplicar el esquema concurrentemente con --scale backend=3
 
 async function main() {
   const client = new Client({ connectionString: DATABASE_URL });
   await client.connect();
 
   try {
-    // Lock distribuido: bloquea hasta adquirir, evita que 2 réplicas migren a la vez
+    // Lock distribuido: bloquea hasta adquirir, evita que 2 réplicas apliquen el esquema a la vez
     await client.query('SELECT pg_advisory_lock($1)', [ADVISORY_LOCK_ID]);
 
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS schema_migrations (
-        name       TEXT PRIMARY KEY,
-        applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
-      )
-    `);
+    const sql = fs.readFileSync(SCHEMA_FILE, 'utf8');
+    const startedAt = Date.now();
 
-    const files = fs
-      .readdirSync(MIGRATIONS_DIR)
-      .filter(file => /\.sql$/i.test(file))
-      .sort();
-
-    const { rows } = await client.query('SELECT name FROM schema_migrations');
-    const applied = new Set(rows.map(row => row.name));
-
-    let appliedCount = 0;
-    for (const file of files) {
-      if (applied.has(file)) continue;
-
-      const sql = fs.readFileSync(path.join(MIGRATIONS_DIR, file), 'utf8');
-      const startedAt = Date.now();
-
-      try {
-        await client.query('BEGIN');
-        await client.query(sql);
-        await client.query('INSERT INTO schema_migrations (name) VALUES ($1)', [file]);
-        await client.query('COMMIT');
-        appliedCount += 1;
-        console.log(`[db:migrate] aplicada ${file} (${Date.now() - startedAt}ms)`);
-      } catch (error) {
-        await client.query('ROLLBACK');
-        throw new Error(`Fallo al aplicar ${file}: ${error.message}`);
-      }
+    try {
+      await client.query('BEGIN');
+      await client.query(sql);
+      await client.query('COMMIT');
+      console.log(`[db:migrate] esquema aplicado desde init.sql (${Date.now() - startedAt}ms)`);
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw new Error(`Fallo al aplicar init.sql: ${error.message}`);
     }
-
-    console.log(
-      `[db:migrate] ${appliedCount === 0 ? 'sin migraciones pendientes' : `${appliedCount} migración(es) aplicada(s)`}`
-    );
   } finally {
     try {
       await client.query('SELECT pg_advisory_unlock($1)', [ADVISORY_LOCK_ID]);

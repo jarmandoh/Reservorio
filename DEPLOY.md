@@ -20,15 +20,14 @@ Ajusta `backend/.env`: credenciales reales de `DATABASE_URL`, `JWT_SECRET`, `ADM
 
 ## 2. Inicializar y actualizar la base
 
-Para una base nueva y vacía, carga el esquema inicial una vez y luego aplica las migraciones:
+Para una base nueva o existente, aplica el esquema único e idempotente:
 
 ```bash
 cd /opt/reservorio/backend
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/init.sql
-pnpm db:migrate
 ```
 
-No vuelvas a ejecutar `init.sql` sobre una base existente. Para versiones posteriores, crea un backup, ejecuta `pnpm db:migrate` y reinicia la API.
+Para versiones posteriores, crea un backup, ejecuta `pnpm db:migrate` (o el mismo `psql -f db/init.sql`) y reinicia la API.
 
 ## 3. Mantener la API en ejecución
 
@@ -40,7 +39,7 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now reservorio-backend
 ```
 
-El servicio carga `backend/.env` mediante la aplicación, aplica migraciones antes de iniciar y se reinicia si el proceso falla. Comprueba `sudo systemctl status reservorio-backend` y `curl -fsS http://127.0.0.1:3000/health`.
+El servicio carga `backend/.env` mediante la aplicación, aplica el esquema (`db/init.sql`) antes de iniciar y se reinicia si el proceso falla. Comprueba `sudo systemctl status reservorio-backend` y `curl -fsS http://127.0.0.1:3000/health`.
 
 ## 4. Publicar el frontend y TLS
 

@@ -51,14 +51,13 @@ cp backend/.env.example backend/.env
 
 Edita `backend/.env` y configura `DATABASE_URL`, `JWT_SECRET`, `ADMIN_PIN` y `FRONTEND_URL` según el entorno.
 
-Para una base PostgreSQL nueva, inicializa el esquema y ejecuta las migraciones:
+Para una base PostgreSQL nueva o existente, aplica el esquema único e idempotente:
 
 ```bash
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f backend/db/init.sql
-pnpm --filter reservorio-backend db:migrate
 ```
 
-No vuelvas a cargar `init.sql` en una base existente; en despliegues posteriores aplica solo las migraciones pendientes.
+También puedes usar `pnpm --filter reservorio-backend db:migrate`, que aplica el mismo `init.sql` dentro de una transacción y con lock distribuido. Es seguro repetirlo para actualizar una base existente.
 
 ### 4. Iniciar la aplicación
 
@@ -119,9 +118,8 @@ Reservorio/
 │   ├── scripts/
 │   │   └── backup.sh
 │   ├── db/
-│   │   ├── init.sql          # esquema base (única fuente de verdad)
-│   │   └── migrations/
-│   │       └── README.md     # historial y notas
+│   │   ├── init.sql          # esquema completo e idempotente (única fuente de verdad)
+│   │   └── migrate.js        # aplica init.sql con lock distribuido
 │   └── src/
 │       ├── index.js
 │       ├── db.js
@@ -190,12 +188,13 @@ Reservorio/
 
 ### Base de datos
 
-Configura `DATABASE_URL` en `backend/.env`. Para una instancia local vacía, aplica el esquema base una vez:
+Configura `DATABASE_URL` en `backend/.env`. Para una instancia local vacía o existente, aplica el esquema único:
 
 ```bash
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f backend/db/init.sql
-pnpm --filter reservorio-backend db:migrate
 ```
+
+O bien `pnpm --filter reservorio-backend db:migrate`, que ejecuta el mismo archivo de forma transaccional.
 
 ### Backend
 
@@ -264,10 +263,10 @@ El script genera un dump custom compatible con `pg_restore`, con marca de tiempo
 
 El pipeline de GitHub Actions (`.github/workflows/ci.yml`) ejecuta en cada push/PR:
 
-- Tests del backend sobre PostgreSQL 16 instalado en el runner (`init.sql`, `pnpm db:migrate` y `RUN_INTEGRATION=1` activan la suite de integración).
+- Tests del backend sobre PostgreSQL 16 instalado en el runner (`init.sql` y `RUN_INTEGRATION=1` activan la suite de integración).
 - Build del frontend (`pnpm build`) y publica el artefacto `dist`.
 
-> **Migraciones**: en desarrollo y despliegues se aplican con `pnpm db:migrate` antes de iniciar o actualizar el backend (ver `backend/db/migrations/`).
+> **Esquema**: `backend/db/init.sql` es el único archivo SQL del esquema. En desarrollo y despliegues se aplica con `pnpm db:migrate` (o `psql -f backend/db/init.sql`) antes de iniciar o actualizar el backend.
 
 ---
 

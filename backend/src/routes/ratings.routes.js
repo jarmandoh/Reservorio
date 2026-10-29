@@ -5,6 +5,7 @@ const rateLimit = require('express-rate-limit');
 const { body } = require('express-validator');
 const { handleValidation } = require('../middleware/validation');
 const { listReviews, getAverageRating, createReview } = require('../services/ratings.service');
+const { tooManyRequests } = require('../middleware/rate-limit');
 
 const router = express.Router();
 
@@ -14,7 +15,7 @@ const ratingsLimiter = rateLimit({
   max: 5,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { ok: false, message: 'Demasiadas reseñas, inténtalo más tarde.' },
+  handler: tooManyRequests('Demasiadas reseñas, inténtalo más tarde.'),
 });
 
 router.get('/:businessId', async (req, res) => {

@@ -3,6 +3,7 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const analyticsService = require('../services/analytics.service');
+const { tooManyRequests } = require('../middleware/rate-limit');
 
 const router = express.Router();
 
@@ -12,7 +13,7 @@ const viewLimiter = rateLimit({
   max: 300,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { ok: false, message: 'Demasiadas peticiones, inténtalo más tarde.' },
+  handler: tooManyRequests('Demasiadas peticiones, inténtalo más tarde.'),
 });
 
 /** POST /api/analytics/view — registra una vista de negocio (fire-and-forget). */

@@ -7,6 +7,7 @@ const db = require('../db');
 const gsheets = require('../services/googleSheets');
 const { syncAll } = require('../services/syncService');
 const logger = require('../logger');
+const { tooManyRequests } = require('../middleware/rate-limit');
 
 const router = express.Router();
 
@@ -16,7 +17,7 @@ const oauthLimiter = rateLimit({
   max: 10,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { ok: false, message: 'Demasiados intentos OAuth, inténtalo más tarde.' },
+  handler: tooManyRequests('Demasiados intentos OAuth, inténtalo más tarde.'),
 });
 
 const syncLimiter = rateLimit({
@@ -24,7 +25,7 @@ const syncLimiter = rateLimit({
   max: 5,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { ok: false, message: 'Demasiadas sincronizaciones, inténtalo más tarde.' },
+  handler: tooManyRequests('Demasiadas sincronizaciones, inténtalo más tarde.'),
 });
 
 // ���� Validación de formatos ����������������������������������������������������������������������������������������������

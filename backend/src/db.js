@@ -4,6 +4,10 @@ const { Pool } = require('pg');
 const logger = require('./logger');
 const { getRlsContext } = require('./db-context');
 
+//const supabase = require('@supabase/supabase-js');
+//supabase.createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+logger.error('---> [DB] Conectando a la base de datos con URL:', process.env.DATABASE_URL);
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   max: parseInt(process.env.PG_POOL_MAX || '20', 10),
@@ -14,6 +18,8 @@ const pool = new Pool({
   // PgBouncer (transaction pooling) es compatible: si PG_POOL_MODE=transaction,
   // el pool local sigue funcionando; documentado en .env.production.example
 });
+
+
 
 async function applyRlsContext(client) {
   const context = getRlsContext();
@@ -49,9 +55,11 @@ async function query(text, values) {
 
 pool.on('error', err => {
   logger.error('[DB] Error inesperado en cliente idle:', err.message);
+
 });
 
 pool.on('connect', () => {
+
   // Opcional: log solo en debug para no saturar en alta carga
   if (String(process.env.LOG_LEVEL || '').toLowerCase() === 'debug') {
     logger.debug('[DB] nueva conexión del pool establecida');

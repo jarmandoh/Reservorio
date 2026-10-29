@@ -114,16 +114,15 @@ Los tokens se generan con `sign(payload)`, firma **HS256**. Expiración: **2 hor
 
 `JWT_SECRET` debe configurarse en `.env`. Si no está definido, se usa un secreto hardcodeado de desarrollo y se imprime una advertencia en consola. En producción el arranque **aborta** si `JWT_SECRET` es débil.
 
-### Migraciones SQL versionadas
+### Esquema SQL único
 
-`backend/db/init.sql` inicializa una base vacía; los cambios posteriores se aplican con migraciones numeradas en `backend/db/migrations/`:
+`backend/db/init.sql` es el único archivo SQL del esquema: contiene tablas, índices, datos iniciales, RLS y políticas. Es idempotente y puede aplicarse sobre una base vacía o existente:
 
 ```bash
-pnpm db:migrate            # aplica pendientes (idempotente; registra en schema_migrations)
-pnpm db:migrate:create -- nombre_cambio   # crea el siguiente NNNN_*.sql
+pnpm db:migrate    # aplica init.sql completo en una transacción, con lock distribuido
 ```
 
-Ejecuta `pnpm db:migrate` antes de iniciar o actualizar el backend. Cada migración corre en una transacción y nunca se repite. Nuevos cambios al schema van en una migración; actualiza `init.sql` solo cuando cambia la inicialización de una base vacía.
+También puedes usar `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f backend/db/init.sql`. Ejecuta `pnpm db:migrate` antes de iniciar o actualizar el backend. Cualquier cambio de esquema debe añadirse a `init.sql` usando `IF NOT EXISTS`, `CREATE OR REPLACE` o bloques equivalentes para mantener la idempotencia.
 
 ### Schema de la base de datos (fuente única: `backend/db/init.sql`)
 
@@ -144,7 +143,8 @@ reservations          id SERIAL PK · business_id FK CASCADE · franja · dispon
                       servicio · notas · created_at · updated_at
                       -- Índice único parcial: no hay dos franjas ocupadas iguales por negocio
 
-customers             id TEXT PK · name · email (UNIQUE) · phone · sms_opt_in (defecto true) · created_at
+customers             id TEXT PK · name · email (UNIQUE) · phone · sms_opt_in (defecto true) ·
+                      data_consent · consent_at · marketing_consent · created_at
 
 customer_login_codes  customer_id (UNIQUE) FK CASCADE · kind (otp|magic_link) · code_hash (SHA-256) ·
                       attempts · expires_at · created_at
