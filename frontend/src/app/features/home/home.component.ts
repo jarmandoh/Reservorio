@@ -70,7 +70,13 @@ const DEFAULT_CATEGORIES = ['Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci�
           <div class="flex items-center justify-between mb-10">
             <div class="g-nav-logo flex items-center gap-2">
               <div class="hero-logo-mark w-8 h-8 rounded-lg flex items-center justify-center">
-                <span class="material-icons-round text-base">calendar_month</span>
+                <span class="material-icons-round text-base">
+                  <img
+                    src="assets/icons/icon-192.png"
+                    alt="Resérvame"
+                    class="w-full h-full object-contain"
+                  />
+                </span>
               </div>
               <span class="font-display font-bold text-lg tracking-tight">Resérvame</span>
             </div>
