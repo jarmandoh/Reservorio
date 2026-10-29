@@ -7,6 +7,7 @@ const { requireAuth } = require('../middleware/auth');
 const authService = require('../services/auth.service');
 const customerAuthService = require('../services/customer-auth.service');
 const logger = require('../logger');
+const { tooManyRequests } = require('../middleware/rate-limit');
 
 const router = express.Router();
 
@@ -16,7 +17,7 @@ function makeLimiter(max) {
     max,
     standardHeaders: true,
     legacyHeaders: false,
-    message: { ok: false, message: 'Demasiados intentos de autenticación, inténtalo más tarde.' },
+    handler: tooManyRequests('Demasiados intentos de autenticación, inténtalo más tarde.'),
   });
 }
 
