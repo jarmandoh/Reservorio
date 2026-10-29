@@ -439,6 +439,14 @@
 .dark .bg-surface {
   background-color: #161d27;
 }
+/* Variantes con opacidad (barras sticky de filtros/paneles): las utilidades
+   bg-surface/90 y bg-surface/95 generan colores fijos y no heredan del tema. */
+.dark .bg-surface\/90 {
+  background-color: rgb(22 29 39 / 0.9);
+}
+.dark .bg-surface\/95 {
+  background-color: rgb(22 29 39 / 0.95);
+}
 .dark .bg-surface-low {
   background-color: #121821;
 }
