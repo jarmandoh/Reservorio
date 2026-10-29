@@ -30,7 +30,7 @@ const FALLBACK_BUSINESSES: Business[] = [
   },
 ];
 
-const CATEGORIES = ['Todos', 'Salud & Bienestar', 'Belleza', 'Fitness', 'Educación', 'Restaurantes'];
+const FALLBACK_CATEGORIES = ['Todos', 'Salud & Bienestar', 'Belleza', 'Fitness', 'Educación', 'Restaurantes'];
 
 @Component({
     selector: 'app-home',
@@ -115,7 +115,7 @@ const CATEGORIES = ['Todos', 'Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci
     <!-- ══ CATEGORY CHIPS ══════════════════════════════════════════ -->
     <div class="bg-surface-lowest border-b border-outline-variant/30 sticky top-0 z-10">
       <div class="g-chips-inner max-w-4xl mx-auto px-4 py-3 flex gap-2 overflow-x-auto hide-scrollbar">
-        @for (cat of categories; track cat) {
+        @for (cat of categories(); track cat) {
           <button
             class="whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-all flex-shrink-0"
             [style.background]="selectedCategory === cat ? '#005bbf' : ''"
@@ -295,7 +295,7 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   private readonly POLL_MS = 30_000;
 
   businesses: Business[] = [];
-  categories = CATEGORIES;
+  readonly categories = signal<string[]>(['Todos']);
   searchQuery      = '';
   selectedCategory = 'Todos';
   readonly loading    = signal(true);
@@ -328,13 +328,19 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   ngOnInit(): void {
-    this.sub = this.api.getBusinesses().pipe(
-      
+    this.sub = this.api.getCategories().pipe(
+      catchError(() => of(FALLBACK_CATEGORIES))
+    ).subscribe(cats => {
+      const categoriesWithTodos = ['Todos', ...cats];
+      this.categories.set(categoriesWithTodos);
+      console.log('Fetched categories:', categoriesWithTodos);
+    });
+
+    this.api.getBusinesses().pipe(
       catchError(() => of(FALLBACK_BUSINESSES))
     ).subscribe(list => {
-      console.log('Fetched businesses:', list)
+      console.log('Fetched businesses:', list);
       this.businesses = list.length ? list : [...FALLBACK_BUSINESSES];
-      
       this.loading.set(false);
       setTimeout(() => this.animateCards(), 50);
     });

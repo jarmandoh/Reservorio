@@ -16,6 +16,7 @@ const auth           = require('./routes/auth.routes');
 const googleOAuth    = require('./routes/google.routes');
 const uxRoutes       = require('./routes/ux.routes');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
+const categoriesRoutes = require('./routes/categories.routes');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -65,6 +66,7 @@ app.use('/api/businesses',   businesses);
 app.use('/api/auth',         auth);
 app.use('/api/google',       googleOAuth);
 app.use('/api/ux-tips',      uxRoutes);
+app.use('/api/categories',   categoriesRoutes);
 
 // ── Health check ─────────────────────────────────────────────────────────────
 app.get('/health', (_req, res) => res.json({ ok: true, service: 'reservorio-api' }));

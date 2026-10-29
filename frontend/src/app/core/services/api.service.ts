@@ -77,6 +77,12 @@ export class ApiService {
 
   // ── Multi-business (public) ───────────────────────────────────────────
 
+  getCategories(): Observable<string[]> {
+    return this.http
+      .get<ApiResponse<string[]>>(`${this.base}/categories`)
+      .pipe(map(r => r.data ?? []), catchError(this.handleError));
+  }
+
   getBusinesses(): Observable<Business[]> {
     return this.http
       .get<ApiResponse<Business[]>>(`${this.base}/businesses`)
