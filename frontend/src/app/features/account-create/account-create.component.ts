@@ -25,7 +25,7 @@ type AccountType = 'usuario' | 'negocio';
       [errorMessage]="error()"
       footerText="¿Ya tienes cuenta?"
       footerActionLabel="Iniciar sesión"
-      (submit)="submit()"
+      (formSubmit)="submit()"
       (footerAction)="goLogin()"
     >
       <a

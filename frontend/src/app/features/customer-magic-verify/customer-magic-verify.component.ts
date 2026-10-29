@@ -18,7 +18,7 @@ import { SupabaseAuthService } from '../../core/services/supabase-auth.service';
       submitLabel="Volver a intentar"
       [loading]="loading()"
       [errorMessage]="error()"
-      (submit)="retry()"
+      (formSubmit)="retry()"
     >
       @if (error()) {
         <p class="text-sm text-on-surface-variant">

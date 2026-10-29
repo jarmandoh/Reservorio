@@ -8,7 +8,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
   template: `
-    <form [formGroup]="formGroup" (ngSubmit)="submit.emit()" class="grid gap-4">
+    <form [formGroup]="formGroup" (ngSubmit)="formSubmit.emit()" class="grid gap-4">
       <div class="grid sm:grid-cols-2 gap-4">
         <div>
           <label class="form-label">Nombre</label>
@@ -129,7 +129,7 @@ export class BusinessFormComponent implements OnInit {
   @Input() saving = false;
   @Input() isSubmitDisabled = false;
 
-  @Output() submit = new EventEmitter<void>();
+  @Output() formSubmit = new EventEmitter<void>();
   @Output() cancel = new EventEmitter<void>();
 
   ngOnInit(): void {

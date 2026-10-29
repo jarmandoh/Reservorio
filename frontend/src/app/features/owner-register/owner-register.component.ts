@@ -21,7 +21,7 @@ import { AuthCardComponent } from '../../shared/components/auth-card/auth-card.c
       [errorMessage]="error()"
       footerText="¿Ya tienes cuenta?"
       footerActionLabel="Iniciar sesión"
-      (submit)="submit()"
+      (formSubmit)="submit()"
       (footerAction)="goLogin()"
     >
       <div>

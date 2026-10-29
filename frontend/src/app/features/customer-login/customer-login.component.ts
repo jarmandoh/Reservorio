@@ -24,7 +24,7 @@ type AuthMode = 'credentials' | 'password' | 'otp';
       [errorMessage]="error()"
       footerText="¿No tienes cuenta?"
       footerActionLabel="Crear cuenta"
-      (submit)="submit()"
+      (formSubmit)="submit()"
       (footerAction)="goCreateAccount()"
     >
       <a

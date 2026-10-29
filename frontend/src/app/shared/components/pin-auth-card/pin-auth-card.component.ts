@@ -23,7 +23,7 @@ import { FormGroup, ReactiveFormsModule } from '@angular/forms';
           </div>
         }
 
-        <form [formGroup]="formGroup" (ngSubmit)="submit.emit()" class="card flex flex-col gap-4">
+        <form [formGroup]="formGroup" (ngSubmit)="formSubmit.emit()" class="card flex flex-col gap-4">
           <ng-content></ng-content>
 
           <button
@@ -75,7 +75,7 @@ export class PinAuthCardComponent {
   @Input() footerLabel = '';
   @Input() backLabel = '';
 
-  @Output() submit = new EventEmitter<void>();
+  @Output() formSubmit = new EventEmitter<void>();
   @Output() footerAction = new EventEmitter<void>();
   @Output() backAction = new EventEmitter<void>();
 }

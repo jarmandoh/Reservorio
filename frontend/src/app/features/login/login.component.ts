@@ -2,6 +2,7 @@ import { Component, signal, inject, OnInit, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators, AbstractControl } from '@angular/forms';
 import { Router } from '@angular/router';
+import { HttpErrorResponse } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../core/services/auth.service';
 import { PinAuthCardComponent } from '../../shared/components/pin-auth-card/pin-auth-card.component';
@@ -18,7 +19,7 @@ import { PinAuthCardComponent } from '../../shared/components/pin-auth-card/pin-
       submitLabel="Entrar al panel"
       loadingLabel="Verificando…"
       backLabel="Volver a reservas"
-      (submit)="submit()"
+      (formSubmit)="submit()"
       (backAction)="goBack()"
     >
       <div header class="flex flex-col items-center gap-3">
@@ -158,8 +159,10 @@ export class LoginComponent implements OnInit {
     this.form.markAllAsTouched();
     if (this.form.invalid) return;
 
-    // Navigate to a dedicated loading screen to give feedback during auth
-    this.router.navigate(['/loading']);
+    // El estado de carga se muestra en la propia tarjeta. No navegar aquí:
+    // destruir el componente cancela la petición HTTP en curso (net::ERR_ABORTED).
+    this.loading.set(true);
+    this.loginError.set(false);
 
     const pin = this.form.value.pin!;
     this.auth
@@ -170,8 +173,10 @@ export class LoginComponent implements OnInit {
           this.loading.set(false);
           this.router.navigate(['/admin']);
         },
-        error: () => {
+        error: (err: HttpErrorResponse) => {
           this.loading.set(false);
+          // El interceptor ya muestra el aviso de rate limit con el tiempo de espera.
+          if (err?.status === 429) return;
           this.loginError.set(true);
           this.form.reset();
         },

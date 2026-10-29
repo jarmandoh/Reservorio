@@ -16,7 +16,7 @@ import { FormGroup, ReactiveFormsModule } from '@angular/forms';
           }
         </div>
 
-        <form [formGroup]="formGroup" (ngSubmit)="submit.emit()" class="space-y-4">
+        <form [formGroup]="formGroup" (ngSubmit)="formSubmit.emit()" class="space-y-4">
           <ng-content></ng-content>
 
           @if (errorMessage) {
@@ -71,6 +71,6 @@ export class AuthCardComponent {
   @Input() footerText = '';
   @Input() footerActionLabel = '';
 
-  @Output() submit = new EventEmitter<void>();
+  @Output() formSubmit = new EventEmitter<void>();
   @Output() footerAction = new EventEmitter<void>();
 }

@@ -21,7 +21,7 @@ import { PinAuthCardComponent } from '../../shared/components/pin-auth-card/pin-
       submitLabel="Entrar"
       loadingLabel="Verificando…"
       backLabel="Volver al inicio"
-      (submit)="submit()"
+      (formSubmit)="submit()"
       (backAction)="goHome()"
     >
       <div header class="flex flex-col items-center gap-3 text-center">

@@ -64,7 +64,7 @@ import { BusinessListComponent } from '../../shared/components/business-list/bus
               submitLabel="Guardar negocio"
               [saving]="saving()"
               [isSubmitDisabled]="businessForm.invalid || saving()"
-              (submit)="saveBusiness()"
+              (formSubmit)="saveBusiness()"
               (cancel)="closeModal()"
             />
           </div>
@@ -119,7 +119,7 @@ import { BusinessListComponent } from '../../shared/components/business-list/bus
             submitLabel="Guardar negocio"
             [saving]="saving()"
             [isSubmitDisabled]="businessForm.invalid || saving()"
-            (submit)="saveBusiness()"
+            (formSubmit)="saveBusiness()"
             (cancel)="closeModal()"
           />
         </div>
