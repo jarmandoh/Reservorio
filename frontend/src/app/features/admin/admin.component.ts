@@ -74,6 +74,21 @@ export class AdminComponent implements OnInit {
   readonly modalRow = signal<Reservation | null>(null);
   readonly newStatus = signal('disponible');
   readonly pinError = signal<string | null>(null);
+  readonly showCurrentPin = signal(false);
+  readonly showNewPin = signal(false);
+  readonly showBusinessPin = signal(false);
+
+  toggleCurrentPin(): void {
+    this.showCurrentPin.update(v => !v);
+  }
+
+  toggleNewPin(): void {
+    this.showNewPin.update(v => !v);
+  }
+
+  toggleBusinessPin(): void {
+    this.showBusinessPin.update(v => !v);
+  }
 
   // ── Panel avanzado state (#14) ─────────────────────────────────────────
   readonly adminPanelLoading = signal(false);

@@ -271,6 +271,53 @@
     color: #414754;
   }
 
+  /* Campo con icono (estilo estándar de los formularios de la app).
+     Estructura: label fuera + <div class="icon-field"> con icono e input. */
+  .icon-field {
+    @apply relative mt-1;
+  }
+  .icon-field > .material-icons-round {
+    position: absolute;
+    top: 50%;
+    left: 0.875rem;
+    transform: translateY(-50%);
+    pointer-events: none;
+    font-size: 1.15rem;
+    color: #686e7c;
+    transition: color 160ms ease;
+  }
+  .icon-field:focus-within > .material-icons-round {
+    color: #1a73e8;
+  }
+  .icon-field > .form-input,
+  .icon-field > .form-select,
+  .icon-field > .form-textarea {
+    padding-left: 2.75rem;
+  }
+  /* Campo con icono + botón de mostrar/ocultar contraseña. */
+  .icon-field.has-toggle > .form-input {
+    padding-right: 3rem;
+  }
+  .password-toggle {
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    display: grid;
+    place-items: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 9999px;
+    color: #686e7c;
+    transition:
+      background-color 160ms ease,
+      color 160ms ease;
+  }
+  .password-toggle:hover {
+    background-color: rgb(26 115 232 / 10%);
+    color: #1a73e8;
+  }
+
   .card {
     @apply rounded-xl p-5;
     background-color: #ffffff;
@@ -593,6 +640,19 @@
 }
 .dark .form-label {
   color: #b8bfc9;
+}
+.dark .icon-field > .material-icons-round {
+  color: #aeb8c5;
+}
+.dark .icon-field:focus-within > .material-icons-round {
+  color: #8fbaff;
+}
+.dark .password-toggle {
+  color: #aeb8c5;
+}
+.dark .password-toggle:hover {
+  background-color: rgb(143 186 255 / 10%);
+  color: #8fbaff;
 }
 
 .dark .card {

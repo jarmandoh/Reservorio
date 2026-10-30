@@ -279,10 +279,16 @@ const DEFAULT_CATEGORIES = ['Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci�
       <!-- ══ FOOTER ══════════════════════════════════════════════════ -->
       <footer class="bg-surface-lowest border-t border-outline-variant/30 py-6 px-6 text-center">
         <p class="text-xs text-outline">Resérvame © 2026 · Tu agenda, siempre a mano</p>
-        <a routerLink="/privacy" class="btn-tertiary btn-sm mt-3 inline-flex items-center gap-1.5">
-          <span class="material-icons-round text-base">shield</span>
-          Política de privacidad
-        </a>
+        <div class="mt-3 flex flex-wrap items-center justify-center gap-3">
+          <a routerLink="/terms" class="btn-tertiary btn-sm inline-flex items-center gap-1.5">
+            <span class="material-icons-round text-base">gavel</span>
+            Términos y condiciones
+          </a>
+          <a routerLink="/privacy" class="btn-tertiary btn-sm inline-flex items-center gap-1.5">
+            <span class="material-icons-round text-base">shield</span>
+            Política de tratamiento de datos
+          </a>
+        </div>
       </footer>
     </div>
   `,

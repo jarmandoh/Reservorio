@@ -13,14 +13,11 @@
   </div>
 
   <div class="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto]">
-    <div class="relative">
-      <span
-        class="material-icons-round absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[1.1rem] pointer-events-none"
-        >search</span
-      >
+    <div class="icon-field">
+      <span class="material-icons-round" aria-hidden="true">search</span>
       <input
         type="search"
-        class="form-input pl-10 w-full"
+        class="form-input"
         placeholder="Buscar negocio, categoría o ubicación…"
         [value]="searchQuery"
         (input)="searchChange.emit(getInputValue($event))"

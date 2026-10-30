@@ -78,14 +78,11 @@
 
       <!-- Search + filter -->
       <div class="flex flex-col sm:flex-row gap-3">
-        <div class="relative flex-1">
-          <span
-            class="material-icons-round absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[1.1rem] pointer-events-none"
-            >search</span
-          >
+        <div class="icon-field flex-1">
+          <span class="material-icons-round" aria-hidden="true">search</span>
           <input
             type="search"
-            class="form-input pl-10"
+            class="form-input"
             placeholder="Buscar cliente, servicio…"
             [value]="searchQuery()"
             (input)="searchQuery.set(getInputValue($event))"
@@ -220,14 +217,17 @@
         <div class="flex flex-col sm:flex-row gap-3 items-start sm:items-end">
           <div class="flex-1 w-full">
             <label class="form-label" for="svcNombre">Nombre del servicio</label>
-            <input
-              id="svcNombre"
-              type="text"
-              class="form-input"
-              placeholder="Ej. Corte de cabello"
-              formControlName="nombre"
-              autocomplete="off"
-            />
+            <div class="icon-field">
+              <span class="material-icons-round" aria-hidden="true">sell</span>
+              <input
+                id="svcNombre"
+                type="text"
+                class="form-input"
+                placeholder="Ej. Corte de cabello"
+                formControlName="nombre"
+                autocomplete="off"
+              />
+            </div>
           </div>
           <button
             type="submit"
@@ -346,27 +346,57 @@
         <p class="section-label">Cambiar PIN de administrador</p>
         <div>
           <label class="form-label" for="currentPin">PIN actual</label>
-          <input
-            id="currentPin"
-            type="password"
-            class="form-input"
-            inputmode="numeric"
-            maxlength="8"
-            formControlName="current"
-            placeholder="••••"
-          />
+          <div class="icon-field has-toggle">
+            <span class="material-icons-round" aria-hidden="true">lock</span>
+            <input
+              id="currentPin"
+              [type]="showCurrentPin() ? 'text' : 'password'"
+              class="form-input"
+              inputmode="numeric"
+              maxlength="8"
+              formControlName="current"
+              placeholder="••••"
+              autocomplete="current-password"
+            />
+            <button
+              type="button"
+              class="password-toggle"
+              [attr.aria-label]="showCurrentPin() ? 'Ocultar PIN' : 'Mostrar PIN'"
+              [attr.aria-pressed]="showCurrentPin()"
+              (click)="toggleCurrentPin()"
+            >
+              <span class="material-icons-round" aria-hidden="true">{{
+                showCurrentPin() ? 'visibility_off' : 'visibility'
+              }}</span>
+            </button>
+          </div>
         </div>
         <div>
           <label class="form-label" for="newPin">Nuevo PIN</label>
-          <input
-            id="newPin"
-            type="password"
-            class="form-input"
-            inputmode="numeric"
-            maxlength="8"
-            formControlName="next"
-            placeholder="••••"
-          />
+          <div class="icon-field has-toggle">
+            <span class="material-icons-round" aria-hidden="true">lock</span>
+            <input
+              id="newPin"
+              [type]="showNewPin() ? 'text' : 'password'"
+              class="form-input"
+              inputmode="numeric"
+              maxlength="8"
+              formControlName="next"
+              placeholder="••••"
+              autocomplete="new-password"
+            />
+            <button
+              type="button"
+              class="password-toggle"
+              [attr.aria-label]="showNewPin() ? 'Ocultar PIN' : 'Mostrar PIN'"
+              [attr.aria-pressed]="showNewPin()"
+              (click)="toggleNewPin()"
+            >
+              <span class="material-icons-round" aria-hidden="true">{{
+                showNewPin() ? 'visibility_off' : 'visibility'
+              }}</span>
+            </button>
+          </div>
           @if (pinError()) {
             <p class="text-xs text-error mt-1">{{ pinError() }}</p>
           }
@@ -402,7 +432,10 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label class="form-label">Nombre *</label>
-                <input type="text" class="form-input" formControlName="name" />
+                <div class="icon-field">
+                  <span class="material-icons-round" aria-hidden="true">store</span>
+                  <input type="text" class="form-input" formControlName="name" />
+                </div>
               </div>
               <div>
                 <label class="form-label">Categoría *</label>
@@ -436,15 +469,18 @@
               @if (businessForm.get('businessType')?.value === 'onsite_service') {
                 <div>
                   <label class="form-label" for="admin-business-profession">Profesión *</label>
-                  <input
-                    id="admin-business-profession"
-                    type="text"
-                    class="form-input"
-                    formControlName="profession"
-                    placeholder="Ej. electricista, ebanista, cerrajero"
-                    maxlength="100"
-                    required
-                  />
+                  <div class="icon-field">
+                    <span class="material-icons-round" aria-hidden="true">work</span>
+                    <input
+                      id="admin-business-profession"
+                      type="text"
+                      class="form-input"
+                      formControlName="profession"
+                      placeholder="Ej. electricista, ebanista, cerrajero"
+                      maxlength="100"
+                      required
+                    />
+                  </div>
                 </div>
               }
             </div>
@@ -455,7 +491,10 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label class="form-label">Dirección</label>
-                <input type="text" class="form-input" formControlName="location" />
+                <div class="icon-field">
+                  <span class="material-icons-round" aria-hidden="true">place</span>
+                  <input type="text" class="form-input" formControlName="location" />
+                </div>
                 @if (locationMapUrl()) {
                   <a
                     class="text-sm text-primary mt-2 inline-block hover:underline"
@@ -469,7 +508,10 @@
               </div>
               <div>
                 <label class="form-label">Teléfono</label>
-                <input type="tel" class="form-input" formControlName="phone" />
+                <div class="icon-field">
+                  <span class="material-icons-round" aria-hidden="true">phone</span>
+                  <input type="tel" class="form-input" formControlName="phone" />
+                </div>
               </div>
             </div>
             <div class="grid grid-cols-1 gap-3">
@@ -492,21 +534,27 @@
               <div class="grid grid-cols-2 gap-3">
                 <div>
                   <label class="form-label">Apertura</label>
-                  <input
-                    type="time"
-                    class="form-input"
-                    [value]="openTime()"
-                    (input)="openTime.set(getInputValue($event))"
-                  />
+                  <div class="icon-field">
+                    <span class="material-icons-round" aria-hidden="true">schedule</span>
+                    <input
+                      type="time"
+                      class="form-input"
+                      [value]="openTime()"
+                      (input)="openTime.set(getInputValue($event))"
+                    />
+                  </div>
                 </div>
                 <div>
                   <label class="form-label">Cierre</label>
-                  <input
-                    type="time"
-                    class="form-input"
-                    [value]="closeTime()"
-                    (input)="closeTime.set(getInputValue($event))"
-                  />
+                  <div class="icon-field">
+                    <span class="material-icons-round" aria-hidden="true">schedule</span>
+                    <input
+                      type="time"
+                      class="form-input"
+                      [value]="closeTime()"
+                      (input)="closeTime.set(getInputValue($event))"
+                    />
+                  </div>
                 </div>
               </div>
               <p class="text-sm text-on-surface-variant">
@@ -517,13 +565,16 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label class="form-label">Logo (URL)</label>
-                <input
-                  type="url"
-                  class="form-input"
-                  formControlName="logo"
-                  placeholder="https://..."
-                  (input)="onLogoChange()"
-                />
+                <div class="icon-field">
+                  <span class="material-icons-round" aria-hidden="true">image</span>
+                  <input
+                    type="url"
+                    class="form-input"
+                    formControlName="logo"
+                    placeholder="https://..."
+                    (input)="onLogoChange()"
+                  />
+                </div>
               </div>
               <div class="flex flex-col gap-2">
                 <label class="form-label">Vista previa del logo</label>
@@ -548,49 +599,67 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label class="form-label">Facebook</label>
-                <input
-                  type="url"
-                  class="form-input"
-                  formControlName="facebook"
-                  placeholder="https://facebook.com/..."
-                />
+                <div class="icon-field">
+                  <span class="material-icons-round" aria-hidden="true">link</span>
+                  <input
+                    type="url"
+                    class="form-input"
+                    formControlName="facebook"
+                    placeholder="https://facebook.com/..."
+                  />
+                </div>
               </div>
               <div>
                 <label class="form-label">Instagram</label>
-                <input
-                  type="url"
-                  class="form-input"
-                  formControlName="instagram"
-                  placeholder="https://instagram.com/..."
-                />
+                <div class="icon-field">
+                  <span class="material-icons-round" aria-hidden="true">link</span>
+                  <input
+                    type="url"
+                    class="form-input"
+                    formControlName="instagram"
+                    placeholder="https://instagram.com/..."
+                  />
+                </div>
               </div>
               <div>
                 <label class="form-label">TikTok</label>
-                <input type="url" class="form-input" formControlName="tiktok" placeholder="https://tiktok.com/@..." />
+                <div class="icon-field">
+                  <span class="material-icons-round" aria-hidden="true">link</span>
+                  <input type="url" class="form-input" formControlName="tiktok" placeholder="https://tiktok.com/@..." />
+                </div>
               </div>
               <div>
                 <label class="form-label">WhatsApp</label>
-                <input type="text" class="form-input" formControlName="whatsapp" placeholder="+5493412345678" />
+                <div class="icon-field">
+                  <span class="material-icons-round" aria-hidden="true">chat</span>
+                  <input type="text" class="form-input" formControlName="whatsapp" placeholder="+5493412345678" />
+                </div>
               </div>
               <div>
                 <label class="form-label">LinkedIn</label>
-                <input
-                  type="url"
-                  class="form-input"
-                  formControlName="linkedin"
-                  placeholder="https://linkedin.com/..."
-                />
+                <div class="icon-field">
+                  <span class="material-icons-round" aria-hidden="true">link</span>
+                  <input
+                    type="url"
+                    class="form-input"
+                    formControlName="linkedin"
+                    placeholder="https://linkedin.com/..."
+                  />
+                </div>
               </div>
             </div>
             <div>
               <label class="form-label">Tags</label>
-              <input
-                type="text"
-                class="form-input"
-                formControlName="tags"
-                placeholder="Consultas, Online"
-                (input)="tagQuery.set(getInputValue($event))"
-              />
+              <div class="icon-field">
+                <span class="material-icons-round" aria-hidden="true">sell</span>
+                <input
+                  type="text"
+                  class="form-input"
+                  formControlName="tags"
+                  placeholder="Consultas, Online"
+                  (input)="tagQuery.set(getInputValue($event))"
+                />
+              </div>
               @if (matchingTagSuggestions().length) {
                 <div class="border border-outline-variant/20 rounded-xl bg-surface-low p-2 mt-2 grid gap-2">
                   @for (tag of matchingTagSuggestions(); track tag) {
@@ -648,7 +717,28 @@
               <label class="form-label">
                 {{ editingBusiness() ? 'Nuevo PIN (vacío = sin cambio)' : 'PIN de acceso *' }}
               </label>
-              <input type="password" class="form-input" formControlName="pin" inputmode="numeric" placeholder="••••" />
+              <div class="icon-field has-toggle">
+                <span class="material-icons-round" aria-hidden="true">lock</span>
+                <input
+                  [type]="showBusinessPin() ? 'text' : 'password'"
+                  class="form-input"
+                  formControlName="pin"
+                  inputmode="numeric"
+                  placeholder="••••"
+                  autocomplete="new-password"
+                />
+                <button
+                  type="button"
+                  class="password-toggle"
+                  [attr.aria-label]="showBusinessPin() ? 'Ocultar PIN' : 'Mostrar PIN'"
+                  [attr.aria-pressed]="showBusinessPin()"
+                  (click)="toggleBusinessPin()"
+                >
+                  <span class="material-icons-round" aria-hidden="true">{{
+                    showBusinessPin() ? 'visibility_off' : 'visibility'
+                  }}</span>
+                </button>
+              </div>
             </div>
           </form>
         </div>

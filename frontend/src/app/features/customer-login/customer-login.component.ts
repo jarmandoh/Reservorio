@@ -4,10 +4,7 @@ import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../core/services/auth.service';
-import { ApiService } from '../../core/services/api.service';
 import { AuthCardComponent } from '../../shared/components/auth-card/auth-card.component';
-
-type AuthMode = 'credentials' | 'password' | 'otp';
 
 @Component({
   selector: 'app-customer-login',
@@ -17,15 +14,15 @@ type AuthMode = 'credentials' | 'password' | 'otp';
       title="Mi cuenta"
       subtitle="Accede para ver tu historial y repetir tus reservas favoritas."
       [formGroup]="form"
-      [submitLabel]="submitLabel"
-      [loadingLabel]="loadingLabel"
+      [submitLabel]="'Iniciar sesión'"
+      [loadingLabel]="'Comprobando…'"
       [loading]="loading()"
       [isSubmitDisabled]="loading() || form.invalid"
       [errorMessage]="error()"
       footerText="¿No tienes cuenta?"
-      footerActionLabel="Crear cuenta"
+      footerActionLabel="Registrarse"
       (formSubmit)="submit()"
-      (footerAction)="goCreateAccount()"
+      (footerAction)="goRegister()"
     >
       <a
         routerLink="/"
@@ -36,188 +33,76 @@ type AuthMode = 'credentials' | 'password' | 'otp';
         Volver al inicio
       </a>
 
-      <div class="mb-4 grid grid-cols-3 gap-2">
-        <button
-          type="button"
-          class="rounded-xl border px-3 py-2 text-sm font-semibold transition-colors"
-          [class.border-primary]="mode() === 'credentials'"
-          [class.text-primary]="mode() === 'credentials'"
-          [class.bg-primary/10]="mode() === 'credentials'"
-          [class.border-on-surface-variant/30]="mode() !== 'credentials'"
-          (click)="setMode('credentials')"
-        >
-          Email y teléfono
-        </button>
-        <button
-          type="button"
-          class="rounded-xl border px-3 py-2 text-sm font-semibold transition-colors"
-          [class.border-primary]="mode() === 'password'"
-          [class.text-primary]="mode() === 'password'"
-          [class.bg-primary/10]="mode() === 'password'"
-          [class.border-on-surface-variant/30]="mode() !== 'password'"
-          (click)="setMode('password')"
-        >
-          Contraseña
-        </button>
-        <button
-          type="button"
-          class="rounded-xl border px-3 py-2 text-sm font-semibold transition-colors"
-          [class.border-primary]="mode() === 'otp'"
-          [class.text-primary]="mode() === 'otp'"
-          [class.bg-primary/10]="mode() === 'otp'"
-          [class.border-on-surface-variant/30]="mode() !== 'otp'"
-          (click)="setMode('otp')"
-        >
-          Código por email
-        </button>
-      </div>
-
-      <button
-        type="button"
-        class="mb-4 w-full rounded-xl border border-outline-variant px-4 py-3 font-semibold"
-        (click)="loginGoogle()"
-        [disabled]="loading()"
-      >
-        Continuar con Google
-      </button>
-
       <div>
-        <label class="form-label" for="email">Correo electrónico</label>
-        <input
-          id="email"
-          type="email"
-          class="form-input w-full"
-          formControlName="email"
-          autocomplete="email"
-          [attr.aria-invalid]="form.controls.email.invalid && form.controls.email.touched ? 'true' : null"
-          [attr.aria-describedby]="
-            form.controls.email.invalid && form.controls.email.touched ? 'email-error' : error() ? 'auth-error' : null
-          "
-          (input)="onEmailChange()"
-        />
+        <label class="form-label" for="customer-email">Correo electrónico</label>
+        <div class="icon-field">
+          <span class="material-icons-round" aria-hidden="true">mail</span>
+          <input
+            id="customer-email"
+            type="email"
+            class="form-input"
+            formControlName="email"
+            autocomplete="email"
+            placeholder="ana@ejemplo.com"
+            [attr.aria-invalid]="form.controls.email.invalid && form.controls.email.touched ? 'true' : null"
+            [attr.aria-describedby]="form.controls.email.invalid && form.controls.email.touched ? 'email-error' : null"
+          />
+        </div>
         @if (form.controls.email.invalid && form.controls.email.touched) {
           <p id="email-error" class="mt-1 text-xs text-error">Introduce un correo electrónico válido.</p>
         }
       </div>
 
-      @if (mode() === 'credentials') {
-        <div>
-          <label class="form-label" for="phone">Teléfono</label>
+      <div>
+        <label class="form-label" for="customer-password">Contraseña</label>
+        <div class="icon-field has-toggle">
+          <span class="material-icons-round" aria-hidden="true">lock</span>
           <input
-            id="phone"
-            type="tel"
-            class="form-input w-full"
-            formControlName="phone"
-            placeholder="Ej. 600 123 456"
-            autocomplete="tel"
-            [attr.aria-invalid]="form.controls.phone.invalid && form.controls.phone.touched ? 'true' : null"
-            [attr.aria-describedby]="
-              form.controls.phone.invalid && form.controls.phone.touched ? 'phone-error' : error() ? 'auth-error' : null
-            "
-          />
-          @if (form.controls.phone.invalid && form.controls.phone.touched) {
-            <p id="phone-error" class="mt-1 text-xs text-error">
-              Introduce un teléfono válido de al menos 7 caracteres.
-            </p>
-          }
-          <p class="text-xs text-on-surface-variant mt-1">
-            ¿No lo recuerdas?
-            <button type="button" class="text-primary font-semibold underline" (click)="sendMagicLink()">
-              Recibe un enlace por correo
-            </button>
-          </p>
-        </div>
-      }
-
-      @if (mode() === 'password') {
-        <div>
-          <label class="form-label" for="password">Contraseña</label>
-          <input
-            id="password"
-            type="password"
-            class="form-input w-full"
+            id="customer-password"
+            [type]="showPassword() ? 'text' : 'password'"
+            class="form-input"
             formControlName="password"
             autocomplete="current-password"
+            placeholder="Mínimo 6 caracteres"
           />
+          <button
+            type="button"
+            class="password-toggle"
+            [attr.aria-label]="showPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+            [attr.aria-pressed]="showPassword()"
+            (click)="togglePassword()"
+          >
+            <span class="material-icons-round" aria-hidden="true">{{
+              showPassword() ? 'visibility_off' : 'visibility'
+            }}</span>
+          </button>
         </div>
-      }
-
-      @if (mode() === 'otp') {
-        <div>
-          <label class="form-label" for="code">Código de 6 dígitos</label>
-          <input
-            id="code"
-            type="text"
-            class="form-input w-full"
-            formControlName="code"
-            inputmode="numeric"
-            maxlength="8"
-            placeholder="123456"
-            [attr.aria-invalid]="form.controls.code.invalid && form.controls.code.touched ? 'true' : null"
-            [attr.aria-describedby]="
-              form.controls.code.invalid && form.controls.code.touched ? 'code-error' : error() ? 'auth-error' : null
-            "
-          />
-        </div>
-        @if (form.controls.code.invalid && form.controls.code.touched) {
-          <p id="code-error" class="mt-1 text-xs text-error">Introduce el código de 4 a 8 dígitos.</p>
+        @if (form.controls.password.touched && form.controls.password.invalid) {
+          <p class="mt-1 text-xs text-error">La contraseña debe tener al menos 6 caracteres.</p>
         }
-        @if (codeRequested()) {
-          <p class="text-xs text-on-surface-variant mt-1">Te enviamos el código a tu correo electrónico.</p>
-        }
-      }
-
-      @if (notice()) {
-        <p
-          class="rounded-2xl bg-primary/10 border border-primary/30 text-sm text-primary mt-4 p-3"
-          role="status"
-          aria-live="polite"
-        >
-          {{ notice() }}
-        </p>
-      }
-
-      <p class="text-center text-xs text-on-surface-variant mt-2">
-        ¿Primera vez aquí?
-        <a routerLink="/account/create" class="text-primary font-semibold underline">Crea tu cuenta</a>
-      </p>
+      </div>
     </app-auth-card>
   `,
 })
 export class CustomerLoginComponent implements OnInit {
   private fb = inject(FormBuilder);
   private auth = inject(AuthService);
-  private api = inject(ApiService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
 
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
-  readonly notice = signal<string | null>(null);
-  readonly mode = signal<AuthMode>('credentials');
-  readonly codeRequested = signal(false);
+  readonly showPassword = signal(false);
+
+  togglePassword(): void {
+    this.showPassword.update(v => !v);
+  }
 
   readonly form = this.fb.group({
     email: ['', [Validators.required, Validators.email]],
-    phone: ['', [Validators.required, Validators.minLength(7)]],
-    password: [{ value: '', disabled: true }, [Validators.required, Validators.minLength(6)]],
-    code: [
-      { value: '', disabled: true },
-      [Validators.minLength(4), Validators.maxLength(8), Validators.pattern(/^\d{4,8}$/)],
-    ],
+    password: ['', [Validators.required, Validators.minLength(6)]],
   });
-
-  get submitLabel(): string {
-    if (this.mode() === 'credentials') return 'Ver mi historial';
-    if (this.mode() === 'password') return 'Iniciar sesión';
-    return this.codeRequested() ? 'Entrar con el código' : 'Enviar código';
-  }
-
-  get loadingLabel(): string {
-    if (this.mode() === 'credentials' || this.mode() === 'password') return 'Comprobando…';
-    return this.codeRequested() ? 'Verificando…' : 'Enviando código…';
-  }
 
   private get redirectUrl(): string | null {
     return this.route.snapshot.queryParamMap.get('redirect');
@@ -231,141 +116,14 @@ export class CustomerLoginComponent implements OnInit {
     }
   }
 
-  loginGoogle(): void {
-    this.loading.set(true);
-    this.error.set(null);
-    this.auth
-      .loginWithGoogle('customer')
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: () => this.loading.set(false),
-        error: err => {
-          this.loading.set(false);
-          this.error.set(err instanceof Error ? err.message : 'No se pudo iniciar sesión con Google.');
-        },
-      });
-  }
-
-  setMode(mode: AuthMode): void {
-    this.mode.set(mode);
-    this.error.set(null);
-    this.notice.set(null);
-    const phone = this.form.controls.phone;
-    const password = this.form.controls.password;
-    const code = this.form.controls.code;
-    phone.disable();
-    password.disable();
-    code.disable();
-    if (mode === 'credentials') phone.enable();
-    if (mode === 'password') password.enable();
-    this.codeRequested.set(false);
-    phone.updateValueAndValidity();
-    password.updateValueAndValidity();
-    code.updateValueAndValidity();
-  }
-
-  onEmailChange(): void {
-    if (this.codeRequested()) {
-      this.codeRequested.set(false);
-      this.form.controls.code.disable();
-      this.form.controls.code.setValue('');
-      this.notice.set(null);
-      this.error.set(null);
-    }
-  }
-
   submit(): void {
     if (this.loading() || this.form.invalid) return;
-    const email = this.form.value.email?.trim();
-
-    if (this.mode() === 'password') {
-      const password = this.form.controls.password.value ?? '';
-      this.loading.set(true);
-      this.error.set(null);
-      this.auth
-        .loginWithPassword(email ?? '', password, 'customer')
-        .pipe(takeUntilDestroyed(this.destroyRef))
-        .subscribe({
-          next: () => {
-            this.loading.set(false);
-            const redirect = this.redirectUrl;
-            if (redirect) this.router.navigateByUrl(redirect);
-            else this.router.navigate(['/customer/history']);
-          },
-          error: err => {
-            this.loading.set(false);
-            this.error.set(err instanceof Error ? err.message : 'Credenciales inválidas.');
-          },
-        });
-      return;
-    }
-
-    if (this.mode() === 'credentials') {
-      const phone = this.form.value.phone?.trim();
-      if (!email || !phone) {
-        this.error.set('Introduce tu correo y teléfono.');
-        return;
-      }
-      this.loading.set(true);
-      this.error.set(null);
-      this.notice.set(null);
-      this.auth
-        .loginCustomer(email, phone)
-        .pipe(takeUntilDestroyed(this.destroyRef))
-        .subscribe({
-          next: () => {
-            this.loading.set(false);
-            const redirect = this.redirectUrl;
-            if (redirect) this.router.navigateByUrl(redirect);
-            else this.router.navigate(['/customer/history']);
-          },
-          error: err => {
-            this.loading.set(false);
-            this.error.set(err instanceof Error ? err.message : 'No encontramos un cliente con ese email y teléfono.');
-          },
-        });
-      return;
-    }
-
-    if (!this.codeRequested()) {
-      if (!email) {
-        this.error.set('Introduce tu correo electrónico.');
-        return;
-      }
-      this.loading.set(true);
-      this.error.set(null);
-      this.notice.set(null);
-      this.auth
-        .requestCustomerOtp(email)
-        .pipe(takeUntilDestroyed(this.destroyRef))
-        .subscribe({
-          next: res => {
-            this.loading.set(false);
-            this.codeRequested.set(true);
-            this.form.controls.code.enable();
-            this.notice.set(res.data?.message ?? 'Revisa tu correo electrónico.');
-            if (res.data?.debugCode) {
-              this.form.controls.code.setValue(res.data.debugCode);
-              this.notice.set(`${this.notice()} (depuración: ${res.data.debugCode})`);
-            }
-          },
-          error: err => {
-            this.loading.set(false);
-            this.error.set(err instanceof Error ? err.message : 'No pudimos enviar el código. Inténtalo otra vez.');
-          },
-        });
-      return;
-    }
-
-    const code = this.form.value.code?.trim();
-    if (!email || !code) {
-      this.error.set('Introduce el código que recibiste por correo.');
-      return;
-    }
+    const email = this.form.value.email?.trim() ?? '';
+    const password = this.form.value.password ?? '';
     this.loading.set(true);
     this.error.set(null);
     this.auth
-      .loginCustomerWithOtp(email, code)
+      .loginWithPassword(email, password, 'customer')
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
@@ -376,58 +134,12 @@ export class CustomerLoginComponent implements OnInit {
         },
         error: err => {
           this.loading.set(false);
-          this.error.set(err instanceof Error ? err.message : 'Código inválido o expirado.');
+          this.error.set(err instanceof Error ? err.message : 'Credenciales inválidas.');
         },
       });
   }
 
-  sendMagicLink(): void {
-    const email = this.form.value.email?.trim();
-    if (!email) {
-      this.error.set('Introduce antes tu correo electrónico.');
-      return;
-    }
-    this.loading.set(true);
-    this.error.set(null);
-    this.notice.set(null);
-    this.auth
-      .requestCustomerMagicLink(email)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: res => {
-          if (res.data?.debugToken) {
-            this.auth
-              .redeemCustomerMagicLink(res.data.debugToken)
-              .pipe(takeUntilDestroyed(this.destroyRef))
-              .subscribe({
-                next: () => {
-                  this.loading.set(false);
-                  const redirect = this.redirectUrl;
-                  if (redirect) this.router.navigateByUrl(redirect);
-                  else this.router.navigate(['/customer/history']);
-                },
-                error: err => {
-                  this.loading.set(false);
-                  this.error.set(err instanceof Error ? err.message : 'El enlace no pudo validarse.');
-                },
-              });
-            return;
-          }
-          this.loading.set(false);
-          this.notice.set(res.data?.message ?? 'Revisa tu correo electrónico; el enlace te traerá de vuelta.');
-        },
-        error: err => {
-          this.loading.set(false);
-          this.error.set(err instanceof Error ? err.message : 'No pudimos enviar el enlace. Inténtalo otra vez.');
-        },
-      });
-  }
-
-  goHome(): void {
-    this.router.navigate(['/']);
-  }
-
-  goCreateAccount(): void {
-    this.router.navigate(['/account/create']);
+  goRegister(): void {
+    this.router.navigate(['/customer/register']);
   }
 }

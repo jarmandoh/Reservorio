@@ -2,21 +2,33 @@
   <h2 class="text-xl font-bold mb-4">Generador Masivo de Slots</h2>
   <form [formGroup]="form" (submit)="$event.preventDefault(); onGenerate()">
     <div class="mb-4">
-      <label class="block mb-1">Nombre</label>
-      <input type="text" formControlName="name" class="w-full border rounded p-2" />
+      <label class="form-label" for="bulk-name">Nombre</label>
+      <div class="icon-field">
+        <span class="material-icons-round" aria-hidden="true">sell</span>
+        <input id="bulk-name" type="text" formControlName="name" class="form-input" />
+      </div>
     </div>
     <div class="mb-4">
-      <label class="block mb-1">Hora de inicio</label>
-      <input type="time" formControlName="startTime" class="w-full border rounded p-2" />
+      <label class="form-label" for="bulk-start">Hora de inicio</label>
+      <div class="icon-field">
+        <span class="material-icons-round" aria-hidden="true">schedule</span>
+        <input id="bulk-start" type="time" formControlName="startTime" class="form-input" />
+      </div>
     </div>
     <div class="mb-4">
-      <label class="block mb-1">Duración (minutos)</label>
-      <input type="number" formControlName="duration" class="w-full border rounded p-2" />
+      <label class="form-label" for="bulk-duration">Duración (minutos)</label>
+      <div class="icon-field">
+        <span class="material-icons-round" aria-hidden="true">timer</span>
+        <input id="bulk-duration" type="number" formControlName="duration" class="form-input" />
+      </div>
     </div>
     <div class="mb-4">
-      <label class="block mb-1">Cantidad</label>
-      <input type="number" min="1" formControlName="quantity" class="w-full border rounded p-2" />
+      <label class="form-label" for="bulk-quantity">Cantidad</label>
+      <div class="icon-field">
+        <span class="material-icons-round" aria-hidden="true">filter_7</span>
+        <input id="bulk-quantity" type="number" min="1" formControlName="quantity" class="form-input" />
+      </div>
     </div>
-    <button type="submit" class="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600">Generar Slots</button>
+    <button type="submit" class="btn-primary">Generar Slots</button>
   </form>
 </div>

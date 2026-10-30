@@ -35,6 +35,10 @@ export const publicRoutes: Routes = [
     loadComponent: () => import('../privacy/privacy.component').then(m => m.PrivacyPolicyComponent),
   },
   {
+    path: 'terms',
+    loadComponent: () => import('../terms/terms.component').then(m => m.TermsComponent),
+  },
+  {
     path: 'store/:businessId',
     loadComponent: () => import('../storefront/storefront.component').then(m => m.StorefrontComponent),
   },

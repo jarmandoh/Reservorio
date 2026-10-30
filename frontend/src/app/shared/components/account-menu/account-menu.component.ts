@@ -21,7 +21,7 @@ type AccountOption = {
           <div class="panel-heading">
             <span class="system-mark material-icons-round" aria-hidden="true">blur_on</span>
             <div>
-              <p class="panel-kicker">RESERVORIO · SISTEMA</p>
+              <p class="panel-kicker">MIVECI · SISTEMA</p>
               <h2>{{ account() ? 'Perfil de usuario' : 'Acceso de usuario' }}</h2>
             </div>
             <span class="panel-status" [class.panel-status-active]="account()">
@@ -352,7 +352,6 @@ export class AccountMenuComponent {
 
   readonly guestOptions: AccountOption[] = [
     { label: 'Iniciar sesión', route: '/customer/login', icon: 'login' },
-    { label: 'Crear cuenta', route: '/account/create', icon: 'person_add' },
     { label: 'Acceso para negocios', route: '/owner/login', icon: 'storefront' },
   ];
 

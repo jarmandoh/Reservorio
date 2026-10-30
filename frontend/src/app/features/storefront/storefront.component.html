@@ -9,14 +9,14 @@
       <p class="store-kicker">TIENDA NO DISPONIBLE</p>
       <h1>No pudimos abrir esta puerta.</h1>
       <p>{{ errorMessage() }}</p>
-      <a routerLink="/">Volver a Reservorio</a>
+      <a routerLink="/">Volver a MiVeci</a>
     </section>
   } @else if (business(); as store) {
     <nav class="breadcrumbs" aria-label="Migas de pan">
-      <a routerLink="/">Reservorio</a><span aria-hidden="true">›</span><span aria-current="page">{{ store.name }}</span>
+      <a routerLink="/">MiVeci</a><span aria-hidden="true">›</span><span aria-current="page">{{ store.name }}</span>
     </nav>
     <header class="store-header">
-      <a class="store-brand" routerLink="/" aria-label="Reservorio, volver al inicio">
+      <a class="store-brand" routerLink="/" aria-label="MiVeci, volver al inicio">
         @if (store.logo) {
           <img [src]="store.logo" [alt]="store.name" width="64" height="64" loading="lazy" />
         } @else {
@@ -79,7 +79,7 @@
               <a href="#contacto"><span>04</span> Contacto</a>
             </nav>
             <p class="menu-footnote">Una buena historia siempre se comparte.</p>
-            <span class="page-signature">RESERVORIO <span aria-hidden="true">·</span> {{ store.name }}</span>
+            <span class="page-signature">MIVECI <span aria-hidden="true">·</span> {{ store.name }}</span>
           </aside>
 
           <div class="book-cover" aria-hidden="true">

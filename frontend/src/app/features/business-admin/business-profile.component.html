@@ -5,11 +5,17 @@
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
       <div>
         <label class="form-label">Nombre</label>
-        <input type="text" class="form-input" formControlName="name" />
+        <div class="icon-field">
+          <span class="material-icons-round" aria-hidden="true">store</span>
+          <input type="text" class="form-input" formControlName="name" />
+        </div>
       </div>
       <div>
         <label class="form-label">Categoría</label>
-        <input type="text" class="form-input" formControlName="category" />
+        <div class="icon-field">
+          <span class="material-icons-round" aria-hidden="true">category</span>
+          <input type="text" class="form-input" formControlName="category" />
+        </div>
       </div>
     </div>
     <div>
@@ -19,23 +25,32 @@
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
       <div>
         <label class="form-label">Ubicación</label>
-        <input type="text" class="form-input" formControlName="location" />
+        <div class="icon-field">
+          <span class="material-icons-round" aria-hidden="true">place</span>
+          <input type="text" class="form-input" formControlName="location" />
+        </div>
       </div>
       <div>
         <label class="form-label">Teléfono</label>
-        <input type="tel" class="form-input" formControlName="phone" />
+        <div class="icon-field">
+          <span class="material-icons-round" aria-hidden="true">phone</span>
+          <input type="tel" class="form-input" formControlName="phone" />
+        </div>
       </div>
     </div>
     <div>
       <label class="form-label" for="business-whatsapp">WhatsApp para pedidos</label>
-      <input
-        id="business-whatsapp"
-        type="tel"
-        class="form-input"
-        formControlName="whatsapp"
-        placeholder="573001234567"
-        autocomplete="tel"
-      />
+      <div class="icon-field">
+        <span class="material-icons-round" aria-hidden="true">chat</span>
+        <input
+          id="business-whatsapp"
+          type="tel"
+          class="form-input"
+          formControlName="whatsapp"
+          placeholder="573001234567"
+          autocomplete="tel"
+        />
+      </div>
       <p class="text-xs text-on-surface-variant mt-1">
         Incluye el código de país, sin espacios ni signos. Ejemplo: 573001234567.
       </p>
@@ -62,7 +77,10 @@
     </div>
     <div>
       <label class="form-label">Horario</label>
-      <input type="text" class="form-input" formControlName="schedule" placeholder="Ej. Lun-Vie 9:00–18:00" />
+      <div class="icon-field">
+        <span class="material-icons-round" aria-hidden="true">schedule</span>
+        <input type="text" class="form-input" formControlName="schedule" placeholder="Ej. Lun-Vie 9:00–18:00" />
+      </div>
     </div>
     <div>
       <label class="form-label">Política de cancelación</label>
@@ -94,11 +112,51 @@
     <p class="section-label">Cambiar PIN</p>
     <div>
       <label class="form-label">Nuevo PIN (mínimo 4 dígitos)</label>
-      <input type="password" class="form-input" formControlName="pin" inputmode="numeric" placeholder="••••" />
+      <div class="icon-field has-toggle">
+        <span class="material-icons-round" aria-hidden="true">lock</span>
+        <input
+          type="password"
+          class="form-input"
+          formControlName="pin"
+          inputmode="numeric"
+          placeholder="••••"
+          autocomplete="new-password"
+        />
+        <button
+          type="button"
+          class="password-toggle"
+          [attr.aria-label]="showPin() ? 'Ocultar PIN' : 'Mostrar PIN'"
+          [attr.aria-pressed]="showPin()"
+          (click)="togglePin()"
+        >
+          <span class="material-icons-round" aria-hidden="true">{{ showPin() ? 'visibility_off' : 'visibility' }}</span>
+        </button>
+      </div>
     </div>
     <div>
       <label class="form-label">Confirmar PIN</label>
-      <input type="password" class="form-input" formControlName="pinConfirm" inputmode="numeric" placeholder="••••" />
+      <div class="icon-field has-toggle">
+        <span class="material-icons-round" aria-hidden="true">lock</span>
+        <input
+          [type]="showPinConfirm() ? 'text' : 'password'"
+          class="form-input"
+          formControlName="pinConfirm"
+          inputmode="numeric"
+          placeholder="••••"
+          autocomplete="new-password"
+        />
+        <button
+          type="button"
+          class="password-toggle"
+          [attr.aria-label]="showPinConfirm() ? 'Ocultar PIN' : 'Mostrar PIN'"
+          [attr.aria-pressed]="showPinConfirm()"
+          (click)="togglePinConfirm()"
+        >
+          <span class="material-icons-round" aria-hidden="true">{{
+            showPinConfirm() ? 'visibility_off' : 'visibility'
+          }}</span>
+        </button>
+      </div>
       @if (pinMismatch()) {
         <p class="text-xs text-error mt-1">Los PINs no coinciden.</p>
       }

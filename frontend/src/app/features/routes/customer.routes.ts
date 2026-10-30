@@ -7,6 +7,11 @@ export const customerRoutes: Routes = [
     loadComponent: () => import('../customer-login/customer-login.component').then(m => m.CustomerLoginComponent),
   },
   {
+    path: 'customer/register',
+    loadComponent: () =>
+      import('../customer-register/customer-register.component').then(m => m.CustomerRegisterComponent),
+  },
+  {
     path: 'customer/history',
     loadComponent: () => import('../customer/customer-history.component').then(m => m.CustomerHistoryComponent),
     canActivate: [customerGuard],

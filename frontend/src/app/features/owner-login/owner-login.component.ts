@@ -35,16 +35,12 @@ import { AuthCardComponent } from '../../shared/components/auth-card/auth-card.c
 
       <div>
         <label class="form-label" for="owner-login-email">Correo electrónico</label>
-        <div class="relative mt-1">
-          <span
-            class="material-icons-round pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-lg text-on-surface-variant"
-            aria-hidden="true"
-            >mail</span
-          >
+        <div class="icon-field">
+          <span class="material-icons-round" aria-hidden="true">mail</span>
           <input
             id="owner-login-email"
             type="email"
-            class="form-input w-full pl-11"
+            class="form-input"
             formControlName="email"
             autocomplete="email"
             placeholder="ana@ejemplo.com"
@@ -54,23 +50,19 @@ import { AuthCardComponent } from '../../shared/components/auth-card/auth-card.c
 
       <div>
         <label class="form-label" for="owner-login-password">Contraseña</label>
-        <div class="relative mt-1">
-          <span
-            class="material-icons-round pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-lg text-on-surface-variant"
-            aria-hidden="true"
-            >lock</span
-          >
+        <div class="icon-field">
+          <span class="material-icons-round" aria-hidden="true">lock</span>
           <input
             id="owner-login-password"
             [type]="showPassword() ? 'text' : 'password'"
-            class="form-input w-full pl-11 pr-12"
+            class="form-input"
             formControlName="password"
             autocomplete="current-password"
             placeholder="Tu contraseña"
           />
           <button
             type="button"
-            class="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-on-surface-variant transition-colors hover:bg-primary/10 hover:text-primary"
+            class="password-toggle"
             [attr.aria-label]="showPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
             [attr.aria-pressed]="showPassword()"
             (click)="togglePassword()"

@@ -38,7 +38,7 @@ import { ReservationManagerComponent } from './reservation-manager.component';
         </section>
       } @else if (business(); as store) {
         <nav class="breadcrumbs" aria-label="Migas de pan">
-          <a routerLink="/">Reservorio</a><span aria-hidden="true">›</span
+          <a routerLink="/">MiVeci</a><span aria-hidden="true">›</span
           ><span aria-current="page">{{ store.name }}</span>
         </nav>
         <header class="business-nav" [class.is-scrolled]="headerScrolled()">
@@ -265,7 +265,7 @@ import { ReservationManagerComponent } from './reservation-manager.component';
         </div>
 
         <footer class="business-footer">
-          <a routerLink="/">Reservorio</a><span>·</span><span>{{ store.name }}</span
+          <a routerLink="/">MiVeci</a><span>·</span><span>{{ store.name }}</span
           ><a routerLink="/privacy">Privacidad</a>
         </footer>
         @if (reservationOpen()) {

@@ -7,8 +7,16 @@ import { FormGroup, ReactiveFormsModule } from '@angular/forms';
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
   template: `
-    <div class="min-h-screen bg-surface flex items-center justify-center p-6">
-      <div class="w-full max-w-md bg-white rounded-3xl shadow-soft p-8">
+    <div class="min-h-screen bg-surface flex items-center justify-center p-6 relative overflow-hidden">
+      <div
+        class="pointer-events-none absolute inset-0 opacity-[0.8]"
+        style="background-image: url('assets/imgs/comercio.jpg'); background-repeat: no-repeat; background-size: cover; background-position: center;"
+      ></div>
+      <div class="pointer-events-none absolute -top-24 -right-24 h-72 w-72 rounded-full bg-primary/10 blur-3xl"></div>
+      <div
+        class="pointer-events-none absolute -bottom-24 -left-24 h-72 w-72 rounded-full bg-primary-container/10 blur-3xl"
+      ></div>
+      <div class="relative z-10 w-full max-w-md bg-white/95 backdrop-blur rounded-3xl shadow-soft p-8">
         <div class="mb-6 text-center">
           <h1 class="font-display text-2xl font-bold">{{ title }}</h1>
           @if (subtitle) {

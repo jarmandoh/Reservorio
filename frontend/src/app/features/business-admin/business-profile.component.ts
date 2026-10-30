@@ -30,6 +30,16 @@ export class BusinessProfileComponent implements OnChanges {
   readonly savingProfile = signal(false);
   readonly savingPin = signal(false);
   readonly uploadingCover = signal(false);
+  readonly showPin = signal(false);
+  readonly showPinConfirm = signal(false);
+
+  togglePin(): void {
+    this.showPin.update(v => !v);
+  }
+
+  togglePinConfirm(): void {
+    this.showPinConfirm.update(v => !v);
+  }
 
   readonly profileForm = this.fb.group({
     name: ['', Validators.required],

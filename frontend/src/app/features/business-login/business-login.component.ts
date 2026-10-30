@@ -50,26 +50,40 @@ import { PinAuthCardComponent } from '../../shared/components/pin-auth-card/pin-
       @if (!notFound()) {
         <div>
           <label class="form-label" for="pin">PIN de acceso</label>
-          <input
-            id="pin"
-            type="password"
-            class="form-input text-center tracking-[0.4em] text-lg"
-            inputmode="numeric"
-            maxlength="8"
-            formControlName="pin"
-            placeholder="••••"
-            autocomplete="current-password"
-            [attr.aria-invalid]="
-              (form.controls.pin.touched && form.controls.pin.invalid) || loginError() ? 'true' : null
-            "
-            [attr.aria-describedby]="
-              form.controls.pin.touched && form.controls.pin.invalid
-                ? 'business-pin-error'
-                : loginError()
-                  ? 'pin-auth-error'
-                  : null
-            "
-          />
+          <div class="icon-field has-toggle">
+            <span class="material-icons-round" aria-hidden="true">lock</span>
+            <input
+              id="pin"
+              [type]="showPin() ? 'text' : 'password'"
+              class="form-input text-center tracking-[0.4em] text-lg"
+              inputmode="numeric"
+              maxlength="8"
+              formControlName="pin"
+              placeholder="••••"
+              autocomplete="current-password"
+              [attr.aria-invalid]="
+                (form.controls.pin.touched && form.controls.pin.invalid) || loginError() ? 'true' : null
+              "
+              [attr.aria-describedby]="
+                form.controls.pin.touched && form.controls.pin.invalid
+                  ? 'business-pin-error'
+                  : loginError()
+                    ? 'pin-auth-error'
+                    : null
+              "
+            />
+            <button
+              type="button"
+              class="password-toggle"
+              [attr.aria-label]="showPin() ? 'Ocultar PIN' : 'Mostrar PIN'"
+              [attr.aria-pressed]="showPin()"
+              (click)="togglePin()"
+            >
+              <span class="material-icons-round" aria-hidden="true">{{
+                showPin() ? 'visibility_off' : 'visibility'
+              }}</span>
+            </button>
+          </div>
           @if (form.controls.pin.touched && form.controls.pin.invalid) {
             <p id="business-pin-error" class="mt-1 text-xs text-error">Introduce un PIN de al menos 4 dígitos.</p>
           }
@@ -90,6 +104,11 @@ export class BusinessLoginComponent implements OnInit {
   readonly notFound = signal(false);
   readonly loading = signal(false);
   readonly loginError = signal<string | null>(null);
+  readonly showPin = signal(false);
+
+  togglePin(): void {
+    this.showPin.update(v => !v);
+  }
 
   readonly form = this.fb.group({
     pin: ['', [Validators.required, Validators.minLength(4)]],

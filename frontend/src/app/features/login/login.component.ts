@@ -29,26 +29,29 @@ import { PinAuthCardComponent } from '../../shared/components/pin-auth-card/pin-
           <span class="material-icons-round text-2xl">admin_panel_settings</span>
         </div>
         <div class="text-center">
-          <h1 class="font-display font-bold text-2xl text-on-surface">Reservorio Admin</h1>
+          <h1 class="font-display font-bold text-2xl text-on-surface">MiVeci Admin</h1>
           <p class="text-sm text-on-surface-variant mt-1">Ingresa tu PIN para continuar</p>
         </div>
       </div>
 
       <div>
         <label class="form-label text-center block mb-3" for="admin-pin" id="admin-pin-label">PIN de acceso</label>
-        <input
-          id="admin-pin"
-          type="password"
-          class="form-input text-center tracking-[0.5em] text-xl font-display"
-          inputmode="numeric"
-          maxlength="8"
-          formControlName="pin"
-          placeholder="••••"
-          autocomplete="current-password"
-          [attr.aria-invalid]="fieldInvalid('pin') || loginError() ? 'true' : null"
-          [attr.aria-labelledby]="'admin-pin-label'"
-          [attr.aria-describedby]="fieldInvalid('pin') ? 'admin-pin-error' : loginError() ? 'pin-auth-error' : null"
-        />
+        <div class="icon-field">
+          <span class="material-icons-round" aria-hidden="true">pin</span>
+          <input
+            id="admin-pin"
+            type="password"
+            class="form-input text-center tracking-[0.5em] text-xl font-display"
+            inputmode="numeric"
+            maxlength="8"
+            formControlName="pin"
+            placeholder="••••"
+            autocomplete="current-password"
+            [attr.aria-invalid]="fieldInvalid('pin') || loginError() ? 'true' : null"
+            [attr.aria-labelledby]="'admin-pin-label'"
+            [attr.aria-describedby]="fieldInvalid('pin') ? 'admin-pin-error' : loginError() ? 'pin-auth-error' : null"
+          />
+        </div>
         @if (fieldInvalid('pin')) {
           <p id="admin-pin-error" class="text-xs text-error text-center mt-2" role="alert">
             Ingresa tu PIN (mínimo 4 dígitos)
@@ -57,21 +60,38 @@ import { PinAuthCardComponent } from '../../shared/components/pin-auth-card/pin-
       </div>
       <div class="mt-4 border-t border-outline-variant pt-4">
         <label class="form-label" for="admin-email">Correo de administrador</label>
-        <input
-          id="admin-email"
-          type="email"
-          class="form-input w-full"
-          formControlName="email"
-          placeholder="admin@dominio.com"
-        />
+        <div class="icon-field">
+          <span class="material-icons-round" aria-hidden="true">mail</span>
+          <input
+            id="admin-email"
+            type="email"
+            class="form-input"
+            formControlName="email"
+            placeholder="admin@dominio.com"
+          />
+        </div>
         <label class="form-label mt-3 block" for="admin-password">Contraseña de administrador</label>
-        <input
-          id="admin-password"
-          type="password"
-          class="form-input w-full"
-          formControlName="password"
-          autocomplete="current-password"
-        />
+        <div class="icon-field has-toggle">
+          <span class="material-icons-round" aria-hidden="true">lock</span>
+          <input
+            id="admin-password"
+            [type]="showPassword() ? 'text' : 'password'"
+            class="form-input"
+            formControlName="password"
+            autocomplete="current-password"
+          />
+          <button
+            type="button"
+            class="password-toggle"
+            [attr.aria-label]="showPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+            [attr.aria-pressed]="showPassword()"
+            (click)="togglePassword()"
+          >
+            <span class="material-icons-round" aria-hidden="true">{{
+              showPassword() ? 'visibility_off' : 'visibility'
+            }}</span>
+          </button>
+        </div>
         <button
           type="button"
           class="mt-2 w-full rounded-xl bg-primary px-4 py-3 text-white font-semibold"
@@ -98,14 +118,17 @@ import { PinAuthCardComponent } from '../../shared/components/pin-auth-card/pin-
         </button>
         @if (otpRequested()) {
           <label class="form-label mt-3 block" for="admin-code">Código de verificación</label>
-          <input
-            id="admin-code"
-            type="text"
-            inputmode="numeric"
-            maxlength="8"
-            class="form-input w-full"
-            formControlName="code"
-          />
+          <div class="icon-field">
+            <span class="material-icons-round" aria-hidden="true">pin</span>
+            <input
+              id="admin-code"
+              type="text"
+              inputmode="numeric"
+              maxlength="8"
+              class="form-input"
+              formControlName="code"
+            />
+          </div>
           <button
             type="button"
             class="mt-2 w-full rounded-xl bg-primary px-4 py-3 text-white font-semibold"
@@ -136,6 +159,11 @@ export class LoginComponent implements OnInit {
   readonly loading = signal(false);
   readonly loginError = signal(false);
   readonly otpRequested = signal(false);
+  readonly showPassword = signal(false);
+
+  togglePassword(): void {
+    this.showPassword.update(v => !v);
+  }
 
   readonly form = this.fb.group({
     pin: ['', [Validators.required, Validators.minLength(4)]],

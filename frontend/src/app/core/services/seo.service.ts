@@ -9,7 +9,7 @@ const PUBLIC_PAGES = new Map([
   [
     '/',
     {
-      title: 'Reservorio · Reserva cita online en tus negocios favoritos',
+      title: 'MiVeci · Reserva cita online en tus negocios favoritos',
       description:
         'Encuentra negocios locales, consulta disponibilidad y reserva tu cita online en minutos. Gratis y sin esperas.',
     },
@@ -17,9 +17,9 @@ const PUBLIC_PAGES = new Map([
   [
     '/privacy',
     {
-      title: 'Política de privacidad · Reservorio',
+      title: 'Política de privacidad · MiVeci',
       description:
-        'Conoce qué datos personales trata Reservorio para gestionar tus reservas, pagos y notificaciones, y cómo ejercer tus derechos.',
+        'Conoce qué datos personales trata MiVeci para gestionar tus reservas, pagos y notificaciones, y cómo ejercer tus derechos.',
     },
   ],
 ]);
@@ -35,7 +35,7 @@ export class SeoService {
     const page = PUBLIC_PAGES.get(route);
 
     if (!page) {
-      this.title.setTitle('Reservorio · Reservas online');
+      this.title.setTitle('MiVeci · Comercios');
       this.meta.updateTag({ name: 'robots', content: 'noindex, nofollow' });
       this.clearSocialMetadata();
       this.removeStructuredData();
@@ -59,9 +59,9 @@ export class SeoService {
     const pageLabel = pageType === 'store' ? 'Tienda online' : 'Reserva online';
     const route = `/${pageType === 'store' ? 'store' : 'business'}/${encodeURIComponent(business.id)}`;
     const canonicalUrl = new URL(route, CANONICAL_ORIGIN).href;
-    const title = this.truncate(`${name} · ${pageLabel} | Reservorio`, 60);
+    const title = this.truncate(`${name} · ${pageLabel} | MiVeci`, 60);
     const description = this.truncate(
-      `Conoce ${name}${category ? `, ${category.toLowerCase()}` : ''}${location ? ` en ${location}` : ''}. Consulta sus servicios, horarios y reserva online con Reservorio.`,
+      `Conoce ${name}${category ? `, ${category.toLowerCase()}` : ''}${location ? ` en ${location}` : ''}. Consulta sus servicios, horarios y reserva online con MiVeci.`,
       158
     );
     const image = this.absoluteUrl(business.storeCoverImage || business.logo) || DEFAULT_SOCIAL_IMAGE;
@@ -107,8 +107,8 @@ export class SeoService {
     this.meta.updateTag({ property: 'og:type', content: 'website' });
     this.meta.updateTag({ property: 'og:url', content: input.canonicalUrl });
     this.meta.updateTag({ property: 'og:image', content: image });
-    this.meta.updateTag({ property: 'og:image:alt', content: input.imageAlt || 'Reservorio' });
-    this.meta.updateTag({ property: 'og:site_name', content: 'Reservorio' });
+    this.meta.updateTag({ property: 'og:image:alt', content: input.imageAlt || 'MiVeci' });
+    this.meta.updateTag({ property: 'og:site_name', content: 'MiVeci' });
     this.meta.updateTag({ property: 'og:locale', content: 'es_CO' });
     this.meta.updateTag({ name: 'twitter:card', content: 'summary_large_image' });
     this.meta.updateTag({ name: 'twitter:title', content: input.title });
@@ -177,7 +177,7 @@ export class SeoService {
         {
           '@type': 'BreadcrumbList',
           itemListElement: [
-            { '@type': 'ListItem', position: 1, name: 'Reservorio', item: CANONICAL_ORIGIN + '/' },
+            { '@type': 'ListItem', position: 1, name: 'MiVeci', item: CANONICAL_ORIGIN + '/' },
             { '@type': 'ListItem', position: 2, name, item: canonicalUrl },
           ],
         },

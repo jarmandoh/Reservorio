@@ -338,13 +338,16 @@ type negocioTab = 'reservas' | 'servicios' | 'productos' | 'perfil' | 'google';
             </div>
 
             <div class="flex flex-col sm:flex-row gap-2">
-              <input
-                type="search"
-                class="form-input flex-1"
-                placeholder="Buscar por cliente, servicio…"
-                [value]="resSearch()"
-                (input)="resSearch.set(getVal($event))"
-              />
+              <div class="icon-field flex-1">
+                <span class="material-icons-round" aria-hidden="true">search</span>
+                <input
+                  type="search"
+                  class="form-input"
+                  placeholder="Buscar por cliente, servicio…"
+                  [value]="resSearch()"
+                  (input)="resSearch.set(getVal($event))"
+                />
+              </div>
               <select class="form-select sm:w-44" [value]="resFilter()" (change)="resFilter.set(getVal($event))">
                 <option value="">Todos los estados</option>
                 <option value="disp">Disponible</option>
@@ -468,12 +471,10 @@ type negocioTab = 'reservas' | 'servicios' | 'productos' | 'perfil' | 'google';
           <!-- Add service form -->
           <form [formGroup]="serviceForm" (ngSubmit)="addService()" class="card flex flex-col gap-3">
             <div class="flex-1 w-full">
-              <input
-                type="text"
-                class="form-input w-full"
-                formControlName="nombre"
-                placeholder="Nombre del servicio…"
-              />
+              <div class="icon-field">
+                <span class="material-icons-round" aria-hidden="true">sell</span>
+                <input type="text" class="form-input" formControlName="nombre" placeholder="Nombre del servicio…" />
+              </div>
               @if (fieldInvalid('nombre')) {
                 <p class="mt-1 text-xs text-error">
                   El nombre del servicio es obligatorio y debe tener al menos 2 caracteres.
@@ -550,24 +551,33 @@ type negocioTab = 'reservas' | 'servicios' | 'productos' | 'perfil' | 'google';
             </div>
             <div>
               <label class="form-label" for="catalog-name">Nombre</label>
-              <input id="catalog-name" class="form-input" formControlName="name" maxlength="120" required />
+              <div class="icon-field">
+                <span class="material-icons-round" aria-hidden="true">sell</span>
+                <input id="catalog-name" class="form-input" formControlName="name" maxlength="120" required />
+              </div>
             </div>
             <div>
               <label class="form-label" for="catalog-category">Categoría</label>
-              <input id="catalog-category" class="form-input" formControlName="category" maxlength="80" />
+              <div class="icon-field">
+                <span class="material-icons-round" aria-hidden="true">category</span>
+                <input id="catalog-category" class="form-input" formControlName="category" maxlength="80" />
+              </div>
             </div>
             <div>
               <label class="form-label" for="catalog-price">Precio (COP)</label>
-              <input
-                id="catalog-price"
-                class="form-input"
-                type="number"
-                min="0"
-                max="1000000000"
-                step="1"
-                formControlName="price"
-                required
-              />
+              <div class="icon-field">
+                <span class="material-icons-round" aria-hidden="true">payments</span>
+                <input
+                  id="catalog-price"
+                  class="form-input"
+                  type="number"
+                  min="0"
+                  max="1000000000"
+                  step="1"
+                  formControlName="price"
+                  required
+                />
+              </div>
             </div>
             <div>
               <label class="form-label" for="catalog-image">Foto del producto</label>
@@ -754,13 +764,16 @@ type negocioTab = 'reservas' | 'servicios' | 'productos' | 'perfil' | 'google';
                     <hr class="flex-1 border-outline-variant/20" />
                   </div>
                   <div class="flex gap-2">
-                    <input
-                      type="text"
-                      class="form-input flex-1 text-sm"
-                      placeholder="ID de la spreadsheet"
-                      [value]="linkSheetId()"
-                      (input)="linkSheetId.set(getVal($event))"
-                    />
+                    <div class="icon-field flex-1">
+                      <span class="material-icons-round" aria-hidden="true">table_view</span>
+                      <input
+                        type="text"
+                        class="form-input text-sm"
+                        placeholder="ID de la spreadsheet"
+                        [value]="linkSheetId()"
+                        (input)="linkSheetId.set(getVal($event))"
+                      />
+                    </div>
                     <button
                       class="btn-secondary btn-sm whitespace-nowrap"
                       [disabled]="!linkSheetId()"

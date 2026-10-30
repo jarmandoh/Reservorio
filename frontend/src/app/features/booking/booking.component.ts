@@ -631,18 +631,21 @@ interface ConfirmedBooking {
                         }
                         <div>
                           <label class="form-label" for="cliente">Tu nombre</label>
-                          <input
-                            id="cliente"
-                            type="text"
-                            class="form-input min-h-[48px]"
-                            formControlName="cliente"
-                            placeholder="Ana Garcia"
-                            autocomplete="name"
-                            required
-                            minlength="2"
-                            [attr.aria-invalid]="fieldInvalid('cliente') ? 'true' : null"
-                            [attr.aria-describedby]="fieldInvalid('cliente') ? 'cliente-error' : null"
-                          />
+                          <div class="icon-field">
+                            <span class="material-icons-round" aria-hidden="true">person</span>
+                            <input
+                              id="cliente"
+                              type="text"
+                              class="form-input min-h-[48px]"
+                              formControlName="cliente"
+                              placeholder="Ana Garcia"
+                              autocomplete="name"
+                              required
+                              minlength="2"
+                              [attr.aria-invalid]="fieldInvalid('cliente') ? 'true' : null"
+                              [attr.aria-describedby]="fieldInvalid('cliente') ? 'cliente-error' : null"
+                            />
+                          </div>
                           @if (fieldInvalid('cliente')) {
                             <p id="cliente-error" class="mt-1 text-xs text-error" role="alert">
                               Escribe tu nombre (mínimo 2 caracteres).
@@ -652,18 +655,21 @@ interface ConfirmedBooking {
 
                         <div>
                           <label class="form-label" for="telefono">Tu teléfono</label>
-                          <input
-                            id="telefono"
-                            type="tel"
-                            class="form-input min-h-[48px]"
-                            formControlName="telefono"
-                            placeholder="300 123 4567"
-                            autocomplete="tel"
-                            required
-                            pattern="[0-9+\\s-]{7,15}"
-                            [attr.aria-invalid]="fieldInvalid('telefono') ? 'true' : null"
-                            [attr.aria-describedby]="fieldInvalid('telefono') ? 'telefono-error' : null"
-                          />
+                          <div class="icon-field">
+                            <span class="material-icons-round" aria-hidden="true">phone</span>
+                            <input
+                              id="telefono"
+                              type="tel"
+                              class="form-input min-h-[48px]"
+                              formControlName="telefono"
+                              placeholder="300 123 4567"
+                              autocomplete="tel"
+                              required
+                              pattern="[0-9+\\s-]{7,15}"
+                              [attr.aria-invalid]="fieldInvalid('telefono') ? 'true' : null"
+                              [attr.aria-describedby]="fieldInvalid('telefono') ? 'telefono-error' : null"
+                            />
+                          </div>
                           @if (fieldInvalid('telefono')) {
                             <p id="telefono-error" class="mt-1 text-xs text-error" role="alert">
                               Introduce un teléfono válido (7-15 caracteres).

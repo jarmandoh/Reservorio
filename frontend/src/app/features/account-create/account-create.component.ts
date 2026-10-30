@@ -65,7 +65,7 @@ type AccountType = 'usuario' | 'negocio';
         >
           <span class="material-icons-round text-2xl">store</span>
           <span class="text-sm font-bold">Negocio</span>
-          <span class="text-xs">Gestionar reservas</span>
+          <span class="text-xs">Gestionar comercios</span>
         </button>
       </div>
 
@@ -79,16 +79,19 @@ type AccountType = 'usuario' | 'negocio';
 
       <div>
         <label class="form-label" for="name">Nombre completo</label>
-        <input
-          id="name"
-          type="text"
-          class="form-input w-full"
-          formControlName="name"
-          placeholder="Ana García"
-          autocomplete="name"
-          [attr.aria-invalid]="form.controls.name.touched && form.controls.name.invalid ? 'true' : null"
-          [attr.aria-describedby]="form.controls.name.touched && form.controls.name.invalid ? 'name-error' : null"
-        />
+        <div class="icon-field">
+          <span class="material-icons-round" aria-hidden="true">person</span>
+          <input
+            id="name"
+            type="text"
+            class="form-input"
+            formControlName="name"
+            placeholder="Ana García"
+            autocomplete="name"
+            [attr.aria-invalid]="form.controls.name.touched && form.controls.name.invalid ? 'true' : null"
+            [attr.aria-describedby]="form.controls.name.touched && form.controls.name.invalid ? 'name-error' : null"
+          />
+        </div>
         @if (form.controls.name.touched && form.controls.name.invalid) {
           <p id="name-error" class="text-xs text-error mt-1">Mínimo 2 caracteres</p>
         }
@@ -96,16 +99,19 @@ type AccountType = 'usuario' | 'negocio';
 
       <div>
         <label class="form-label" for="email">Correo electrónico</label>
-        <input
-          id="email"
-          type="email"
-          class="form-input w-full"
-          formControlName="email"
-          placeholder="ana@ejemplo.com"
-          autocomplete="email"
-          [attr.aria-invalid]="form.controls.email.touched && form.controls.email.invalid ? 'true' : null"
-          [attr.aria-describedby]="form.controls.email.touched && form.controls.email.invalid ? 'email-error' : null"
-        />
+        <div class="icon-field">
+          <span class="material-icons-round" aria-hidden="true">mail</span>
+          <input
+            id="email"
+            type="email"
+            class="form-input"
+            formControlName="email"
+            placeholder="ana@ejemplo.com"
+            autocomplete="email"
+            [attr.aria-invalid]="form.controls.email.touched && form.controls.email.invalid ? 'true' : null"
+            [attr.aria-describedby]="form.controls.email.touched && form.controls.email.invalid ? 'email-error' : null"
+          />
+        </div>
         @if (form.controls.email.touched && form.controls.email.invalid) {
           <p id="email-error" class="text-xs text-error mt-1">Correo inválido</p>
         }
@@ -114,16 +120,21 @@ type AccountType = 'usuario' | 'negocio';
       @if (accountType() === 'usuario') {
         <div>
           <label class="form-label" for="phone">Teléfono</label>
-          <input
-            id="phone"
-            type="tel"
-            class="form-input w-full"
-            formControlName="phone"
-            placeholder="600 123 456"
-            autocomplete="tel"
-            [attr.aria-invalid]="form.controls.phone.touched && form.controls.phone.invalid ? 'true' : null"
-            [attr.aria-describedby]="form.controls.phone.touched && form.controls.phone.invalid ? 'phone-error' : null"
-          />
+          <div class="icon-field">
+            <span class="material-icons-round" aria-hidden="true">phone</span>
+            <input
+              id="phone"
+              type="tel"
+              class="form-input"
+              formControlName="phone"
+              placeholder="600 123 456"
+              autocomplete="tel"
+              [attr.aria-invalid]="form.controls.phone.touched && form.controls.phone.invalid ? 'true' : null"
+              [attr.aria-describedby]="
+                form.controls.phone.touched && form.controls.phone.invalid ? 'phone-error' : null
+              "
+            />
+          </div>
           @if (form.controls.phone.touched && form.controls.phone.invalid) {
             <p id="phone-error" class="text-xs text-error mt-1">Mínimo 7 dígitos</p>
           }
@@ -133,14 +144,28 @@ type AccountType = 'usuario' | 'negocio';
       @if (accountType() === 'usuario') {
         <div>
           <label class="form-label" for="customer-password">Contraseña (opcional)</label>
-          <input
-            id="customer-password"
-            type="password"
-            class="form-input w-full"
-            formControlName="password"
-            autocomplete="new-password"
-            placeholder="Mínimo 6 caracteres"
-          />
+          <div class="icon-field has-toggle">
+            <span class="material-icons-round" aria-hidden="true">lock</span>
+            <input
+              id="customer-password"
+              [type]="showPassword() ? 'text' : 'password'"
+              class="form-input"
+              formControlName="password"
+              autocomplete="new-password"
+              placeholder="Mínimo 6 caracteres"
+            />
+            <button
+              type="button"
+              class="password-toggle"
+              [attr.aria-label]="showPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+              [attr.aria-pressed]="showPassword()"
+              (click)="togglePassword()"
+            >
+              <span class="material-icons-round" aria-hidden="true">{{
+                showPassword() ? 'visibility_off' : 'visibility'
+              }}</span>
+            </button>
+          </div>
           <p class="mt-1 text-xs text-on-surface-variant">
             También puedes crear tu cuenta y entrar con un código por correo.
           </p>
@@ -150,40 +175,68 @@ type AccountType = 'usuario' | 'negocio';
       @if (accountType() === 'negocio') {
         <div>
           <label class="form-label" for="password">Contraseña</label>
-          <input
-            id="password"
-            type="password"
-            class="form-input w-full"
-            formControlName="password"
-            placeholder="Mínimo 6 caracteres"
-            autocomplete="new-password"
-            [attr.aria-invalid]="form.controls.password.touched && form.controls.password.invalid ? 'true' : null"
-            [attr.aria-describedby]="
-              form.controls.password.touched && form.controls.password.invalid ? 'password-error' : null
-            "
-          />
+          <div class="icon-field has-toggle">
+            <span class="material-icons-round" aria-hidden="true">lock</span>
+            <input
+              id="password"
+              [type]="showPassword() ? 'text' : 'password'"
+              class="form-input"
+              formControlName="password"
+              placeholder="Mínimo 6 caracteres"
+              autocomplete="new-password"
+              [attr.aria-invalid]="form.controls.password.touched && form.controls.password.invalid ? 'true' : null"
+              [attr.aria-describedby]="
+                form.controls.password.touched && form.controls.password.invalid ? 'password-error' : null
+              "
+            />
+            <button
+              type="button"
+              class="password-toggle"
+              [attr.aria-label]="showPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+              [attr.aria-pressed]="showPassword()"
+              (click)="togglePassword()"
+            >
+              <span class="material-icons-round" aria-hidden="true">{{
+                showPassword() ? 'visibility_off' : 'visibility'
+              }}</span>
+            </button>
+          </div>
           @if (form.controls.password.touched && form.controls.password.invalid) {
             <p id="password-error" class="text-xs text-error mt-1">Mínimo 6 caracteres</p>
           }
         </div>
         <div>
           <label class="form-label" for="confirmPassword">Confirmar contraseña</label>
-          <input
-            id="confirmPassword"
-            type="password"
-            class="form-input w-full"
-            formControlName="confirmPassword"
-            placeholder="Repite tu contraseña"
-            autocomplete="new-password"
-            [attr.aria-invalid]="
-              form.controls.confirmPassword.touched && form.hasError('passwordMismatch') ? 'true' : null
-            "
-            [attr.aria-describedby]="
-              form.controls.confirmPassword.touched && form.hasError('passwordMismatch')
-                ? 'confirm-password-error'
-                : null
-            "
-          />
+          <div class="icon-field has-toggle">
+            <span class="material-icons-round" aria-hidden="true">lock</span>
+            <input
+              id="confirmPassword"
+              [type]="showConfirmPassword() ? 'text' : 'password'"
+              class="form-input"
+              formControlName="confirmPassword"
+              placeholder="Repite tu contraseña"
+              autocomplete="new-password"
+              [attr.aria-invalid]="
+                form.controls.confirmPassword.touched && form.hasError('passwordMismatch') ? 'true' : null
+              "
+              [attr.aria-describedby]="
+                form.controls.confirmPassword.touched && form.hasError('passwordMismatch')
+                  ? 'confirm-password-error'
+                  : null
+              "
+            />
+            <button
+              type="button"
+              class="password-toggle"
+              [attr.aria-label]="showConfirmPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+              [attr.aria-pressed]="showConfirmPassword()"
+              (click)="toggleConfirmPassword()"
+            >
+              <span class="material-icons-round" aria-hidden="true">{{
+                showConfirmPassword() ? 'visibility_off' : 'visibility'
+              }}</span>
+            </button>
+          </div>
           @if (form.hasError('passwordMismatch') && form.controls.confirmPassword.touched) {
             <p id="confirm-password-error" class="text-xs text-error mt-1">Las contraseñas no coinciden</p>
           }
@@ -217,6 +270,16 @@ export class AccountCreateComponent {
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly notice = signal<string | null>(null);
+  readonly showPassword = signal(false);
+  readonly showConfirmPassword = signal(false);
+
+  togglePassword(): void {
+    this.showPassword.update(v => !v);
+  }
+
+  toggleConfirmPassword(): void {
+    this.showConfirmPassword.update(v => !v);
+  }
 
   readonly form = this.fb.group(
     {
