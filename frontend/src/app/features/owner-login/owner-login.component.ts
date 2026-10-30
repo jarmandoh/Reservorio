@@ -11,7 +11,7 @@ import { AuthCardComponent } from '../../shared/components/auth-card/auth-card.c
   imports: [CommonModule, ReactiveFormsModule, AuthCardComponent, RouterLink],
   template: `
     <app-auth-card
-      title="Login de dueño"
+      title="Iniciar sesión de propietario"
       subtitle="Accede para gestionar tus negocios."
       [formGroup]="form"
       submitLabel="Iniciar sesión"
@@ -34,51 +34,53 @@ import { AuthCardComponent } from '../../shared/components/auth-card/auth-card.c
       </a>
 
       <div>
-        <label class="form-label">Correo electrónico</label>
-        <input type="email" class="form-input w-full" formControlName="email" />
+        <label class="form-label" for="owner-login-email">Correo electrónico</label>
+        <div class="relative mt-1">
+          <span
+            class="material-icons-round pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-lg text-on-surface-variant"
+            aria-hidden="true"
+            >mail</span
+          >
+          <input
+            id="owner-login-email"
+            type="email"
+            class="form-input w-full pl-11"
+            formControlName="email"
+            autocomplete="email"
+            placeholder="ana@ejemplo.com"
+          />
+        </div>
       </div>
+
       <div>
-        <label class="form-label">Contraseña</label>
-        <input type="password" class="form-input w-full" formControlName="password" />
-      </div>
-      <button
-        type="button"
-        class="w-full rounded-xl border border-outline-variant px-4 py-3 font-semibold"
-        (click)="loginGoogle()"
-        [disabled]="loading()"
-      >
-        Continuar con Google
-      </button>
-      <button
-        type="button"
-        class="w-full rounded-xl border border-outline-variant px-4 py-3 font-semibold"
-        (click)="requestOtp()"
-        [disabled]="loading()"
-      >
-        Enviar código de acceso por email
-      </button>
-      <button
-        type="button"
-        class="w-full rounded-xl border border-outline-variant px-4 py-3 font-semibold"
-        (click)="requestMagicLink()"
-        [disabled]="loading()"
-      >
-        Enviar enlace mágico por email
-      </button>
-      @if (otpRequested()) {
-        <div>
-          <label class="form-label">Código recibido por email</label>
-          <input type="text" inputmode="numeric" maxlength="8" class="form-input w-full" formControlName="code" />
+        <label class="form-label" for="owner-login-password">Contraseña</label>
+        <div class="relative mt-1">
+          <span
+            class="material-icons-round pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-lg text-on-surface-variant"
+            aria-hidden="true"
+            >lock</span
+          >
+          <input
+            id="owner-login-password"
+            [type]="showPassword() ? 'text' : 'password'"
+            class="form-input w-full pl-11 pr-12"
+            formControlName="password"
+            autocomplete="current-password"
+            placeholder="Tu contraseña"
+          />
           <button
             type="button"
-            class="mt-2 w-full rounded-xl bg-primary px-4 py-3 text-white font-semibold"
-            (click)="verifyOtp()"
-            [disabled]="loading() || form.controls.code.invalid"
+            class="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-on-surface-variant transition-colors hover:bg-primary/10 hover:text-primary"
+            [attr.aria-label]="showPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+            [attr.aria-pressed]="showPassword()"
+            (click)="togglePassword()"
           >
-            Verificar código
+            <span class="material-icons-round text-lg" aria-hidden="true">{{
+              showPassword() ? 'visibility_off' : 'visibility'
+            }}</span>
           </button>
         </div>
-      }
+      </div>
     </app-auth-card>
   `,
 })
@@ -90,7 +92,11 @@ export class OwnerLoginComponent {
 
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
-  readonly otpRequested = signal(false);
+  readonly showPassword = signal(false);
+
+  togglePassword(): void {
+    this.showPassword.update(v => !v);
+  }
 
   readonly form = this.fb.group({
     email: ['', [Validators.required, Validators.email]],
@@ -112,8 +118,6 @@ export class OwnerLoginComponent {
       .subscribe({
         next: () => {
           this.loading.set(false);
-          this.otpRequested.set(true);
-          this.form.controls.code.enable();
         },
         error: err => {
           this.loading.set(false);
