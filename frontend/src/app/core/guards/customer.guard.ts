@@ -12,5 +12,5 @@ export const customerGuard: CanActivateFn = () => {
   const purged = auth.purgeInvalidTokens();
   if (auth.isCustomerUnlocked()) return true;
 
-  return purged.length > 0 ? router.parseUrl('/') : router.parseUrl('/customer/login');
+  return purged.length > 0 ? router.parseUrl('/') : router.parseUrl('/usuario/auth');
 };

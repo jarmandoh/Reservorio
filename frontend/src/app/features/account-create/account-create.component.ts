@@ -374,7 +374,7 @@ export class AccountCreateComponent {
                     this.loading.set(false);
                     if (result.data?.confirmationRequired) {
                       this.notice.set('Cuenta creada. Confirma tu correo para activar el acceso.');
-                      setTimeout(() => this.router.navigate(['/customer/login']), 1800);
+                      setTimeout(() => this.router.navigate(['/usuario/auth']), 1800);
                     } else {
                       this.router.navigate(['/customer/history']);
                     }
@@ -405,18 +405,18 @@ export class AccountCreateComponent {
                         next: () => this.router.navigate(['/customer/history']),
                         error: () => {
                           this.notice.set('Cuenta creada. Revisa tu correo para el código de acceso.');
-                          setTimeout(() => this.router.navigate(['/customer/login']), 1500);
+                          setTimeout(() => this.router.navigate(['/usuario/auth']), 1500);
                         },
                       });
                   } else {
                     this.notice.set('Cuenta creada. Te enviamos un código por correo.');
-                    setTimeout(() => this.router.navigate(['/customer/login']), 1500);
+                    setTimeout(() => this.router.navigate(['/usuario/auth']), 1500);
                   }
                 },
                 error: err => {
                   this.loading.set(false);
                   this.notice.set('Cuenta creada. Ya puedes iniciar sesión.');
-                  setTimeout(() => this.router.navigate(['/customer/login']), 1500);
+                  setTimeout(() => this.router.navigate(['/usuario/auth']), 1500);
                 },
               });
           },
@@ -435,7 +435,7 @@ export class AccountCreateComponent {
             this.loading.set(false);
             if (result.data?.confirmationRequired) {
               this.notice.set('Cuenta de negocio creada. Confirma tu correo para activar el acceso.');
-              setTimeout(() => this.router.navigate(['/owner/login']), 1800);
+              setTimeout(() => this.router.navigate(['/owner/auth']), 1800);
               return;
             }
             this.router.navigate(['/owner/dashboard']);
@@ -451,7 +451,7 @@ export class AccountCreateComponent {
   }
 
   goLogin(): void {
-    if (this.accountType() === 'negocio') this.router.navigate(['/owner/login']);
-    else this.router.navigate(['/customer/login']);
+    if (this.accountType() === 'negocio') this.router.navigate(['/owner/auth']);
+    else this.router.navigate(['/usuario/auth']);
   }
 }

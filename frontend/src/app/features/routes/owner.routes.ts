@@ -3,12 +3,18 @@ import { ownerGuard } from '../../core/guards/owner.guard';
 
 export const ownerRoutes: Routes = [
   {
-    path: 'owner/register',
-    loadComponent: () => import('../owner-register/owner-register.component').then(m => m.OwnerRegisterComponent),
+    path: 'owner/auth',
+    loadComponent: () => import('../owner-auth/owner-auth.component').then(m => m.OwnerAuthComponent),
   },
   {
     path: 'owner/login',
-    loadComponent: () => import('../owner-login/owner-login.component').then(m => m.OwnerLoginComponent),
+    redirectTo: 'owner/auth',
+    pathMatch: 'full',
+  },
+  {
+    path: 'owner/register',
+    redirectTo: 'owner/auth',
+    pathMatch: 'full',
   },
   {
     path: 'owner/dashboard',

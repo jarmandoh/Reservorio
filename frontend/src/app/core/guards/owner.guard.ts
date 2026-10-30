@@ -12,6 +12,6 @@ export const ownerGuard: CanActivateFn = () => {
   if (auth.isOwnerUnlocked()) return true;
 
   if (purged.length > 0) router.navigate(['/']);
-  else router.navigate(['/owner/login']);
+  else router.navigate(['/owner/auth']);
   return false;
 };

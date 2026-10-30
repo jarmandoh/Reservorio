@@ -126,24 +126,12 @@ const DEFAULT_CATEGORIES = ['Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci√
                       <button
                         type="button"
                         class="flex items-center gap-3 w-full px-4 py-3 text-sm text-left text-on-surface hover:bg-surface-low transition"
-                        (click)="goOwnerLogin()"
+                        (click)="goOwnerAuth()"
                       >
                         <span class="material-icons-round text-base text-primary">store</span>
                         <span class="flex flex-col items-start">
                           <span class="font-semibold">Negocio</span>
                           <span class="text-xs text-on-surface-variant">Panel de negocio</span>
-                        </span>
-                      </button>
-                      <div class="mx-2 border-t border-outline-variant/20"></div>
-                      <button
-                        type="button"
-                        class="flex items-center gap-3 w-full px-4 py-3 text-sm text-left text-on-surface hover:bg-surface-low transition"
-                        (click)="goCreateAccount()"
-                      >
-                        <span class="material-icons-round text-base text-primary">person_add</span>
-                        <span class="flex flex-col items-start">
-                          <span class="font-semibold">Crear cuenta</span>
-                          <span class="text-xs text-on-surface-variant">Usuario o negocio</span>
                         </span>
                       </button>
                     </div>
@@ -160,7 +148,7 @@ const DEFAULT_CATEGORIES = ['Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci√
               <span class="text-primary-fixed-dim">cerca de ti...</span>
             </h1>
             <p class="g-sub text-base opacity-80 max-w-md">
-              Reservas y agendamientos en segundos.
+              Contacta, reserva o agenda en segundos.
             </p>
           </div>
 
@@ -780,12 +768,12 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
 
   goCustomerLogin(): void {
     this.showAccountMenu.set(false);
-    this.router.navigate(['/customer/login']);
+    this.router.navigate(['/usuario/auth']);
   }
 
-  goOwnerLogin(): void {
+  goOwnerAuth(): void {
     this.showAccountMenu.set(false);
-    this.router.navigate(['/owner/login']);
+    this.router.navigate(['/owner/auth']);
   }
 
   goCreateAccount(): void {

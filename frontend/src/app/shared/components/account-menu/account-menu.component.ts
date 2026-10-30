@@ -351,8 +351,8 @@ export class AccountMenuComponent {
   });
 
   readonly guestOptions: AccountOption[] = [
-    { label: 'Iniciar sesión', route: '/customer/login', icon: 'login' },
-    { label: 'Acceso para negocios', route: '/owner/login', icon: 'storefront' },
+    { label: 'Iniciar sesión', route: '/usuario/auth', icon: 'login' },
+    { label: 'Acceso para negocios', route: '/owner/auth', icon: 'storefront' },
   ];
 
   toggleMenu(): void {

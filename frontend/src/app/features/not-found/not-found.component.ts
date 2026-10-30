@@ -15,7 +15,7 @@ import { RouterLink } from '@angular/router';
         </p>
         <div class="flex flex-col sm:flex-col items-center justify-center gap-3">
           <a routerLink="/" class="btn-primary">Explorar negocios</a>
-          <a routerLink="/owner/login" class="btn-secondary">Acceso de negocios</a>
+          <a routerLink="/owner/auth" class="btn-secondary">Acceso de negocios</a>
         </div>
       </div>
     </div>

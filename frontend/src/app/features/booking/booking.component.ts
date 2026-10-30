@@ -598,13 +598,13 @@ interface ConfirmedBooking {
                           </div>
                           <div class="flex flex-col sm:flex-row gap-2">
                             <a
-                              routerLink="/customer/login"
+                              routerLink="/usuario/auth"
                               [queryParams]="{ redirect: '/booking/' + businessId }"
                               class="btn-primary btn-sm flex-1 text-center"
                               >Iniciar sesión</a
                             >
                             <a
-                              routerLink="/customer/login"
+                              routerLink="/usuario/auth"
                               [queryParams]="{ redirect: '/booking/' + businessId }"
                               class="btn-secondary btn-sm flex-1 text-center"
                               >Crear cuenta</a
@@ -1486,7 +1486,7 @@ export class BookingComponent implements OnInit, OnDestroy {
     } else if (s === 2 && this.selectedSlot()) {
       if (!this.isCustomerAuthenticated()) {
         this.toast.error('Debes iniciar sesión para reservar. Redirigiendo...');
-        this.router.navigate(['/customer/login'], { queryParams: { redirect: `/booking/${this.businessId}` } });
+        this.router.navigate(['/usuario/auth'], { queryParams: { redirect: `/booking/${this.businessId}` } });
         return;
       }
       this.goToStep(3);
@@ -1526,7 +1526,7 @@ export class BookingComponent implements OnInit, OnDestroy {
   submit(): void {
     if (!this.isCustomerAuthenticated()) {
       this.toast.error('Debes estar registrado para hacer una reserva.');
-      this.router.navigate(['/customer/login'], { queryParams: { redirect: `/booking/${this.businessId}` } });
+      this.router.navigate(['/usuario/auth'], { queryParams: { redirect: `/booking/${this.businessId}` } });
       return;
     }
     this.bookingForm.markAllAsTouched();

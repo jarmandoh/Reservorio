@@ -3,13 +3,18 @@ import { customerGuard } from '../../core/guards/customer.guard';
 
 export const customerRoutes: Routes = [
   {
+    path: 'usuario/auth',
+    loadComponent: () => import('../usuario-auth/usuario-auth.component').then(m => m.UsuarioAuthComponent),
+  },
+  {
     path: 'customer/login',
-    loadComponent: () => import('../customer-login/customer-login.component').then(m => m.CustomerLoginComponent),
+    redirectTo: 'usuario/auth',
+    pathMatch: 'full',
   },
   {
     path: 'customer/register',
-    loadComponent: () =>
-      import('../customer-register/customer-register.component').then(m => m.CustomerRegisterComponent),
+    redirectTo: 'usuario/auth',
+    pathMatch: 'full',
   },
   {
     path: 'customer/history',

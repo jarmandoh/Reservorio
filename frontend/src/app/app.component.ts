@@ -179,7 +179,9 @@ export class AppComponent implements OnInit {
       url.startsWith('/jh-login') ||
       url.startsWith('/owner/login') ||
       url.startsWith('/owner/register') ||
+      url.startsWith('/owner/auth') ||
       url.startsWith('/customer/login') ||
+      url.startsWith('/usuario/auth') ||
       url.startsWith('/customer/verify') ||
       /\/business\/[^\/]+\/login/.test(url)
     ) {

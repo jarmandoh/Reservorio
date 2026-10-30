@@ -23,7 +23,7 @@ import { SupabaseAuthService } from '../../core/services/supabase-auth.service';
       @if (error()) {
         <p class="text-sm text-on-surface-variant">
           El enlace ha caducado o ya fue utilizado. Solicita uno nuevo desde
-          <a class="text-primary font-semibold underline" routerLink="/customer/login">Mi cuenta</a>.
+          <a class="text-primary font-semibold underline" routerLink="/usuario/auth">Mi cuenta</a>.
         </p>
       }
     </app-auth-card>
@@ -91,6 +91,6 @@ export class CustomerMagicVerifyComponent implements OnInit {
   }
 
   retry(): void {
-    this.router.navigate(['/customer/login']);
+    this.router.navigate(['/usuario/auth']);
   }
 }

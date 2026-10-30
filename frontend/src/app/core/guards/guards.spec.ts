@@ -61,7 +61,7 @@ describe('route guards', () => {
     );
 
     expect(result).toBe(false);
-    expect(router.navigate).toHaveBeenCalledWith(['/owner/login']);
+    expect(router.navigate).toHaveBeenCalledWith(['/owner/auth']);
   });
 
   it('redirects unauthenticated customers to customer login', () => {
@@ -69,8 +69,8 @@ describe('route guards', () => {
       customerGuard({} as ActivatedRouteSnapshot, {} as RouterStateSnapshot)
     );
 
-    expect(result).toEqual({ url: '/customer/login' });
-    expect(router.parseUrl).toHaveBeenCalledWith('/customer/login');
+    expect(result).toEqual({ url: '/usuario/auth' });
+    expect(router.parseUrl).toHaveBeenCalledWith('/usuario/auth');
     expect(router.navigate).not.toHaveBeenCalled();
   });
 

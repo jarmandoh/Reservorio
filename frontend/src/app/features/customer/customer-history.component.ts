@@ -213,7 +213,7 @@ export class CustomerHistoryComponent implements OnInit {
 
     if (!this.token) {
       this.auth.clearCustomerToken();
-      this.router.navigate(['/customer/login']);
+      this.router.navigate(['/usuario/auth']);
       return;
     }
 
@@ -234,7 +234,7 @@ export class CustomerHistoryComponent implements OnInit {
         },
         error: () => {
           this.auth.clearCustomerToken();
-          this.router.navigate(['/customer/login']);
+          this.router.navigate(['/usuario/auth']);
         },
       });
   }
@@ -262,7 +262,7 @@ export class CustomerHistoryComponent implements OnInit {
           this.loading.set(false);
           if (err instanceof HttpErrorResponse && err.status === 401) {
             this.auth.clearCustomerToken();
-            this.router.navigate(['/customer/login']);
+            this.router.navigate(['/usuario/auth']);
             return;
           }
           this.error.set(err.error?.message ?? 'No se pudo cargar tu historial.');

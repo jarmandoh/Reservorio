@@ -16,7 +16,7 @@ import { FormGroup, ReactiveFormsModule } from '@angular/forms';
       <div
         class="pointer-events-none absolute -bottom-24 -left-24 h-72 w-72 rounded-full bg-primary-container/10 blur-3xl"
       ></div>
-      <div class="relative z-10 w-full max-w-md bg-white/95 backdrop-blur rounded-3xl shadow-soft p-8">
+      <div class="relative z-10 w-full max-w-md bg-white/95 backdrop-blur rounded-3xl shadow-soft p-8 auth-card">
         <div class="mb-6 text-center">
           <h1 class="font-display text-2xl font-bold">{{ title }}</h1>
           @if (subtitle) {
@@ -66,6 +66,24 @@ import { FormGroup, ReactiveFormsModule } from '@angular/forms';
       </div>
     </div>
   `,
+  styles: [
+    `
+      :host-context(.dark) .auth-card {
+        background: #1a222d;
+        border: 1px solid #34404e;
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.36);
+        color: #e6e9ee;
+        color-scheme: dark;
+      }
+      :host-context(.dark) .auth-card h1,
+      :host-context(.dark) .auth-card p {
+        color: #e6e9ee;
+      }
+      :host-context(.dark) .auth-card .text-on-surface-variant {
+        color: #aab5c3;
+      }
+    `,
+  ],
 })
 export class AuthCardComponent {
   @Input() title = '';

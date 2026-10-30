@@ -217,7 +217,7 @@ export class CustomerRegisterComponent {
   }
 
   goLogin(): void {
-    this.router.navigate(['/customer/login']);
+    this.router.navigate(['/usuario/auth']);
   }
 }
 

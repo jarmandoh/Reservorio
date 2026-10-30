@@ -13,7 +13,7 @@ import { AuthService } from '../../core/services/auth.service';
         <h1 class="text-xl font-bold text-on-surface">Verificando tu cuenta</h1>
         <p class="mt-2 text-sm text-on-surface-variant">{{ message() }}</p>
         @if (error()) {
-          <a class="inline-flex mt-5 text-primary underline" href="/customer/login">Volver al inicio de sesión</a>
+          <a class="inline-flex mt-5 text-primary underline" href="/usuario/auth">Volver al inicio de sesión</a>
         }
       </section>
     </main>

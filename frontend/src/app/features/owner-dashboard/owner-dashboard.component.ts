@@ -160,7 +160,7 @@ export class OwnerDashboardComponent implements OnInit {
 
   ngOnInit(): void {
     if (!this.auth.getOwnerToken()) {
-      this.router.navigate(['/owner/login']);
+      this.router.navigate(['/owner/auth']);
       return;
     }
 
