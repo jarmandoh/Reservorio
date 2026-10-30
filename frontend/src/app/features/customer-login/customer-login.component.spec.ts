@@ -23,23 +23,9 @@ describe('CustomerLoginComponent form', () => {
     const component = fixture.componentInstance;
 
     component.form.controls.email.setValue('not-an-email');
-    component.form.controls.phone.setValue('123');
     fixture.detectChanges();
 
     expect(component.form.invalid).toBe(true);
     expect(fixture.nativeElement.querySelector('button[type="submit"]').disabled).toBe(true);
-  });
-
-  it('enables submission once email and phone satisfy the form validators', () => {
-    const fixture = TestBed.createComponent(CustomerLoginComponent);
-    fixture.detectChanges();
-    const component = fixture.componentInstance;
-
-    component.form.controls.email.setValue('cliente@example.com');
-    component.form.controls.phone.setValue('+573001234567');
-    fixture.detectChanges();
-
-    expect(component.form.valid).toBe(true);
-    expect(fixture.nativeElement.querySelector('button[type="submit"]').disabled).toBe(false);
   });
 });

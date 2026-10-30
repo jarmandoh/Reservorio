@@ -14,7 +14,7 @@ describe('SeoService', () => {
   it('sets the canonical metadata for the home page and ignores query parameters', () => {
     service.updateForRoute('/?q=hair');
 
-    expect(document.title).toContain('Reservorio');
+    expect(document.title).toContain('MiVeci');
     expect(document.head.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe('https://reservorio.app/');
     expect(document.head.querySelector('meta[name="robots"]')?.getAttribute('content')).toContain('index, follow');
     expect(document.head.querySelector('meta[property="og:url"]')?.getAttribute('content')).toBe(
