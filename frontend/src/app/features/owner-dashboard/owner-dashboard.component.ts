@@ -71,21 +71,6 @@ import { BusinessListComponent } from '../../shared/components/business-list/bus
         </div>
       }
     </main>
-    <header class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <h1 class="font-display text-3xl font-bold">Panel de dueños</h1>
-        <p class="text-sm text-on-surface-variant">Gestiona tus negocios y crea nuevas fichas.</p>
-      </div>
-      <button class="btn-tertiary" (click)="logout()">Cerrar sesión</button>
-    </header>
-
-    <section class="grid gap-4 sm:grid-cols-[1fr_auto]">
-      <div class="card p-5">
-        <h2 class="font-semibold text-lg">Tus negocios</h2>
-        <p class="text-sm text-on-surface-variant mt-1">Visualiza el listado de tus negocios registrados.</p>
-      </div>
-      <button class="btn-primary btn-lg self-start" (click)="openCreateModal()">Nuevo negocio</button>
-    </section>
 
     <section class="grid gap-4">
       @if (loading()) {
@@ -93,10 +78,6 @@ import { BusinessListComponent } from '../../shared/components/business-list/bus
           @for (i of [1, 2, 3]; track i) {
             <div class="skeleton h-16 rounded-xl"></div>
           }
-        </div>
-      } @else if (!businesses().length) {
-        <div class="card p-5 text-center">
-          <p class="text-sm text-on-surface-variant">No tienes negocios aún. Crea uno para comenzar.</p>
         </div>
       } @else {
         <app-business-list [businesses]="businesses()" (view)="openBusiness($event)" (edit)="editBusiness($event)" />

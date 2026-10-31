@@ -63,3 +63,4 @@ tmp/
 temp/
 *.txt
 .turbo
+.opencode/
