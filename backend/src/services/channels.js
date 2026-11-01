@@ -103,7 +103,7 @@ async function httpSms({ to, message }) {
   return httpPost(url, headers, { to, message, type: 'sms' });
 }
 
-/** Envía un email. Devuelve { ok, status, message, provider? } � nunca lanza. */
+/** Envía un email. Devuelve { ok, status, message, provider? }  nunca lanza. */
 async function sendEmail({ to, subject, textBody, htmlBody } = {}) {
   const cleanTo = String(to ?? '').trim();
   if (!cleanTo) return { ok: false, status: 400, message: 'Destinatario de email requerido' };
@@ -117,7 +117,7 @@ async function sendEmail({ to, subject, textBody, htmlBody } = {}) {
   }
 }
 
-/** Envía un SMS. Devuelve { ok, status, message, provider? } � nunca lanza. */
+/** Envía un SMS. Devuelve { ok, status, message, provider? }  nunca lanza. */
 async function sendSms({ to, message } = {}) {
   const cleanTo = digitsOnly(to);
   if (!cleanTo) return { ok: false, status: 400, message: 'Destinatario de SMS requerido' };

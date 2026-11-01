@@ -339,7 +339,7 @@ export class AccountMenuComponent {
       return { label: 'Sesión de administrador activa', route: '/admin', icon: 'admin_panel_settings' };
     }
     if (this.auth.getOwnerToken() || this.sessionStore.isOwnerAuthenticated()) {
-      return { label: 'Sesión de negocio activa', route: '/owner/dashboard', icon: 'storefront' };
+      return { label: 'Sesión de negocio activa', route: '/propietario/dashboard', icon: 'storefront' };
     }
     if (this.auth.getCustomerToken()) {
       return { label: 'Sesión de cliente activa', route: '/customer/history', icon: 'person' };
@@ -352,7 +352,7 @@ export class AccountMenuComponent {
 
   readonly guestOptions: AccountOption[] = [
     { label: 'Iniciar sesión', route: '/usuario/auth', icon: 'login' },
-    { label: 'Acceso para negocios', route: '/owner/auth', icon: 'storefront' },
+    { label: 'Acceso para negocios', route: '/propietario/auth', icon: 'storefront' },
   ];
 
   toggleMenu(): void {

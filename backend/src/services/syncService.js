@@ -7,7 +7,7 @@ const logger = require('../logger');
 const { clean } = require('../middleware/sanitize');
 
 /**
- * Sincroniza TODAS las reservas de un negocio: PG �  Google Sheets.
+ * Sincroniza TODAS las reservas de un negocio: PG   Google Sheets.
  * Sobreescribe la hoja "Reservas" completa (cabecera + datos).
  */
 async function syncReservations(businessId) {
@@ -45,7 +45,7 @@ async function syncReservations(businessId) {
 }
 
 /**
- * Sincroniza TODOS los servicios de un negocio: PG �  Google Sheets.
+ * Sincroniza TODOS los servicios de un negocio: PG   Google Sheets.
  */
 async function syncServices(businessId) {
   const { rows: negocio } = await db.query(

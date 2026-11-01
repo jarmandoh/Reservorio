@@ -107,18 +107,20 @@ interface ConfirmedBooking {
                   class="border-b border-white/10 bg-gradient-to-br from-brand-strong via-primary to-primary-container px-5 py-4 text-white"
                 >
                   <div class="flex items-center gap-3">
-                    @if (step() < 4) {
-                      <button
-                        class="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 transition hover:bg-white/15"
-                        (click)="goBack()"
-                        aria-label="Volver"
-                      >
-                        <span class="material-icons-round text-[1.15rem]">arrow_back</span>
-                      </button>
-                    } @else {
-                      <div class="flex h-10 w-10 items-center justify-center rounded-full bg-white/15">
-                        <span class="material-icons-round text-[1.15rem]">check</span>
-                      </div>
+                    @if (!embedded) {
+                      @if (step() < 4) {
+                        <button
+                          class="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 transition hover:bg-white/15"
+                          (click)="goBack()"
+                          aria-label="Volver"
+                        >
+                          <span class="material-icons-round text-[1.15rem]">arrow_back</span>
+                        </button>
+                      } @else {
+                        <div class="flex h-10 w-10 items-center justify-center rounded-full bg-white/15">
+                          <span class="material-icons-round text-[1.15rem]">check</span>
+                        </div>
+                      }
                     }
 
                     <div class="min-w-0 flex-1">
@@ -175,50 +177,18 @@ interface ConfirmedBooking {
                     }
                   </div>
 
-                  <div class="mt-5">
-                    <div class="relative">
-                      <div class="absolute left-[12.5%] right-[12.5%] top-[15px] h-0.5 rounded-full bg-white/20">
-                        <div
-                          class="h-full rounded-full bg-white transition-[width] duration-500 ease-out"
-                          [style.width.%]="stepProgress()"
-                        ></div>
-                      </div>
-                      <ol class="relative flex items-start">
-                        @for (item of bookingSteps; track item.value) {
-                          <li class="flex min-w-0 flex-1 flex-col items-center gap-1.5">
-                            <button
-                              type="button"
-                              class="flex h-8 w-8 items-center justify-center rounded-full border text-[11px] font-semibold transition"
-                              [class.border-white]="step() >= item.value"
-                              [class.bg-white]="step() > item.value"
-                              [class.text-primary]="step() > item.value"
-                              [class.bg-white/20]="step() === item.value"
-                              [class.text-white]="step() === item.value"
-                              [class.border-white/50]="step() < item.value"
-                              [class.text-white/60]="step() < item.value"
-                              [class.cursor-pointer]="item.value < step()"
-                              [class.cursor-default]="item.value >= step()"
-                              [disabled]="item.value >= step()"
-                              [attr.aria-current]="item.value === step() ? 'step' : null"
-                              [attr.aria-label]="'Paso ' + item.value + ': ' + item.label"
-                              (click)="goToStep(item.value)"
-                            >
-                              @if (step() > item.value) {
-                                <span class="material-icons-round text-[0.9rem]">check</span>
-                              } @else {
-                                {{ item.value }}
-                              }
-                            </button>
-                            <span
-                              class="max-w-full truncate text-[10px] font-medium"
-                              [class.text-white]="step() >= item.value"
-                              [class.text-white/55]="step() < item.value"
-                            >
-                              {{ item.label }}
-                            </span>
-                          </li>
-                        }
-                      </ol>
+                  <div class="mt-4">
+                    <div class="flex items-center justify-between mb-2">
+                      <span class="text-xs font-semibold uppercase tracking-[0.18em] text-white/80">
+                        Paso {{ step() }} de 4
+                      </span>
+                      <span class="text-xs font-medium text-white/60">{{ step() === 1 ? 'Servicio' : step() === 2 ? 'Horario' : step() === 3 ? 'Datos' : 'Confirmación' }}</span>
+                    </div>
+                    <div class="h-2 w-full rounded-full bg-white/15 overflow-hidden">
+                      <div
+                        class="h-full rounded-full bg-white transition-[width] duration-500 ease-out"
+                        [style.width.%]="stepProgress()"
+                      ></div>
                     </div>
                   </div>
                 </header>
@@ -429,20 +399,6 @@ interface ConfirmedBooking {
 
                       @if (!loading() && !error()) {
                         <div>
-                          <div
-                            class="mb-3 flex items-center justify-between gap-3 rounded-2xl border border-primary/10 bg-primary-fixed px-3 py-2"
-                          >
-                            <div>
-                              <p class="section-label">Horarios disponibles</p>
-                              <p class="text-xs text-primary" aria-live="polite" aria-atomic="true">
-                                Actualización en tiempo real · {{ availableSlotsCount() }} libres /
-                                {{ reservedSlotsCount() }} ocupadas
-                              </p>
-                            </div>
-                            <button class="btn-tertiary btn-sm" type="button" (click)="startPolling()">
-                              Actualizar
-                            </button>
-                          </div>
                           <div class="rounded-2xl border border-outline-variant bg-white p-4">
                             <label class="form-label" for="slotSelect">Elige tu horario</label>
                             @if (reservations().length) {

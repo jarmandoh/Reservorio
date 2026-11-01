@@ -177,9 +177,9 @@ export class AppComponent implements OnInit {
     if (
       url === '/' ||
       url.startsWith('/jh-login') ||
-      url.startsWith('/owner/login') ||
-      url.startsWith('/owner/register') ||
-      url.startsWith('/owner/auth') ||
+      url.startsWith('/propietario/login') ||
+      url.startsWith('/propietario/register') ||
+      url.startsWith('/propietario/auth') ||
       url.startsWith('/customer/login') ||
       url.startsWith('/usuario/auth') ||
       url.startsWith('/customer/verify') ||
@@ -196,7 +196,7 @@ export class AppComponent implements OnInit {
         this.router.navigate(['/'], { replaceUrl: true }).catch(() => {});
         redirected = true;
       }
-    } else if (url.startsWith('/owner')) {
+    } else if (url.startsWith('/propietario')) {
       if (!this.auth.getOwnerToken()) {
         this.router.navigate(['/'], { replaceUrl: true }).catch(() => {});
         redirected = true;

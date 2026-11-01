@@ -773,7 +773,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
 
   goOwnerAuth(): void {
     this.showAccountMenu.set(false);
-    this.router.navigate(['/owner/auth']);
+    this.router.navigate(['/propietario/auth']);
   }
 
   goCreateAccount(): void {
@@ -786,7 +786,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     if (this.customerName()) {
       this.router.navigate(['/customer/history']);
     } else if (this.ownerName()) {
-      this.router.navigate(['/owner/dashboard']);
+      this.router.navigate(['/propietario/dashboard']);
     } else if (this.businessName()) {
       try {
         for (let i = 0; i < sessionStorage.length; i++) {
@@ -802,7 +802,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       } catch {
         // ignore
       }
-      this.router.navigate(['/owner/dashboard']);
+      this.router.navigate(['/propietario/dashboard']);
     }
   }
 }

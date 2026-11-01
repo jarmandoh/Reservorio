@@ -153,7 +153,7 @@ export class OwnerLoginComponent {
       .subscribe({
         next: () => {
           this.loading.set(false);
-          this.router.navigate(['/owner/dashboard']);
+          this.router.navigate(['/propietario/dashboard']);
         },
         error: err => {
           this.loading.set(false);
@@ -193,7 +193,7 @@ export class OwnerLoginComponent {
             this.error.set('Cuenta creada. Confirma tu correo y luego inicia sesión.');
             return;
           } */
-          this.router.navigate(['/owner/dashboard']);
+          this.router.navigate(['/propietario/dashboard']);
         },
         error: err => {
           const message = err instanceof Error ? err.message : 'Credenciales inválidas.';
@@ -204,6 +204,6 @@ export class OwnerLoginComponent {
   }
 
   goRegister(): void {
-    this.router.navigate(['/owner/register']);
+    this.router.navigate(['/propietario/register']);
   }
 }

@@ -29,7 +29,7 @@ export class AuthCallbackComponent implements OnInit {
     this.auth.activateSupabaseSession().subscribe({
       next: role => {
         this.message.set('Acceso correcto. Redirigiendo…');
-        const target = role === 'admin' ? '/admin' : role === 'owner' ? '/owner/dashboard' : '/customer/history';
+        const target = role === 'admin' ? '/admin' : role === 'owner' ? '/propietario/dashboard' : '/customer/history';
         void this.router.navigateByUrl(target);
       },
       error: () => {

@@ -140,6 +140,33 @@ async function main() {
         );
       }
 
+      // Horarios disponibles (solo negocios con agenda): slots cada 30 min de 09:00 a 17:30
+      if (type === 'appointment') {
+        const slots = [];
+        for (let h = 9; h < 18; h++) {
+          for (const m of [0, 30]) {
+            slots.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
+          }
+        }
+        for (const slot of slots) {
+          // ~20% ocupados para variedad
+          const taken = Math.random() < 0.2;
+          await client.query(
+            `INSERT INTO reservations (business_id, franja, disponibilidad, cliente, telefono, servicio, notas)
+             VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+            [
+              id,
+              slot,
+              taken ? 'Reservado' : 'Disponible',
+              taken ? pick(['Ana García', 'Carlos López', 'María Pérez', 'Juan Rodríguez']) : '',
+              taken ? `+57${randInt(300, 320)}${randInt(1000000, 9999999)}` : '',
+              taken ? pick(svcs) : '',
+              '',
+            ]
+          );
+        }
+      }
+
       if (i % 10 === 0) console.log(`insertados ${i}/83`);
     }
 

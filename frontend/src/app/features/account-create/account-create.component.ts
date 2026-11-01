@@ -435,10 +435,10 @@ export class AccountCreateComponent {
             this.loading.set(false);
             if (result.data?.confirmationRequired) {
               this.notice.set('Cuenta de negocio creada. Confirma tu correo para activar el acceso.');
-              setTimeout(() => this.router.navigate(['/owner/auth']), 1800);
+              setTimeout(() => this.router.navigate(['/propietario/auth']), 1800);
               return;
             }
-            this.router.navigate(['/owner/dashboard']);
+            this.router.navigate(['/propietario/dashboard']);
           },
           error: err => {
             this.loading.set(false);
@@ -451,7 +451,7 @@ export class AccountCreateComponent {
   }
 
   goLogin(): void {
-    if (this.accountType() === 'negocio') this.router.navigate(['/owner/auth']);
+    if (this.accountType() === 'negocio') this.router.navigate(['/propietario/auth']);
     else this.router.navigate(['/usuario/auth']);
   }
 }

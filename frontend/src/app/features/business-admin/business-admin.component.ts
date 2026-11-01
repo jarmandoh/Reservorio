@@ -1068,7 +1068,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
     const isOwnerRoute = this.route.snapshot.url.some(seg => seg.path === 'owner');
     if (!this.token) {
       if (isOwnerRoute) {
-        this.router.navigate(['/owner/auth']);
+        this.router.navigate(['/propietario/auth']);
       } else {
         this.router.navigate(['/business', this.negocioId, 'login']);
       }

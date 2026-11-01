@@ -61,7 +61,7 @@ describe('route guards', () => {
     );
 
     expect(result).toBe(false);
-    expect(router.navigate).toHaveBeenCalledWith(['/owner/auth']);
+    expect(router.navigate).toHaveBeenCalledWith(['/propietario/auth']);
   });
 
   it('redirects unauthenticated customers to customer login', () => {

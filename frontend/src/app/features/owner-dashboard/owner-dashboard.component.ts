@@ -50,7 +50,7 @@ type OwnerSection =
               <span class="material-icons-round text-primary text-2xl" aria-hidden="true">storefront</span>
               <span class="font-display font-bold text-lg">MiVeci</span>
             </div>
-            <button class="btn-ghost btn-sm" (click)="mobileMenuOpen.set(false)" aria-label="Cerrar men�">
+            <button class="btn-ghost btn-sm" (click)="mobileMenuOpen.set(false)" aria-label="Cerrar men">
               <span class="material-icons-round text-base" aria-hidden="true">close</span>
             </button>
           </div>
@@ -408,7 +408,7 @@ export class OwnerDashboardComponent implements OnInit {
 
   ngOnInit(): void {
     if (!this.auth.getOwnerToken()) {
-      this.router.navigate(['/owner/auth']);
+      this.router.navigate(['/propietario/auth']);
       return;
     }
 
@@ -477,7 +477,7 @@ export class OwnerDashboardComponent implements OnInit {
 
   openBusiness(business: Business): void {
     if (!business.id) return;
-    this.router.navigate(['/owner/business', business.id]);
+    this.router.navigate(['/propietario/business', business.id]);
   }
 
   saveBusiness(): void {

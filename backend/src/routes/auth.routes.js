@@ -140,7 +140,7 @@ router.post(
   }
 );
 
-/** POST /api/auth/customer/otp/request � solicita un OTP por email/SMS */
+/** POST /api/auth/customer/otp/request  solicita un OTP por email/SMS */
 router.post(
   '/customer/otp/request',
   otpLimiter,
@@ -159,7 +159,7 @@ router.post(
   }
 );
 
-/** POST /api/auth/customer/otp/verify � canjea el OTP por un JWT de cliente */
+/** POST /api/auth/customer/otp/verify  canjea el OTP por un JWT de cliente */
 router.post(
   '/customer/otp/verify',
   otpLimiter,
@@ -182,7 +182,7 @@ router.post(
   }
 );
 
-/** POST /api/auth/customer/magic-link/request � solicita un enlace de acceso por email */
+/** POST /api/auth/customer/magic-link/request  solicita un enlace de acceso por email */
 router.post(
   '/customer/magic-link/request',
   otpLimiter,
@@ -201,7 +201,7 @@ router.post(
   }
 );
 
-/** POST /api/auth/customer/magic-link/verify � canjea el enlace por un JWT de cliente */
+/** POST /api/auth/customer/magic-link/verify  canjea el enlace por un JWT de cliente */
 router.post(
   '/customer/magic-link/verify',
   otpLimiter,
@@ -220,7 +220,7 @@ router.post(
   }
 );
 
-/** POST /api/auth/refresh � reemite un token de sesión dentro de la ventana de gracia */
+/** POST /api/auth/refresh  reemite un token de sesión dentro de la ventana de gracia */
 router.post(
   '/refresh',
   refreshLimiter,

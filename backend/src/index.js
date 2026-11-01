@@ -152,7 +152,7 @@ app.use(
 );
 
 // ── CORS ────────────────────────────────────────────────────────────────────
-const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:4200,http://localhost:3000,http://localhost:85323,http://localhot:54322')
+const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:4200,http://localhost:3000,http://localhost:85323,http://localhot:54322, http://localhost:*')
   .split(',')
   .map(o => o.trim());
 

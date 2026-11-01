@@ -11,7 +11,7 @@ const { tooManyRequests } = require('../middleware/rate-limit');
 
 const router = express.Router();
 
-// ���� Rate limiter específico para OAuth (más estricto) ����������������������������������������
+//  Rate limiter específico para OAuth (más estricto)
 const oauthLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
@@ -28,14 +28,14 @@ const syncLimiter = rateLimit({
   handler: tooManyRequests('Demasiadas sincronizaciones, inténtalo más tarde.'),
 });
 
-// ���� Validación de formatos ����������������������������������������������������������������������������������������������
+//  Validación de formatos
 const SHEET_ID_RE = /^[a-zA-Z0-9_-]{20,60}$/;
 
 function isValidSheetId(id) {
   return typeof id === 'string' && SHEET_ID_RE.test(id);
 }
 
-// ���� Auth middleware (reutiliza lógica de businesses.routes) ������������������������������
+//  Auth middleware (reutiliza lógica de businesses.routes)
 
 function requireAnyAuth(req, res, next) {
   const hdr = req.headers.authorization;
@@ -56,7 +56,7 @@ function canAccessBusiness(req, res) {
   return false;
 }
 
-// �"��"� ROUTES �"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"�
+// "" ROUTES """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
 /**
  * GET /api/google/start/:businessId
@@ -114,7 +114,7 @@ router.get('/callback', oauthLimiter, async (req, res) => {
     // Guardar tokens cifrados
     await gsheets.saveTokens(businessId, tokens, email);
 
-    // Redirigir al frontend � usar el ID de la BD (no del state) para evitar inyección en URL
+    // Redirigir al frontend  usar el ID de la BD (no del state) para evitar inyección en URL
     const safeId = rows[0].id.replace(/[^a-zA-Z0-9_-]/g, '');
     const frontendUrl = (process.env.CORS_ORIGINS || 'http://localhost:4200').split(',')[0].trim();
     res.redirect(`${frontendUrl}/business/${encodeURIComponent(safeId)}/admin?google=linked`);
@@ -228,7 +228,7 @@ router.post('/link-sheet/:businessId', requireAnyAuth, async (req, res) => {
 
 /**
  * POST /api/google/sync/:businessId
- * Sincronización manual: vuelca reservas + servicios de PG �  Google Sheets.
+ * Sincronización manual: vuelca reservas + servicios de PG   Google Sheets.
  */
 router.post('/sync/:businessId', syncLimiter, requireAnyAuth, async (req, res) => {
   if (!canAccessBusiness(req, res)) return;

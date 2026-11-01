@@ -178,7 +178,7 @@ export class OwnerRegisterComponent {
             this.error.set('Cuenta creada. Confirma tu correo y luego inicia sesión.');
             return;
           }
-          this.router.navigate(['/owner/dashboard']);
+          this.router.navigate(['/propietario/dashboard']);
         },
         error: err => {
           const message = err instanceof Error ? err.message : 'No se pudo crear la cuenta.';
@@ -189,6 +189,6 @@ export class OwnerRegisterComponent {
   }
 
   goLogin(): void {
-    this.router.navigate(['/owner/login']);
+    this.router.navigate(['/propietario/login']);
   }
 }

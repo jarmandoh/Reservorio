@@ -1,4 +1,4 @@
-import { Component, DestroyRef, ElementRef, ViewChild, AfterViewInit, computed, signal, inject } from '@angular/core';
+import { Component, DestroyRef, ElementRef, ViewChild, AfterViewInit, OnInit, computed, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -197,7 +197,7 @@ function passwordMatchValidator(group: { get(controlName: string): { value: unkn
     </app-auth-card>
   `,
 })
-export class OwnerAuthComponent implements AfterViewInit {
+export class OwnerAuthComponent implements AfterViewInit, OnInit {
   private fb = inject(FormBuilder);
   private auth = inject(AuthService);
   private router = inject(Router);
@@ -308,6 +308,12 @@ export class OwnerAuthComponent implements AfterViewInit {
     this.mode() === 'login' ? 'Registrarse' : 'Iniciar sesión'
   );
 
+  ngOnInit(): void {
+    if (this.auth.getOwnerToken()) {
+      this.router.navigate(['/propietario/dashboard']);
+    }
+  }
+
   togglePassword(): void {
     this.showPassword.update(v => !v);
   }
@@ -342,7 +348,7 @@ export class OwnerAuthComponent implements AfterViewInit {
         .subscribe({
           next: () => {
             this.loading.set(false);
-            this.router.navigate(['/owner/dashboard']);
+            this.router.navigate(['/propietario/dashboard']);
           },
           error: err => {
             const message = err instanceof Error ? err.message : 'Credenciales inválidas.';
@@ -375,7 +381,7 @@ export class OwnerAuthComponent implements AfterViewInit {
             this.error.set('Cuenta creada. Confirma tu correo y luego inicia sesión.');
             return;
           }
-          this.router.navigate(['/owner/dashboard']);
+          this.router.navigate(['/propietario/dashboard']);
         },
         error: err => {
           const message = err instanceof Error ? err.message : 'No se pudo crear la cuenta.';

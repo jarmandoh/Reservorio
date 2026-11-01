@@ -172,7 +172,7 @@ function getRedirectForExpiry(router: Router, role?: string, businessId?: string
     role === 'customer' ||
     role === 'business-admin' ||
     current.startsWith('/admin') ||
-    current.startsWith('/owner') ||
+    current.startsWith('/propietario') ||
     current.startsWith('/customer') ||
     current.startsWith('/business')
   ) {

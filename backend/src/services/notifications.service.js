@@ -97,7 +97,7 @@ async function createNotification(payload = {}) {
     );
 
     if (customerId) {
-      // Copia externa (email/sms) � fire-and-forget, nunca bloquea ni propaga errores.
+      // Copia externa (email/sms)  fire-and-forget, nunca bloquea ni propaga errores.
       deliverExternalNotification(notification).catch(error => {
         logger.error('[notifications] envío externo falló:', error?.message ?? error);
       });
@@ -149,7 +149,7 @@ async function deliverExternalNotification(notification) {
 
     const businessRef = businessName ? ` en ${businessName}` : '';
     const subject = `${title}${businessRef}`;
-    const body = `Hola ${customer.name},\n\n${message.trim()}${detail}.\n\nPuedes consultar tu historial en ${FRONTEND_URL}/customer/history.\n\n� Reservorio`;
+    const body = `Hola ${customer.name},\n\n${message.trim()}${detail}.\n\nPuedes consultar tu historial en ${FRONTEND_URL}/customer/history.\n\n Reservorio`;
 
     const outcome = { email: 'skipped', sms: 'skipped' };
     if (customer.email) {
@@ -163,7 +163,7 @@ async function deliverExternalNotification(notification) {
       outcome.sms = smsResult.ok ? 'sent' : 'failed';
     }
 
-    logger.info(`[notifications] externo ${type} �  email:${outcome.email} sms:${outcome.sms}`);
+    logger.info(`[notifications] externo ${type}   email:${outcome.email} sms:${outcome.sms}`);
   } catch (error) {
     logger.error('[notifications] deliverExternalNotification ignorado:', error.message);
   }

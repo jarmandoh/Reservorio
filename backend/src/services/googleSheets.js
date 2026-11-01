@@ -21,7 +21,7 @@ const SCOPES = [
   'https://www.googleapis.com/auth/userinfo.email',
 ];
 
-// ���� Helpers ����������������������������������������������������������������������������������������������������������������������������������
+//  Helpers
 
 /**
  * Crea un OAuth2Client base (sin tokens).
@@ -32,7 +32,7 @@ function createOAuth2Client() {
 
 /**
  * Genera la URL de consentimiento OAuth.
- * @param {string} state � JWT firmado con businessId (protección CSRF)
+ * @param {string} state  JWT firmado con businessId (protección CSRF)
  */
 function getAuthUrl(state) {
   const client = createOAuth2Client();
@@ -145,7 +145,7 @@ async function disconnect(businessId) {
       const client = createOAuth2Client();
       await client.revokeToken(token);
     } catch (_) {
-      /* token ya expirado/revocado � ignorar */
+      /* token ya expirado/revocado  ignorar */
     }
   }
   await db.query(
@@ -205,7 +205,7 @@ async function createTemplateSheet(businessId, businessName) {
 
   const res = await sheets.spreadsheets.create({
     requestBody: {
-      properties: { title: `${businessName} � Reservorio` },
+      properties: { title: `${businessName}  Reservorio` },
       sheets: [
         {
           properties: { title: 'Reservas' },
