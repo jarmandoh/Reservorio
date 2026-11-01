@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS businesses (
   name        TEXT NOT NULL,
   category    TEXT NOT NULL DEFAULT '',
   business_type TEXT NOT NULL DEFAULT 'appointment'
-    CHECK (business_type IN ('appointment', 'onsite_service')),
+    CHECK (business_type IN ('appointment', 'onsite_service', 'no_appointments')),
   profession  TEXT,
   description TEXT NOT NULL DEFAULT '',
   location    TEXT NOT NULL DEFAULT '',

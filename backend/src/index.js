@@ -208,6 +208,7 @@ const limiter = rateLimit({
   store: redisStore,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: req => req.method === 'GET' && /^\/businesses(\/|$)/.test(req.path || ''),
   handler: tooManyRequests('Demasiadas peticiones, inténtalo más tarde.'),
 });
 app.use('/api/', limiter);

@@ -71,7 +71,7 @@ type negocioTab = 'reservas' | 'servicios' | 'productos' | 'perfil' | 'google';
 
         <!-- Tab bar -->
         <div class="max-w-4xl mx-auto px-4 flex gap-0.5 sm:gap-1 overflow-x-auto pb-0.5">
-          @for (t of tabs; track t.id) {
+          @for (t of tabs(); track t.id) {
             <button
               class="flex items-center gap-1.5 px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-medium rounded-t-lg transition
                          whitespace-nowrap border-b-2 min-h-[44px] sm:min-h-[auto]"
@@ -873,13 +873,20 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
   private readonly destroyRef = inject(DestroyRef);
   readonly formatCurrency = formatCurrency;
 
-  readonly tabs: { id: negocioTab; label: string; icon: string }[] = [
-    { id: 'reservas', label: 'Reservas', icon: 'event_note' },
-    { id: 'servicios', label: 'Servicios', icon: 'spa' },
-    { id: 'productos', label: 'Productos', icon: 'inventory_2' },
-    { id: 'perfil', label: 'Perfil', icon: 'storefront' },
-    { id: 'google', label: 'Sheets', icon: 'table_chart' },
-  ];
+  readonly tabs = computed(() => {
+    const all: { id: negocioTab; label: string; icon: string }[] = [
+      { id: 'servicios', label: 'Servicios', icon: 'spa' },
+      { id: 'productos', label: 'Productos', icon: 'inventory_2' },
+      { id: 'perfil', label: 'Perfil', icon: 'storefront' },
+      { id: 'google', label: 'Sheets', icon: 'table_chart' },
+    ];
+    const b = this.business();
+    const hasAgenda = !b || b.businessType === 'appointment';
+    if (hasAgenda) {
+      all.unshift({ id: 'reservas', label: 'Agendamiento', icon: 'event_note' });
+    }
+    return all;
+  });
 
   readonly tab = signal<negocioTab>('reservas');
   readonly business = signal<Business | null>(null);
@@ -1108,6 +1115,9 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
       .subscribe({
         next: found => {
           this.business.set(found);
+          if (found && found.businessType !== 'appointment' && this.tab() === 'reservas') {
+            this.tab.set('servicios');
+          }
         },
         error: () => {
           this.toast.error('No se pudo cargar el negocio.');

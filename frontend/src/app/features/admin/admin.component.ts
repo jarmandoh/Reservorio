@@ -171,7 +171,7 @@ export class AdminComponent implements OnInit {
   readonly businessForm = this.fb.group({
     name: ['', [Validators.required, Validators.minLength(2)]],
     category: ['', Validators.required],
-    businessType: ['appointment' as 'appointment' | 'onsite_service'],
+    businessType: ['appointment' as 'appointment' | 'onsite_service' | 'no_appointments'],
     profession: [''],
     description: [''],
     location: [''],

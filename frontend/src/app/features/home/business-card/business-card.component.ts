@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input, AfterViewInit, ElementRef, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { Business } from '../../../core/models/business.model';
@@ -10,6 +10,7 @@ import { Business } from '../../../core/models/business.model';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <a
+      #card
       class="business-card group block overflow-hidden rounded-2xl border border-outline-variant/25 bg-surface-lowest shadow-card transition duration-300 hover:-translate-y-1 hover:shadow-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
       [routerLink]="['/business', business.id]"
       [attr.aria-label]="'Ver ' + business.name + ', ' + business.category + ', en ' + business.location"
@@ -162,8 +163,16 @@ import { Business } from '../../../core/models/business.model';
       }
       .business-card {
         min-height: 100%;
-        animation: card-enter 0.52s cubic-bezier(0.2, 0.7, 0.25, 1) both;
-        animation-delay: calc(min(var(--card-index, 0), 8) * 42ms);
+        opacity: 0;
+        transform: translateY(24px) scale(0.985);
+        transition:
+          opacity 0.6s cubic-bezier(0.2, 0.7, 0.25, 1),
+          transform 0.6s cubic-bezier(0.2, 0.7, 0.25, 1);
+        transition-delay: calc(min(var(--card-index, 0), 8) * 42ms);
+      }
+      .business-card.card-visible {
+        opacity: 1;
+        transform: translateY(0) scale(1);
       }
       .card-cover {
         isolation: isolate;
@@ -311,7 +320,34 @@ import { Business } from '../../../core/models/business.model';
     `,
   ],
 })
-export class BusinessCardComponent {
+export class BusinessCardComponent implements AfterViewInit {
   @Input({ required: true }) business!: Business;
   @Input() animationIndex = 0;
+
+  @ViewChild('card', { static: true }) private cardRef!: ElementRef<HTMLElement>;
+
+  ngAfterViewInit(): void {
+    const el = this.cardRef?.nativeElement;
+    if (!el) return;
+    if (typeof window === 'undefined' || !('IntersectionObserver' in window)) {
+      el.classList.add('card-visible');
+      return;
+    }
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      el.classList.add('card-visible');
+      return;
+    }
+    const observer = new IntersectionObserver(
+      entries => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            el.classList.add('card-visible');
+            observer.unobserve(el);
+          }
+        }
+      },
+      { threshold: 0.05, rootMargin: '0px 0px -40px 0px' }
+    );
+    observer.observe(el);
+  }
 }

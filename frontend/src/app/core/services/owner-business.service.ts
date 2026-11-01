@@ -8,7 +8,7 @@ import { BusinessService } from './business.service';
 export interface OwnerBusinessFormValues {
   name: string | null;
   category: string | null;
-  businessType: 'appointment' | 'onsite_service' | null;
+  businessType: 'appointment' | 'onsite_service' | 'no_appointments' | null;
   profession: string | null;
   description: string | null;
   location: string | null;

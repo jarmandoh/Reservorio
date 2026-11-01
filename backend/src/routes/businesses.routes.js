@@ -31,7 +31,7 @@ const pinLimiter = rateLimit({
 const businessCreateValidators = [
   body('name').trim().notEmpty().withMessage('name requerido'),
   body('category').trim().notEmpty().withMessage('category requerido'),
-  body('businessType').optional().isIn(['appointment', 'onsite_service']).withMessage('businessType inválido'),
+  body('businessType').optional().isIn(['appointment', 'onsite_service', 'no_appointments']).withMessage('businessType inválido'),
   body('profession').optional().trim().isLength({ max: 100 }).withMessage('profession demasiado larga'),
   body('profession').custom((value, { req }) => {
     if (req.body?.businessType === 'onsite_service' && !String(value ?? '').trim()) {
@@ -48,7 +48,7 @@ const businessCreateValidators = [
 
 const businessUpdateValidators = [
   param('id').trim().notEmpty().withMessage('id requerido'),
-  body('businessType').optional().isIn(['appointment', 'onsite_service']).withMessage('businessType inválido'),
+  body('businessType').optional().isIn(['appointment', 'onsite_service', 'no_appointments']).withMessage('businessType inválido'),
   body('profession').optional().trim().isLength({ max: 100 }).withMessage('profession demasiado larga'),
   body('profession').custom((value, { req }) => {
     if (req.body?.businessType === 'onsite_service' && !String(value ?? '').trim()) {

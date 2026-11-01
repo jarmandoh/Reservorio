@@ -39,6 +39,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
             >
               <option value="appointment">Negocio con agenda</option>
               <option value="onsite_service">Prestador de servicio presencial</option>
+              <option value="no_appointments">Negocio sin agenda</option>
             </select>
           </div>
         </div>

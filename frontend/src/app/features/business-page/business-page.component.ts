@@ -37,10 +37,6 @@ import { ReservationManagerComponent } from './reservation-manager.component';
           <a routerLink="/">Volver al inicio</a>
         </section>
       } @else if (business(); as store) {
-        <nav class="breadcrumbs" aria-label="Migas de pan">
-          <a routerLink="/">MiVeci</a><span aria-hidden="true">›</span
-          ><span aria-current="page">{{ store.name }}</span>
-        </nav>
         <header class="business-nav" [class.is-scrolled]="headerScrolled()">
           <a class="back-link" routerLink="/" aria-label="Volver al inicio"
             ><span class="material-icons-round">arrow_back</span><span>Inicio</span></a
@@ -61,6 +57,7 @@ import { ReservationManagerComponent } from './reservation-manager.component';
         </header>
 
         @if (qrOpen()) {
+          <div class="qr-backdrop" (click)="qrOpen.set(false)" aria-hidden="true"></div>
           <aside class="qr-card" aria-labelledby="qr-card-title">
             <div class="qr-card-topline">
               <div>
@@ -82,7 +79,7 @@ import { ReservationManagerComponent } from './reservation-manager.component';
                   (error)="qrImageError.set(true)"
                 />
                 <div class="qr-center-logo" aria-hidden="true">
-                  <img src="assets/imgs/reservorio-logo.jpg" alt="" width="48" height="48" />
+                  <img src="assets/imgs/logo-capi.png" alt="" width="48" height="48" />
                 </div>
               }
               @if (qrImageError()) {
@@ -391,14 +388,23 @@ import { ReservationManagerComponent } from './reservation-manager.component';
         background: white;
         object-fit: cover;
       }
+      .qr-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 24;
+        background: rgba(15, 23, 42, 0.35);
+        backdrop-filter: blur(2px);
+        animation: qr-fade 240ms ease both;
+      }
       .qr-card,
       .qr-launcher {
         position: fixed;
         z-index: 25;
       }
       .qr-card {
-        top: 6.25rem;
+        top: 50%;
         right: 1.25rem;
+        transform: translateY(-50%);
         width: min(18rem, calc(100vw - 2rem));
         padding: 1rem;
         border: 1px solid rgba(255, 255, 255, 0.65);
@@ -406,7 +412,7 @@ import { ReservationManagerComponent } from './reservation-manager.component';
         background: color-mix(in srgb, var(--business-surface) 94%, transparent);
         box-shadow: 0 22px 60px rgba(18, 32, 51, 0.2);
         backdrop-filter: blur(20px) saturate(140%);
-        animation: qr-arrive 420ms cubic-bezier(0.2, 0.75, 0.25, 1) both;
+        animation: qr-slide-in 420ms cubic-bezier(0.2, 0.75, 0.25, 1) both;
       }
       .qr-card-topline {
         display: flex;
@@ -548,25 +554,31 @@ import { ReservationManagerComponent } from './reservation-manager.component';
         text-align: center;
       }
       .qr-launcher {
-        top: 7rem;
-        right: 1.25rem;
+        top: 50%;
+        right: 0;
+        transform: translateY(-50%);
         display: inline-flex;
         min-width: 3.25rem;
-        min-height: 3.25rem;
+        min-height: 4.5rem;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 0.05rem;
+        gap: 0.25rem;
         border: 1px solid rgba(255, 255, 255, 0.75);
-        border-radius: 1rem;
+        border-right: none;
+        border-radius: 0.75rem 0 0 0.75rem;
         color: white;
         background: var(--color-primary, #005bbf);
-        box-shadow: 0 12px 30px rgba(18, 32, 51, 0.22);
+        box-shadow: -4px 0 16px rgba(18, 32, 51, 0.18);
         font: inherit;
-        font-size: 0.55rem;
+        font-size: 0.6rem;
         font-weight: 800;
+        letter-spacing: 0.05em;
         cursor: pointer;
-        animation: qr-arrive 420ms cubic-bezier(0.2, 0.75, 0.25, 1) both;
+        animation: qr-slide-in 420ms cubic-bezier(0.2, 0.75, 0.25, 1) both;
+        transition:
+          transform 180ms ease,
+          box-shadow 180ms ease;
       }
       .qr-launcher:hover,
       .qr-launcher:focus-visible {
@@ -584,10 +596,10 @@ import { ReservationManagerComponent } from './reservation-manager.component';
       .business-hero {
         position: relative;
         display: flex;
-        min-height: min(660px, 88vh);
+        min-height: min(480px, 60vh);
         align-items: center;
         overflow: hidden;
-        padding: 7rem max(1.25rem, calc((100vw - 1160px) / 2)) 5rem;
+        padding: 5rem max(1.25rem, calc((100vw - 1160px) / 2)) 3rem;
         color: white;
         background-position: center;
         background-size: cover;
@@ -937,20 +949,28 @@ import { ReservationManagerComponent } from './reservation-manager.component';
           transform: translateY(0);
         }
       }
-      @keyframes qr-arrive {
+      @keyframes qr-slide-in {
         from {
           opacity: 0;
-          transform: translateX(1rem);
+          transform: translateX(100%);
         }
         to {
           opacity: 1;
           transform: translateX(0);
         }
       }
+      @keyframes qr-fade {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
       @media (max-width: 760px) {
         .business-hero {
-          min-height: 600px;
-          min-height: min(650px, 88svh);
+          min-height: 420px;
+          min-height: min(460px, 70svh);
         }
         .service-list {
           grid-template-columns: minmax(0, 1fr);
@@ -984,6 +1004,9 @@ import { ReservationManagerComponent } from './reservation-manager.component';
           top: auto;
           right: 0.75rem;
           bottom: 0.75rem;
+          transform: none;
+          border-radius: 0.75rem;
+          min-height: 3.25rem;
         }
         .business-brand {
           font-size: 0.78rem !important;
@@ -997,8 +1020,8 @@ import { ReservationManagerComponent } from './reservation-manager.component';
           font-size: 1.2rem !important;
         }
         .business-hero {
-          min-height: 620px;
-          padding-top: 6.5rem;
+          min-height: 420px;
+          padding-top: 5rem;
         }
         .hero-shade {
           background:
@@ -1044,7 +1067,7 @@ export class BusinessPageComponent implements OnInit {
   readonly reservationOpen = signal(false);
   readonly selectedService = signal('');
   readonly headerScrolled = signal(false);
-  readonly qrOpen = signal(true);
+  readonly qrOpen = signal(false);
   readonly qrImageError = signal(false);
   readonly qrUpgradeNotice = signal(false);
   readonly bookingEnabled = computed(() => this.business()?.businessType === 'appointment');
