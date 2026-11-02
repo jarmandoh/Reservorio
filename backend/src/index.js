@@ -53,6 +53,7 @@ const ratingsRoutes = require('./routes/ratings.routes');
 const adminRoutes = require('./routes/admin.routes');
 const analyticsRoutes = require('./routes/analytics.routes');
 const realtimeRoutes = require('./routes/realtime.routes');
+const privacyRoutes = require('./routes/privacy.routes');
 const businessesService = require('./services/businesses.service');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
 
@@ -137,6 +138,27 @@ if (String(trustProxy) !== '0') {
 app.use(
   helmet({
     crossOriginResourcePolicy: { policy: 'cross-origin' },
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+        fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
+        imgSrc: ["'self'", 'data:', 'https:'],
+        connectSrc: ["'self'", 'https://*.supabase.co', 'wss://*.supabase.co'],
+        frameSrc: ["'none'"],
+        objectSrc: ["'none'"],
+        baseUri: ["'self'"],
+        formAction: ["'self'"],
+      },
+    },
+    hsts: { maxAge: 31536000, includeSubDomains: true, preload: true },
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+    permissionsPolicy: {
+      camera: [],
+      microphone: [],
+      geolocation: [],
+    },
   })
 );
 
@@ -284,6 +306,7 @@ app.use('/api/tags', tagsRoutes);
 app.use('/api/ux-tips', uxRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/realtime', realtimeRoutes);
+app.use('/api/privacy', privacyRoutes);
 
 function escapeXml(value) {
   return String(value)

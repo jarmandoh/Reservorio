@@ -8,6 +8,7 @@ const authService = require('../services/auth.service');
 const customerAuthService = require('../services/customer-auth.service');
 const logger = require('../logger');
 const { tooManyRequests } = require('../middleware/rate-limit');
+const { audit } = require('../middleware/audit');
 
 const router = express.Router();
 
@@ -54,7 +55,12 @@ router.post(
   authLimiter,
   body('name').trim().notEmpty().withMessage('name requerido'),
   body('email').trim().isEmail().withMessage('email inválido'),
-  body('password').trim().isLength({ min: 6 }).withMessage('password requiere al menos 6 caracteres'),
+  body('password')
+    .trim()
+    .isLength({ min: 8, max: 128 })
+    .withMessage('password requiere al menos 8 caracteres')
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/)
+    .withMessage('password debe incluir mayúscula, minúscula, número y símbolo'),
   handleValidation,
   async (req, res) => {
     try {
@@ -63,11 +69,13 @@ router.post(
         email: req.body.email,
         password: req.body.password,
       });
+      audit('auth.owner.register', { email: req.body.email, ok: result.ok, status: result.status, ip: req.ip });
       return res
         .status(result.status)
         .json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
     } catch (error) {
       logger.error('Error en registro de dueño:', error);
+      audit('auth.owner.register.error', { email: req.body.email, ip: req.ip });
       return res.status(500).json({ ok: false, message: 'Server error' });
     }
   }
@@ -86,11 +94,13 @@ router.post(
         email: req.body.email,
         password: req.body.password,
       });
+      audit('auth.owner.login', { email: req.body.email, ok: result.ok, status: result.status, ip: req.ip });
       return res
         .status(result.status)
         .json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
     } catch (error) {
       logger.error('Error en login de dueño:', error);
+      audit('auth.owner.login.error', { email: req.body.email, ip: req.ip });
       return res.status(500).json({ ok: false, message: 'Server error' });
     }
   }
