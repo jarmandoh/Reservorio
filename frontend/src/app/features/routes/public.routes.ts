@@ -10,7 +10,7 @@ export const publicRoutes: Routes = [
     loadComponent: () => import('../booking/booking.component').then(m => m.BookingComponent),
   },
   {
-    path: 'business/:businessId',
+    path: 'negocio/:businessId',
     pathMatch: 'full',
     loadComponent: () => import('../business-page/business-page.component').then(m => m.BusinessPageComponent),
   },

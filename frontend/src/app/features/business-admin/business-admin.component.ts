@@ -1070,7 +1070,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
       if (isOwnerRoute) {
         this.router.navigate(['/propietario/auth']);
       } else {
-        this.router.navigate(['/business', this.negocioId, 'login']);
+        this.router.navigate(['/negocio', this.negocioId, 'login']);
       }
       return;
     }
@@ -1726,7 +1726,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
 
   logout(): void {
     this.auth.clearBusinessToken(this.negocioId);
-    this.router.navigate(['/business', this.negocioId, 'login']);
+    this.router.navigate(['/negocio', this.negocioId, 'login']);
   }
 
   getVal(e: Event): string {

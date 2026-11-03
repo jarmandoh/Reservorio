@@ -13,6 +13,6 @@ export const businessGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
   if (auth.isBusinessUnlocked(businessId)) return true;
 
   if (purged.length > 0) router.navigate(['/']);
-  else router.navigate(['/business', businessId, 'login']);
+  else router.navigate(['/negocio', businessId, 'login']);
   return false;
 };

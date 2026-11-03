@@ -174,7 +174,7 @@ function getRedirectForExpiry(router: Router, role?: string, businessId?: string
     current.startsWith('/admin') ||
     current.startsWith('/propietario') ||
     current.startsWith('/customer') ||
-    current.startsWith('/business')
+    current.startsWith('/negocio')
   ) {
     return ['/'];
   }

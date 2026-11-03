@@ -23,7 +23,7 @@ export const ownerRoutes: Routes = [
     canMatch: [ownerGuard],
   },
   {
-    path: 'propietario/business/:businessId',
+    path: 'propietario/negocio/:businessId',
     loadComponent: () => import('../business-admin/business-admin.component').then(m => m.BusinessAdminComponent),
     canActivate: [ownerGuard],
   },

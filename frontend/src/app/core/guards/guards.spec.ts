@@ -80,7 +80,7 @@ describe('route guards', () => {
     const result = TestBed.runInInjectionContext(() => businessGuard(route, {} as RouterStateSnapshot));
 
     expect(result).toBe(false);
-    expect(router.navigate).toHaveBeenCalledWith(['/business', 'business-7', 'login']);
+    expect(router.navigate).toHaveBeenCalledWith(['/negocio', 'business-7', 'login']);
   });
 
   it('returns to home when an invalid session token was purged', () => {

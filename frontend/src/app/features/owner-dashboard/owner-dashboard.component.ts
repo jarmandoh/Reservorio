@@ -477,7 +477,7 @@ export class OwnerDashboardComponent implements OnInit {
 
   openBusiness(business: Business): void {
     if (!business.id) return;
-    this.router.navigate(['/propietario/business', business.id]);
+    this.router.navigate(['/propietario/negocio', business.id]);
   }
 
   saveBusiness(): void {

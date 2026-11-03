@@ -794,7 +794,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
           if (k?.startsWith('negocio_jwt_')) {
             const bid = k.replace('negocio_jwt_', '');
             if (this.auth.isBusinessUnlocked(bid)) {
-              this.router.navigate(['/business', bid, 'admin']);
+              this.router.navigate(['/negocio', bid, 'admin']);
               return;
             }
           }

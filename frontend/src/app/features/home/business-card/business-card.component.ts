@@ -12,7 +12,7 @@ import { Business } from '../../../core/models/business.model';
     <a
       #card
       class="business-card group block overflow-hidden rounded-2xl border border-outline-variant/25 bg-surface-lowest shadow-card transition duration-300 hover:-translate-y-1 hover:shadow-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-      [routerLink]="['/business', business.id]"
+      [routerLink]="['/negocio', business.id]"
       [attr.aria-label]="'Ver ' + business.name + ', ' + business.category + ', en ' + business.location"
       [style.--card-index]="animationIndex"
     >

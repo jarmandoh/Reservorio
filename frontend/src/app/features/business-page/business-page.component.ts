@@ -1075,7 +1075,7 @@ export class BusinessPageComponent implements OnInit {
     const id = this.business()?.id;
     if (!id) return '';
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
-    return `${origin}/business/${encodeURIComponent(id)}`;
+    return `${origin}/negocio/${encodeURIComponent(id)}`;
   });
   readonly qrImageUrl = computed(() => {
     const payload = this.qrPayload();

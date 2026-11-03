@@ -183,7 +183,7 @@ export class AppComponent implements OnInit {
       url.startsWith('/customer/login') ||
       url.startsWith('/usuario/auth') ||
       url.startsWith('/customer/verify') ||
-      /\/business\/[^\/]+\/login/.test(url)
+      /\/negocio\/[^\/]+\/login/.test(url)
     ) {
       return;
     }
@@ -206,8 +206,8 @@ export class AppComponent implements OnInit {
         this.router.navigate(['/'], { replaceUrl: true }).catch(() => {});
         redirected = true;
       }
-    } else if (url.startsWith('/business/')) {
-      const m = url.match(/\/business\/([^\/]+)/);
+    } else if (url.startsWith('/negocio/')) {
+      const m = url.match(/\/negocio\/([^\/]+)/);
       const bid = m?.[1];
       if (bid && !this.auth.getBusinessToken(bid)) {
         this.router.navigate(['/'], { replaceUrl: true }).catch(() => {});

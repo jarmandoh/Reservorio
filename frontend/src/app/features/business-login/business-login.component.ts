@@ -123,7 +123,7 @@ export class BusinessLoginComponent implements OnInit {
 
     // If already unlocked, redirect directly
     if (this.auth.isBusinessUnlocked(id)) {
-      this.router.navigate(['/business', id, 'admin']);
+      this.router.navigate(['/negocio', id, 'admin']);
       return;
     }
 
@@ -153,7 +153,7 @@ export class BusinessLoginComponent implements OnInit {
       .subscribe({
         next: () => {
           this.loading.set(false);
-          this.router.navigate(['/business', id, 'admin']);
+          this.router.navigate(['/negocio', id, 'admin']);
         },
         error: err => {
           const message = err instanceof Error ? err.message : 'PIN incorrecto. Inténtalo de nuevo.';

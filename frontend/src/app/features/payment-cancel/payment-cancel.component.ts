@@ -38,7 +38,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 
         <div class="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
           <a
-            [routerLink]="providerId ? ['/business', providerId, 'admin'] : '/'"
+            [routerLink]="providerId ? ['/negocio', providerId, 'admin'] : '/'"
             [queryParams]="providerId ? { bookingId: bookingId, paymentStatus: 'cancelled' } : null"
             class="btn-primary"
           >
