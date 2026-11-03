@@ -57,97 +57,105 @@ import { ReservationManagerComponent } from './reservation-manager.component';
           <a class="nav-contact" href="#contacto" (click)="scrollToSection($event, 'contacto')">Contacto</a>
         </header>
 
-        @if (qrOpen()) {
-          <div class="qr-backdrop" (click)="qrOpen.set(false)" aria-hidden="true"></div>
-          <aside class="qr-card" aria-labelledby="qr-card-title">
-            <div class="qr-card-topline">
-              <div>
-                <p class="qr-eyebrow">COMPARTE ESTE NEGOCIO</p>
-                <h2 id="qr-card-title">Su código QR</h2>
-              </div>
-              <button type="button" class="qr-close" aria-label="Ocultar código QR" (click)="qrOpen.set(false)">
-                <span class="material-icons-round">close</span>
+        <div
+          class="qr-backdrop"
+          [class.qr-backdrop-open]="qrOpen()"
+          (click)="qrOpen.set(false)"
+          aria-hidden="true"
+        ></div>
+        <aside class="qr-card" [class.qr-card-open]="qrOpen()" aria-labelledby="qr-card-title">
+          <div class="qr-card-topline">
+            <div>
+              <p class="qr-eyebrow">COMPARTE ESTE NEGOCIO</p>
+              <h2 id="qr-card-title">Su código QR</h2>
+            </div>
+            <button type="button" class="qr-close" aria-label="Ocultar código QR" (click)="qrOpen.set(false)">
+              <span class="material-icons-round">close</span>
+            </button>
+          </div>
+          <div class="qr-share">
+            <p class="qr-share-label">Compartir</p>
+            <div class="qr-share-buttons">
+              <button type="button" class="qr-share-btn" (click)="shareNative()" aria-label="Compartir">
+                <span class="material-icons-round">share</span>
+              </button>
+              <a
+                class="qr-share-btn"
+                [href]="shareWhatsAppUrl()"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Compartir en WhatsApp"
+              >
+                <span class="material-icons-round">chat</span>
+              </a>
+              <a
+                class="qr-share-btn"
+                [href]="shareFacebookUrl()"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Compartir en Facebook"
+              >
+                <span class="material-icons-round">facebook</span>
+              </a>
+              <a
+                class="qr-share-btn"
+                [href]="shareTwitterUrl()"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Compartir en X"
+              >
+                <span class="material-icons-round">alternate_email</span>
+              </a>
+              <button type="button" class="qr-share-btn" (click)="copyLink()" aria-label="Copiar enlace">
+                <span class="material-icons-round">{{ copied() ? 'check' : 'link' }}</span>
               </button>
             </div>
-            <div class="qr-share">
-              <p class="qr-share-label">Compartir</p>
-              <div class="qr-share-buttons">
-                <button type="button" class="qr-share-btn" (click)="shareNative()" aria-label="Compartir">
-                  <span class="material-icons-round">share</span>
-                </button>
-                <a
-                  class="qr-share-btn"
-                  [href]="shareWhatsAppUrl()"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="Compartir en WhatsApp"
-                >
-                  <span class="material-icons-round">chat</span>
-                </a>
-                <a
-                  class="qr-share-btn"
-                  [href]="shareFacebookUrl()"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="Compartir en Facebook"
-                >
-                  <span class="material-icons-round">facebook</span>
-                </a>
-                <a
-                  class="qr-share-btn"
-                  [href]="shareTwitterUrl()"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="Compartir en X"
-                >
-                  <span class="material-icons-round">alternate_email</span>
-                </a>
-                <button type="button" class="qr-share-btn" (click)="copyLink()" aria-label="Copiar enlace">
-                  <span class="material-icons-round">{{ copied() ? 'check' : 'link' }}</span>
-                </button>
-              </div>
-              @if (copied()) {
-                <p class="qr-copied" role="status">Enlace copiado</p>
-              }
-            </div>
-            <div class="qr-code-shell">
-              @if (qrImageUrl(); as qrUrl) {
-                <img
-                  class="qr-image"
-                  [src]="qrUrl"
-                  [alt]="'Código QR para visitar ' + store.name"
-                  width="360"
-                  height="360"
-                  (error)="qrImageError.set(true)"
-                />
-                <div class="qr-center-logo" aria-hidden="true">
-                  <img src="assets/imgs/logo-capi.png" alt="" width="48" height="48" />
-                </div>
-              }
-              @if (qrImageError()) {
-                <p class="qr-error" role="status">No pudimos cargar el código QR. Intenta actualizar la página.</p>
-              }
-            </div>
-            <p class="qr-help">Escanéalo para abrir directamente la página de {{ store.name }}.</p>
-            @if (isOwner()) {
-              <button type="button" class="qr-upgrade" (click)="requestQrBranding()">
-                <span class="material-icons-round">workspace_premium</span>
-                <span>Personalizar con el logo del negocio</span>
-                <span class="qr-upgrade-badge">Plan de marca</span>
-              </button>
-              @if (qrUpgradeNotice()) {
-                <p class="qr-upgrade-notice" role="status">
-                  La personalización con el logo del negocio se habilita al contratar el plan de marca.
-                </p>
-              }
+            @if (copied()) {
+              <p class="qr-copied" role="status">Enlace copiado</p>
             }
-          </aside>
-        } @else {
-          <button type="button" class="qr-launcher" aria-label="Mostrar código QR" (click)="qrOpen.set(true)">
-            <span class="material-icons-round">qr_code_2</span>
-            <span>QR</span>
-          </button>
-        }
+          </div>
+          <div class="qr-code-shell">
+            @if (qrImageUrl(); as qrUrl) {
+              <img
+                class="qr-image"
+                [src]="qrUrl"
+                [alt]="'Código QR para visitar ' + store.name"
+                width="360"
+                height="360"
+                (error)="qrImageError.set(true)"
+              />
+              <div class="qr-center-logo" aria-hidden="true">
+                <img src="assets/imgs/logo-capi.png" alt="" width="48" height="48" />
+              </div>
+            }
+            @if (qrImageError()) {
+              <p class="qr-error" role="status">No pudimos cargar el código QR. Intenta actualizar la página.</p>
+            }
+          </div>
+          <p class="qr-help">Escanéalo para abrir directamente la página de {{ store.name }}.</p>
+          @if (isOwner()) {
+            <button type="button" class="qr-upgrade" (click)="requestQrBranding()">
+              <span class="material-icons-round">workspace_premium</span>
+              <span>Personalizar con el logo del negocio</span>
+              <span class="qr-upgrade-badge">Plan de marca</span>
+            </button>
+            @if (qrUpgradeNotice()) {
+              <p class="qr-upgrade-notice" role="status">
+                La personalización con el logo del negocio se habilita al contratar el plan de marca.
+              </p>
+            }
+          }
+        </aside>
+        <button
+          type="button"
+          class="qr-launcher"
+          [class.qr-launcher-hidden]="qrOpen()"
+          aria-label="Mostrar código QR"
+          (click)="qrOpen.set(true)"
+        >
+          <span class="material-icons-round">qr_code_2</span>
+          <span>QR</span>
+        </button>
 
         <section
           id="inicio"
@@ -437,7 +445,13 @@ import { ReservationManagerComponent } from './reservation-manager.component';
         z-index: 60;
         background: rgba(15, 23, 42, 0.35);
         backdrop-filter: blur(2px);
-        animation: qr-fade 240ms ease both;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 280ms ease;
+      }
+      .qr-backdrop.qr-backdrop-open {
+        opacity: 1;
+        pointer-events: auto;
       }
       .qr-card,
       .qr-launcher {
@@ -447,7 +461,9 @@ import { ReservationManagerComponent } from './reservation-manager.component';
       .qr-card {
         top: 50%;
         right: 1.25rem;
-        transform: translateY(-50%);
+        transform: translate(100%, -50%);
+        opacity: 0;
+        pointer-events: none;
         width: min(18rem, calc(100vw - 2rem));
         padding: 1rem;
         border: 1px solid rgba(255, 255, 255, 0.65);
@@ -455,7 +471,14 @@ import { ReservationManagerComponent } from './reservation-manager.component';
         background: color-mix(in srgb, var(--business-surface) 94%, transparent);
         box-shadow: 0 22px 60px rgba(18, 32, 51, 0.2);
         backdrop-filter: blur(20px) saturate(140%);
-        animation: qr-slide-in 420ms cubic-bezier(0.2, 0.75, 0.25, 1) both;
+        transition:
+          transform 380ms cubic-bezier(0.2, 0.75, 0.25, 1),
+          opacity 280ms ease;
+      }
+      .qr-card.qr-card-open {
+        transform: translate(0, -50%);
+        opacity: 1;
+        pointer-events: auto;
       }
       .qr-card-topline {
         display: flex;
@@ -643,7 +666,7 @@ import { ReservationManagerComponent } from './reservation-manager.component';
       .qr-launcher {
         top: 50%;
         right: 0;
-        transform: translateY(-50%);
+        transform: translateY(-50%) translateX(0);
         display: inline-flex;
         min-width: 3.25rem;
         min-height: 4.5rem;
@@ -662,12 +685,16 @@ import { ReservationManagerComponent } from './reservation-manager.component';
         font-weight: 800;
         letter-spacing: 0.05em;
         cursor: pointer;
-        animation: qr-slide-in 420ms cubic-bezier(0.2, 0.75, 0.25, 1) both;
+        opacity: 1;
         transition:
-          transform 180ms ease,
-          box-shadow 180ms ease;
+          transform 320ms cubic-bezier(0.2, 0.75, 0.25, 1),
+          opacity 240ms ease;
       }
-      .qr-launcher:hover,
+      .qr-launcher.qr-launcher-hidden {
+        transform: translateY(-50%) translateX(100%);
+        opacity: 0;
+        pointer-events: none;
+      }
       .qr-launcher:focus-visible {
         transform: translateY(-2px);
       }
@@ -691,7 +718,7 @@ import { ReservationManagerComponent } from './reservation-manager.component';
         background-position: center;
         background-size: cover;
         isolation: isolate;
-        border-radius: 0 0 2rem 2rem;
+        border-radius: 0;
       }
       .hero-image,
       .hero-shade {
@@ -1086,15 +1113,24 @@ import { ReservationManagerComponent } from './reservation-manager.component';
           bottom: 0.75rem;
           left: 0.75rem;
           width: auto;
+          transform: translateY(100%);
+        }
+        .qr-card.qr-card-open {
+          transform: translateY(0);
+          opacity: 1;
+          pointer-events: auto;
         }
         .qr-launcher {
           top: 50%;
-          right: 0.5rem;
+          right: 0;
           bottom: auto;
-          transform: translateY(-50%);
+          transform: translateY(-50%) translateX(0);
           border-radius: 0.6rem 0 0 0.6rem;
           min-height: 3.5rem;
           min-width: 2.75rem;
+        }
+        .qr-launcher.qr-launcher-hidden {
+          transform: translateY(-50%) translateX(100%);
         }
         .business-brand {
           font-size: 0.78rem !important;
