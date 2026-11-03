@@ -4,6 +4,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { catchError, forkJoin, of } from 'rxjs';
 import { ApiService } from '../../core/services/api.service';
 import { SeoService } from '../../core/services/seo.service';
+import { AuthService } from '../../core/services/auth.service';
 import { Business } from '../../core/models/business.model';
 import { CatalogProduct } from '../../core/models/catalog.model';
 import { createWhatsAppOrderUrl } from '../storefront/storefront-order';
@@ -68,6 +69,47 @@ import { ReservationManagerComponent } from './reservation-manager.component';
                 <span class="material-icons-round">close</span>
               </button>
             </div>
+            <div class="qr-share">
+              <p class="qr-share-label">Compartir</p>
+              <div class="qr-share-buttons">
+                <button type="button" class="qr-share-btn" (click)="shareNative()" aria-label="Compartir">
+                  <span class="material-icons-round">share</span>
+                </button>
+                <a
+                  class="qr-share-btn"
+                  [href]="shareWhatsAppUrl()"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Compartir en WhatsApp"
+                >
+                  <span class="material-icons-round">chat</span>
+                </a>
+                <a
+                  class="qr-share-btn"
+                  [href]="shareFacebookUrl()"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Compartir en Facebook"
+                >
+                  <span class="material-icons-round">facebook</span>
+                </a>
+                <a
+                  class="qr-share-btn"
+                  [href]="shareTwitterUrl()"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Compartir en X"
+                >
+                  <span class="material-icons-round">alternate_email</span>
+                </a>
+                <button type="button" class="qr-share-btn" (click)="copyLink()" aria-label="Copiar enlace">
+                  <span class="material-icons-round">{{ copied() ? 'check' : 'link' }}</span>
+                </button>
+              </div>
+              @if (copied()) {
+                <p class="qr-copied" role="status">Enlace copiado</p>
+              }
+            </div>
             <div class="qr-code-shell">
               @if (qrImageUrl(); as qrUrl) {
                 <img
@@ -87,16 +129,17 @@ import { ReservationManagerComponent } from './reservation-manager.component';
               }
             </div>
             <p class="qr-help">Escanéalo para abrir directamente la página de {{ store.name }}.</p>
-            <p class="qr-url">{{ qrPayload() }}</p>
-            <button type="button" class="qr-upgrade" (click)="requestQrBranding()">
-              <span class="material-icons-round">workspace_premium</span>
-              <span>Personalizar con el logo del negocio</span>
-              <span class="qr-upgrade-badge">Plan de marca</span>
-            </button>
-            @if (qrUpgradeNotice()) {
-              <p class="qr-upgrade-notice" role="status">
-                La personalización con el logo del negocio se habilita al contratar el plan de marca.
-              </p>
+            @if (isOwner()) {
+              <button type="button" class="qr-upgrade" (click)="requestQrBranding()">
+                <span class="material-icons-round">workspace_premium</span>
+                <span>Personalizar con el logo del negocio</span>
+                <span class="qr-upgrade-badge">Plan de marca</span>
+              </button>
+              @if (qrUpgradeNotice()) {
+                <p class="qr-upgrade-notice" role="status">
+                  La personalización con el logo del negocio se habilita al contratar el plan de marca.
+                </p>
+              }
             }
           </aside>
         } @else {
@@ -391,7 +434,7 @@ import { ReservationManagerComponent } from './reservation-manager.component';
       .qr-backdrop {
         position: fixed;
         inset: 0;
-        z-index: 24;
+        z-index: 60;
         background: rgba(15, 23, 42, 0.35);
         backdrop-filter: blur(2px);
         animation: qr-fade 240ms ease both;
@@ -399,7 +442,7 @@ import { ReservationManagerComponent } from './reservation-manager.component';
       .qr-card,
       .qr-launcher {
         position: fixed;
-        z-index: 25;
+        z-index: 61;
       }
       .qr-card {
         top: 50%;
@@ -507,6 +550,50 @@ import { ReservationManagerComponent } from './reservation-manager.component';
         font-size: 0.62rem;
         text-overflow: ellipsis;
         white-space: nowrap;
+      }
+      .qr-share {
+        margin-top: 0.75rem;
+        padding-top: 0.75rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.12);
+      }
+      .qr-share-label {
+        margin: 0 0 0.5rem;
+        font-size: 0.65rem;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--business-muted);
+      }
+      .qr-share-buttons {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+      }
+      .qr-share-btn {
+        display: inline-grid;
+        place-items: center;
+        width: 2.25rem;
+        height: 2.25rem;
+        border-radius: 0.6rem;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        background: rgba(255, 255, 255, 0.08);
+        color: var(--business-ink);
+        cursor: pointer;
+        transition:
+          background 160ms ease,
+          transform 160ms ease;
+      }
+      .qr-share-btn:hover {
+        background: rgba(255, 255, 255, 0.18);
+        transform: translateY(-1px);
+      }
+      .qr-share-btn .material-icons-round {
+        font-size: 1.1rem;
+      }
+      .qr-copied {
+        margin: 0.4rem 0 0;
+        font-size: 0.7rem;
+        color: var(--business-accent-soft, #005bbf);
       }
       .qr-upgrade {
         display: grid;
@@ -1001,12 +1088,13 @@ import { ReservationManagerComponent } from './reservation-manager.component';
           width: auto;
         }
         .qr-launcher {
-          top: auto;
-          right: 0.75rem;
-          bottom: 0.75rem;
-          transform: none;
-          border-radius: 0.75rem;
-          min-height: 3.25rem;
+          top: 50%;
+          right: 0.5rem;
+          bottom: auto;
+          transform: translateY(-50%);
+          border-radius: 0.6rem 0 0 0.6rem;
+          min-height: 3.5rem;
+          min-width: 2.75rem;
         }
         .business-brand {
           font-size: 0.78rem !important;
@@ -1058,6 +1146,7 @@ import { ReservationManagerComponent } from './reservation-manager.component';
 export class BusinessPageComponent implements OnInit {
   private readonly api = inject(ApiService);
   private readonly seo = inject(SeoService);
+  private readonly auth = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
   readonly business = signal<Business | null>(null);
   readonly products = signal<CatalogProduct[]>([]);
@@ -1071,6 +1160,7 @@ export class BusinessPageComponent implements OnInit {
   readonly qrImageError = signal(false);
   readonly qrUpgradeNotice = signal(false);
   readonly bookingEnabled = computed(() => this.business()?.businessType === 'appointment');
+  readonly isOwner = computed(() => !!this.auth.getOwnerToken());
   readonly qrPayload = computed(() => {
     const id = this.business()?.id;
     if (!id) return '';
@@ -1149,6 +1239,49 @@ export class BusinessPageComponent implements OnInit {
   closeBooking(): void {
     this.reservationOpen.set(false);
     this.selectedService.set('');
+  }
+
+  readonly copied = signal(false);
+
+  shareWhatsAppUrl(): string {
+    const url = encodeURIComponent(this.qrPayload());
+    const text = encodeURIComponent(`Conoce ${this.business()?.name ?? ''} en MiVeci`);
+    return `https://wa.me/?text=${text}%20${url}`;
+  }
+
+  shareFacebookUrl(): string {
+    return `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(this.qrPayload())}`;
+  }
+
+  shareTwitterUrl(): string {
+    const text = encodeURIComponent(`Conoce ${this.business()?.name ?? ''} en MiVeci`);
+    return `https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(this.qrPayload())}`;
+  }
+
+  async shareNative(): Promise<void> {
+    const url = this.qrPayload();
+    if (typeof navigator !== 'undefined' && (navigator as any).share) {
+      try {
+        await (navigator as any).share({ title: this.business()?.name ?? 'MiVeci', url });
+      } catch {
+        // user cancelled
+      }
+    } else {
+      await this.copyLink();
+    }
+  }
+
+  async copyLink(): Promise<void> {
+    const url = this.qrPayload();
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(url);
+      }
+    } catch {
+      // ignore
+    }
+    this.copied.set(true);
+    setTimeout(() => this.copied.set(false), 2000);
   }
 
   requestQrBranding(): void {
