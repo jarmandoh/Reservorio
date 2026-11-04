@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, DestroyRef, EventEmitter, Input, OnInit, Output, inject, signal } from '@angular/core';
 import { FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
@@ -11,17 +12,17 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
     <form [formGroup]="formGroup" (ngSubmit)="formSubmit.emit()" class="grid gap-4">
       <div class="grid sm:grid-cols-2 gap-4">
         <div>
-          <label class="form-label" for="business-name">Nombre</label>
+          <label class="form-label" for="business-name">Nombre *</label>
           <div class="icon-field">
             <span class="material-icons-round" aria-hidden="true">store</span>
-            <input id="business-name" class="form-input" formControlName="name" />
+            <input id="business-name" class="form-input" formControlName="name" required aria-required="true" />
           </div>
         </div>
         <div>
-          <label class="form-label" for="business-category">Categoría</label>
+          <label class="form-label" for="business-category">Categoría *</label>
           <div class="icon-field">
             <span class="material-icons-round" aria-hidden="true">category</span>
-            <input id="business-category" class="form-input" formControlName="category" />
+            <input id="business-category" class="form-input" formControlName="category" required aria-required="true" />
           </div>
         </div>
       </div>
@@ -45,7 +46,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
         </div>
         @if (formGroup.get('businessType')?.value === 'onsite_service') {
           <div>
-            <label class="form-label" for="business-profession">Profesión</label>
+            <label class="form-label" for="business-profession">Profesión *</label>
             <div class="icon-field">
               <span class="material-icons-round" aria-hidden="true">work</span>
               <input
@@ -62,7 +63,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
       </div>
 
       <div>
-        <label class="form-label" for="business-description">Descripción</label>
+        <label class="form-label" for="business-description">Descripción (opcional)</label>
         <textarea
           id="business-description"
           class="form-input w-full min-h-[108px]"
@@ -72,48 +73,100 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
       <div class="grid sm:grid-cols-2 gap-4">
         <div>
-          <label class="form-label" for="business-location">Ubicación</label>
+          <label class="form-label" for="business-department">Departamento *</label>
           <div class="icon-field">
-            <span class="material-icons-round" aria-hidden="true">place</span>
-            <input id="business-location" class="form-input" formControlName="location" />
+            <span class="material-icons-round" aria-hidden="true">map</span>
+            <select
+              id="business-department"
+              class="form-input"
+              formControlName="department"
+              [disabled]="loadingDepartments()"
+            >
+              <option value="" disabled>
+                {{ loadingDepartments() ? 'Cargando departamentos…' : 'Selecciona un departamento' }}
+              </option>
+              @for (d of departments(); track d.id) {
+                <option [value]="d.id">{{ d.name }}</option>
+              }
+            </select>
           </div>
         </div>
         <div>
-          <label class="form-label" for="business-pin">PIN de negocio</label>
-          <div class="icon-field has-toggle">
-            <span class="material-icons-round" aria-hidden="true">lock</span>
-            <input
-              id="business-pin"
-              [type]="showPin() ? 'text' : 'password'"
+          <label class="form-label" for="business-city">Ciudad *</label>
+          <div class="icon-field">
+            <span class="material-icons-round" aria-hidden="true">location_city</span>
+            <select
+              id="business-city"
               class="form-input"
-              formControlName="pin"
-              autocomplete="new-password"
-            />
-            <button
-              type="button"
-              class="password-toggle"
-              [attr.aria-label]="showPin() ? 'Ocultar PIN' : 'Mostrar PIN'"
-              [attr.aria-pressed]="showPin()"
-              (click)="togglePin()"
+              formControlName="city"
+              [disabled]="loadingCities() || !formGroup.get('department')?.value"
             >
-              <span class="material-icons-round" aria-hidden="true">{{
-                showPin() ? 'visibility_off' : 'visibility'
-              }}</span>
-            </button>
+              <option value="" disabled>
+                {{ loadingCities() ? 'Cargando ciudades…' : 'Selecciona una ciudad' }}
+              </option>
+              @for (c of cities(); track c.id) {
+                <option [value]="c.name">{{ c.name }}</option>
+              }
+            </select>
           </div>
         </div>
       </div>
 
       <div class="grid sm:grid-cols-2 gap-4">
         <div>
-          <label class="form-label" for="business-phone">Teléfono</label>
+          <label class="form-label" for="business-location">Dirección *</label>
+          <div class="icon-field">
+            <span class="material-icons-round" aria-hidden="true">place</span>
+            <input id="business-location" class="form-input" formControlName="location" required aria-required="true" />
+          </div>
+        </div>
+        <div>
+          <label class="form-label" for="business-phone">Teléfono (opcional)</label>
+          <div class="icon-field">
+            <span class="material-icons-round" aria-hidden="true">phone</span>
+            <input id="business-phone" class="form-input" formControlName="phone" autocomplete="tel" />
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <label class="form-label" for="business-pin">PIN de negocio *</label>
+        <div class="icon-field has-toggle">
+          <span class="material-icons-round" aria-hidden="true">lock</span>
+          <input
+            id="business-pin"
+            [type]="showPin() ? 'text' : 'password'"
+            class="form-input"
+            formControlName="pin"
+            autocomplete="new-password"
+            required
+            aria-required="true"
+            inputmode="numeric"
+          />
+          <button
+            type="button"
+            class="password-toggle"
+            [attr.aria-label]="showPin() ? 'Ocultar PIN' : 'Mostrar PIN'"
+            [attr.aria-pressed]="showPin()"
+            (click)="togglePin()"
+          >
+            <span class="material-icons-round" aria-hidden="true">{{
+              showPin() ? 'visibility_off' : 'visibility'
+            }}</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="grid sm:grid-cols-2 gap-4">
+        <div>
+          <label class="form-label" for="business-phone">Teléfono (opcional)</label>
           <div class="icon-field">
             <span class="material-icons-round" aria-hidden="true">phone</span>
             <input id="business-phone" class="form-input" formControlName="phone" autocomplete="tel" />
           </div>
         </div>
         <div>
-          <label class="form-label" for="business-logo">Logo (URL)</label>
+          <label class="form-label" for="business-logo">Logo (URL) (opcional)</label>
           <div class="icon-field">
             <span class="material-icons-round" aria-hidden="true">image</span>
             <input id="business-logo" class="form-input" formControlName="logo" />
@@ -123,14 +176,14 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
       <div class="grid sm:grid-cols-2 gap-4">
         <div>
-          <label class="form-label" for="business-facebook">Facebook</label>
+          <label class="form-label" for="business-facebook">Facebook (opcional)</label>
           <div class="icon-field">
             <span class="material-icons-round" aria-hidden="true">link</span>
             <input id="business-facebook" class="form-input" formControlName="facebook" />
           </div>
         </div>
         <div>
-          <label class="form-label" for="business-instagram">Instagram</label>
+          <label class="form-label" for="business-instagram">Instagram (opcional)</label>
           <div class="icon-field">
             <span class="material-icons-round" aria-hidden="true">link</span>
             <input id="business-instagram" class="form-input" formControlName="instagram" />
@@ -140,14 +193,14 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
       <div class="grid sm:grid-cols-2 gap-4">
         <div>
-          <label class="form-label" for="business-tiktok">TikTok</label>
+          <label class="form-label" for="business-tiktok">TikTok (opcional)</label>
           <div class="icon-field">
             <span class="material-icons-round" aria-hidden="true">link</span>
             <input id="business-tiktok" class="form-input" formControlName="tiktok" />
           </div>
         </div>
         <div>
-          <label class="form-label" for="business-whatsapp">WhatsApp</label>
+          <label class="form-label" for="business-whatsapp">WhatsApp (opcional)</label>
           <div class="icon-field">
             <span class="material-icons-round" aria-hidden="true">chat</span>
             <input id="business-whatsapp" class="form-input" formControlName="whatsapp" />
@@ -157,14 +210,14 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
       <div class="grid sm:grid-cols-2 gap-4">
         <div>
-          <label class="form-label" for="business-linkedin">LinkedIn</label>
+          <label class="form-label" for="business-linkedin">LinkedIn (opcional)</label>
           <div class="icon-field">
             <span class="material-icons-round" aria-hidden="true">link</span>
             <input id="business-linkedin" class="form-input" formControlName="linkedin" />
           </div>
         </div>
         <div>
-          <label class="form-label" for="business-tags">Etiquetas</label>
+          <label class="form-label" for="business-tags">Etiquetas (opcional)</label>
           <div class="icon-field">
             <span class="material-icons-round" aria-hidden="true">sell</span>
             <input id="business-tags" class="form-input" formControlName="tags" placeholder="ej. peluquería, spa" />
@@ -187,6 +240,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 })
 export class BusinessFormComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
+  private readonly http = inject(HttpClient);
 
   @Input() formGroup!: FormGroup;
   @Input() submitLabel = 'Guardar negocio';
@@ -198,6 +252,11 @@ export class BusinessFormComponent implements OnInit {
 
   readonly showPin = signal(false);
 
+  readonly departments = signal<{ id: number; name: string }[]>([]);
+  readonly cities = signal<{ id: number; name: string }[]>([]);
+  readonly loadingDepartments = signal(false);
+  readonly loadingCities = signal(false);
+
   togglePin(): void {
     this.showPin.update(v => !v);
   }
@@ -208,6 +267,49 @@ export class BusinessFormComponent implements OnInit {
       ?.valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.updateProfessionValidators());
     this.updateProfessionValidators();
+
+    // Cargar departamentos de Colombia
+    this.loadingDepartments.set(true);
+    this.http
+      .get<{ id: number; name: string }[]>('https://api-colombia.com/api/v1/Department')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: data => {
+          const list = (data ?? []).map(d => ({ id: d.id, name: d.name })).sort((a, b) => a.name.localeCompare(b.name));
+          this.departments.set(list);
+          this.loadingDepartments.set(false);
+        },
+        error: () => this.loadingDepartments.set(false),
+      });
+
+    // Cargar ciudades cuando cambie el departamento
+    const deptCtrl = this.formGroup.get('department');
+    deptCtrl?.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(deptId => {
+      const cityCtrl = this.formGroup.get('city');
+      cityCtrl?.setValue('');
+      this.cities.set([]);
+      if (!deptId) return;
+      this.loadingCities.set(true);
+      this.http
+        .get<{ id: number; name: string }[]>(`https://api-colombia.com/api/v1/Department/${deptId}/cities`)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: data => {
+            const list = (data ?? [])
+              .map(c => ({ id: c.id, name: c.name }))
+              .sort((a, b) => a.name.localeCompare(b.name));
+            this.cities.set(list);
+            this.loadingCities.set(false);
+          },
+          error: () => this.loadingCities.set(false),
+        });
+    });
+
+    // Si ya hay departamento seleccionado (edición), cargar sus ciudades
+    const initialDept = deptCtrl?.value;
+    if (initialDept) {
+      deptCtrl?.setValue(initialDept, { emitEvent: true });
+    }
   }
 
   updateProfessionValidators(): void {

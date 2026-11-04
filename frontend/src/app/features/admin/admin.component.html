@@ -491,10 +491,10 @@
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label class="form-label">Dirección</label>
+                <label class="form-label">Dirección *</label>
                 <div class="icon-field">
                   <span class="material-icons-round" aria-hidden="true">place</span>
-                  <input type="text" class="form-input" formControlName="location" />
+                  <input type="text" class="form-input" formControlName="location" required />
                 </div>
                 @if (locationMapUrl()) {
                   <a
@@ -508,7 +508,7 @@
                 }
               </div>
               <div>
-                <label class="form-label">Teléfono</label>
+                <label class="form-label">Teléfono (opcional)</label>
                 <div class="icon-field">
                   <span class="material-icons-round" aria-hidden="true">phone</span>
                   <input type="tel" class="form-input" formControlName="phone" />

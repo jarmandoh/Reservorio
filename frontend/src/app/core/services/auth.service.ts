@@ -24,6 +24,7 @@ export class AuthService {
   private readonly storage = inject(StorageService);
   private readonly supabase = inject(SupabaseAuthService);
   private _unlocked = signal(this.storage.getItem(SESSION_KEY) === '1');
+  private _tokenVersion = signal(0);
 
   constructor() {
     // Mantiene sincronizado el Bearer que usa HttpClient con los refresh automáticos
@@ -48,8 +49,8 @@ export class AuthService {
   }
 
   readonly isUnlocked = computed(() => this._unlocked());
-  readonly isOwnerUnlocked = computed(() => !!this.getOwnerToken());
-  readonly isCustomerUnlocked = computed(() => !!this.getCustomerToken());
+  readonly isOwnerUnlocked = computed(() => (this._tokenVersion(), !!this.getOwnerToken()));
+  readonly isCustomerUnlocked = computed(() => (this._tokenVersion(), !!this.getCustomerToken()));
 
   get storedPin(): string {
     return this.storage.getItem(PIN_KEY, 'local') ?? DEFAULT_PIN;
@@ -447,6 +448,7 @@ export class AuthService {
     this.storage.setItem(ADMIN_JWT, token);
     this.sessionStore.setAdminAuthenticated(true);
     this.sessionStore.setAuthenticated(true);
+    this._tokenVersion.update(v => v + 1);
   }
 
   clearAdminToken(): void {
@@ -454,6 +456,7 @@ export class AuthService {
     this.storage.removeItem(SESSION_KEY);
     this._unlocked.set(false);
     this.sessionStore.setAdminAuthenticated(false);
+    this._tokenVersion.update(v => v + 1);
     // Si no queda ningún otro token (incluyendo business), resetea autenticación general
     if (!this.hasAnyValidToken()) {
       this.sessionStore.setAuthenticated(false);
@@ -474,11 +477,13 @@ export class AuthService {
     this.storage.setItem(OWNER_JWT, token);
     this.sessionStore.setOwnerAuthenticated(true);
     this.sessionStore.setAuthenticated(true);
+    this._tokenVersion.update(v => v + 1);
   }
 
   clearOwnerToken(): void {
     this.storage.removeItem(OWNER_JWT);
     this.sessionStore.setOwnerAuthenticated(false);
+    this._tokenVersion.update(v => v + 1);
     if (!this.hasAnyValidToken()) {
       this.sessionStore.setAuthenticated(false);
     }
@@ -503,10 +508,12 @@ export class AuthService {
   setCustomerToken(token: string): void {
     this.storage.setItem(CUSTOMER_JWT, token, 'local');
     this.sessionStore.setAuthenticated(true);
+    this._tokenVersion.update(v => v + 1);
   }
 
   clearCustomerToken(): void {
     this.storage.removeItem(CUSTOMER_JWT, 'local');
+    this._tokenVersion.update(v => v + 1);
     if (!this.hasAnyValidToken()) {
       this.sessionStore.setAuthenticated(false);
     }
@@ -557,6 +564,18 @@ export class AuthService {
     const owner = this.storage.getItem(OWNER_JWT);
     const customer = this.storage.getItem(CUSTOMER_JWT, 'local');
     const activeSupabaseToken = admin || owner || customer;
+
+    // Evita la petición a /auth/me si el token ya expiró localmente (evita 401 innecesario)
+    if (activeSupabaseToken && this.isSupabaseToken(activeSupabaseToken)) {
+      const payload = this.decodeToken(activeSupabaseToken);
+      const exp = typeof payload?.['exp'] === 'number' ? payload['exp'] : null;
+      if (exp && exp * 1000 < Date.now()) {
+        this.clearAdminToken();
+        this.clearOwnerToken();
+        this.clearCustomerToken();
+        return of(undefined);
+      }
+    }
 
     // Supabase renueva sus propios refresh tokens; el token nuevo debe copiarse
     // al almacén por rol que usa el interceptor de la API de Reservorio.

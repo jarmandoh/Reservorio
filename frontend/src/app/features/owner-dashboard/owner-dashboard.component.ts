@@ -291,13 +291,13 @@ type OwnerSection =
 
       @if (showModal()) {
         <div
-          class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm p-4 flex items-center justify-center"
+          class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm p-4 flex items-start justify-center overflow-y-auto"
           role="dialog"
           aria-modal="true"
           aria-labelledby="business-modal-title"
           (click)="closeModal()"
         >
-          <div class="w-full max-w-2xl rounded-3xl bg-surface p-6 shadow-xl" (click)="$event.stopPropagation()">
+          <div class="w-full max-w-2xl rounded-3xl bg-surface p-6 shadow-xl my-4 max-h-[90dvh] overflow-y-auto" (click)="$event.stopPropagation()">
             <div class="flex items-center justify-between gap-4 mb-4">
               <div>
                 <h2 id="business-modal-title" class="font-semibold text-xl">
@@ -394,7 +394,9 @@ export class OwnerDashboardComponent implements OnInit {
     businessType: ['appointment' as 'appointment' | 'onsite_service' | 'no_appointments'],
     profession: [''],
     description: [''],
-    location: [''],
+    department: ['', Validators.required],
+    city: ['', Validators.required],
+    location: ['', Validators.required],
     phone: [''],
     logo: [''],
     tags: '',

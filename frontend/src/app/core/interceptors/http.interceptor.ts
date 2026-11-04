@@ -138,6 +138,7 @@ function hasAnyRawToken(storage: StorageService): boolean {
 
 function isLoginAttempt(url: string): boolean {
   // Endpoints donde 401 significa credenciales inválidas, no sesión expirada
+  if (url.includes('/auth/me')) return true; // sync interno: no disparar flujo de expiración
   return (
     url.includes('/auth/admin') ||
     url.includes('/auth/owner/login') ||

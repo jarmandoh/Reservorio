@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, ElementRef, HostListener, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
+import { SupabaseAuthService } from '../../../core/services/supabase-auth.service';
 import { SessionStore } from '../../../core/state/session.store';
 
 type AccountOption = {
@@ -22,10 +23,13 @@ type AccountOption = {
             <span class="system-mark material-icons-round" aria-hidden="true">blur_on</span>
             <div>
               <p class="panel-kicker">MIVECI · SISTEMA</p>
-              <h2>{{ account() ? 'Perfil de usuario' : 'Acceso de usuario' }}</h2>
+              <h2>{{ userInfo()?.name || (account() ? 'Perfil de usuario' : 'Acceso de usuario') }}</h2>
+              @if (userInfo()?.email) {
+                <p class="panel-email">{{ userInfo()?.email }}</p>
+              }
             </div>
             <span class="panel-status" [class.panel-status-active]="account()">
-              {{ account() ? 'ONLINE' : 'OFFLINE' }}
+              {{ userInfo()?.role || (account() ? 'ONLINE' : 'OFFLINE') }}
             </span>
           </div>
 
@@ -209,6 +213,12 @@ type AccountOption = {
         font-weight: 650;
         letter-spacing: 0.01em;
       }
+      .panel-email {
+        margin: 0.1rem 0 0;
+        font-size: 0.7rem;
+        color: var(--account-muted);
+        word-break: break-all;
+      }
       .panel-status {
         margin-left: auto;
         padding: 0.22rem 0.38rem;
@@ -328,6 +338,7 @@ type AccountOption = {
 })
 export class AccountMenuComponent {
   private readonly auth = inject(AuthService);
+  private readonly supabase = inject(SupabaseAuthService);
   private readonly sessionStore = inject(SessionStore);
   private readonly router = inject(Router);
   private readonly host = inject(ElementRef<HTMLElement>);
@@ -348,6 +359,21 @@ export class AccountMenuComponent {
       return { label: 'Sesión activa', route: '', icon: 'account_circle' };
     }
     return null;
+  });
+
+  readonly userInfo = computed(() => {
+    const u = this.supabase.user();
+    const acc = this.account();
+    if (!acc) return null;
+    const email = u?.email ?? null;
+    const name =
+      u?.user_metadata?.['full_name'] ||
+      u?.user_metadata?.['name'] ||
+      (email ? email.split('@')[0] : null);
+    let role = 'Cliente';
+    if (this.auth.getAdminToken() || this.sessionStore.isAdminAuthenticated()) role = 'Administrador';
+    else if (this.auth.getOwnerToken() || this.sessionStore.isOwnerAuthenticated()) role = 'Propietario';
+    return { name, email, role };
   });
 
   readonly guestOptions: AccountOption[] = [
