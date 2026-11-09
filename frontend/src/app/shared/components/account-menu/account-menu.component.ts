@@ -366,10 +366,7 @@ export class AccountMenuComponent {
     const acc = this.account();
     if (!acc) return null;
     const email = u?.email ?? null;
-    const name =
-      u?.user_metadata?.['full_name'] ||
-      u?.user_metadata?.['name'] ||
-      (email ? email.split('@')[0] : null);
+    const name = u?.user_metadata?.['full_name'] || u?.user_metadata?.['name'] || (email ? email.split('@')[0] : null);
     let role = 'Cliente';
     if (this.auth.getAdminToken() || this.sessionStore.isAdminAuthenticated()) role = 'Administrador';
     else if (this.auth.getOwnerToken() || this.sessionStore.isOwnerAuthenticated()) role = 'Propietario';

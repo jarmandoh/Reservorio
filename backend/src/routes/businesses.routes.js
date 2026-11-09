@@ -31,7 +31,10 @@ const pinLimiter = rateLimit({
 const businessCreateValidators = [
   body('name').trim().notEmpty().withMessage('name requerido'),
   body('category').trim().notEmpty().withMessage('category requerido'),
-  body('businessType').optional().isIn(['appointment', 'onsite_service', 'no_appointments']).withMessage('businessType inválido'),
+  body('businessType')
+    .optional()
+    .isIn(['appointment', 'onsite_service', 'no_appointments'])
+    .withMessage('businessType inválido'),
   body('profession').optional().trim().isLength({ max: 100 }).withMessage('profession demasiado larga'),
   body('profession').custom((value, { req }) => {
     if (req.body?.businessType === 'onsite_service' && !String(value ?? '').trim()) {
@@ -48,7 +51,10 @@ const businessCreateValidators = [
 
 const businessUpdateValidators = [
   param('id').trim().notEmpty().withMessage('id requerido'),
-  body('businessType').optional().isIn(['appointment', 'onsite_service', 'no_appointments']).withMessage('businessType inválido'),
+  body('businessType')
+    .optional()
+    .isIn(['appointment', 'onsite_service', 'no_appointments'])
+    .withMessage('businessType inválido'),
   body('profession').optional().trim().isLength({ max: 100 }).withMessage('profession demasiado larga'),
   body('profession').custom((value, { req }) => {
     if (req.body?.businessType === 'onsite_service' && !String(value ?? '').trim()) {
@@ -362,7 +368,12 @@ router.get('/:id/services', async (req, res) => {
 // POST /api/businesses/:id/services
 router.post('/:id/services', requireBusinessAuth, serviceValidators, async (req, res) => {
   try {
-    const result = await businessesService.addService(req.params.id, req.body?.nombre, req.body?.precio, req.body?.variaciones);
+    const result = await businessesService.addService(
+      req.params.id,
+      req.body?.nombre,
+      req.body?.precio,
+      req.body?.variaciones
+    );
     res
       .status(result.status)
       .json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });

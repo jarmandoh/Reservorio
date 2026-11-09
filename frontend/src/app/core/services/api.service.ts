@@ -448,8 +448,13 @@ export class ApiService {
 
   getBusinessServices(negocioId: string): Observable<{ nombre: string; precio: number | null; variaciones: string }[]> {
     const request$ = this.http
-      .get<ApiResponse<{ nombre: string; precio: number | null; variaciones: string }[]>>(`${this.base}/businesses/${negocioId}/services`)
-      .pipe(map(r => r.data ?? []), catchError(this.handleError));
+      .get<ApiResponse<{ nombre: string; precio: number | null; variaciones: string }[]>>(
+        `${this.base}/businesses/${negocioId}/services`
+      )
+      .pipe(
+        map(r => r.data ?? []),
+        catchError(this.handleError)
+      );
 
     return this.cachedGet(`services:${negocioId}`, request$);
   }

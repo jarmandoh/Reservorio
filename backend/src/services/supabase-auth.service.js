@@ -5,7 +5,11 @@ const db = require('../db');
 const { runWithRlsContext } = require('../db-context');
 
 const rawBaseUrl = String(process.env.SUPABASE_URL || '').trim();
-const baseUrl = /^https?:\/\//i.test(rawBaseUrl) ? rawBaseUrl.replace(/\/+$/, '') : rawBaseUrl ? `https://${rawBaseUrl.replace(/\/+$/, '')}` : '';
+const baseUrl = /^https?:\/\//i.test(rawBaseUrl)
+  ? rawBaseUrl.replace(/\/+$/, '')
+  : rawBaseUrl
+    ? `https://${rawBaseUrl.replace(/\/+$/, '')}`
+    : '';
 const publishableKey = String(process.env.SUPABASE_PUBLISHABLE_KEY || '').trim();
 
 function isConfigured() {

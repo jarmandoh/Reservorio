@@ -117,7 +117,13 @@ export class BusinessAdminService {
     return this.api.getBusinessServices(negocioId);
   }
 
-  addService(negocioId: string, nombre: string, token: string, precio?: number | null, variaciones?: string): Observable<ApiResponse> {
+  addService(
+    negocioId: string,
+    nombre: string,
+    token: string,
+    precio?: number | null,
+    variaciones?: string
+  ): Observable<ApiResponse> {
     return this.api.createBusinessService(negocioId, nombre, token, precio, variaciones);
   }
 

@@ -4,7 +4,17 @@
 
 const logger = require('../logger');
 
-const SENSITIVE_KEYS = new Set(['password', 'password_hash', 'pin', 'pin_hash', 'token', 'access_token', 'refresh_token', 'secret', 'authorization']);
+const SENSITIVE_KEYS = new Set([
+  'password',
+  'password_hash',
+  'pin',
+  'pin_hash',
+  'token',
+  'access_token',
+  'refresh_token',
+  'secret',
+  'authorization',
+]);
 
 function redact(value, depth = 0) {
   if (depth > 4 || value == null) return value;
@@ -23,7 +33,8 @@ function redact(value, depth = 0) {
 function maskEmail(email) {
   if (typeof email !== 'string' || !email.includes('@')) return email;
   const [local, domain] = email.split('@');
-  const masked = local.length <= 2 ? '*'.repeat(local.length) : local[0] + '*'.repeat(local.length - 2) + local.slice(-1);
+  const masked =
+    local.length <= 2 ? '*'.repeat(local.length) : local[0] + '*'.repeat(local.length - 2) + local.slice(-1);
   return `${masked}@${domain}`;
 }
 

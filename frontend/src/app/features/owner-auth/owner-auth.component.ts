@@ -1,4 +1,14 @@
-import { Component, DestroyRef, ElementRef, ViewChild, AfterViewInit, OnInit, computed, signal, inject } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  ElementRef,
+  ViewChild,
+  AfterViewInit,
+  OnInit,
+  computed,
+  signal,
+  inject,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -45,154 +55,156 @@ function passwordMatchValidator(group: { get(controlName: string): { value: unkn
       </a>
 
       <div #formPane class="form-pane overflow-hidden">
-      @if (mode() === 'login') {
-        <div class="space-y-4">
-          <div>
-            <label class="form-label" for="owner-email">Correo electrónico</label>
-            <div class="icon-field">
-              <span class="material-icons-round" aria-hidden="true">mail</span>
-              <input
-                id="owner-email"
-                type="email"
-                class="form-input"
-                formControlName="email"
-                autocomplete="email"
-                placeholder="ana@ejemplo.com"
-              />
+        @if (mode() === 'login') {
+          <div class="space-y-4">
+            <div>
+              <label class="form-label" for="owner-email">Correo electrónico</label>
+              <div class="icon-field">
+                <span class="material-icons-round" aria-hidden="true">mail</span>
+                <input
+                  id="owner-email"
+                  type="email"
+                  class="form-input"
+                  formControlName="email"
+                  autocomplete="email"
+                  placeholder="ana@ejemplo.com"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label class="form-label" for="owner-password">Contraseña</label>
+              <div class="icon-field has-toggle">
+                <span class="material-icons-round" aria-hidden="true">lock</span>
+                <input
+                  id="owner-password"
+                  [type]="showPassword() ? 'text' : 'password'"
+                  class="form-input"
+                  formControlName="password"
+                  autocomplete="current-password"
+                  placeholder="Mínimo 6 caracteres"
+                />
+                <button
+                  type="button"
+                  class="password-toggle"
+                  [attr.aria-label]="showPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                  [attr.aria-pressed]="showPassword()"
+                  (click)="togglePassword()"
+                >
+                  <span class="material-icons-round" aria-hidden="true">{{
+                    showPassword() ? 'visibility_off' : 'visibility'
+                  }}</span>
+                </button>
+              </div>
             </div>
           </div>
+        }
 
-          <div>
-            <label class="form-label" for="owner-password">Contraseña</label>
-            <div class="icon-field has-toggle">
-              <span class="material-icons-round" aria-hidden="true">lock</span>
-              <input
-                id="owner-password"
-                [type]="showPassword() ? 'text' : 'password'"
-                class="form-input"
-                formControlName="password"
-                autocomplete="current-password"
-                placeholder="Mínimo 6 caracteres"
-              />
-              <button
-                type="button"
-                class="password-toggle"
-                [attr.aria-label]="showPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
-                [attr.aria-pressed]="showPassword()"
-                (click)="togglePassword()"
-              >
-                <span class="material-icons-round" aria-hidden="true">{{
-                  showPassword() ? 'visibility_off' : 'visibility'
-                }}</span>
-              </button>
+        @if (mode() === 'register') {
+          <div class="space-y-4">
+            <div>
+              <label class="form-label" for="owner-name">Nombre completo</label>
+              <div class="icon-field">
+                <span class="material-icons-round" aria-hidden="true">person</span>
+                <input
+                  id="owner-name"
+                  type="text"
+                  class="form-input"
+                  formControlName="name"
+                  autocomplete="name"
+                  placeholder="Ana García"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label class="form-label" for="owner-reg-email">Correo electrónico</label>
+              <div class="icon-field">
+                <span class="material-icons-round" aria-hidden="true">mail</span>
+                <input
+                  id="owner-reg-email"
+                  type="email"
+                  class="form-input"
+                  formControlName="email"
+                  autocomplete="email"
+                  placeholder="ana@ejemplo.com"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label class="form-label" for="owner-reg-password">Contraseña</label>
+              <div class="icon-field has-toggle">
+                <span class="material-icons-round" aria-hidden="true">lock</span>
+                <input
+                  id="owner-reg-password"
+                  [type]="showPassword() ? 'text' : 'password'"
+                  class="form-input"
+                  formControlName="password"
+                  autocomplete="new-password"
+                  placeholder="Mínimo 6 caracteres"
+                />
+                <button
+                  type="button"
+                  class="password-toggle"
+                  [attr.aria-label]="showPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                  [attr.aria-pressed]="showPassword()"
+                  (click)="togglePassword()"
+                >
+                  <span class="material-icons-round" aria-hidden="true">{{
+                    showPassword() ? 'visibility_off' : 'visibility'
+                  }}</span>
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label class="form-label" for="owner-confirm-password">Confirmar contraseña</label>
+              <div class="icon-field has-toggle">
+                <span class="material-icons-round" aria-hidden="true">lock</span>
+                <input
+                  id="owner-confirm-password"
+                  [type]="showConfirmPassword() ? 'text' : 'password'"
+                  class="form-input"
+                  formControlName="confirmPassword"
+                  autocomplete="new-password"
+                  placeholder="Repite tu contraseña"
+                />
+                <button
+                  type="button"
+                  class="password-toggle"
+                  [attr.aria-label]="showConfirmPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                  [attr.aria-pressed]="showConfirmPassword()"
+                  (click)="toggleConfirmPassword()"
+                >
+                  <span class="material-icons-round" aria-hidden="true">{{
+                    showConfirmPassword() ? 'visibility_off' : 'visibility'
+                  }}</span>
+                </button>
+              </div>
+              @if (registerForm.controls.confirmPassword.touched && registerForm.hasError('passwordMismatch')) {
+                <p class="mt-1 text-xs text-error">Las contraseñas no coinciden.</p>
+              }
+            </div>
+
+            <div class="flex items-start mt-2">
+              <label class="inline-flex items-center">
+                <input type="checkbox" formControlName="termsAccepted" class="form-checkbox" />
+                <span class="ml-2 text-sm"
+                  >Acepto los <a href="/terms" class="underline">términos y condiciones</a></span
+                >
+              </label>
+            </div>
+            <div class="flex items-start">
+              <label class="inline-flex items-center">
+                <input type="checkbox" formControlName="privacyAccepted" class="form-checkbox" />
+                <span class="ml-2 text-sm"
+                  >Acepto la <a href="/privacy" class="underline">política de tratamiento de datos personales</a></span
+                >
+              </label>
             </div>
           </div>
-        </div>
-      }
-
-      @if (mode() === 'register') {
-        <div class="space-y-4">
-          <div>
-            <label class="form-label" for="owner-name">Nombre completo</label>
-            <div class="icon-field">
-              <span class="material-icons-round" aria-hidden="true">person</span>
-              <input
-                id="owner-name"
-                type="text"
-                class="form-input"
-                formControlName="name"
-                autocomplete="name"
-                placeholder="Ana García"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label class="form-label" for="owner-reg-email">Correo electrónico</label>
-            <div class="icon-field">
-              <span class="material-icons-round" aria-hidden="true">mail</span>
-              <input
-                id="owner-reg-email"
-                type="email"
-                class="form-input"
-                formControlName="email"
-                autocomplete="email"
-                placeholder="ana@ejemplo.com"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label class="form-label" for="owner-reg-password">Contraseña</label>
-            <div class="icon-field has-toggle">
-              <span class="material-icons-round" aria-hidden="true">lock</span>
-              <input
-                id="owner-reg-password"
-                [type]="showPassword() ? 'text' : 'password'"
-                class="form-input"
-                formControlName="password"
-                autocomplete="new-password"
-                placeholder="Mínimo 6 caracteres"
-              />
-              <button
-                type="button"
-                class="password-toggle"
-                [attr.aria-label]="showPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
-                [attr.aria-pressed]="showPassword()"
-                (click)="togglePassword()"
-              >
-                <span class="material-icons-round" aria-hidden="true">{{
-                  showPassword() ? 'visibility_off' : 'visibility'
-                }}</span>
-              </button>
-            </div>
-          </div>
-
-          <div>
-            <label class="form-label" for="owner-confirm-password">Confirmar contraseña</label>
-            <div class="icon-field has-toggle">
-              <span class="material-icons-round" aria-hidden="true">lock</span>
-              <input
-                id="owner-confirm-password"
-                [type]="showConfirmPassword() ? 'text' : 'password'"
-                class="form-input"
-                formControlName="confirmPassword"
-                autocomplete="new-password"
-                placeholder="Repite tu contraseña"
-              />
-              <button
-                type="button"
-                class="password-toggle"
-                [attr.aria-label]="showConfirmPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
-                [attr.aria-pressed]="showConfirmPassword()"
-                (click)="toggleConfirmPassword()"
-              >
-                <span class="material-icons-round" aria-hidden="true">{{
-                  showConfirmPassword() ? 'visibility_off' : 'visibility'
-                }}</span>
-              </button>
-            </div>
-            @if (registerForm.controls.confirmPassword.touched && registerForm.hasError('passwordMismatch')) {
-              <p class="mt-1 text-xs text-error">Las contraseñas no coinciden.</p>
-            }
-          </div>
-
-          <div class="flex items-start mt-2">
-            <label class="inline-flex items-center">
-              <input type="checkbox" formControlName="termsAccepted" class="form-checkbox" />
-              <span class="ml-2 text-sm">Acepto los <a href="/terms" class="underline">términos y condiciones</a></span>
-            </label>
-          </div>
-          <div class="flex items-start">
-            <label class="inline-flex items-center">
-              <input type="checkbox" formControlName="privacyAccepted" class="form-checkbox" />
-              <span class="ml-2 text-sm"
-                >Acepto la <a href="/privacy" class="underline">política de tratamiento de datos personales</a></span
-              >
-            </label>
-          </div>
-        </div>
-      }
+        }
       </div>
     </app-auth-card>
   `,
@@ -295,18 +307,12 @@ export class OwnerAuthComponent implements AfterViewInit, OnInit {
     this.mode() === 'login' ? 'Iniciar sesión de propietario' : 'Registro de propietario'
   );
   readonly subtitle = computed(() =>
-    this.mode() === 'login'
-      ? 'Accede para gestionar tus negocios.'
-      : 'Crea tu cuenta para administrar tus negocios.'
+    this.mode() === 'login' ? 'Accede para gestionar tus negocios.' : 'Crea tu cuenta para administrar tus negocios.'
   );
   readonly submitLabel = computed(() => (this.mode() === 'login' ? 'Iniciar sesión' : 'Registrarme'));
   readonly loadingLabel = computed(() => (this.mode() === 'login' ? 'Comprobando…' : 'Registrando…'));
-  readonly footerText = computed(() =>
-    this.mode() === 'login' ? '¿No tienes cuenta?' : '¿Ya tienes cuenta?'
-  );
-  readonly footerActionLabel = computed(() =>
-    this.mode() === 'login' ? 'Registrarse' : 'Iniciar sesión'
-  );
+  readonly footerText = computed(() => (this.mode() === 'login' ? '¿No tienes cuenta?' : '¿Ya tienes cuenta?'));
+  readonly footerActionLabel = computed(() => (this.mode() === 'login' ? 'Registrarse' : 'Iniciar sesión'));
 
   ngOnInit(): void {
     if (this.auth.getOwnerToken()) {

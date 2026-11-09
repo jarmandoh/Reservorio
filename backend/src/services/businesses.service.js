@@ -469,7 +469,11 @@ async function addService(businessId, nombre, precio, variaciones) {
   const cleanedName = clean(nombre);
   await businessRepository.addService(businessId, cleanedName, precio, variaciones);
   syncInBackground(businessId, 'services');
-  return { ok: true, status: 201, data: { nombre: cleanedName, precio: precio ?? null, variaciones: variaciones ?? '' } };
+  return {
+    ok: true,
+    status: 201,
+    data: { nombre: cleanedName, precio: precio ?? null, variaciones: variaciones ?? '' },
+  };
 }
 
 async function removeService(businessId, nombre) {

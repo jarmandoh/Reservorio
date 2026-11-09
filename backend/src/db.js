@@ -19,8 +19,6 @@ const pool = new Pool({
   // el pool local sigue funcionando; documentado en .env.production.example
 });
 
-
-
 async function applyRlsContext(client) {
   const context = getRlsContext();
   await client.query(
@@ -55,11 +53,9 @@ async function query(text, values) {
 
 pool.on('error', err => {
   logger.error('[DB] Error inesperado en cliente idle:', err.message);
-
 });
 
 pool.on('connect', () => {
-
   // Opcional: log solo en debug para no saturar en alta carga
   if (String(process.env.LOG_LEVEL || '').toLowerCase() === 'debug') {
     logger.debug('[DB] nueva conexión del pool establecida');

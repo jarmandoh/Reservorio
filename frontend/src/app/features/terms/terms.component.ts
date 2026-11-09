@@ -43,16 +43,14 @@ import { RouterLink } from '@angular/router';
           <section class="space-y-2 text-sm leading-6">
             <h2 class="font-semibold text-base">4. Cancelaciones</h2>
             <p>
-              Las cancelaciones y reprogramaciones dependen de la política de cada negocio. Revisa las condiciones
-              antes de confirmar tu reserva.
+              Las cancelaciones y reprogramaciones dependen de la política de cada negocio. Revisa las condiciones antes
+              de confirmar tu reserva.
             </p>
           </section>
 
           <section class="space-y-2 text-sm leading-6">
             <h2 class="font-semibold text-base">5. Contacto</h2>
-            <p>
-              Para dudas o reclamos escríbenos a través de los canales de contacto publicados en el sitio.
-            </p>
+            <p>Para dudas o reclamos escríbenos a través de los canales de contacto publicados en el sitio.</p>
           </section>
         </article>
       </div>

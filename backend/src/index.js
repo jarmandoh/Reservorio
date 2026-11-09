@@ -174,7 +174,10 @@ app.use(
 );
 
 // ── CORS ────────────────────────────────────────────────────────────────────
-const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:4200,http://localhost:3000,http://localhost:85323,http://localhot:54322, http://localhost:*')
+const allowedOrigins = (
+  process.env.CORS_ORIGINS ||
+  'http://localhost:4200,http://localhost:3000,http://localhost:85323,http://localhot:54322, http://localhost:*'
+)
   .split(',')
   .map(o => o.trim());
 
@@ -269,7 +272,7 @@ app.use((req, res, next) => {
       const labels = { method: req.method, route, status: String(res.statusCode) };
       httpRequestsTotal.inc(labels);
       httpRequestDuration.observe(labels, durationMs / 1000);
-    } catch { }
+    } catch {}
 
     const level = res.statusCode >= 500 ? 'error' : res.statusCode >= 400 ? 'warn' : 'info';
     logger[level](
@@ -447,7 +450,7 @@ function setupGracefulShutdown(server) {
     if (reminderIntervalRef) {
       try {
         clearInterval(reminderIntervalRef);
-      } catch { }
+      } catch {}
       reminderIntervalRef = null;
     }
     if (idempotencyCleanupIntervalRef) {

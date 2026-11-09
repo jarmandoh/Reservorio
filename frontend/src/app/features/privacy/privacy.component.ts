@@ -43,8 +43,8 @@ import { RouterLink } from '@angular/router';
               <li><strong>Oposición/rectificación</strong>: puedes contactar con el negocio o el administrador.</li>
             </ul>
             <p class="mt-3">
-              En <strong>MiVeci</strong> puedes solicitar ambas cosas desde la sección
-              <strong>"Mis datos"</strong> de tu historial sin necesidad de contactar con nadie.
+              En <strong>MiVeci</strong> puedes solicitar ambas cosas desde la sección <strong>"Mis datos"</strong> de
+              tu historial sin necesidad de contactar con nadie.
             </p>
           </section>
 

@@ -10,19 +10,55 @@ const DATABASE_URL = process.env.DATABASE_URL || 'postgresql://postgres:postgres
 const pool = new Pool({ connectionString: DATABASE_URL });
 
 const CATEGORIES = [
-  'Salud & Bienestar', 'Belleza', 'Fitness', 'Educación', 'Restaurantes',
-  'Hogar', 'Tecnología', 'Moda', 'Automotriz', 'Mascotas', 'Deportes',
-  'Entretenimiento', 'Fotografía', 'Consultoría', 'Limpieza',
+  'Salud & Bienestar',
+  'Belleza',
+  'Fitness',
+  'Educación',
+  'Restaurantes',
+  'Hogar',
+  'Tecnología',
+  'Moda',
+  'Automotriz',
+  'Mascotas',
+  'Deportes',
+  'Entretenimiento',
+  'Fotografía',
+  'Consultoría',
+  'Limpieza',
 ];
 
 const CITIES = [
-  'Bogotá', 'Medellín', 'Cali', 'Barranquilla', 'Cartagena', 'Bucaramanga',
-  'Pereira', 'Manizales', 'Santa Marta', 'Cúcuta', 'Ibagué', 'Villavicencio',
+  'Bogotá',
+  'Medellín',
+  'Cali',
+  'Barranquilla',
+  'Cartagena',
+  'Bucaramanga',
+  'Pereira',
+  'Manizales',
+  'Santa Marta',
+  'Cúcuta',
+  'Ibagué',
+  'Villavicencio',
 ];
 
-const ICONS = ['store', 'spa', 'content_cut', 'fitness_center', 'restaurant',
-  'school', 'pets', 'directions_car', 'photo_camera', 'computer', 'local_laundry_service',
-  'medical_services', 'home_repair_service', 'shopping_bag', 'emoji_events'];
+const ICONS = [
+  'store',
+  'spa',
+  'content_cut',
+  'fitness_center',
+  'restaurant',
+  'school',
+  'pets',
+  'directions_car',
+  'photo_camera',
+  'computer',
+  'local_laundry_service',
+  'medical_services',
+  'home_repair_service',
+  'shopping_bag',
+  'emoji_events',
+];
 
 const GRADIENTS = [
   'linear-gradient(135deg,#005bbf,#1a73e8)',
@@ -33,32 +69,92 @@ const GRADIENTS = [
   'linear-gradient(135deg,#0891b2,#22d3ee)',
 ];
 
-const NAME_PARTS = [
-  'La', 'El', 'Mi', 'Tu', 'Nuestro', 'Gran', 'Nuevo', 'Prime', 'Max', 'Pro',
-];
+const NAME_PARTS = ['La', 'El', 'Mi', 'Tu', 'Nuestro', 'Gran', 'Nuevo', 'Prime', 'Max', 'Pro'];
 const NAME_NOUNS = [
-  'Estilo', 'Belleza', 'Salud', 'Fitness', 'Sabor', 'Corte', 'Spa', 'Tech',
-  'Hogar', 'Auto', 'Mascota', 'Foto', 'Café', 'Pizza', 'Burger', 'Yoga',
-  'Pilates', 'Dental', 'Óptica', 'Farmacia', 'Gym', 'Estudio', 'Centro',
-  'Consultorio', 'Taller', 'Boutique', 'Tienda', 'Market', 'Express',
+  'Estilo',
+  'Belleza',
+  'Salud',
+  'Fitness',
+  'Sabor',
+  'Corte',
+  'Spa',
+  'Tech',
+  'Hogar',
+  'Auto',
+  'Mascota',
+  'Foto',
+  'Café',
+  'Pizza',
+  'Burger',
+  'Yoga',
+  'Pilates',
+  'Dental',
+  'Óptica',
+  'Farmacia',
+  'Gym',
+  'Estudio',
+  'Centro',
+  'Consultorio',
+  'Taller',
+  'Boutique',
+  'Tienda',
+  'Market',
+  'Express',
 ];
 const NAME_SUFFIXES = [
-  'Bogotá', 'Medellín', 'Premium', 'Plus', 'Studio', 'Club', 'House',
-  'Lab', 'Co', 'Group', 'Zone', 'Point', 'Hub', 'Center',
+  'Bogotá',
+  'Medellín',
+  'Premium',
+  'Plus',
+  'Studio',
+  'Club',
+  'House',
+  'Lab',
+  'Co',
+  'Group',
+  'Zone',
+  'Point',
+  'Hub',
+  'Center',
 ];
 
 const SERVICE_POOL = [
-  'Corte de cabello', 'Tinte', 'Manicure', 'Pedicure', 'Masaje relajante',
-  'Limpieza facial', 'Consulta general', 'Asesoría', 'Reparación',
-  'Mantenimiento', 'Instalación', 'Diagnóstico', 'Clase grupal', 'Clase personal',
-  'Entrenamiento', 'Domicilio', 'Lavado', 'Planchado', 'Fotografía de producto',
-  'Sesión de fotos', 'Diseño web', 'Soporte técnico', 'Revisión', 'Cambio de aceite',
-  'Alineación', 'Vacunación', 'Baño y corte', 'Paseo', 'Guardería',
+  'Corte de cabello',
+  'Tinte',
+  'Manicure',
+  'Pedicure',
+  'Masaje relajante',
+  'Limpieza facial',
+  'Consulta general',
+  'Asesoría',
+  'Reparación',
+  'Mantenimiento',
+  'Instalación',
+  'Diagnóstico',
+  'Clase grupal',
+  'Clase personal',
+  'Entrenamiento',
+  'Domicilio',
+  'Lavado',
+  'Planchado',
+  'Fotografía de producto',
+  'Sesión de fotos',
+  'Diseño web',
+  'Soporte técnico',
+  'Revisión',
+  'Cambio de aceite',
+  'Alineación',
+  'Vacunación',
+  'Baño y corte',
+  'Paseo',
+  'Guardería',
 ];
 
 const TYPES = ['appointment', 'appointment', 'onsite_service', 'no_appointments', 'appointment', 'no_appointments'];
 
-function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function pick(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
 function pickN(arr, n) {
   const copy = [...arr];
   const out = [];
@@ -68,8 +164,15 @@ function pickN(arr, n) {
   }
   return out;
 }
-function slugify(s) { return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); }
-function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+function slugify(s) {
+  return s
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+function randInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
 
 async function main() {
   const client = await pool.connect();
@@ -109,26 +212,51 @@ async function main() {
       const category = pick(CATEGORIES);
       const type = pick(TYPES);
       const city = pick(CITIES);
-      const profession = type === 'onsite_service' ? pick(['electricista', 'ebanista', 'cerrajero', 'plomero', 'pintor', 'técnico']) : null;
+      const profession =
+        type === 'onsite_service'
+          ? pick(['electricista', 'ebanista', 'cerrajero', 'plomero', 'pintor', 'técnico'])
+          : null;
       const rating = (3.5 + Math.random() * 1.5).toFixed(2);
       const reviews = randInt(0, 120);
-      const tags = pickN(['premium', 'online', 'domicilio', '24/7', 'express', 'certificado', 'garantía', 'nuevo'], 3).join(', ');
+      const tags = pickN(
+        ['premium', 'online', 'domicilio', '24/7', 'express', 'certificado', 'garantía', 'nuevo'],
+        3
+      ).join(', ');
       const icon = pick(ICONS);
       const gradient = pick(GRADIENTS);
-      const schedule = type === 'no_appointments' ? '' : (Math.random() > 0.3 ? 'Lun-Vie 09:00-18:00' : 'Lun-Sáb 08:00-20:00');
+      const schedule =
+        type === 'no_appointments' ? '' : Math.random() > 0.3 ? 'Lun-Vie 09:00-18:00' : 'Lun-Sáb 08:00-20:00';
       const phone = `+57${randInt(300, 320)}${randInt(1000000, 9999999)}`;
       const description = `${name} — ${category.toLowerCase()} en ${city}. ${type === 'onsite_service' ? 'Servicio a domicilio.' : type === 'no_appointments' ? 'Visítanos en tienda.' : 'Agenda tu cita online.'}`;
 
       await client.query(
         `INSERT INTO businesses (id, name, category, business_type, profession, description, location, rating, reviews, tags, gradient, icon, schedule, logo, phone, active, pin_hash)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,
-        [id, name, category, type, profession, description, city, rating, reviews, tags, gradient, icon, schedule, '', phone, true, pinHash]
+        [
+          id,
+          name,
+          category,
+          type,
+          profession,
+          description,
+          city,
+          rating,
+          reviews,
+          tags,
+          gradient,
+          icon,
+          schedule,
+          '',
+          phone,
+          true,
+          pinHash,
+        ]
       );
 
-      await client.query(
-        'INSERT INTO business_owners (business_id, owner_id) VALUES ($1,$2) ON CONFLICT DO NOTHING',
-        [id, ownerId]
-      );
+      await client.query('INSERT INTO business_owners (business_id, owner_id) VALUES ($1,$2) ON CONFLICT DO NOTHING', [
+        id,
+        ownerId,
+      ]);
 
       // Servicios (3 a 6 por negocio)
       const nSvc = randInt(3, 6);

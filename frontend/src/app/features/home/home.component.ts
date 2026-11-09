@@ -71,11 +71,7 @@ const DEFAULT_CATEGORIES = ['Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci√
             <div class="g-nav-logo flex items-center gap-2">
               <div class="hero-logo-mark w-8 h-8 rounded-lg flex items-center justify-center">
                 <span class="material-icons-round text-base">
-                  <img
-                    src="assets/icons/icon-192.png"
-                    alt="Res√©rvame"
-                    class="w-full h-full object-contain"
-                  />
+                  <img src="assets/icons/icon-192.png" alt="Res√©rvame" class="w-full h-full object-contain" />
                 </span>
               </div>
               <span class="font-display font-bold text-lg tracking-tight">Res√©rvame</span>
@@ -147,9 +143,7 @@ const DEFAULT_CATEGORIES = ['Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci√
               Encuentra negocios y servicios,<br />
               <span class="text-primary-fixed-dim">cerca de ti...</span>
             </h1>
-            <p class="g-sub text-base opacity-80 max-w-md">
-              Contacta, reserva o agenda en segundos.
-            </p>
+            <p class="g-sub text-base opacity-80 max-w-md">Contacta, reserva o agenda en segundos.</p>
           </div>
 
           <!-- <div class="mt-6">

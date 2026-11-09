@@ -4,4 +4,7 @@ async function main() {
   console.log(JSON.stringify(r.rows));
   await db.end();
 }
-main().catch(e => { console.error('ERR', e.message); process.exit(1); });
+main().catch(e => {
+  console.error('ERR', e.message);
+  process.exit(1);
+});

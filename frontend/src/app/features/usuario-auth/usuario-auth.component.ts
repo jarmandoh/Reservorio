@@ -1,4 +1,14 @@
-import { Component, DestroyRef, ElementRef, ViewChild, AfterViewInit, OnInit, computed, signal, inject } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  ElementRef,
+  ViewChild,
+  AfterViewInit,
+  OnInit,
+  computed,
+  signal,
+  inject,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -195,7 +205,8 @@ function passwordMatchValidator(group: { get(controlName: string): { value: unkn
             <label class="flex items-start gap-2 mt-1">
               <input type="checkbox" formControlName="dataConsent" class="mt-1" />
               <span class="text-xs text-on-surface-variant"
-                >He leído y acepto la <a routerLink="/privacy" class="underline text-primary">política de privacidad</a></span
+                >He leído y acepto la
+                <a routerLink="/privacy" class="underline text-primary">política de privacidad</a></span
               >
             </label>
             @if (registerForm.controls.dataConsent.touched && registerForm.controls.dataConsent.invalid) {
@@ -239,9 +250,7 @@ export class UsuarioAuthComponent implements AfterViewInit, OnInit {
 
   readonly activeForm = computed(() => (this.mode() === 'login' ? this.loginForm : this.registerForm));
 
-  readonly title = computed(() =>
-    this.mode() === 'login' ? 'Mi cuenta' : 'Crear cuenta'
-  );
+  readonly title = computed(() => (this.mode() === 'login' ? 'Mi cuenta' : 'Crear cuenta'));
   readonly subtitle = computed(() =>
     this.mode() === 'login'
       ? 'Accede para ver tu historial y repetir tus reservas favoritas.'
@@ -249,12 +258,8 @@ export class UsuarioAuthComponent implements AfterViewInit, OnInit {
   );
   readonly submitLabel = computed(() => (this.mode() === 'login' ? 'Iniciar sesión' : 'Registrarme'));
   readonly loadingLabel = computed(() => (this.mode() === 'login' ? 'Comprobando…' : 'Registrando…'));
-  readonly footerText = computed(() =>
-    this.mode() === 'login' ? '¿No tienes cuenta?' : '¿Ya tienes cuenta?'
-  );
-  readonly footerActionLabel = computed(() =>
-    this.mode() === 'login' ? 'Registrarse' : 'Iniciar sesión'
-  );
+  readonly footerText = computed(() => (this.mode() === 'login' ? '¿No tienes cuenta?' : '¿Ya tienes cuenta?'));
+  readonly footerActionLabel = computed(() => (this.mode() === 'login' ? 'Registrarse' : 'Iniciar sesión'));
 
   @ViewChild('formPane') private formPane?: ElementRef<HTMLDivElement>;
 

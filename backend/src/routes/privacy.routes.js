@@ -14,13 +14,22 @@ router.get('/export', requireAuth, async (req, res) => {
     const out = { role: payload.role, exportedAt: new Date().toISOString() };
 
     if (payload.role === 'customer' && payload.customerId) {
-      const { rows: cust } = await db.query('SELECT id, name, email, phone, created_at FROM customers WHERE id = $1', [payload.customerId]);
-      const { rows: resv } = await db.query('SELECT id, business_id, franja, servicio, created_at FROM reservations WHERE telefono = (SELECT phone FROM customers WHERE id = $1) OR cliente = (SELECT name FROM customers WHERE id = $1)', [payload.customerId]);
+      const { rows: cust } = await db.query('SELECT id, name, email, phone, created_at FROM customers WHERE id = $1', [
+        payload.customerId,
+      ]);
+      const { rows: resv } = await db.query(
+        'SELECT id, business_id, franja, servicio, created_at FROM reservations WHERE telefono = (SELECT phone FROM customers WHERE id = $1) OR cliente = (SELECT name FROM customers WHERE id = $1)',
+        [payload.customerId]
+      );
       out.customer = cust[0] || null;
       out.reservations = resv;
     } else if (payload.role === 'owner' && payload.ownerId) {
-      const { rows: owner } = await db.query('SELECT id, name, email, created_at FROM owners WHERE id = $1', [payload.ownerId]);
-      const { rows: links } = await db.query('SELECT business_id FROM business_owners WHERE owner_id = $1', [payload.ownerId]);
+      const { rows: owner } = await db.query('SELECT id, name, email, created_at FROM owners WHERE id = $1', [
+        payload.ownerId,
+      ]);
+      const { rows: links } = await db.query('SELECT business_id FROM business_owners WHERE owner_id = $1', [
+        payload.ownerId,
+      ]);
       out.owner = owner[0] || null;
       out.businesses = links.map(l => l.business_id);
     } else {
@@ -46,7 +55,10 @@ router.delete('/account', requireAuth, async (req, res) => {
     }
     if (payload.role === 'owner' && payload.ownerId) {
       // Anonimizar (no borrar negocios para no romper reservas históricas)
-      await db.query("UPDATE owners SET name = 'deleted', email = CONCAT('deleted-', id, '@deleted.local'), password_hash = '' WHERE id = $1", [payload.ownerId]);
+      await db.query(
+        "UPDATE owners SET name = 'deleted', email = CONCAT('deleted-', id, '@deleted.local'), password_hash = '' WHERE id = $1",
+        [payload.ownerId]
+      );
       audit('privacy.delete', { role: 'owner', id: payload.ownerId, ip: req.ip });
       return res.json({ ok: true, message: 'Cuenta anonimizada.' });
     }
