@@ -312,6 +312,21 @@ import { ReservationManagerComponent } from './reservation-manager.component';
           </section>
         </div>
 
+        <div class="mobile-cta-bar sm:hidden" role="group" aria-label="Acciones rapidas">
+          @if (bookingEnabled()) {
+            <button type="button" class="mobile-cta mobile-cta-primary" (click)="openBooking()">
+              <span class="material-icons-round" aria-hidden="true">event_available</span>
+              Reservar
+            </button>
+          }
+          @if (store.whatsapp && contactUrl(store.whatsapp); as url) {
+            <a class="mobile-cta mobile-cta-secondary" [href]="url" target="_blank" rel="noopener noreferrer">
+              <span class="material-icons-round" aria-hidden="true">chat</span>
+              WhatsApp
+            </a>
+          }
+        </div>
+
         <footer class="business-footer">
           <a routerLink="/">MiVeci</a><span>·</span><span>{{ store.name }}</span
           ><a routerLink="/privacy">Privacidad</a>
@@ -1024,6 +1039,46 @@ import { ReservationManagerComponent } from './reservation-manager.component';
       }
       .business-footer a:last-child {
         margin-left: 1rem;
+      }
+      .mobile-cta-bar {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 20;
+        display: flex;
+        gap: 0.6rem;
+        padding: 0.6rem 0.75rem;
+        padding-bottom: calc(0.6rem + env(safe-area-inset-bottom));
+        background: color-mix(in srgb, var(--business-surface) 92%, transparent);
+        backdrop-filter: blur(12px);
+        border-top: 1px solid var(--business-border);
+      }
+      .mobile-cta {
+        flex: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.4rem;
+        min-height: 2.75rem;
+        border-radius: 0.75rem;
+        font-size: 0.85rem;
+        font-weight: 700;
+        text-decoration: none;
+        transition:
+          transform 160ms ease,
+          opacity 160ms ease;
+      }
+      .mobile-cta-primary {
+        background: var(--color-primary, #005bbf);
+        color: white;
+      }
+      .mobile-cta-secondary {
+        background: #25d366;
+        color: white;
+      }
+      .mobile-cta .material-icons-round {
+        font-size: 1.1rem;
       }
       .page-loading,
       .page-error {
