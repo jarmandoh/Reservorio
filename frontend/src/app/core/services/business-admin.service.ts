@@ -113,12 +113,12 @@ export class BusinessAdminService {
     return this.api.createCheckoutSession(payload, idempotencyKey);
   }
 
-  loadServices(negocioId: string): Observable<string[]> {
+  loadServices(negocioId: string): Observable<{ nombre: string; precio: number | null; variaciones: string }[]> {
     return this.api.getBusinessServices(negocioId);
   }
 
-  addService(negocioId: string, nombre: string, token: string): Observable<ApiResponse> {
-    return this.api.createBusinessService(negocioId, nombre, token);
+  addService(negocioId: string, nombre: string, token: string, precio?: number | null, variaciones?: string): Observable<ApiResponse> {
+    return this.api.createBusinessService(negocioId, nombre, token, precio, variaciones);
   }
 
   removeService(negocioId: string, nombre: string, token: string): Observable<ApiResponse> {

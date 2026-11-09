@@ -5,6 +5,7 @@ import { Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../core/services/auth.service';
 import { OwnerBusinessService } from '../../core/services/owner-business.service';
+import { ToastService } from '../../core/services/toast.service';
 import { Business } from '../../core/models/business.model';
 import { BusinessFormComponent } from '../../shared/components/business-form/business-form.component';
 import { BusinessListComponent } from '../../shared/components/business-list/business-list.component';
@@ -14,7 +15,7 @@ type OwnerSection =
 
 @Component({
   selector: 'app-owner-dashboard',
-  imports: [CommonModule, ReactiveFormsModule, BusinessFormComponent, BusinessListComponent],
+  imports: [CommonModule, ReactiveFormsModule, BusinessFormComponent, BusinessListComponent, RouterLink],
   template: `
     <div class="min-h-screen bg-surface">
       <!-- Top bar (mobile) -->
@@ -66,6 +67,15 @@ type OwnerSection =
                     <span class="material-icons-round text-base" aria-hidden="true">{{ item.icon }}</span>
                     <span>{{ item.label }}</span>
                   </button>
+                } @else if (item.action === 'search') {
+                  <button
+                    type="button"
+                    class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-on-surface hover:bg-surface-low transition-colors"
+                    (click)="goHome(); mobileMenuOpen.set(false)"
+                  >
+                    <span class="material-icons-round text-base" aria-hidden="true">{{ item.icon }}</span>
+                    <span>{{ item.label }}</span>
+                  </button>
                 } @else {
                   <button
                     type="button"
@@ -101,7 +111,10 @@ type OwnerSection =
                 </span>
                 <div>
                   <p class="font-display font-bold text-base">MiVeci</p>
-                  <p class="text-xs text-on-surface-variant">Panel de dueño</p>
+                  <p class="text-xs text-on-surface-variant">Panel del propietario</p>
+                  <a routerLink="/" class="text-xs text-on-surface-variant hover:text-primary transition-colors"
+                    >Ir al inicio</a
+                  >
                 </div>
               </div>
             </div>
@@ -115,6 +128,15 @@ type OwnerSection =
                         type="button"
                         class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-error hover:bg-error/10 transition-colors"
                         (click)="logout()"
+                      >
+                        <span class="material-icons-round text-base" aria-hidden="true">{{ item.icon }}</span>
+                        <span>{{ item.label }}</span>
+                      </button>
+                    } @else if (item.action === 'search') {
+                      <button
+                        type="button"
+                        class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-on-surface hover:bg-surface-low transition-colors"
+                        (click)="goHome()"
                       >
                         <span class="material-icons-round text-base" aria-hidden="true">{{ item.icon }}</span>
                         <span>{{ item.label }}</span>
@@ -163,17 +185,17 @@ type OwnerSection =
               <h1 class="font-display text-2xl sm:text-3xl font-bold">{{ sectionTitle() }}</h1>
               <p class="text-sm text-on-surface-variant">{{ sectionSubtitle() }}</p>
             </div>
-            @if (activeSection() === 'dashboard' || activeSection() === 'businesses') {
+            <!-- @if (activeSection() === 'dashboard' || activeSection() === 'businesses') {
               <button class="btn-primary self-start" (click)="openCreateModal()">
                 <span class="material-icons-round text-base" aria-hidden="true">add</span>
                 Nuevo negocio
               </button>
-            }
+            } -->
           </header>
 
           <!-- KPI row -->
           @if (activeSection() === 'dashboard') {
-            <section class="grid gap-4 sm:grid-cols-3">
+            <!-- <section class="grid gap-4 sm:grid-cols-3">
               <div class="card p-5">
                 <div class="flex items-center gap-3">
                   <span class="grid place-items-center h-10 w-10 rounded-xl bg-primary/10 text-primary">
@@ -215,10 +237,10 @@ type OwnerSection =
                 </div>
                 <p class="text-[11px] text-on-surface-variant mt-2">Próximamente</p>
               </div>
-            </section>
+            </section> -->
 
             <!-- Simple bar chart placeholder -->
-            <section class="card p-5">
+            <!-- <section class="card p-5">
               <div class="flex items-center justify-between mb-4">
                 <h2 class="font-semibold text-lg">Reservas por día</h2>
                 <span class="text-xs text-on-surface-variant">Últimos 7 días</span>
@@ -238,39 +260,56 @@ type OwnerSection =
               <p class="text-[11px] text-on-surface-variant mt-3 text-center">
                 Datos de ejemplo — se conectarán a tus reservas reales próximamente.
               </p>
-            </section>
+            </section> -->
           }
 
           <!-- Businesses list -->
-          <section class="grid gap-4">
-            @if (loading()) {
-              <div class="card p-5 space-y-3" aria-busy="true" aria-live="polite">
-                @for (i of [1, 2, 3]; track i) {
-                  <div class="skeleton h-16 rounded-xl"></div>
-                }
-              </div>
-            } @else if (!businesses().length) {
-              <div class="card p-8 text-center space-y-3">
-                <span class="material-icons-round text-5xl text-on-surface-variant/40" aria-hidden="true"
-                  >storefront</span
-                >
-                <h2 class="font-display text-xl font-semibold">Aún no tienes negocios</h2>
-                <p class="text-sm text-on-surface-variant max-w-sm mx-auto">
-                  Crea tu primer negocio para empezar a recibir reservas y gestionar tu agenda.
-                </p>
-                <button class="btn-primary mt-2" (click)="openCreateModal()">
-                  <span class="material-icons-round text-base" aria-hidden="true">add</span>
-                  Crear mi primer negocio
-                </button>
-              </div>
-            } @else {
-              <app-business-list
-                [businesses]="businesses()"
-                (view)="openBusiness($event)"
-                (edit)="editBusiness($event)"
-              />
-            }
-          </section>
+          @if (activeSection() === 'dashboard' || activeSection() === 'businesses') {
+            <section class="grid gap-4">
+              @if (loading()) {
+                <div class="card p-5 space-y-3" aria-busy="true" aria-live="polite">
+                  @for (i of [1, 2, 3]; track i) {
+                    <div class="skeleton h-16 rounded-xl"></div>
+                  }
+                </div>
+              } @else if (!businesses().length) {
+                <div class="card p-8 text-center space-y-3">
+                  <span class="material-icons-round text-5xl text-on-surface-variant/40" aria-hidden="true"
+                    >storefront</span
+                  >
+                  <h2 class="font-display text-xl font-semibold">Aún no tienes negocios</h2>
+                  <p class="text-sm text-on-surface-variant max-w-sm mx-auto">
+                    Crea tu primer negocio para empezar a recibir reservas y gestionar tu agenda.
+                  </p>
+                  <button class="btn-primary mt-2" (click)="openCreateModal()">
+                    <span class="material-icons-round text-base" aria-hidden="true">add</span>
+                    Crear mi primer negocio
+                  </button>
+                </div>
+              } @else {
+                <app-business-list
+                  [businesses]="businesses()"
+                  (view)="openBusiness($event)"
+                  (edit)="editBusiness($event)"
+                  (delete)="deleteBusiness($event)"
+                  (promote)="promoteBusiness($event)"
+                />
+                <div class="flex justify-center pt-2">
+                  @if (canCreateFree()) {
+                    <button class="btn-primary" (click)="openCreateModal()">
+                      <span class="material-icons-round text-base" aria-hidden="true">add</span>
+                      Nuevo negocio (gratis)
+                    </button>
+                  } @else {
+                    <button class="btn-secondary" (click)="openPaywall()">
+                      <span class="material-icons-round text-base" aria-hidden="true">lock</span>
+                      Nuevo negocio — requiere suscripción
+                    </button>
+                  }
+                </div>
+              }
+            </section>
+          }
 
           <!-- Placeholder sections for other menu items -->
           @if (activeSection() !== 'dashboard' && activeSection() !== 'businesses') {
@@ -297,7 +336,10 @@ type OwnerSection =
           aria-labelledby="business-modal-title"
           (click)="closeModal()"
         >
-          <div class="w-full max-w-2xl rounded-3xl bg-surface p-6 shadow-xl my-4 max-h-[90dvh] overflow-y-auto" (click)="$event.stopPropagation()">
+          <div
+            class="w-full max-w-2xl rounded-3xl bg-surface p-6 shadow-xl my-4 max-h-[90dvh] overflow-y-auto"
+            (click)="$event.stopPropagation()"
+          >
             <div class="flex items-center justify-between gap-4 mb-4">
               <div>
                 <h2 id="business-modal-title" class="font-semibold text-xl">
@@ -328,6 +370,7 @@ export class OwnerDashboardComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly toast = inject(ToastService);
 
   readonly businesses = signal<Business[]>([]);
   readonly loading = signal(true);
@@ -336,21 +379,18 @@ export class OwnerDashboardComponent implements OnInit {
   readonly editingBusiness = signal<Business | null>(null);
   readonly activeSection = signal<OwnerSection>('dashboard');
   readonly mobileMenuOpen = signal(false);
+  readonly paywallOpen = signal(false);
 
   readonly menuItems: {
-    id: OwnerSection | 'logout';
+    id: OwnerSection | 'logout' | 'search';
     label: string;
     icon: string;
     badge?: string;
-    action?: 'logout';
+    action?: 'logout' | 'search';
   }[] = [
     { id: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
     { id: 'businesses', label: 'Mis negocios', icon: 'storefront' },
-    { id: 'reservations', label: 'Reservas', icon: 'event_note' },
-    { id: 'services', label: 'Servicios', icon: 'content_cut' },
-    { id: 'products', label: 'Productos', icon: 'inventory_2' },
-    { id: 'analytics', label: 'Analytics', icon: 'analytics', badge: 'Pronto' },
-    { id: 'profile', label: 'Perfil del negocio', icon: 'person' },
+    { id: 'search', label: 'Buscar negocios', icon: 'search', action: 'search' },
     { id: 'settings', label: 'Configuración', icon: 'settings' },
     { id: 'logout', label: 'Cerrar sesión', icon: 'logout', action: 'logout' },
   ];
@@ -387,6 +427,8 @@ export class OwnerDashboardComponent implements OnInit {
     const item = this.menuItems.find(m => m.id === this.activeSection());
     return item?.icon ?? 'dashboard';
   });
+
+  readonly canCreateFree = computed(() => this.businesses().length === 0);
 
   readonly businessForm = this.fb.group({
     name: ['', [Validators.required, Validators.minLength(2)]],
@@ -434,6 +476,10 @@ export class OwnerDashboardComponent implements OnInit {
   }
 
   openCreateModal(): void {
+    if (!this.canCreateFree()) {
+      this.paywallOpen.set(true);
+      return;
+    }
     this.editingBusiness.set(null);
     this.businessForm.reset({
       businessType: 'appointment',
@@ -482,24 +528,45 @@ export class OwnerDashboardComponent implements OnInit {
     this.router.navigate(['/propietario/negocio', business.id]);
   }
 
+  deleteBusiness(business: Business): void {
+    const name = business.name ?? 'este negocio';
+    if (!confirm(`¿Eliminar "${name}"? Esta acción no se puede deshacer.`)) return;
+    // No hay endpoint de eliminación para propietarios aún; se informa al usuario.
+    this.toast.error('La eliminación de negocios estará disponible próximamente.');
+  }
+
+  promoteBusiness(business: Business): void {
+    this.toast.success(`Promoción de "${business.name}" disponible próximamente.`);
+  }
+
+  openPaywall(): void {
+    this.paywallOpen.set(true);
+  }
+
+  goToSubscription(): void {
+    this.paywallOpen.set(false);
+    this.router.navigate(['/']);
+  }
+
   saveBusiness(): void {
     if (this.businessForm.invalid) return;
     this.saving.set(true);
     const current = this.editingBusiness();
     const payload = this.businessForm.value as any;
 
-    const request$ = this.ownerBusinessService.saveBusiness(payload, current);
-
-    request$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: () => {
-        this.saving.set(false);
-        this.closeModal();
-        this.reloadBusinesses();
-      },
-      error: () => {
-        this.saving.set(false);
-      },
-    });
+    this.ownerBusinessService
+      .saveBusiness(payload, current)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.saving.set(false);
+          this.closeModal();
+          this.reloadBusinesses();
+        },
+        error: () => {
+          this.saving.set(false);
+        },
+      });
   }
 
   closeModal(): void {
@@ -522,6 +589,10 @@ export class OwnerDashboardComponent implements OnInit {
           this.loading.set(false);
         },
       });
+  }
+
+  goHome(): void {
+    this.router.navigate(['/']);
   }
 
   logout(): void {

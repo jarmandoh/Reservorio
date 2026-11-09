@@ -83,10 +83,12 @@ describe('Businesses routes', () => {
     expect(response.status).toBe(201);
     expect(response.body.ok).toBe(true);
     expect(response.body.data.nombre).toBe('Corte de cabello');
-    expect(db.query).toHaveBeenCalledWith('INSERT INTO services (business_id, nombre) VALUES ($1, $2)', [
-      'negocio1',
-      'Corte de cabello',
-    ]);
+    expect(response.body.data.precio).toBeNull();
+    expect(response.body.data.variaciones).toBe('');
+    expect(db.query).toHaveBeenCalledWith(
+      'INSERT INTO services (business_id, nombre, precio, variaciones) VALUES ($1, $2, $3, $4)',
+      ['negocio1', 'Corte de cabello', null, '']
+    );
   });
 
   const baseRow = {

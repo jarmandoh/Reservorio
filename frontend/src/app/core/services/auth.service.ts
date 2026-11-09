@@ -30,6 +30,8 @@ export class AuthService {
     // Mantiene sincronizado el Bearer que usa HttpClient con los refresh automáticos
     // de Supabase Auth (incluidos cambios de sesión en otras pestañas).
     effect(() => {
+      if (!this.supabase.initialized()) return;
+
       const refreshedToken = this.supabase.accessToken();
       const admin = this.storage.getItem(ADMIN_JWT);
       const owner = this.storage.getItem(OWNER_JWT);

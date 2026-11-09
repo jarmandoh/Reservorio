@@ -203,11 +203,14 @@ async function updateReservation(businessId, reservationId, disponibilidad, nota
 }
 
 async function listServices(businessId) {
-  return db.query('SELECT nombre FROM services WHERE business_id = $1 ORDER BY nombre', [businessId]);
+  return db.query('SELECT nombre, precio, variaciones FROM services WHERE business_id = $1 ORDER BY nombre', [businessId]);
 }
 
-async function addService(businessId, nombre) {
-  return db.query('INSERT INTO services (business_id, nombre) VALUES ($1, $2)', [businessId, clean(nombre)]);
+async function addService(businessId, nombre, precio, variaciones) {
+  return db.query(
+    'INSERT INTO services (business_id, nombre, precio, variaciones) VALUES ($1, $2, $3, $4)',
+    [businessId, clean(nombre), precio ?? null, clean(variaciones ?? '')]
+  );
 }
 
 async function removeService(businessId, nombre) {

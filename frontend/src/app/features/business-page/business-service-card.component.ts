@@ -5,7 +5,8 @@ import { DEFAULT_CURRENCY, formatCurrency } from '../../core/config/currency';
 export interface BusinessServiceItem {
   name: string;
   description?: string;
-  price?: number;
+  price?: number | null;
+  variations?: string;
   durationMinutes?: number;
   requiresBooking: boolean;
 }
@@ -31,6 +32,9 @@ export interface BusinessServiceItem {
         </div>
         @if (service.description) {
           <p>{{ service.description }}</p>
+        }
+        @if (service.variations) {
+          <p class="service-variations">{{ service.variations }}</p>
         }
         <div class="service-meta">
           @if (service.durationMinutes) {

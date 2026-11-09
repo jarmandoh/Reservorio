@@ -182,7 +182,9 @@ interface ConfirmedBooking {
                       <span class="text-xs font-semibold uppercase tracking-[0.18em] text-white/80">
                         Paso {{ step() }} de 4
                       </span>
-                      <span class="text-xs font-medium text-white/60">{{ step() === 1 ? 'Servicio' : step() === 2 ? 'Horario' : step() === 3 ? 'Datos' : 'Confirmación' }}</span>
+                      <span class="text-xs font-medium text-white/60">{{
+                        step() === 1 ? 'Servicio' : step() === 2 ? 'Horario' : step() === 3 ? 'Datos' : 'Confirmación'
+                      }}</span>
                     </div>
                     <div class="h-2 w-full rounded-full bg-white/15 overflow-hidden">
                       <div
@@ -1459,8 +1461,9 @@ export class BookingComponent implements OnInit, OnDestroy {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: data => {
-          this.services.set(data);
-          if (this.initialServiceName && data.includes(this.initialServiceName)) {
+          const names = data.map(s => (typeof s === 'string' ? s : s.nombre));
+          this.services.set(names);
+          if (this.initialServiceName && names.includes(this.initialServiceName)) {
             this.selectedService.set(this.initialServiceName);
             if (this.embedded) this.goToStep(2);
           }

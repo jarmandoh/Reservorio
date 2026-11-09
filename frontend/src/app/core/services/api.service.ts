@@ -446,18 +446,27 @@ export class ApiService {
       .pipe(catchError(this.handleError));
   }
 
-  getBusinessServices(negocioId: string): Observable<string[]> {
-    const request$ = this.http.get<ApiResponse<string[]>>(`${this.base}/businesses/${negocioId}/services`).pipe(
-      map(r => r.data ?? []),
-      catchError(this.handleError)
-    );
+  getBusinessServices(negocioId: string): Observable<{ nombre: string; precio: number | null; variaciones: string }[]> {
+    const request$ = this.http
+      .get<ApiResponse<{ nombre: string; precio: number | null; variaciones: string }[]>>(`${this.base}/businesses/${negocioId}/services`)
+      .pipe(map(r => r.data ?? []), catchError(this.handleError));
 
     return this.cachedGet(`services:${negocioId}`, request$);
   }
 
-  createBusinessService(negocioId: string, nombre: string, token: string): Observable<ApiResponse> {
+  createBusinessService(
+    negocioId: string,
+    nombre: string,
+    token: string,
+    precio?: number | null,
+    variaciones?: string
+  ): Observable<ApiResponse> {
     return this.http
-      .post<ApiResponse>(`${this.base}/businesses/${negocioId}/services`, { nombre }, this.authHeader(token))
+      .post<ApiResponse>(
+        `${this.base}/businesses/${negocioId}/services`,
+        { nombre, precio: precio ?? null, variaciones: variaciones ?? '' },
+        this.authHeader(token)
+      )
       .pipe(catchError(this.handleError));
   }
 

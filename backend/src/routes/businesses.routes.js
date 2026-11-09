@@ -362,7 +362,7 @@ router.get('/:id/services', async (req, res) => {
 // POST /api/businesses/:id/services
 router.post('/:id/services', requireBusinessAuth, serviceValidators, async (req, res) => {
   try {
-    const result = await businessesService.addService(req.params.id, req.body?.nombre);
+    const result = await businessesService.addService(req.params.id, req.body?.nombre, req.body?.precio, req.body?.variaciones);
     res
       .status(result.status)
       .json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });

@@ -19,7 +19,6 @@ export class BusinessProfileComponent implements OnChanges {
   @Input() business: Business | null = null;
   @Input() businessId = '';
   @Input() token = '';
-
   private readonly fb = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
   private readonly businessAdminService = inject(BusinessAdminService);

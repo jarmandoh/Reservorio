@@ -30,15 +30,15 @@ import {
   summarizeReservations,
 } from './business-admin-analytics';
 
-type negocioTab = 'reservas' | 'servicios' | 'productos' | 'perfil' | 'google';
+type BusinessAdminTab = 'analytics' | 'reservas' | 'clientes' | 'servicios' | 'productos' | 'perfil' | 'google';
 
 @Component({
   selector: 'app-business-admin',
   imports: [CommonModule, ReactiveFormsModule, BadgeComponent, BusinessProfileComponent],
   template: `
-    <div class="min-h-dvh bg-surface flex flex-col">
-      <!-- ══ TOP BAR ══════════════════════════════════════════════════ -->
-      <header class="sticky top-0 z-20 bg-surface/90 backdrop-blur-md border-b border-outline-variant/20">
+    <div class="min-h-dvh bg-surface">
+      <!-- Mobile top bar -->
+      <header class="lg:hidden sticky top-0 z-20 bg-surface/90 backdrop-blur-md border-b border-outline-variant/20">
         <div class="max-w-4xl mx-auto px-4 py-3 flex items-center gap-3">
           @if (business()) {
             <div
@@ -50,815 +50,1039 @@ type negocioTab = 'reservas' | 'servicios' | 'productos' | 'perfil' | 'google';
             <div class="flex-1 min-w-0">
               <h1 class="font-display font-bold text-base leading-tight truncate">{{ business()!.name }}</h1>
               <p class="text-xs text-on-surface-variant truncate">{{ business()!.category }}</p>
+              <button
+                type="button"
+                class="mt-1 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                (click)="goDashboard()"
+                aria-label="Volver al panel de dueño"
+              >
+                <span class="material-icons-round text-sm" aria-hidden="true">arrow_back</span>
+                Volver al panel
+              </button>
             </div>
           } @else {
             <div class="w-9 h-9 rounded-xl bg-surface-container flex items-center justify-center">
               <span class="material-icons-round text-on-surface-variant">store</span>
             </div>
-            <div class="flex-1">
-              <div class="skeleton h-4 w-32 rounded"></div>
-            </div>
+            <div class="flex-1"><div class="skeleton h-4 w-32 rounded"></div></div>
           }
           <button
-            class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-surface-container
-                       text-on-surface-variant transition sm:w-10 sm:h-10"
-            (click)="logout()"
-            title="Cerrar sesión"
+            class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-surface-container text-on-surface-variant transition"
+            (click)="mobileMenuOpen.set(true)"
+            aria-label="Abrir menú"
           >
-            <span class="material-icons-round">logout</span>
+            <span class="material-icons-round">menu</span>
           </button>
-        </div>
-
-        <!-- Tab bar -->
-        <div class="max-w-4xl mx-auto px-4 flex gap-0.5 sm:gap-1 overflow-x-auto pb-0.5">
-          @for (t of tabs(); track t.id) {
-            <button
-              class="flex items-center gap-1.5 px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-medium rounded-t-lg transition
-                         whitespace-nowrap border-b-2 min-h-[44px] sm:min-h-[auto]"
-              [class]="
-                tab() === t.id
-                  ? 'text-primary border-primary bg-primary/5'
-                  : 'text-on-surface-variant border-transparent hover:bg-surface-container'
-              "
-              (click)="setTab(t.id)"
-            >
-              <span class="material-icons-round text-base">{{ t.icon }}</span>
-              <span class="hidden sm:inline">{{ t.label }}</span>
-            </button>
-          }
         </div>
       </header>
 
-      <!-- ══ CONTENT ══════════════════════════════════════════════════ -->
-
-      <!-- TAB: RESERVAS ──────────────────────────────────────────────── -->
-      @if (tab() === 'reservas') {
-        <div class="flex-1 p-4 sm:p-6 flex flex-col gap-5 max-w-4xl mx-auto w-full">
+      <!-- Mobile drawer -->
+      <div
+        class="lg:hidden fixed inset-0 z-50 transition-opacity duration-300 ease-out"
+        [class.opacity-100]="mobileMenuOpen()"
+        [class.opacity-0]="!mobileMenuOpen()"
+        [class.pointer-events-none]="!mobileMenuOpen()"
+        [class.bg-black/50]="mobileMenuOpen()"
+        [class.backdrop-blur-sm]="mobileMenuOpen()"
+        (click)="mobileMenuOpen.set(false)"
+      >
+        <nav
+          class="absolute left-0 top-0 h-full w-72 max-w-[80vw] bg-surface p-4 space-y-3 overflow-y-auto shadow-2xl transition-transform duration-300 ease-out"
+          [class.translate-x-0]="mobileMenuOpen()"
+          [class.-translate-x-full]="!mobileMenuOpen()"
+          (click)="$event.stopPropagation()"
+        >
           <div class="flex items-center justify-between">
-            <h2 class="font-display font-semibold text-[1.375rem]">Reservas</h2>
-            <div class="flex items-center gap-2">
-              <button
-                type="button"
-                class="btn-secondary btn-sm min-h-[44px] sm:min-h-[auto]"
-                (click)="exportReservationsCsv()"
-                title="Exportar reservas a CSV"
-              >
-                <span class="material-icons-round text-base">file_download</span>
-                <span class="hidden sm:inline">CSV</span>
-              </button>
-              <button
-                class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-surface-container
-                           text-on-surface-variant transition sm:w-10 sm:h-10 min-h-[44px] sm:min-h-[auto]"
-                (click)="loadReservations()"
-                title="Actualizar"
-              >
-                <span class="material-icons-round text-lg" [class.animate-spin]="resLoading()">refresh</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- Stats -->
-          @if (resStats().total) {
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              @for (s of resStats().items; track s.label) {
-                <div class="card text-center py-3">
-                  <p class="font-display font-bold text-2xl">{{ s.value }}</p>
-                  <p class="text-xs text-on-surface-variant mt-0.5">{{ s.label }}</p>
-                </div>
-              }
-            </div>
-          }
-
-          @if (businessAnalytics().cards.length) {
-            <div class="card p-4 flex flex-col gap-3">
-              <div class="flex items-center justify-between">
-                <p class="section-label">Analytics de negocio</p>
-                <span class="badge badge-primary">{{ businessAnalytics().cards.length }} métricas</span>
-              </div>
-              <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                @for (metric of businessAnalytics().cards; track metric.label) {
-                  <div class="rounded-xl bg-surface-low px-3 py-3 text-center">
-                    <p class="text-[10px] uppercase tracking-[0.18em] text-on-surface-variant">{{ metric.label }}</p>
-                    <p
-                      class="mt-2 font-display text-2xl font-bold"
-                      [class.text-success]="metric.tone === 'success'"
-                      [class.text-warning]="metric.tone === 'warning'"
-                      [class.text-primary]="metric.tone === 'primary'"
-                      [class.text-error]="metric.tone === 'error'"
-                    >
-                      {{ metric.value }}
-                    </p>
-                  </div>
-                }
-              </div>
-            </div>
-          }
-
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
-            <div class="card p-4 flex flex-col gap-3">
-              <div class="flex items-center justify-between">
-                <p class="section-label">Clientes de marketplace</p>
-                <span class="badge badge-primary">{{ recentCustomers().length }}</span>
-              </div>
-              <div class="flex flex-col gap-2">
-                @for (customer of recentCustomers(); track customer.id) {
-                  <div class="flex items-center justify-between rounded-xl bg-surface-low px-3 py-2">
-                    <div>
-                      <p class="font-medium">{{ customer.name ?? customer.email }}</p>
-                      <p class="text-xs text-on-surface-variant">{{ customer.email }}</p>
-                    </div>
-                    <span class="text-xs text-on-surface-variant">{{ customer.phone || 'Sin teléfono' }}</span>
-                  </div>
-                }
-              </div>
-            </div>
-
-            <div class="card p-4 flex flex-col gap-3">
-              <div class="flex items-center justify-between">
-                <p class="section-label">Cobro preparado</p>
-                <span class="badge" [class.badge-success]="checkoutBooking()">{{
-                  checkoutBooking() ? 'Listo' : 'Sin reserva'
-                }}</span>
-              </div>
-              <p class="font-display text-3xl font-bold">{{ formatCurrency(paymentAmount()) }}</p>
-              <p class="text-sm text-on-surface-variant">
-                {{
-                  checkoutBooking()
-                    ? 'Preparado para ' + checkoutBooking()!.slot
-                    : 'Selecciona una reserva activa para preparar el pago.'
-                }}
-              </p>
-              <button
-                class="btn-primary btn-sm self-start min-h-[44px] sm:min-h-[auto]"
-                [disabled]="!checkoutBooking() || checkouting()"
-                (click)="prepareCheckout()"
-              >
-                @if (checkouting()) {
-                  <span class="material-icons-round text-base animate-spin">refresh</span>
-                } @else {
-                  <span class="material-icons-round text-base">payment</span>
-                }
-                <span class="hidden sm:inline">Preparar cobro</span>
-              </button>
-            </div>
-          </div>
-
-          @if (reservationGroups().statusGroups.some(item => item.value > 0) || providerBookings().length) {
-            <div class="card p-4 flex flex-col gap-4">
-              <div class="flex items-center justify-between">
-                <p class="section-label">Resumen operativo</p>
-                <span class="badge badge-info"
-                  >{{ reservationGroups().statusGroups.reduce((sum, item) => sum + item.value, 0) }} total</span
+            @if (business()) {
+              <div class="flex items-center gap-2 min-w-0">
+                <div
+                  class="w-9 h-9 rounded-xl flex items-center justify-center text-white flex-shrink-0"
+                  [style.background]="business()!.gradient"
                 >
-              </div>
-
-              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                @for (item of reservationGroups().statusGroups; track item.label) {
-                  <div class="rounded-xl bg-surface-low px-3 py-3">
-                    <p class="text-[10px] uppercase tracking-[0.18em] text-on-surface-variant">{{ item.label }}</p>
-                    <p class="mt-2 font-display text-2xl font-bold text-on-surface">{{ item.value }}</p>
-                  </div>
-                }
-              </div>
-
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div class="rounded-xl border border-outline-variant/20 bg-surface-low p-3">
-                  <p class="text-[10px] uppercase tracking-[0.18em] text-on-surface-variant">
-                    Servicios con más demanda
-                  </p>
-                  <div class="mt-3 flex flex-col gap-2">
-                    @for (item of reservationGroups().byService; track item.label) {
-                      <div class="flex items-center justify-between text-sm">
-                        <span class="text-on-surface-variant">{{ item.label }}</span>
-                        <span class="font-semibold text-on-surface">{{ item.value }}</span>
-                      </div>
-                    }
-                    @if (!reservationGroups().byService.length) {
-                      <p class="text-sm text-on-surface-variant">Sin datos todavía.</p>
-                    }
-                  </div>
+                  <span class="material-icons-round text-lg">{{ business()!.icon }}</span>
                 </div>
-
-                <div class="rounded-xl border border-outline-variant/20 bg-surface-low p-3">
-                  <p class="text-[10px] uppercase tracking-[0.18em] text-on-surface-variant">Días con más actividad</p>
-                  <div class="mt-3 flex flex-col gap-2">
-                    @for (item of reservationGroups().byDay; track item.label) {
-                      <div class="flex items-center justify-between text-sm">
-                        <span class="text-on-surface-variant">{{ item.label }}</span>
-                        <span class="font-semibold text-on-surface">{{ item.value }}</span>
-                      </div>
-                    }
-                    @if (!reservationGroups().byDay.length) {
-                      <p class="text-sm text-on-surface-variant">Aún no hay actividad programada.</p>
-                    }
-                  </div>
-                </div>
-              </div>
-            </div>
-          }
-
-          @if (providerBookings().length) {
-            <div class="card p-4 flex flex-col gap-3">
-              <div class="flex items-center justify-between">
-                <p class="section-label">Reservas del marketplace</p>
-                <span class="badge badge-info">{{ providerBookings().length }}</span>
-              </div>
-
-              <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                <div class="rounded-xl bg-surface-low px-3 py-2 text-center">
-                  <p class="text-[10px] uppercase tracking-[0.18em] text-on-surface-variant">Pendientes</p>
-                  <p class="mt-1 font-display text-xl font-bold text-warning">{{ pendingBookingsCount() }}</p>
-                </div>
-                <div class="rounded-xl bg-surface-low px-3 py-2 text-center">
-                  <p class="text-[10px] uppercase tracking-[0.18em] text-on-surface-variant">Confirmadas</p>
-                  <p class="mt-1 font-display text-xl font-bold text-success">{{ confirmedBookingsCount() }}</p>
-                </div>
-                <div class="rounded-xl bg-surface-low px-3 py-2 text-center">
-                  <p class="text-[10px] uppercase tracking-[0.18em] text-on-surface-variant">Pagadas</p>
-                  <p class="mt-1 font-display text-xl font-bold text-primary">{{ paidBookingsCount() }}</p>
-                </div>
-                <div class="rounded-xl bg-surface-low px-3 py-2 text-center">
-                  <p class="text-[10px] uppercase tracking-[0.18em] text-on-surface-variant">Canceladas</p>
-                  <p class="mt-1 font-display text-xl font-bold text-error">{{ cancelledBookingsCount() }}</p>
-                </div>
-              </div>
-
-              <div class="flex flex-col gap-2">
-                @for (booking of providerBookings(); track booking.id) {
-                  <div class="rounded-xl border border-outline-variant/15 bg-surface-low p-3">
-                    <div class="flex items-center justify-between gap-3">
-                      <div>
-                        <p class="font-medium">{{ booking.serviceId || 'Servicio' }}</p>
-                        <p class="text-xs text-on-surface-variant">{{ booking.date }} · {{ booking.slot }}</p>
-                      </div>
-                      <div class="flex flex-col items-end gap-1.5">
-                        <span class="badge" [ngClass]="bookingOverallStateClass(booking.id)">
-                          {{ bookingOverallStateLabel(booking.id) }}
-                        </span>
-                        <span class="badge badge-secondary">{{ booking.status }}</span>
-                      </div>
-                    </div>
-                  </div>
-                }
-              </div>
-            </div>
-          }
-
-          <!-- Filters -->
-          <div class="flex flex-col gap-3">
-            <div class="flex flex-wrap gap-2">
-              <button
-                class="btn-tertiary btn-sm"
-                [class.btn-primary]="resQuickFilter() === 'all'"
-                (click)="resQuickFilter.set('all')"
-              >
-                Todas
-              </button>
-              <button
-                class="btn-tertiary btn-sm"
-                [class.btn-primary]="resQuickFilter() === 'pending'"
-                (click)="resQuickFilter.set('pending')"
-              >
-                Pendientes
-              </button>
-              <button
-                class="btn-tertiary btn-sm"
-                [class.btn-primary]="resQuickFilter() === 'confirmed'"
-                (click)="resQuickFilter.set('confirmed')"
-              >
-                Confirmadas
-              </button>
-              <button
-                class="btn-tertiary btn-sm"
-                [class.btn-primary]="resQuickFilter() === 'available'"
-                (click)="resQuickFilter.set('available')"
-              >
-                Disponibles
-              </button>
-            </div>
-
-            <div class="flex flex-col sm:flex-row gap-2">
-              <div class="icon-field flex-1">
-                <span class="material-icons-round" aria-hidden="true">search</span>
-                <input
-                  type="search"
-                  class="form-input"
-                  placeholder="Buscar por cliente, servicio…"
-                  [value]="resSearch()"
-                  (input)="resSearch.set(getVal($event))"
-                />
-              </div>
-              <select class="form-select sm:w-44" [value]="resFilter()" (change)="resFilter.set(getVal($event))">
-                <option value="">Todos los estados</option>
-                <option value="disp">Disponible</option>
-                <option value="pend">Pendiente</option>
-                <option value="reserv">Reservado</option>
-                <option value="confirm">Confirmado</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- Table -->
-          <div class="card p-4 flex flex-col gap-3">
-            <div class="flex items-center justify-between">
-              <p class="section-label">Notificaciones</p>
-              <span class="badge badge-primary">{{ notifications().length }}</span>
-            </div>
-            @if (!notifications().length) {
-              <p class="text-sm text-on-surface-variant">No hay avisos todavía para este negocio.</p>
-            } @else {
-              <div class="flex flex-col gap-2">
-                @for (notification of notifications(); track notification.id) {
-                  <div class="rounded-xl bg-surface-low px-3 py-2">
-                    <div class="flex items-center justify-between gap-3">
-                      <p class="font-medium text-sm">{{ notification.title }}</p>
-                      <span
-                        class="badge"
-                        [class.badge-success]="notification.status === 'sent'"
-                        [class.badge-secondary]="notification.status !== 'sent'"
-                      >
-                        {{
-                          notification.status === 'sent'
-                            ? 'Enviado'
-                            : notification.status === 'failed'
-                              ? 'Fallido'
-                              : 'Pendiente'
-                        }}
-                      </span>
-                    </div>
-                    <p class="text-xs text-on-surface-variant mt-1">{{ notification.message }}</p>
-                    <p class="text-[10px] uppercase tracking-[0.16em] text-on-surface-variant mt-2">
-                      {{ notification.type }} · {{ notification.channel }}
-                    </p>
-                  </div>
-                }
+                <span class="font-display font-bold text-base truncate">{{ business()!.name }}</span>
               </div>
             }
-          </div>
-
-          @if (resLoading()) {
-            <div class="flex flex-col gap-2">
-              @for (i of [1, 2, 3, 4, 5]; track i) {
-                <div class="skeleton h-14 rounded-xl"></div>
-              }
-            </div>
-          } @else if (!filteredRes().length) {
-            <div class="flex flex-col items-center gap-3 py-16 text-center">
-              <span class="material-icons-round text-[3rem] text-outline-variant">event_busy</span>
-              <p class="text-on-surface-variant text-sm">Sin reservas que mostrar.</p>
-            </div>
-          } @else {
-            <div class="overflow-x-auto rounded-xl border border-outline-variant/20">
-              <table class="w-full text-sm">
-                <thead>
-                  <tr class="bg-surface-container text-on-surface-variant text-left">
-                    <th class="px-4 py-3 font-semibold">Franja</th>
-                    <th class="px-4 py-3 font-semibold hidden sm:table-cell">Cliente</th>
-                    <th class="px-4 py-3 font-semibold hidden md:table-cell">Servicio</th>
-                    <th class="px-4 py-3 font-semibold">Estado</th>
-                    <th class="px-4 py-3"></th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-outline-variant/10">
-                  @for (r of filteredRes(); track r._rowIndex) {
-                    <tr class="hover:bg-surface-container/40 transition">
-                      <td class="px-4 py-3 font-display font-semibold whitespace-nowrap">{{ r.franja }}</td>
-                      <td class="px-4 py-3 hidden sm:table-cell">{{ r.cliente || '—' }}</td>
-                      <td class="px-4 py-3 hidden md:table-cell text-on-surface-variant">{{ r.servicio || '—' }}</td>
-                      <td class="px-4 py-3"><app-badge [status]="r.disponibilidad" /></td>
-                      <td class="px-4 py-3 text-right whitespace-nowrap">
-                        @if (
-                          r.disponibilidad.toLowerCase().includes('pend') ||
-                          r.disponibilidad.toLowerCase().includes('reserv')
-                        ) {
-                          <button class="btn-primary btn-sm mr-1" (click)="setResStatus(r, 'Confirmado')">
-                            Confirmar
-                          </button>
-                          <button class="btn-tertiary btn-sm mr-1" (click)="setResStatus(r, 'Cancelado')">
-                            Rechazar
-                          </button>
-                        }
-                        @if (r.telefono) {
-                          <a
-                            href="{{ contactHref(r) }}"
-                            target="_blank"
-                            rel="noopener"
-                            class="btn-tertiary btn-sm mr-1"
-                            [attr.title]="'Contactar a ' + (r.cliente || 'el cliente') + ' por WhatsApp'"
-                          >
-                            <span class="material-icons-round text-base">chat</span>
-                            <span class="hidden lg:inline">Contactar</span>
-                          </a>
-                        }
-                        <button class="text-primary hover:underline text-xs font-medium" (click)="openResModal(r)">
-                          Editar
-                        </button>
-                      </td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            </div>
-          }
-        </div>
-      }
-
-      <!-- TAB: SERVICIOS ─────────────────────────────────────────────── -->
-      @if (tab() === 'servicios') {
-        <div class="flex-1 p-4 sm:p-6 flex flex-col gap-5 max-w-xl mx-auto w-full">
-          <h2 class="font-display font-semibold text-[1.375rem]">Servicios</h2>
-
-          <!-- Add service form -->
-          <form [formGroup]="serviceForm" (ngSubmit)="addService()" class="card flex flex-col gap-3">
-            <div class="flex-1 w-full">
-              <div class="icon-field">
-                <span class="material-icons-round" aria-hidden="true">sell</span>
-                <input type="text" class="form-input" formControlName="nombre" placeholder="Nombre del servicio…" />
-              </div>
-              @if (fieldInvalid('nombre')) {
-                <p class="mt-1 text-xs text-error">
-                  El nombre del servicio es obligatorio y debe tener al menos 2 caracteres.
-                </p>
-              }
-            </div>
-            <button
-              type="submit"
-              class="btn-primary btn-sm whitespace-nowrap min-h-[44px] sm:min-h-[auto]"
-              [disabled]="serviceForm.invalid || addingSvc()"
-            >
-              @if (addingSvc()) {
-                <span class="material-icons-round text-base animate-spin">refresh</span>
-              } @else {
-                <span class="material-icons-round text-base">add</span>
-              }
-              <span class="hidden sm:inline">Agregar</span>
+            <button class="btn-ghost btn-sm" (click)="mobileMenuOpen.set(false)" aria-label="Cerrar menú">
+              <span class="material-icons-round text-base">close</span>
             </button>
-          </form>
-
-          <!-- List -->
-          @if (svcLoading()) {
-            <div class="flex flex-col gap-2">
-              @for (i of [1, 2, 3]; track i) {
-                <div class="skeleton h-12 rounded-xl"></div>
-              }
-            </div>
-          } @else if (!services().length) {
-            <div class="flex flex-col items-center gap-3 py-12 text-center">
-              <span class="material-icons-round text-[3rem] text-outline-variant">spa</span>
-              <p class="text-on-surface-variant text-sm">Sin servicios. Agrega el primero.</p>
-            </div>
-          } @else {
-            <div class="flex flex-col gap-2">
-              @for (svc of services(); track svc) {
-                <div class="card flex items-center gap-3">
-                  <span class="material-icons-round text-primary text-base">spa</span>
-                  <span class="flex-1 font-medium">{{ svc }}</span>
-                  <button
-                    class="w-8 h-8 flex items-center justify-center rounded-full
-                               hover:bg-error/10 text-error transition min-h-[44px] sm:min-h-[auto] sm:w-8 sm:h-8"
-                    [disabled]="deletingSvc() === svc"
-                    (click)="deleteService(svc)"
-                  >
-                    @if (deletingSvc() === svc) {
-                      <span class="material-icons-round text-base animate-spin">refresh</span>
-                    } @else {
-                      <span class="material-icons-round text-base">delete_outline</span>
-                    }
-                  </button>
-                </div>
-              }
-            </div>
-          }
-        </div>
-      }
-
-      <!-- TAB: PRODUCTOS ─────────────────────────────────────────────── -->
-      @if (tab() === 'productos') {
-        <div class="flex-1 p-4 sm:p-6 flex flex-col gap-5 max-w-4xl mx-auto w-full">
-          <div class="flex items-end justify-between gap-3">
-            <div>
-              <h2 class="font-display font-semibold text-[1.375rem]">Catálogo de productos</h2>
-              <p class="text-sm text-on-surface-variant mt-1">
-                Tus productos aparecerán en tu tienda pública y se podrán pedir por WhatsApp.
-              </p>
-            </div>
-            <button type="button" class="btn-secondary btn-sm" (click)="resetProduct()">Nuevo</button>
           </div>
-
-          <form [formGroup]="productForm" (ngSubmit)="saveProduct()" class="card grid gap-4 sm:grid-cols-2">
-            <div class="sm:col-span-2">
-              <h3 class="font-semibold">{{ editingProduct() ? 'Editar producto' : 'Agregar producto' }}</h3>
-            </div>
-            <div>
-              <label class="form-label" for="catalog-name">Nombre</label>
-              <div class="icon-field">
-                <span class="material-icons-round" aria-hidden="true">sell</span>
-                <input id="catalog-name" class="form-input" formControlName="name" maxlength="120" required />
-              </div>
-            </div>
-            <div>
-              <label class="form-label" for="catalog-category">Categoría</label>
-              <div class="icon-field">
-                <span class="material-icons-round" aria-hidden="true">category</span>
-                <input id="catalog-category" class="form-input" formControlName="category" maxlength="80" />
-              </div>
-            </div>
-            <div>
-              <label class="form-label" for="catalog-price">Precio (COP)</label>
-              <div class="icon-field">
-                <span class="material-icons-round" aria-hidden="true">payments</span>
-                <input
-                  id="catalog-price"
-                  class="form-input"
-                  type="number"
-                  min="0"
-                  max="1000000000"
-                  step="1"
-                  formControlName="price"
-                  required
-                />
-              </div>
-            </div>
-            <div>
-              <label class="form-label" for="catalog-image">Foto del producto</label>
-              <input
-                id="catalog-image"
-                class="form-input"
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                (change)="uploadProductImage($event)"
-              />
-              @if (uploadingImage() === 'product') {
-                <p class="text-xs text-on-surface-variant mt-1" role="status">Subiendo foto...</p>
-              }
-              @if (productImage(); as image) {
-                <img
-                  [src]="image.url"
-                  [alt]="'Foto de ' + (productForm.value.name || 'producto')"
-                  class="mt-2 h-28 w-full rounded-lg object-cover"
-                />
-              }
-              @if (productImageError()) {
-                <p class="text-xs text-error mt-1" role="alert">{{ productImageError() }}</p>
-              }
-            </div>
-            <div class="sm:col-span-2">
-              <label class="form-label" for="catalog-description">Descripción</label>
-              <textarea
-                id="catalog-description"
-                class="form-textarea"
-                rows="2"
-                maxlength="1000"
-                formControlName="description"
-              ></textarea>
-            </div>
-            <label class="flex items-center gap-2 text-sm">
-              <input type="checkbox" formControlName="active" />
-              Visible en la tienda
-            </label>
-            <div class="sm:col-span-2 flex flex-wrap justify-end gap-2">
-              @if (editingProduct()) {
-                <button type="button" class="btn-secondary btn-sm" (click)="resetProduct()">Cancelar edición</button>
-              }
-              <button
-                type="submit"
-                class="btn-primary btn-sm"
-                [disabled]="productForm.invalid || !productImage() || savingProduct() || uploadingImage() !== null"
-              >
-                {{ savingProduct() ? 'Guardando...' : editingProduct() ? 'Guardar cambios' : 'Agregar producto' }}
-              </button>
-            </div>
-          </form>
-
-          @if (productsLoading()) {
-            <p class="text-sm text-on-surface-variant" role="status">Cargando productos...</p>
-          } @else if (!products().length) {
-            <div class="card py-10 text-center">
-              <span class="material-icons-round text-4xl text-outline-variant" aria-hidden="true">inventory_2</span>
-              <p class="mt-2 font-medium">Aún no tienes productos</p>
-              <p class="text-sm text-on-surface-variant">Agrega el primero para publicarlo en tu tienda.</p>
-            </div>
-          } @else {
-            <ul class="grid gap-3 sm:grid-cols-2">
-              @for (product of products(); track product.id) {
-                <li class="card flex gap-3" [class.opacity-60]="!product.active">
-                  <img
-                    [src]="product.imageUrl"
-                    [alt]="product.name"
-                    class="h-24 w-24 rounded-lg object-cover"
-                    loading="lazy"
-                  />
-                  <div class="min-w-0 flex-1">
-                    <div class="flex items-start justify-between gap-2">
-                      <div>
-                        <p class="font-semibold">{{ product.name }}</p>
-                        <p class="text-xs text-on-surface-variant">{{ product.category || 'Sin categoría' }}</p>
-                      </div>
-                      <span class="text-xs font-semibold">{{ formatCurrency(product.price) }}</span>
-                    </div>
-                    <p class="mt-1 line-clamp-2 text-xs text-on-surface-variant">{{ product.description }}</p>
-                    <div class="mt-2 flex gap-3">
-                      <button type="button" class="text-xs font-semibold text-primary" (click)="editProduct(product)">
-                        Editar
-                      </button>
-                      @if (product.active) {
-                        <button type="button" class="text-xs font-semibold text-error" (click)="deleteProduct(product)">
-                          Ocultar
-                        </button>
-                      }
-                    </div>
-                  </div>
-                </li>
-              }
-            </ul>
-          }
-        </div>
-      }
-
-      <!-- TAB: PERFIL ─────────────────────────────────────────────────── -->
-      @if (tab() === 'perfil') {
-        <app-business-profile [business]="business()" [businessId]="profileBusinessId" [token]="profileToken" />
-      }
-
-      <!-- TAB: GOOGLE SHEETS ────────────────────────────────────────── -->
-      @if (tab() === 'google') {
-        <div class="flex-1 p-4 sm:p-6 flex flex-col gap-5 max-w-xl mx-auto w-full">
-          <h2 class="font-display font-semibold text-[1.375rem]">Google Sheets</h2>
-
-          @if (googleLoading()) {
-            <div class="flex flex-col gap-3">
-              <div class="skeleton h-20 rounded-xl"></div>
-              <div class="skeleton h-14 rounded-xl"></div>
-            </div>
-          } @else if (!googleStatus()?.linked) {
-            <!-- No vinculado -->
-            <div class="card flex flex-col items-center gap-4 py-8 text-center">
-              <span class="material-icons-round text-[3rem] text-outline-variant">link_off</span>
-              <div>
-                <p class="font-medium">Sin cuenta Google vinculada</p>
-                <p class="text-sm text-on-surface-variant mt-1">
-                  Vincula tu cuenta para sincronizar reservas y servicios a tu propia Google Sheet.
-                </p>
-              </div>
-              <button class="btn-primary" (click)="startGoogleAuth()">
-                <span class="material-icons-round text-base">link</span>
-                Vincular cuenta Google
-              </button>
-            </div>
-          } @else {
-            <!-- Vinculado -->
-            <div class="card flex flex-col gap-4">
-              <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <span class="material-icons-round text-primary">check_circle</span>
-                </div>
-                <div class="flex-1 min-w-0">
-                  <p class="font-medium">Cuenta vinculada</p>
-                  <p class="text-sm text-on-surface-variant truncate">{{ googleStatus()!.email }}</p>
-                </div>
-              </div>
-
-              @if (googleStatus()!.sheetId) {
-                <div class="bg-surface-low rounded-xl p-4 flex flex-col gap-2 text-sm">
-                  <div class="flex justify-between items-center">
-                    <span class="text-on-surface-variant">Spreadsheet</span>
-                    <a
-                      [href]="'https://docs.google.com/spreadsheets/d/' + googleStatus()!.sheetId"
-                      target="_blank"
-                      rel="noopener"
-                      class="text-primary hover:underline flex items-center gap-1 text-xs font-medium"
-                    >
-                      Abrir
-                      <span class="material-icons-round text-sm">open_in_new</span>
-                    </a>
-                  </div>
-                </div>
-
-                <!-- Sync button -->
-                <button class="btn-primary self-start" [disabled]="syncing()" (click)="syncSheets()">
-                  @if (syncing()) {
-                    <span class="material-icons-round text-base animate-spin">refresh</span> Sincronizando…
-                  } @else {
-                    <span class="material-icons-round text-base">sync</span> Sincronizar ahora
-                  }
+          <ul class="space-y-1">
+            @for (t of tabs(); track t.id) {
+              <li>
+                <button
+                  type="button"
+                  class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors"
+                  [class.bg-primary/10]="tab() === t.id"
+                  [class.text-primary]="tab() === t.id"
+                  [class.text-on-surface]="tab() !== t.id"
+                  [class.hover:bg-surface-low]="tab() !== t.id"
+                  (click)="setTab(t.id); mobileMenuOpen.set(false)"
+                >
+                  <span class="material-icons-round text-base">{{ t.icon }}</span>
+                  <span>{{ t.label }}</span>
                 </button>
-              } @else {
-                <!-- Sin sheet vinculada todavía -->
-                <div class="bg-surface-low rounded-xl p-4 flex flex-col gap-3">
-                  <p class="text-sm text-on-surface-variant">Elige cómo vincular tu spreadsheet:</p>
+              </li>
+            }
+          </ul>
+          <div class="pt-3 border-t border-outline-variant/20 space-y-1">
+            <button
+              type="button"
+              class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-on-surface hover:bg-surface-low transition-colors"
+              (click)="goDashboard(); mobileMenuOpen.set(false)"
+            >
+              <span class="material-icons-round text-base">arrow_back</span>
+              <span>Volver al panel</span>
+            </button>
+            <button
+              type="button"
+              class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-error hover:bg-error/10 transition-colors"
+              (click)="logout(); mobileMenuOpen.set(false)"
+            >
+              <span class="material-icons-round text-base">logout</span>
+              <span>Cerrar sesión</span>
+            </button>
+          </div>
+        </nav>
+      </div>
 
-                  <!-- Crear nueva -->
-                  <button class="btn-primary btn-sm" [disabled]="creatingSheet()" (click)="createSheet()">
-                    @if (creatingSheet()) {
-                      <span class="material-icons-round text-base animate-spin">refresh</span>
-                    } @else {
-                      <span class="material-icons-round text-base">add</span>
-                    }
-                    Crear spreadsheet nueva
-                  </button>
-
-                  <!-- O vincular existente -->
-                  <div class="flex items-center gap-2 text-xs text-on-surface-variant">
-                    <hr class="flex-1 border-outline-variant/20" />
-                    <span>o vincular una existente</span>
-                    <hr class="flex-1 border-outline-variant/20" />
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 grid gap-6 lg:grid-cols-[240px_1fr]">
+        <!-- Sidebar (desktop) -->
+        <aside class="hidden lg:block">
+          <div class="sticky top-6 space-y-4">
+            @if (business()) {
+              <div class="card p-5">
+                <div class="flex items-center gap-3">
+                  <div
+                    class="w-11 h-11 rounded-xl flex items-center justify-center text-white flex-shrink-0"
+                    [style.background]="business()!.gradient"
+                  >
+                    <span class="material-icons-round">{{ business()!.icon }}</span>
                   </div>
-                  <div class="flex gap-2">
-                    <div class="icon-field flex-1">
-                      <span class="material-icons-round" aria-hidden="true">table_view</span>
+                  <div class="min-w-0">
+                    <p class="font-display font-bold text-base truncate">{{ business()!.name }}</p>
+                    <p class="text-xs text-on-surface-variant truncate">{{ business()!.category }}</p>
+                  </div>
+                </div>
+              </div>
+            }
+            <nav class="card p-3" aria-label="Secciones del negocio">
+              <ul class="space-y-1">
+                @for (t of tabs(); track t.id) {
+                  <li>
+                    <button
+                      type="button"
+                      class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors"
+                      [class.bg-primary/10]="tab() === t.id"
+                      [class.text-primary]="tab() === t.id"
+                      [class.text-on-surface]="tab() !== t.id"
+                      [class.hover:bg-surface-low]="tab() !== t.id"
+                      (click)="setTab(t.id)"
+                    >
+                      <span class="material-icons-round text-base">{{ t.icon }}</span>
+                      <span>{{ t.label }}</span>
+                    </button>
+                  </li>
+                }
+              </ul>
+            </nav>
+            <div class="card p-3 space-y-1">
+              <button
+                type="button"
+                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-on-surface hover:bg-surface-low transition-colors"
+                (click)="goDashboard()"
+              >
+                <span class="material-icons-round text-base">arrow_back</span>
+                <span>Volver al panel</span>
+              </button>
+              <button
+                type="button"
+                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-error hover:bg-error/10 transition-colors"
+                (click)="logout()"
+              >
+                <span class="material-icons-round text-base">logout</span>
+                <span>Cerrar sesión</span>
+              </button>
+            </div>
+          </div>
+        </aside>
+
+        <!-- Main content -->
+        <main class="min-w-0 space-y-5">
+          <!-- TAB: RESERVAS ──────────────────────────────────────────────── -->
+          @if (tab() === 'reservas') {
+            <div class="flex-1 p-4 sm:p-6 flex flex-col gap-5 max-w-4xl mx-auto w-full">
+              <div class="flex items-center justify-between">
+                <h2 class="font-display font-semibold text-[1.375rem]">Agendamiento</h2>
+                <div class="flex items-center gap-2">
+                  <button
+                    type="button"
+                    class="btn-secondary btn-sm min-h-[44px] sm:min-h-[auto]"
+                    (click)="exportReservationsCsv()"
+                    title="Exportar reservas a CSV"
+                  >
+                    <span class="material-icons-round text-base">file_download</span>
+                    <span class="hidden sm:inline">CSV</span>
+                  </button>
+                  <button
+                    class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-surface-container
+                           text-on-surface-variant transition sm:w-10 sm:h-10 min-h-[44px] sm:min-h-[auto]"
+                    (click)="loadReservations()"
+                    title="Actualizar"
+                  >
+                    <span class="material-icons-round text-lg" [class.animate-spin]="resLoading()">refresh</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Stats -->
+              @if (resStats().total) {
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  @for (s of resStats().items; track s.label) {
+                    <div class="card text-center py-3">
+                      <p class="font-display font-bold text-2xl">{{ s.value }}</p>
+                      <p class="text-xs text-on-surface-variant mt-0.5">{{ s.label }}</p>
+                    </div>
+                  }
+                </div>
+              }
+
+              <div class="card p-4 flex flex-col gap-3">
+                <div class="flex items-center justify-between">
+                  <p class="section-label">Cobro preparado</p>
+                  <span class="badge" [class.badge-success]="checkoutBooking()">{{
+                    checkoutBooking() ? 'Listo' : 'Sin reserva'
+                  }}</span>
+                </div>
+                <p class="font-display text-3xl font-bold">{{ formatCurrency(paymentAmount()) }}</p>
+                <p class="text-sm text-on-surface-variant">
+                  {{
+                    checkoutBooking()
+                      ? 'Preparado para ' + checkoutBooking()!.slot
+                      : 'Selecciona una reserva activa para preparar el pago.'
+                  }}
+                </p>
+                <button
+                  class="btn-primary btn-sm self-start min-h-[44px] sm:min-h-[auto]"
+                  [disabled]="!checkoutBooking() || checkouting()"
+                  (click)="prepareCheckout()"
+                >
+                  @if (checkouting()) {
+                    <span class="material-icons-round text-base animate-spin">refresh</span>
+                  } @else {
+                    <span class="material-icons-round text-base">payment</span>
+                  }
+                  <span class="hidden sm:inline">Preparar cobro</span>
+                </button>
+              </div>
+
+              @if (providerBookings().length) {
+                <div class="card p-4 flex flex-col gap-3">
+                  <div class="flex items-center justify-between">
+                    <p class="section-label">Reservas del marketplace</p>
+                    <span class="badge badge-info">{{ providerBookings().length }}</span>
+                  </div>
+
+                  <div class="flex flex-col gap-2">
+                    @for (booking of providerBookings(); track booking.id) {
+                      <div class="rounded-xl border border-outline-variant/15 bg-surface-low p-3">
+                        <div class="flex items-center justify-between gap-3">
+                          <div>
+                            <p class="font-medium">{{ booking.serviceId || 'Servicio' }}</p>
+                            <p class="text-xs text-on-surface-variant">{{ booking.date }} · {{ booking.slot }}</p>
+                          </div>
+                          <div class="flex flex-col items-end gap-1.5">
+                            <span class="badge" [ngClass]="bookingOverallStateClass(booking.id)">
+                              {{ bookingOverallStateLabel(booking.id) }}
+                            </span>
+                            <span class="badge badge-secondary">{{ booking.status }}</span>
+                          </div>
+                        </div>
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+
+              <!-- Filters -->
+              <div class="flex flex-col gap-3">
+                <div class="flex flex-wrap gap-2">
+                  <button
+                    class="btn-tertiary btn-sm"
+                    [class.btn-primary]="resQuickFilter() === 'all'"
+                    (click)="resQuickFilter.set('all')"
+                  >
+                    Todas
+                  </button>
+                  <button
+                    class="btn-tertiary btn-sm"
+                    [class.btn-primary]="resQuickFilter() === 'pending'"
+                    (click)="resQuickFilter.set('pending')"
+                  >
+                    Pendientes
+                  </button>
+                  <button
+                    class="btn-tertiary btn-sm"
+                    [class.btn-primary]="resQuickFilter() === 'confirmed'"
+                    (click)="resQuickFilter.set('confirmed')"
+                  >
+                    Confirmadas
+                  </button>
+                  <button
+                    class="btn-tertiary btn-sm"
+                    [class.btn-primary]="resQuickFilter() === 'available'"
+                    (click)="resQuickFilter.set('available')"
+                  >
+                    Disponibles
+                  </button>
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-2">
+                  <div class="icon-field flex-1">
+                    <span class="material-icons-round" aria-hidden="true">search</span>
+                    <input
+                      type="search"
+                      class="form-input"
+                      placeholder="Buscar por cliente, servicio…"
+                      [value]="resSearch()"
+                      (input)="resSearch.set(getVal($event))"
+                    />
+                  </div>
+                  <div class="flex gap-1 overflow-x-auto pb-1">
+                    @for (
+                      f of [
+                        { v: '', l: 'Todos' },
+                        { v: 'disp', l: 'Disponibles' },
+                        { v: 'pend', l: 'Pendientes' },
+                        { v: 'reserv', l: 'Reservados' },
+                        { v: 'confirm', l: 'Confirmados' },
+                      ];
+                      track f.v
+                    ) {
+                      <button
+                        type="button"
+                        class="px-3 py-1.5 text-xs font-semibold rounded-full whitespace-nowrap transition-colors"
+                        [class.bg-primary]="resFilter() === f.v"
+                        [class.text-white]="resFilter() === f.v"
+                        [class.bg-surface-container]="resFilter() !== f.v"
+                        [class.text-on-surface-variant]="resFilter() !== f.v"
+                        (click)="resFilter.set(f.v)"
+                      >
+                        {{ f.l }}
+                      </button>
+                    }
+                  </div>
+                </div>
+              </div>
+
+              <!-- Table -->
+              <div class="card p-4 flex flex-col gap-3">
+                <div class="flex items-center justify-between">
+                  <p class="section-label">Notificaciones</p>
+                  <span class="badge badge-primary">{{ notifications().length }}</span>
+                </div>
+                @if (!notifications().length) {
+                  <p class="text-sm text-on-surface-variant">No hay avisos todavía para este negocio.</p>
+                } @else {
+                  <div class="flex flex-col gap-2">
+                    @for (notification of notifications(); track notification.id) {
+                      <div class="rounded-xl bg-surface-low px-3 py-2">
+                        <div class="flex items-center justify-between gap-3">
+                          <p class="font-medium text-sm">{{ notification.title }}</p>
+                          <span
+                            class="badge"
+                            [class.badge-success]="notification.status === 'sent'"
+                            [class.badge-secondary]="notification.status !== 'sent'"
+                          >
+                            {{
+                              notification.status === 'sent'
+                                ? 'Enviado'
+                                : notification.status === 'failed'
+                                  ? 'Fallido'
+                                  : 'Pendiente'
+                            }}
+                          </span>
+                        </div>
+                        <p class="text-xs text-on-surface-variant mt-1">{{ notification.message }}</p>
+                        <p class="text-[10px] uppercase tracking-[0.16em] text-on-surface-variant mt-2">
+                          {{ notification.type }} · {{ notification.channel }}
+                        </p>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+
+              @if (resLoading()) {
+                <div class="flex flex-col gap-2">
+                  @for (i of [1, 2, 3, 4, 5]; track i) {
+                    <div class="skeleton h-14 rounded-xl"></div>
+                  }
+                </div>
+              } @else if (!filteredRes().length) {
+                <div class="flex flex-col items-center gap-3 py-16 text-center">
+                  <span class="material-icons-round text-[3rem] text-outline-variant">event_busy</span>
+                  <p class="text-on-surface-variant text-sm">Sin reservas que mostrar.</p>
+                </div>
+              } @else {
+                <div class="overflow-x-auto rounded-xl border border-outline-variant/20">
+                  <table class="w-full text-sm">
+                    <thead>
+                      <tr class="bg-surface-container text-on-surface-variant text-left">
+                        <th class="px-4 py-3 font-semibold">Franja</th>
+                        <th class="px-4 py-3 font-semibold hidden sm:table-cell">Cliente</th>
+                        <th class="px-4 py-3 font-semibold hidden md:table-cell">Servicio</th>
+                        <th class="px-4 py-3 font-semibold">Estado</th>
+                        <th class="px-4 py-3"></th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-outline-variant/10">
+                      @for (r of filteredRes(); track r._rowIndex) {
+                        <tr class="hover:bg-surface-container/40 transition">
+                          <td class="px-4 py-3 font-display font-semibold whitespace-nowrap">{{ r.franja }}</td>
+                          <td class="px-4 py-3 hidden sm:table-cell">{{ r.cliente || '—' }}</td>
+                          <td class="px-4 py-3 hidden md:table-cell text-on-surface-variant">
+                            {{ r.servicio || '—' }}
+                          </td>
+                          <td class="px-4 py-3"><app-badge [status]="r.disponibilidad" /></td>
+                          <td class="px-4 py-3 text-right whitespace-nowrap">
+                            @if (
+                              r.disponibilidad.toLowerCase().includes('pend') ||
+                              r.disponibilidad.toLowerCase().includes('reserv')
+                            ) {
+                              <button class="btn-primary btn-sm mr-1" (click)="setResStatus(r, 'Confirmado')">
+                                Confirmar
+                              </button>
+                              <button class="btn-tertiary btn-sm mr-1" (click)="setResStatus(r, 'Cancelado')">
+                                Rechazar
+                              </button>
+                            }
+                            @if (r.telefono) {
+                              <a
+                                href="{{ contactHref(r) }}"
+                                target="_blank"
+                                rel="noopener"
+                                class="btn-tertiary btn-sm mr-1"
+                                [attr.title]="'Contactar a ' + (r.cliente || 'el cliente') + ' por WhatsApp'"
+                              >
+                                <span class="material-icons-round text-base">chat</span>
+                                <span class="hidden lg:inline">Contactar</span>
+                              </a>
+                            }
+                            <button class="text-primary hover:underline text-xs font-medium" (click)="openResModal(r)">
+                              Editar
+                            </button>
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              }
+            </div>
+          }
+
+          <!-- TAB: ANALYTICS ─────────────────────────────────────────────── -->
+          @if (tab() === 'analytics') {
+            <div class="flex-1 p-4 sm:p-6 flex flex-col gap-5 max-w-4xl mx-auto w-full">
+              <h2 class="font-display font-semibold text-[1.375rem]">Analytics</h2>
+
+              @if (businessAnalytics().cards.length) {
+                <div class="card p-4 flex flex-col gap-3">
+                  <div class="flex items-center justify-between">
+                    <p class="section-label">Rendimiento del negocio</p>
+                    <span class="badge badge-primary">{{ businessAnalytics().cards.length }} métricas</span>
+                  </div>
+                  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    @for (metric of businessAnalytics().cards; track metric.label) {
+                      <div class="rounded-xl bg-surface-low px-3 py-3 text-center">
+                        <p class="text-[10px] uppercase tracking-[0.18em] text-on-surface-variant">
+                          {{ metric.label }}
+                        </p>
+                        <p
+                          class="mt-2 font-display text-2xl font-bold"
+                          [class.text-success]="metric.tone === 'success'"
+                          [class.text-warning]="metric.tone === 'warning'"
+                          [class.text-primary]="metric.tone === 'primary'"
+                          [class.text-error]="metric.tone === 'error'"
+                        >
+                          {{ metric.value }}
+                        </p>
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+
+              @if (reservationGroups().statusGroups.some(item => item.value > 0) || providerBookings().length) {
+                <div class="card p-4 flex flex-col gap-4">
+                  <div class="flex items-center justify-between">
+                    <p class="section-label">Actividad de reservas</p>
+                    <span class="badge badge-info">
+                      {{ reservationGroups().statusGroups.reduce((sum, item) => sum + item.value, 0) }} total
+                    </span>
+                  </div>
+
+                  <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    @for (item of reservationGroups().statusGroups; track item.label) {
+                      <div class="rounded-xl bg-surface-low px-3 py-3">
+                        <p class="text-[10px] uppercase tracking-[0.18em] text-on-surface-variant">{{ item.label }}</p>
+                        <p class="mt-2 font-display text-2xl font-bold text-on-surface">{{ item.value }}</p>
+                      </div>
+                    }
+                  </div>
+
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div class="rounded-xl border border-outline-variant/20 bg-surface-low p-3">
+                      <p class="text-[10px] uppercase tracking-[0.18em] text-on-surface-variant">
+                        Servicios con más demanda
+                      </p>
+                      <div class="mt-3 flex flex-col gap-2">
+                        @for (item of reservationGroups().byService; track item.label) {
+                          <div class="flex items-center justify-between text-sm">
+                            <span class="text-on-surface-variant">{{ item.label }}</span>
+                            <span class="font-semibold text-on-surface">{{ item.value }}</span>
+                          </div>
+                        }
+                        @if (!reservationGroups().byService.length) {
+                          <p class="text-sm text-on-surface-variant">Sin datos todavía.</p>
+                        }
+                      </div>
+                    </div>
+
+                    <div class="rounded-xl border border-outline-variant/20 bg-surface-low p-3">
+                      <p class="text-[10px] uppercase tracking-[0.18em] text-on-surface-variant">
+                        Días con más actividad
+                      </p>
+                      <div class="mt-3 flex flex-col gap-2">
+                        @for (item of reservationGroups().byDay; track item.label) {
+                          <div class="flex items-center justify-between text-sm">
+                            <span class="text-on-surface-variant">{{ item.label }}</span>
+                            <span class="font-semibold text-on-surface">{{ item.value }}</span>
+                          </div>
+                        }
+                        @if (!reservationGroups().byDay.length) {
+                          <p class="text-sm text-on-surface-variant">Aún no hay actividad programada.</p>
+                        }
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              }
+
+              @if (providerBookings().length) {
+                <div class="card p-4 flex flex-col gap-3">
+                  <p class="section-label">Reservas del marketplace</p>
+                  <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    <div class="rounded-xl bg-surface-low px-3 py-2 text-center">
+                      <p class="text-[10px] uppercase tracking-[0.18em] text-on-surface-variant">Pendientes</p>
+                      <p class="mt-1 font-display text-xl font-bold text-warning">{{ pendingBookingsCount() }}</p>
+                    </div>
+                    <div class="rounded-xl bg-surface-low px-3 py-2 text-center">
+                      <p class="text-[10px] uppercase tracking-[0.18em] text-on-surface-variant">Confirmadas</p>
+                      <p class="mt-1 font-display text-xl font-bold text-success">{{ confirmedBookingsCount() }}</p>
+                    </div>
+                    <div class="rounded-xl bg-surface-low px-3 py-2 text-center">
+                      <p class="text-[10px] uppercase tracking-[0.18em] text-on-surface-variant">Pagadas</p>
+                      <p class="mt-1 font-display text-xl font-bold text-primary">{{ paidBookingsCount() }}</p>
+                    </div>
+                    <div class="rounded-xl bg-surface-low px-3 py-2 text-center">
+                      <p class="text-[10px] uppercase tracking-[0.18em] text-on-surface-variant">Canceladas</p>
+                      <p class="mt-1 font-display text-xl font-bold text-error">{{ cancelledBookingsCount() }}</p>
+                    </div>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+
+          <!-- TAB: CLIENTES ──────────────────────────────────────────────── -->
+          @if (tab() === 'clientes') {
+            <div class="flex-1 p-4 sm:p-6 flex flex-col gap-5 max-w-4xl mx-auto w-full">
+              <div class="flex items-center justify-between">
+                <h2 class="font-display font-semibold text-[1.375rem]">Clientes</h2>
+                <span class="badge badge-primary">{{ recentCustomers().length }} recientes</span>
+              </div>
+
+              <div class="card flex flex-col gap-3">
+                <p class="section-label">Clientes de marketplace</p>
+                @if (recentCustomers().length) {
+                  <ul class="flex flex-col gap-2">
+                    @for (customer of recentCustomers(); track customer.id) {
+                      <li
+                        class="flex flex-col gap-2 rounded-xl bg-surface-low px-3 py-3 sm:flex-row sm:items-center sm:justify-between"
+                      >
+                        <div class="min-w-0">
+                          <p class="font-medium">{{ customer.name ?? customer.email }}</p>
+                          <a class="text-xs text-primary hover:underline" [href]="'mailto:' + customer.email">
+                            {{ customer.email }}
+                          </a>
+                        </div>
+                        <span class="text-xs text-on-surface-variant">{{ customer.phone || 'Sin teléfono' }}</span>
+                      </li>
+                    }
+                  </ul>
+                } @else {
+                  <p class="py-8 text-center text-sm text-on-surface-variant">Aún no hay clientes para mostrar.</p>
+                }
+              </div>
+            </div>
+          }
+
+          <!-- TAB: SERVICIOS ─────────────────────────────────────────────── -->
+          @if (tab() === 'servicios') {
+            <div class="flex-1 p-4 sm:p-6 flex flex-col gap-5 max-w-xl mx-auto w-full">
+              <h2 class="font-display font-semibold text-[1.375rem]">Servicios</h2>
+
+              <!-- Add service form -->
+              <form [formGroup]="serviceForm" (ngSubmit)="addService()" class="card flex flex-col gap-3">
+                <div class="flex-1 w-full space-y-3">
+                  <div>
+                    <div class="icon-field">
+                      <span class="material-icons-round" aria-hidden="true">sell</span>
                       <input
                         type="text"
-                        class="form-input text-sm"
-                        placeholder="ID de la spreadsheet"
-                        [value]="linkSheetId()"
-                        (input)="linkSheetId.set(getVal($event))"
+                        class="form-input"
+                        formControlName="nombre"
+                        placeholder="Nombre del servicio…"
                       />
                     </div>
-                    <button
-                      class="btn-secondary btn-sm whitespace-nowrap"
-                      [disabled]="!linkSheetId()"
-                      (click)="linkSheet()"
-                    >
-                      Vincular
-                    </button>
+                    @if (fieldInvalid('nombre')) {
+                      <p class="mt-1 text-xs text-error">
+                        El nombre del servicio es obligatorio y debe tener al menos 2 caracteres.
+                      </p>
+                    }
                   </div>
+                  <div class="grid sm:grid-cols-2 gap-3">
+                    <div>
+                      <label class="form-label" for="svc-precio">Precio (opcional)</label>
+                      <div class="icon-field">
+                        <span class="material-icons-round" aria-hidden="true">payments</span>
+                        <input
+                          id="svc-precio"
+                          type="number"
+                          min="0"
+                          step="1"
+                          class="form-input"
+                          formControlName="precio"
+                          placeholder="0"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label class="form-label" for="svc-var">Variaciones (opcional)</label>
+                      <div class="icon-field">
+                        <span class="material-icons-round" aria-hidden="true">tune</span>
+                        <input
+                          id="svc-var"
+                          type="text"
+                          class="form-input"
+                          formControlName="variaciones"
+                          placeholder="Ej: tamaño, color"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="submit"
+                  class="btn-primary btn-sm whitespace-nowrap min-h-[44px] sm:min-h-[auto]"
+                  [disabled]="serviceForm.invalid || addingSvc()"
+                >
+                  @if (addingSvc()) {
+                    <span class="material-icons-round text-base animate-spin">refresh</span>
+                  } @else {
+                    <span class="material-icons-round text-base">add</span>
+                  }
+                  <span class="hidden sm:inline">Agregar</span>
+                </button>
+              </form>
+
+              <!-- List -->
+              @if (svcLoading()) {
+                <div class="flex flex-col gap-2">
+                  @for (i of [1, 2, 3]; track i) {
+                    <div class="skeleton h-12 rounded-xl"></div>
+                  }
+                </div>
+              } @else if (!services().length) {
+                <div class="flex flex-col items-center gap-3 py-12 text-center">
+                  <span class="material-icons-round text-[3rem] text-outline-variant">spa</span>
+                  <p class="text-on-surface-variant text-sm">Sin servicios. Agrega el primero.</p>
+                </div>
+              } @else {
+                <div class="flex flex-col gap-2">
+                  @for (svc of services(); track svc.nombre) {
+                    <div class="card flex items-center gap-3">
+                      <span class="material-icons-round text-primary text-base">spa</span>
+                      <div class="flex-1 min-w-0">
+                        <span class="font-medium">{{ svc.nombre }}</span>
+                        @if (svc.precio != null) {
+                          <span class="ml-2 text-xs text-on-surface-variant">{{ svc.precio }}</span>
+                        }
+                        @if (svc.variaciones) {
+                          <p class="text-xs text-on-surface-variant truncate">{{ svc.variaciones }}</p>
+                        }
+                      </div>
+                      <button
+                        class="w-8 h-8 flex items-center justify-center rounded-full
+                               hover:bg-error/10 text-error transition min-h-[44px] sm:min-h-[auto] sm:w-8 sm:h-8"
+                        [disabled]="deletingSvc() === svc.nombre"
+                        (click)="deleteService(svc.nombre)"
+                      >
+                        @if (deletingSvc() === svc.nombre) {
+                          <span class="material-icons-round text-base animate-spin">refresh</span>
+                        } @else {
+                          <span class="material-icons-round text-base">delete_outline</span>
+                        }
+                      </button>
+                    </div>
+                  }
                 </div>
               }
             </div>
-
-            <!-- Disconnect -->
-            <button
-              class="text-error text-sm hover:underline self-start flex items-center gap-1"
-              [disabled]="disconnecting()"
-              (click)="disconnectGoogle()"
-            >
-              <span class="material-icons-round text-base">link_off</span>
-              Desvincular cuenta Google
-            </button>
           }
-        </div>
-      }
 
-      <!-- ══ MODAL: Editar reserva ════════════════════════════════════ -->
-      @if (modalRes()) {
-        <div
-          class="fixed inset-0 z-30 flex items-end sm:items-center justify-center p-4 sm:p-6
+          <!-- TAB: PRODUCTOS ─────────────────────────────────────────────── -->
+          @if (tab() === 'productos') {
+            <div class="flex-1 p-4 sm:p-6 flex flex-col gap-5 max-w-4xl mx-auto w-full">
+              <div class="flex items-end justify-between gap-3">
+                <div>
+                  <h2 class="font-display font-semibold text-[1.375rem]">Catálogo de productos</h2>
+                  <p class="text-sm text-on-surface-variant mt-1">
+                    Tus productos aparecerán en tu tienda pública y se podrán pedir por WhatsApp.
+                  </p>
+                </div>
+                <button type="button" class="btn-secondary btn-sm" (click)="resetProduct()">Nuevo</button>
+              </div>
+
+              <form [formGroup]="productForm" (ngSubmit)="saveProduct()" class="card grid gap-4 sm:grid-cols-2">
+                <div class="sm:col-span-2">
+                  <h3 class="font-semibold">{{ editingProduct() ? 'Editar producto' : 'Agregar producto' }}</h3>
+                </div>
+                <div>
+                  <label class="form-label" for="catalog-name">Nombre</label>
+                  <div class="icon-field">
+                    <span class="material-icons-round" aria-hidden="true">sell</span>
+                    <input id="catalog-name" class="form-input" formControlName="name" maxlength="120" required />
+                  </div>
+                </div>
+                <div>
+                  <label class="form-label" for="catalog-category">Categoría</label>
+                  <div class="icon-field">
+                    <span class="material-icons-round" aria-hidden="true">category</span>
+                    <input id="catalog-category" class="form-input" formControlName="category" maxlength="80" />
+                  </div>
+                </div>
+                <div>
+                  <label class="form-label" for="catalog-price">Precio (COP)</label>
+                  <div class="icon-field">
+                    <span class="material-icons-round" aria-hidden="true">payments</span>
+                    <input
+                      id="catalog-price"
+                      class="form-input"
+                      type="number"
+                      min="0"
+                      max="1000000000"
+                      step="1"
+                      formControlName="price"
+                      required
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label class="form-label" for="catalog-image">Foto del producto</label>
+                  <input
+                    id="catalog-image"
+                    class="form-input"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    (change)="uploadProductImage($event)"
+                  />
+                  @if (uploadingImage() === 'product') {
+                    <p class="text-xs text-on-surface-variant mt-1" role="status">Subiendo foto...</p>
+                  }
+                  @if (productImage(); as image) {
+                    <img
+                      [src]="image.url"
+                      [alt]="'Foto de ' + (productForm.value.name || 'producto')"
+                      class="mt-2 h-28 w-full rounded-lg object-cover"
+                    />
+                  }
+                  @if (productImageError()) {
+                    <p class="text-xs text-error mt-1" role="alert">{{ productImageError() }}</p>
+                  }
+                </div>
+                <div class="sm:col-span-2">
+                  <label class="form-label" for="catalog-description">Descripción</label>
+                  <textarea
+                    id="catalog-description"
+                    class="form-textarea"
+                    rows="2"
+                    maxlength="1000"
+                    formControlName="description"
+                  ></textarea>
+                </div>
+                <label class="flex items-center gap-2 text-sm">
+                  <input type="checkbox" formControlName="active" />
+                  Visible en la tienda
+                </label>
+                <div class="sm:col-span-2 flex flex-wrap justify-end gap-2">
+                  @if (editingProduct()) {
+                    <button type="button" class="btn-secondary btn-sm" (click)="resetProduct()">
+                      Cancelar edición
+                    </button>
+                  }
+                  <button
+                    type="submit"
+                    class="btn-primary btn-sm"
+                    [disabled]="productForm.invalid || !productImage() || savingProduct() || uploadingImage() !== null"
+                  >
+                    {{ savingProduct() ? 'Guardando...' : editingProduct() ? 'Guardar cambios' : 'Agregar producto' }}
+                  </button>
+                </div>
+              </form>
+
+              @if (productsLoading()) {
+                <p class="text-sm text-on-surface-variant" role="status">Cargando productos...</p>
+              } @else if (!products().length) {
+                <div class="card py-10 text-center">
+                  <span class="material-icons-round text-4xl text-outline-variant" aria-hidden="true">inventory_2</span>
+                  <p class="mt-2 font-medium">Aún no tienes productos</p>
+                  <p class="text-sm text-on-surface-variant">Agrega el primero para publicarlo en tu tienda.</p>
+                </div>
+              } @else {
+                <ul class="grid gap-3 sm:grid-cols-2">
+                  @for (product of products(); track product.id) {
+                    <li class="card flex gap-3" [class.opacity-60]="!product.active">
+                      <img
+                        [src]="product.imageUrl"
+                        [alt]="product.name"
+                        class="h-24 w-24 rounded-lg object-cover"
+                        loading="lazy"
+                      />
+                      <div class="min-w-0 flex-1">
+                        <div class="flex items-start justify-between gap-2">
+                          <div>
+                            <p class="font-semibold">{{ product.name }}</p>
+                            <p class="text-xs text-on-surface-variant">{{ product.category || 'Sin categoría' }}</p>
+                          </div>
+                          <span class="text-xs font-semibold">{{ formatCurrency(product.price) }}</span>
+                        </div>
+                        <p class="mt-1 line-clamp-2 text-xs text-on-surface-variant">{{ product.description }}</p>
+                        <div class="mt-2 flex gap-3">
+                          <button
+                            type="button"
+                            class="text-xs font-semibold text-primary"
+                            (click)="editProduct(product)"
+                          >
+                            Editar
+                          </button>
+                          @if (product.active) {
+                            <button
+                              type="button"
+                              class="text-xs font-semibold text-error"
+                              (click)="deleteProduct(product)"
+                            >
+                              Ocultar
+                            </button>
+                          }
+                        </div>
+                      </div>
+                    </li>
+                  }
+                </ul>
+              }
+            </div>
+          }
+
+          <!-- TAB: PERFIL ─────────────────────────────────────────────────── -->
+          @if (tab() === 'perfil') {
+            <app-business-profile [business]="business()" [businessId]="profileBusinessId" [token]="profileToken" />
+          }
+
+          <!-- TAB: GOOGLE SHEETS ────────────────────────────────────────── -->
+          @if (tab() === 'google') {
+            <div class="flex-1 p-4 sm:p-6 flex flex-col gap-5 max-w-xl mx-auto w-full">
+              <h2 class="font-display font-semibold text-[1.375rem]">Google Sheets</h2>
+
+              @if (googleLoading()) {
+                <div class="flex flex-col gap-3">
+                  <div class="skeleton h-20 rounded-xl"></div>
+                  <div class="skeleton h-14 rounded-xl"></div>
+                </div>
+              } @else if (!googleStatus()?.linked) {
+                <!-- No vinculado -->
+                <div class="card flex flex-col items-center gap-4 py-8 text-center">
+                  <span class="material-icons-round text-[3rem] text-outline-variant">link_off</span>
+                  <div>
+                    <p class="font-medium">Sin cuenta Google vinculada</p>
+                    <p class="text-sm text-on-surface-variant mt-1">
+                      Vincula tu cuenta para sincronizar reservas y servicios a tu propia Google Sheet.
+                    </p>
+                  </div>
+                  <button class="btn-primary" (click)="startGoogleAuth()">
+                    <span class="material-icons-round text-base">link</span>
+                    Vincular cuenta Google
+                  </button>
+                </div>
+              } @else {
+                <!-- Vinculado -->
+                <div class="card flex flex-col gap-4">
+                  <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                      <span class="material-icons-round text-primary">check_circle</span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <p class="font-medium">Cuenta vinculada</p>
+                      <p class="text-sm text-on-surface-variant truncate">{{ googleStatus()!.email }}</p>
+                    </div>
+                  </div>
+
+                  @if (googleStatus()!.sheetId) {
+                    <div class="bg-surface-low rounded-xl p-4 flex flex-col gap-2 text-sm">
+                      <div class="flex justify-between items-center">
+                        <span class="text-on-surface-variant">Spreadsheet</span>
+                        <a
+                          [href]="'https://docs.google.com/spreadsheets/d/' + googleStatus()!.sheetId"
+                          target="_blank"
+                          rel="noopener"
+                          class="text-primary hover:underline flex items-center gap-1 text-xs font-medium"
+                        >
+                          Abrir
+                          <span class="material-icons-round text-sm">open_in_new</span>
+                        </a>
+                      </div>
+                    </div>
+
+                    <!-- Sync button -->
+                    <button class="btn-primary self-start" [disabled]="syncing()" (click)="syncSheets()">
+                      @if (syncing()) {
+                        <span class="material-icons-round text-base animate-spin">refresh</span> Sincronizando…
+                      } @else {
+                        <span class="material-icons-round text-base">sync</span> Sincronizar ahora
+                      }
+                    </button>
+                  } @else {
+                    <!-- Sin sheet vinculada todavía -->
+                    <div class="bg-surface-low rounded-xl p-4 flex flex-col gap-3">
+                      <p class="text-sm text-on-surface-variant">Elige cómo vincular tu spreadsheet:</p>
+
+                      <!-- Crear nueva -->
+                      <button class="btn-primary btn-sm" [disabled]="creatingSheet()" (click)="createSheet()">
+                        @if (creatingSheet()) {
+                          <span class="material-icons-round text-base animate-spin">refresh</span>
+                        } @else {
+                          <span class="material-icons-round text-base">add</span>
+                        }
+                        Crear spreadsheet nueva
+                      </button>
+
+                      <!-- O vincular existente -->
+                      <div class="flex items-center gap-2 text-xs text-on-surface-variant">
+                        <hr class="flex-1 border-outline-variant/20" />
+                        <span>o vincular una existente</span>
+                        <hr class="flex-1 border-outline-variant/20" />
+                      </div>
+                      <div class="flex gap-2">
+                        <div class="icon-field flex-1">
+                          <span class="material-icons-round" aria-hidden="true">table_view</span>
+                          <input
+                            type="text"
+                            class="form-input text-sm"
+                            placeholder="ID de la spreadsheet"
+                            [value]="linkSheetId()"
+                            (input)="linkSheetId.set(getVal($event))"
+                          />
+                        </div>
+                        <button
+                          class="btn-secondary btn-sm whitespace-nowrap"
+                          [disabled]="!linkSheetId()"
+                          (click)="linkSheet()"
+                        >
+                          Vincular
+                        </button>
+                      </div>
+                    </div>
+                  }
+                </div>
+
+                <!-- Disconnect -->
+                <button
+                  class="text-error text-sm hover:underline self-start flex items-center gap-1"
+                  [disabled]="disconnecting()"
+                  (click)="disconnectGoogle()"
+                >
+                  <span class="material-icons-round text-base">link_off</span>
+                  Desvincular cuenta Google
+                </button>
+              }
+            </div>
+          }
+
+          <!-- ══ MODAL: Editar reserva ════════════════════════════════════ -->
+          @if (modalRes()) {
+            <div
+              class="fixed inset-0 z-30 flex items-end sm:items-center justify-center p-4 sm:p-6
                   bg-black/40 backdrop-blur-sm animate-fade-in"
-          (click)="closeResModal()"
-        >
-          <div
-            class="w-full max-w-md bg-surface-lowest rounded-t-2xl sm:rounded-2xl p-6
+              (click)="closeResModal()"
+            >
+              <div
+                class="w-full max-w-md bg-surface-lowest rounded-t-2xl sm:rounded-2xl p-6
                     flex flex-col gap-5 shadow-soft animate-sheet-up"
-            (click)="$event.stopPropagation()"
-          >
-            <div class="flex items-center justify-between">
-              <h3 class="font-display font-semibold text-lg">Actualizar reserva</h3>
-              <button
-                class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-surface-container"
-                (click)="closeResModal()"
+                (click)="$event.stopPropagation()"
               >
-                <span class="material-icons-round text-on-surface-variant">close</span>
-              </button>
-            </div>
+                <div class="flex items-center justify-between">
+                  <h3 class="font-display font-semibold text-lg">Actualizar reserva</h3>
+                  <button
+                    class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-surface-container"
+                    (click)="closeResModal()"
+                  >
+                    <span class="material-icons-round text-on-surface-variant">close</span>
+                  </button>
+                </div>
 
-            <div class="bg-surface-low rounded-xl p-4 flex flex-col gap-2 text-sm">
-              <div class="flex justify-between">
-                <span class="text-on-surface-variant">Franja</span>
-                <span class="font-semibold font-display">{{ modalRes()!.franja }}</span>
-              </div>
-              <div class="flex justify-between">
-                <span class="text-on-surface-variant">Cliente</span>
-                <span>{{ modalRes()!.cliente || '—' }}</span>
-              </div>
-              <div class="flex justify-between items-center">
-                <span class="text-on-surface-variant">Estado actual</span>
-                <app-badge [status]="modalRes()!.disponibilidad" />
-              </div>
-            </div>
+                <div class="bg-surface-low rounded-xl p-4 flex flex-col gap-2 text-sm">
+                  <div class="flex justify-between">
+                    <span class="text-on-surface-variant">Franja</span>
+                    <span class="font-semibold font-display">{{ modalRes()!.franja }}</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-on-surface-variant">Cliente</span>
+                    <span>{{ modalRes()!.cliente || '—' }}</span>
+                  </div>
+                  <div class="flex justify-between items-center">
+                    <span class="text-on-surface-variant">Estado actual</span>
+                    <app-badge [status]="modalRes()!.disponibilidad" />
+                  </div>
+                </div>
 
-            <div>
-              <label class="form-label">Nuevo estado</label>
-              <select class="form-select" [value]="newResStatus()" (change)="newResStatus.set(getVal($event))">
-                <option value="Disponible">Disponible</option>
-                <option value="Pendiente">Pendiente</option>
-                <option value="Reservado">Reservado</option>
-                <option value="Confirmado">Confirmado</option>
-              </select>
-            </div>
+                <div>
+                  <label class="form-label">Nuevo estado</label>
+                  <select class="form-select" [value]="newResStatus()" (change)="newResStatus.set(getVal($event))">
+                    <option value="Disponible">Disponible</option>
+                    <option value="Pendiente">Pendiente</option>
+                    <option value="Reservado">Reservado</option>
+                    <option value="Confirmado">Confirmado</option>
+                  </select>
+                </div>
 
-            <div class="flex gap-3">
-              <button class="btn-secondary flex-1" (click)="closeResModal()">Cancelar</button>
-              <button class="btn-primary flex-1" [disabled]="savingRes()" (click)="saveResStatus()">
-                @if (savingRes()) {
-                  <span class="material-icons-round text-base animate-spin">refresh</span> Guardando…
-                } @else {
-                  Guardar
-                }
-              </button>
+                <div class="flex gap-3">
+                  <button class="btn-secondary flex-1" (click)="closeResModal()">Cancelar</button>
+                  <button class="btn-primary flex-1" [disabled]="savingRes()" (click)="saveResStatus()">
+                    @if (savingRes()) {
+                      <span class="material-icons-round text-base animate-spin">refresh</span> Guardando…
+                    } @else {
+                      Guardar
+                    }
+                  </button>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      }
+          }
+        </main>
+      </div>
     </div>
   `,
 })
@@ -874,7 +1098,8 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
   readonly formatCurrency = formatCurrency;
 
   readonly tabs = computed(() => {
-    const all: { id: negocioTab; label: string; icon: string }[] = [
+    const all: { id: BusinessAdminTab; label: string; icon: string }[] = [
+      { id: 'clientes', label: 'Clientes', icon: 'groups' },
       { id: 'servicios', label: 'Servicios', icon: 'spa' },
       { id: 'productos', label: 'Productos', icon: 'inventory_2' },
       { id: 'perfil', label: 'Perfil', icon: 'storefront' },
@@ -883,15 +1108,17 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
     const b = this.business();
     const hasAgenda = !b || b.businessType === 'appointment';
     if (hasAgenda) {
+      all.unshift({ id: 'analytics', label: 'Analytics', icon: 'insights' });
       all.unshift({ id: 'reservas', label: 'Agendamiento', icon: 'event_note' });
     }
     return all;
   });
 
-  readonly tab = signal<negocioTab>('reservas');
+  readonly tab = signal<BusinessAdminTab>('reservas');
+  readonly mobileMenuOpen = signal(false);
   readonly business = signal<Business | null>(null);
   readonly reservations = signal<Reservation[]>([]);
-  readonly services = signal<string[]>([]);
+  readonly services = signal<{ nombre: string; precio: number | null; variaciones: string }[]>([]);
   readonly products = signal<CatalogProduct[]>([]);
   readonly productsLoading = signal(false);
   readonly savingProduct = signal(false);
@@ -1051,6 +1278,8 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
 
   readonly serviceForm = this.fb.group({
     nombre: ['', [Validators.required, Validators.minLength(2)]],
+    precio: [null as number | null, [Validators.min(0)]],
+    variaciones: [''],
   });
 
   readonly productForm = this.fb.group({
@@ -1101,7 +1330,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
     this.pollSub?.unsubscribe();
   }
 
-  setTab(t: negocioTab): void {
+  setTab(t: BusinessAdminTab): void {
     this.tab.set(t);
     if (t === 'servicios') this.loadServices();
     if (t === 'productos') this.loadProducts();
@@ -1491,14 +1720,16 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
   addService(): void {
     if (this.serviceForm.invalid) return;
     const nombre = this.serviceForm.value.nombre!;
+    const precio = this.serviceForm.value.precio;
+    const variaciones = this.serviceForm.value.variaciones ?? '';
     this.addingSvc.set(true);
     this.businessAdminService
-      .addService(this.negocioId, nombre, this.token)
+      .addService(this.negocioId, nombre, this.token, precio, variaciones)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
           this.toast.success('Servicio agregado');
-          this.serviceForm.reset();
+          this.serviceForm.reset({ nombre: '', precio: null, variaciones: '' });
           this.addingSvc.set(false);
           this.loadServices();
         },
@@ -1722,6 +1953,10 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
           this.disconnecting.set(false);
         },
       });
+  }
+
+  goDashboard(): void {
+    this.router.navigate(['/propietario/dashboard']);
   }
 
   logout(): void {

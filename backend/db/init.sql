@@ -60,6 +60,8 @@ CREATE TABLE IF NOT EXISTS services (
   id          SERIAL PRIMARY KEY,
   business_id TEXT NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
   nombre      TEXT NOT NULL,
+  precio      NUMERIC(12,2),
+  variaciones TEXT NOT NULL DEFAULT '',
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
   UNIQUE (business_id, nombre),
   active      BOOLEAN NOT NULL DEFAULT true

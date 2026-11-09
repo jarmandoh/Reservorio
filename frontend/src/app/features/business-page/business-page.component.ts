@@ -1245,8 +1245,10 @@ export class BusinessPageComponent implements OnInit {
         this.qrImageError.set(false);
         this.products.set(result.products.filter(product => product.active));
         this.services.set(
-          result.services.map(name => ({
-            name,
+          result.services.map(s => ({
+            name: typeof s === 'string' ? s : s.nombre,
+            price: typeof s === 'string' ? null : s.precio,
+            variations: typeof s === 'string' ? '' : (s.variaciones ?? ''),
             requiresBooking: result.business.businessType === 'appointment',
           }))
         );

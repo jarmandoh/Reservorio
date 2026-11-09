@@ -18,12 +18,22 @@ export class SupabaseAuthService {
 
   readonly accessToken = signal<string | null>(null);
   readonly user = signal<User | null>(null);
+  readonly initialized = signal(false);
 
   constructor() {
-    if (!this.client) return;
-    this.client.auth.onAuthStateChange((_event, session) => this.applySession(session));
+    if (!this.client) {
+      this.initialized.set(true);
+      return;
+    }
+
+    this.client.auth.onAuthStateChange((_event, session) => {
+      this.applySession(session);
+      this.initialized.set(true);
+    });
     void this.client.auth.getSession().then(({ data, error }) => {
-      if (!error) this.applySession(data.session);
+      if (error) return;
+      this.applySession(data.session);
+      this.initialized.set(true);
     });
   }
 

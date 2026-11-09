@@ -454,14 +454,22 @@ async function updateReservation(businessId, reservationId, payload) {
 
 async function listServices(businessId) {
   const { rows } = await businessRepository.listServices(businessId);
-  return { ok: true, status: 200, data: rows.map(row => row.nombre) };
+  return {
+    ok: true,
+    status: 200,
+    data: rows.map(row => ({
+      nombre: row.nombre,
+      precio: row.precio == null ? null : Number(row.precio),
+      variaciones: row.variaciones || '',
+    })),
+  };
 }
 
-async function addService(businessId, nombre) {
+async function addService(businessId, nombre, precio, variaciones) {
   const cleanedName = clean(nombre);
-  await businessRepository.addService(businessId, cleanedName);
+  await businessRepository.addService(businessId, cleanedName, precio, variaciones);
   syncInBackground(businessId, 'services');
-  return { ok: true, status: 201, data: { nombre: cleanedName } };
+  return { ok: true, status: 201, data: { nombre: cleanedName, precio: precio ?? null, variaciones: variaciones ?? '' } };
 }
 
 async function removeService(businessId, nombre) {
