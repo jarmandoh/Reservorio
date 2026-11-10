@@ -403,7 +403,7 @@ interface ConfirmedBooking {
                         <div>
                           <div class="rounded-2xl border border-outline-variant bg-white p-4">
                             <label class="form-label" for="slotSelect">Elige tu horario</label>
-                            @if (reservations().length) {
+                            @if (availableSlotsCount() > 0) {
                               <select
                                 id="slotSelect"
                                 class="form-select w-full text-base"
@@ -412,18 +412,16 @@ interface ConfirmedBooking {
                               >
                                 <option value="" disabled>Selecciona un horario disponible</option>
                                 @for (row of reservations(); track row._rowIndex) {
-                                  <option
-                                    [value]="row._rowIndex"
-                                    [disabled]="isTaken(row)"
-                                    [selected]="selectedSlot()?._rowIndex === row._rowIndex"
-                                  >
-                                    {{ formatTime24(row.franja) }}{{ isTaken(row) ? ' — Ocupado' : ' — Disponible' }}
-                                  </option>
+                                  @if (!isTaken(row)) {
+                                    <option
+                                      [value]="row._rowIndex"
+                                      [selected]="selectedSlot()?._rowIndex === row._rowIndex"
+                                    >
+                                      {{ formatTime24(row.franja) }}
+                                    </option>
+                                  }
                                 }
                               </select>
-                              <p class="mt-2 text-xs text-on-surface-variant">
-                                Las franjas marcadas como ocupadas no se pueden seleccionar.
-                              </p>
                             } @else {
                               <p class="rounded-2xl bg-surface-low px-4 py-6 text-center text-sm text-outline">
                                 No hay franjas disponibles por ahora.

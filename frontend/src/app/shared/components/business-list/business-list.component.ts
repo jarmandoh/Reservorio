@@ -9,7 +9,11 @@ import { Business } from '../../../core/models/business.model';
   template: `
     <div class="grid gap-4">
       @for (negocio of businesses; track negocio.id) {
-        <div class="card p-5 relative overflow-visible" style="content-visibility: visible; contain: none;">
+        <div
+          class="card p-5 relative overflow-visible"
+          style="content-visibility: visible; contain: none;"
+          [style.view-transition-name]="'business-' + (negocio.id || negocio.name)"
+        >
           <button
             type="button"
             class="absolute top-3 right-3 grid place-items-center h-9 w-9 rounded-full text-on-surface-variant hover:bg-surface-container transition"

@@ -161,6 +161,7 @@ import { ReservationManagerComponent } from './reservation-manager.component';
           id="inicio"
           class="business-hero"
           [style.background]="store.gradient || 'linear-gradient(135deg,#12335d,#2476b9)'"
+          [style.view-transition-name]="'business-' + store.id"
         >
           @if (store.storeCoverImage) {
             <img
@@ -256,7 +257,14 @@ import { ReservationManagerComponent } from './reservation-manager.component';
                   @for (service of services(); track service.name) {
                     <app-business-service-card
                       [service]="service"
-                      [contactUrl]="store.whatsapp ? contactUrl(store.whatsapp, service.name) : null"
+                      [contactUrl]="
+                        store.whatsapp
+                          ? contactUrl(
+                              store.whatsapp,
+                              service.name + (service.price ? ' (precio: ' + service.price + ')' : '')
+                            )
+                          : null
+                      "
                       (schedule)="openBooking($event)"
                     />
                   }
@@ -286,7 +294,14 @@ import { ReservationManagerComponent } from './reservation-manager.component';
                   @for (product of products(); track product.id) {
                     <app-business-product-card
                       [product]="product"
-                      [contactUrl]="store.whatsapp ? contactUrl(store.whatsapp, product.name) : null"
+                      [contactUrl]="
+                        store.whatsapp
+                          ? contactUrl(
+                              store.whatsapp,
+                              product.name + (product.price ? ' (precio: ' + product.price + ')' : '')
+                            )
+                          : null
+                      "
                     />
                   }
                 </div>
@@ -1353,7 +1368,7 @@ export class BusinessPageComponent implements OnInit {
 
   contactUrl(phone: string, subject?: string): string | null {
     const message = subject
-      ? `Hola, quisiera más información sobre ${subject} en ${this.business()?.name ?? 'este negocio'}.`
+      ? `Hola, quisiera más información sobre: ${subject} (negocio: ${this.business()?.name ?? 'este negocio'}).`
       : `Hola, quisiera más información sobre ${this.business()?.name ?? 'este negocio'}.`;
     return createWhatsAppOrderUrl(phone, message);
   }

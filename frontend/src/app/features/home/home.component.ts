@@ -74,7 +74,7 @@ const DEFAULT_CATEGORIES = ['Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci�
                   <img src="assets/icons/icon-192.png" alt="Resérvame" class="w-full h-full object-contain" />
                 </span>
               </div>
-              <span class="font-display font-bold text-lg tracking-tight">Resérvame</span>
+              <span class="font-display font-bold text-lg tracking-tight">Miveci</span>
             </div>
             <div class="flex items-center gap-2">
               <div class="relative">

@@ -15,6 +15,7 @@ import { Business } from '../../../core/models/business.model';
       [routerLink]="['/negocio', business.id]"
       [attr.aria-label]="'Ver ' + business.name + ', ' + business.category + ', en ' + business.location"
       [style.--card-index]="animationIndex"
+      [style.view-transition-name]="'business-' + business.id"
     >
       <div
         class="card-cover relative flex h-36 items-end overflow-hidden p-4 sm:h-40"
