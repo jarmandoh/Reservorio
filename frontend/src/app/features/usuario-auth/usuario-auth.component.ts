@@ -68,10 +68,18 @@ function passwordMatchValidator(group: { get(controlName: string): { value: unkn
                   formControlName="email"
                   autocomplete="email"
                   placeholder="ana@ejemplo.com"
+                  [attr.aria-invalid]="
+                    loginForm.controls.email.invalid && loginForm.controls.email.touched ? 'true' : null
+                  "
+                  [attr.aria-describedby]="
+                    loginForm.controls.email.invalid && loginForm.controls.email.touched ? 'email-error' : null
+                  "
                 />
               </div>
               @if (loginForm.controls.email.touched && loginForm.controls.email.invalid) {
-                <p class="mt-1 text-xs text-error">Introduce un correo electrónico válido.</p>
+                <p id="email-error" class="mt-1 text-xs text-error" role="alert">
+                  Introduce un correo electrónico válido.
+                </p>
               }
             </div>
 
@@ -86,6 +94,12 @@ function passwordMatchValidator(group: { get(controlName: string): { value: unkn
                   formControlName="password"
                   autocomplete="current-password"
                   placeholder="Mínimo 6 caracteres"
+                  [attr.aria-invalid]="
+                    loginForm.controls.password.invalid && loginForm.controls.password.touched ? 'true' : null
+                  "
+                  [attr.aria-describedby]="
+                    loginForm.controls.password.invalid && loginForm.controls.password.touched ? 'password-error' : null
+                  "
                 />
                 <button
                   type="button"
@@ -100,7 +114,9 @@ function passwordMatchValidator(group: { get(controlName: string): { value: unkn
                 </button>
               </div>
               @if (loginForm.controls.password.touched && loginForm.controls.password.invalid) {
-                <p class="mt-1 text-xs text-error">La contraseña debe tener al menos 6 caracteres.</p>
+                <p id="password-error" class="mt-1 text-xs text-error" role="alert">
+                  La contraseña debe tener al menos 6 caracteres.
+                </p>
               }
             </div>
           </div>
@@ -137,10 +153,20 @@ function passwordMatchValidator(group: { get(controlName: string): { value: unkn
                   formControlName="email"
                   autocomplete="email"
                   placeholder="ana@ejemplo.com"
+                  [attr.aria-invalid]="
+                    registerForm.controls.email.invalid && registerForm.controls.email.touched ? 'true' : null
+                  "
+                  [attr.aria-describedby]="
+                    registerForm.controls.email.invalid && registerForm.controls.email.touched
+                      ? 'register-email-error'
+                      : null
+                  "
                 />
               </div>
               @if (registerForm.controls.email.touched && registerForm.controls.email.invalid) {
-                <p class="mt-1 text-xs text-error">Introduce un correo electrónico válido.</p>
+                <p id="register-email-error" class="mt-1 text-xs text-error" role="alert">
+                  Introduce un correo electrónico válido.
+                </p>
               }
             </div>
 
@@ -155,6 +181,14 @@ function passwordMatchValidator(group: { get(controlName: string): { value: unkn
                   formControlName="password"
                   autocomplete="new-password"
                   placeholder="Mínimo 6 caracteres"
+                  [attr.aria-invalid]="
+                    registerForm.controls.password.invalid && registerForm.controls.password.touched ? 'true' : null
+                  "
+                  [attr.aria-describedby]="
+                    registerForm.controls.password.invalid && registerForm.controls.password.touched
+                      ? 'register-password-error'
+                      : null
+                  "
                 />
                 <button
                   type="button"
@@ -169,7 +203,9 @@ function passwordMatchValidator(group: { get(controlName: string): { value: unkn
                 </button>
               </div>
               @if (registerForm.controls.password.touched && registerForm.controls.password.invalid) {
-                <p class="mt-1 text-xs text-error">La contraseña debe tener al menos 6 caracteres.</p>
+                <p id="register-password-error" class="mt-1 text-xs text-error" role="alert">
+                  La contraseña debe tener al menos 6 caracteres.
+                </p>
               }
             </div>
 

@@ -238,7 +238,7 @@ import { Business } from '../../../core/models/business.model';
         font-size: 0.95rem;
       }
       .rating-count {
-        color: #8a7a58;
+        color: #66552f;
         font-size: 0.65rem;
         font-weight: 500;
       }

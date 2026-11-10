@@ -119,6 +119,11 @@
     transform: translateY(0);
   }
 
+  .skip-link:focus-visible {
+    outline: 3px solid #ffbf00 !important;
+    outline-offset: 3px;
+  }
+
   .btn-primary {
     @apply flex items-center justify-center gap-2 w-full px-6 py-3.5 rounded-lg font-semibold text-white transition
            disabled:opacity-40 disabled:cursor-not-allowed;

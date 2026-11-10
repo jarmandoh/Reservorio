@@ -1,6 +1,8 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 
+test.use({ serviceWorkers: 'block' });
+
 async function expectAccessible(page: Page, route: string): Promise<void> {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto(route);
@@ -86,11 +88,12 @@ test('invalid login fields expose and associate their validation messages', asyn
   await expect(email).toHaveAttribute('aria-describedby', 'email-error');
   await expect(page.getByText('Introduce un correo electrónico válido.')).toBeVisible();
 
-  const phone = page.getByLabel('Teléfono');
-  await phone.fill('123');
-  await phone.press('Tab');
-  await expect(phone).toHaveAttribute('aria-invalid', 'true');
-  await expect(phone).toHaveAttribute('aria-describedby', 'phone-error');
+  const password = page.locator('#customer-password');
+  await password.fill('123');
+  await password.press('Tab');
+  await expect(password).toHaveAttribute('aria-invalid', 'true');
+  await expect(password).toHaveAttribute('aria-describedby', 'password-error');
+  await expect(page.getByText('La contraseña debe tener al menos 6 caracteres.')).toBeVisible();
   await expectNoAxeViolations(page);
 });
 
