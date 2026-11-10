@@ -206,6 +206,13 @@ function passwordMatchValidator(group: { get(controlName: string): { value: unkn
           </div>
         }
       </div>
+      @if (mode() === 'login') {
+        <p class="mt-1 text-right">
+          <a routerLink="/auth/reset-password" class="text-xs text-primary font-semibold hover:underline">
+            ¿Olvidaste tu contraseña?
+          </a>
+        </p>
+      }
     </app-auth-card>
   `,
 })

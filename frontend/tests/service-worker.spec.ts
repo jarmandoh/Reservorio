@@ -12,10 +12,10 @@ test('serves the cached application shell offline and recovers on reconnection',
   await page.reload();
 
   await expect(page.locator('app-root')).toBeVisible();
-  await expect(page.getByRole('status')).toContainText('Sin conexión');
+  await expect(page.locator('.offline-banner')).toContainText('Sin conexión');
 
   await context.setOffline(false);
-  await expect(page.getByRole('status')).toHaveCount(0);
+  await expect(page.locator('.offline-banner')).toHaveCount(0);
 });
 
 test('clears an expired session when the API responds with 401', async ({ page }) => {

@@ -22,7 +22,7 @@ export class AuthService {
   private readonly api = inject(ApiService);
   private readonly sessionStore = inject(SessionStore);
   private readonly storage = inject(StorageService);
-  private readonly supabase = inject(SupabaseAuthService);
+  readonly supabase = inject(SupabaseAuthService);
   private _unlocked = signal(this.storage.getItem(SESSION_KEY) === '1');
   private _tokenVersion = signal(0);
 
@@ -356,6 +356,27 @@ export class AuthService {
         this.clearCustomerToken();
         return throwError(() => err);
       })
+    );
+  }
+
+  requestPasswordReset(email: string): Observable<void> {
+    return from(this.supabase.resetPasswordForEmail(email)).pipe(
+      map(({ error }) => {
+        if (error) throw error;
+        return undefined;
+      })
+    );
+  }
+
+  updatePassword(newPassword: string): Observable<void> {
+    return from(this.supabase.updatePassword(newPassword)).pipe(
+      map(({ error }) => {
+        if (error) throw error;
+        return undefined;
+      }),
+      catchError(err =>
+        throwError(() => (err instanceof Error ? err : new Error('No se pudo actualizar la contraseña.')))
+      )
     );
   }
 

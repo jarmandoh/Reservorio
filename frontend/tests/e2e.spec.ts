@@ -8,6 +8,8 @@ const newServiceName = `prueba-servicio-${Date.now()}`;
 const setupServiceName = `servicio-e2e-${Date.now()}`;
 const setupSlotTime = `10:00-${Date.now()}`;
 
+test.use({ serviceWorkers: 'block' });
+
 let businessId = process.env['PLAYWRIGHT_BUSINESS_ID'] || '';
 
 async function getAdminToken(request: APIRequestContext) {
@@ -136,6 +138,7 @@ test.describe('Reserva y administración', () => {
     await expect(page.getByText('No se pudieron cargar los servicios')).toBeVisible();
     await page.getByRole('button', { name: 'Reintentar' }).click();
     await expect(page.getByText('No se pudieron cargar los servicios')).toHaveCount(0);
+    await expect(page.getByText(setupServiceName)).toBeVisible();
     expect(attempts).toBeGreaterThan(1);
   });
 
@@ -152,9 +155,10 @@ test.describe('Reserva y administración', () => {
     await expect(page.getByRole('button', { name: 'Continuar al horario' })).toBeEnabled();
     await page.getByRole('button', { name: 'Continuar al horario' }).click();
 
-    const slotButton = page.locator('button.slot-chip:not(.taken)').first();
-    await expect(slotButton).toBeVisible({ timeout: 20000 });
-    await slotButton.click();
+    const slotSelect = page.getByLabel('Elige tu horario');
+    await expect(slotSelect).toBeVisible({ timeout: 20000 });
+    await expect(slotSelect.locator('option').nth(1)).toBeAttached({ timeout: 20000 });
+    await slotSelect.selectOption({ index: 1 });
 
     await expect(page.getByRole('button', { name: 'Continuar con tus datos' })).toBeEnabled();
     await page.getByRole('button', { name: 'Continuar con tus datos' }).click();
@@ -162,7 +166,7 @@ test.describe('Reserva y administración', () => {
     await expect(page.getByLabel('Tu nombre')).toBeVisible();
     await page.fill('#cliente', 'Ana Garcia');
     await page.fill('#telefono', 'invalid');
-    await expect(page.locator('text=7-15 dígitos')).toBeVisible();
+    await expect(page.getByText(/Introduce un teléfono válido/)).toBeVisible();
     await expect(page.getByRole('button', { name: 'Confirmar reserva' })).toBeDisabled();
 
     await page.check('#dataConsent');

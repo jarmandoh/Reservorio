@@ -5,8 +5,8 @@ test('shows offline status after disconnection and clears it after reconnection'
   await expect(page.getByRole('heading', { name: 'La reserva sigue creada' })).toBeVisible();
 
   await page.evaluate(() => window.dispatchEvent(new Event('offline')));
-  await expect(page.getByRole('status')).toContainText('Sin conexión');
+  await expect(page.locator('.offline-banner')).toContainText('Sin conexión');
 
   await page.evaluate(() => window.dispatchEvent(new Event('online')));
-  await expect(page.getByRole('status')).toHaveCount(0);
+  await expect(page.locator('.offline-banner')).toHaveCount(0);
 });

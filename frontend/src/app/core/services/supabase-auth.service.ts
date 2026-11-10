@@ -1,5 +1,12 @@
 import { Injectable, signal } from '@angular/core';
-import { createClient, type AuthResponse, type Session, type SupabaseClient, type User } from '@supabase/supabase-js';
+import {
+  createClient,
+  type AuthResponse,
+  type Session,
+  type SupabaseClient,
+  type User,
+  type UserResponse,
+} from '@supabase/supabase-js';
 import { environment } from '../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
@@ -95,6 +102,24 @@ export class SupabaseAuthService {
   getSession(): Promise<{ data: { session: Session | null }; error: Error | null }> {
     if (!this.client) return Promise.resolve({ data: { session: null }, error: null });
     return this.client.auth.getSession();
+  }
+
+  resetPasswordForEmail(email: string): Promise<{ error: Error | null }> {
+    if (!this.client) return Promise.resolve({ error: new Error('Supabase Auth no está configurado') });
+    return this.client.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
+      redirectTo: `${window.location.origin}/auth/reset-password`,
+    });
+  }
+
+  updatePassword(newPassword: string): Promise<UserResponse> {
+    if (!this.client) return Promise.reject(new Error('Supabase Auth no está configurado'));
+    return this.client.auth.updateUser({ password: newPassword });
+  }
+
+  onAuthStateChange(callback: (event: string, session: Session | null) => void): { unsubscribe: () => void } | null {
+    if (!this.client) return null;
+    const { data } = this.client.auth.onAuthStateChange(callback);
+    return data.subscription;
   }
 
   signOut(): Promise<{ error: Error | null }> {
