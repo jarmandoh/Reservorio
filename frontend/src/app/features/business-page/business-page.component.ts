@@ -175,6 +175,12 @@ import { ReservationManagerComponent } from './reservation-manager.component';
           <div class="hero-content">
             <div class="hero-labels">
               <span class="category-label">{{ store.category }}</span>
+              @if (store.businessType === 'onsite_service') {
+                <span class="verified-label service-label">
+                  <span class="material-icons-round">home_repair_service</span>
+                  {{ store.profession || 'Servicio a domicilio' }}
+                </span>
+              }
               @if (store.verified) {
                 <span class="verified-label"><span class="material-icons-round">verified</span>Negocio verificado</span>
               }
@@ -200,10 +206,21 @@ import { ReservationManagerComponent } from './reservation-manager.component';
               }
             </div>
             <div class="hero-actions">
-              @if (bookingEnabled()) {
+              @if (bookingEnabled() && services().length && (business()?.schedule ?? '').trim()) {
                 <button type="button" class="primary-action" (click)="openBooking()">
                   <span class="material-icons-round">event_available</span>Reservar una cita
                 </button>
+              }
+              @if (store.businessType === 'onsite_service') {
+                @if (store.whatsapp && contactUrl(store.whatsapp); as url) {
+                  <a class="primary-action" [href]="url" target="_blank" rel="noopener noreferrer">
+                    <span class="material-icons-round">home_repair_service</span>Solicitar servicio
+                  </a>
+                } @else if (store.phone) {
+                  <a class="primary-action" [href]="'tel:' + store.phone">
+                    <span class="material-icons-round">call</span>Llamar para cotizar
+                  </a>
+                }
               }
               @if (store.whatsapp && contactUrl(store.whatsapp); as url) {
                 <a class="secondary-action" [href]="url" target="_blank" rel="noopener noreferrer"
@@ -211,11 +228,17 @@ import { ReservationManagerComponent } from './reservation-manager.component';
                 >
               }
             </div>
+            @if (bookingEnabled() && services().length && !(business()?.schedule ?? '').trim()) {
+              <p class="hero-no-schedule">
+                <span class="material-icons-round" aria-hidden="true">schedule</span>
+                Este negocio aún no tiene horarios definidos. Contáctalo para más información.
+              </p>
+            }
           </div>
         </section>
 
         <div class="business-content">
-          @if (services().length || bookingEnabled()) {
+          @if (services().length) {
             <section id="servicios" class="content-section services-section">
               <div class="section-heading">
                 <div>
@@ -247,32 +270,29 @@ import { ReservationManagerComponent } from './reservation-manager.component';
             </section>
           }
 
-          <section id="productos" class="content-section products-section">
-            <div class="section-heading">
-              <div>
-                <p class="section-eyebrow">HECHO O ELEGIDO CON CUIDADO</p>
-                <h2>Productos</h2>
+          @if (products().length) {
+            <section id="productos" class="content-section products-section">
+              <div class="section-heading">
+                <div>
+                  <p class="section-eyebrow">HECHO O ELEGIDO CON CUIDADO</p>
+                  <h2>Productos</h2>
+                </div>
+                <span class="section-count"
+                  >{{ products().length }} {{ products().length === 1 ? 'producto' : 'productos' }}</span
+                >
               </div>
-              <span class="section-count"
-                >{{ products().length }} {{ products().length === 1 ? 'producto' : 'productos' }}</span
-              >
-            </div>
-            @if (products().length) {
-              <div class="product-grid">
-                @for (product of products(); track product.id) {
-                  <app-business-product-card
-                    [product]="product"
-                    [contactUrl]="store.whatsapp ? contactUrl(store.whatsapp, product.name) : null"
-                  />
-                }
-              </div>
-            } @else {
-              <div class="section-empty">
-                <span class="material-icons-round">inventory_2</span>
-                <p>Este negocio aún no ha publicado productos.</p>
-              </div>
-            }
-          </section>
+              @if (products().length) {
+                <div class="product-grid">
+                  @for (product of products(); track product.id) {
+                    <app-business-product-card
+                      [product]="product"
+                      [contactUrl]="store.whatsapp ? contactUrl(store.whatsapp, product.name) : null"
+                    />
+                  }
+                </div>
+              }
+            </section>
+          }
 
           <section class="about-section">
             <div class="about-mark" aria-hidden="true">R<span>·</span></div>
@@ -313,7 +333,7 @@ import { ReservationManagerComponent } from './reservation-manager.component';
         </div>
 
         <div class="mobile-cta-bar sm:hidden" role="group" aria-label="Acciones rapidas">
-          @if (bookingEnabled()) {
+          @if (bookingEnabled() && services().length && (business()?.schedule ?? '').trim()) {
             <button type="button" class="mobile-cta mobile-cta-primary" (click)="openBooking()">
               <span class="material-icons-round" aria-hidden="true">event_available</span>
               Reservar
@@ -762,6 +782,21 @@ import { ReservationManagerComponent } from './reservation-manager.component';
         flex-wrap: wrap;
         align-items: center;
         gap: 0.65rem;
+      }
+      .hero-no-schedule {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        margin-top: 0.5rem;
+        padding: 0.5rem 0.75rem;
+        border-radius: 0.6rem;
+        background: rgba(255, 255, 255, 0.12);
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 0.8rem;
+        backdrop-filter: blur(4px);
+      }
+      .hero-no-schedule .material-icons-round {
+        font-size: 1rem;
       }
       .category-label,
       .verified-label {
