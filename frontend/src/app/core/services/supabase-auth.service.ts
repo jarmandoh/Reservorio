@@ -104,10 +104,15 @@ export class SupabaseAuthService {
     return this.client.auth.getSession();
   }
 
-  resetPasswordForEmail(email: string): Promise<{ error: Error | null }> {
+  resendConfirmation(email: string): Promise<{ error: Error | null }> {
+    if (!this.client) return Promise.resolve({ error: new Error('Supabase Auth no está configurado') });
+    return this.client.auth.resend({ type: 'signup', email: email.trim().toLowerCase() });
+  }
+
+  resetPasswordForEmail(email: string, role: 'customer' | 'owner' = 'customer'): Promise<{ error: Error | null }> {
     if (!this.client) return Promise.resolve({ error: new Error('Supabase Auth no está configurado') });
     return this.client.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
-      redirectTo: `${window.location.origin}/auth/reset-password`,
+      redirectTo: `${window.location.origin}/auth/reset-password?role=${role}`,
     });
   }
 

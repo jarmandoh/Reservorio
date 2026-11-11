@@ -93,7 +93,7 @@ import { PinAuthCardComponent } from '../../shared/components/pin-auth-card/pin-
           </button>
         </div>
         <p class="mt-1 text-right">
-          <a routerLink="/auth/reset-password" class="text-xs text-primary font-semibold hover:underline">
+          <a routerLink="/forgot-password" class="text-xs text-primary font-semibold hover:underline">
             ¿Olvidaste tu contraseña?
           </a>
         </p>

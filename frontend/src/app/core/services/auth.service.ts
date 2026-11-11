@@ -249,6 +249,14 @@ export class AuthService {
   ): Observable<string> {
     return from(this.supabase.signInWithPassword(email, password)).pipe(
       switchMap(({ data, error }) => {
+        if (error?.code === 'invalid_credentials' || error?.message === 'Invalid login credentials') {
+          return throwError(
+            () =>
+              new Error(
+                'El correo o la contraseña no coinciden. Si creaste tu cuenta con un código de acceso, restablece tu contraseña.'
+              )
+          );
+        }
         if (error || !data.session?.access_token) return throwError(() => error ?? new Error('Credenciales inválidas'));
         const token = data.session.access_token;
         return this.api.getAuthMe(token).pipe(
@@ -359,8 +367,18 @@ export class AuthService {
     );
   }
 
-  requestPasswordReset(email: string): Observable<void> {
-    return from(this.supabase.resetPasswordForEmail(email)).pipe(
+  resendConfirmation(email: string): Observable<void> {
+    return from(this.supabase.resendConfirmation(email)).pipe(
+      map(({ error }) => {
+        if (error) throw error;
+        return undefined;
+      }),
+      catchError(err => throwError(() => (err instanceof Error ? err : new Error('No se pudo reenviar el correo.'))))
+    );
+  }
+
+  requestPasswordReset(email: string, role: 'customer' | 'owner' = 'customer'): Observable<void> {
+    return from(this.supabase.resetPasswordForEmail(email, role)).pipe(
       map(({ error }) => {
         if (error) throw error;
         return undefined;

@@ -31,6 +31,14 @@ export const publicRoutes: Routes = [
     loadComponent: () => import('../payment-cancel/payment-cancel.component').then(m => m.PaymentCancelComponent),
   },
   {
+    path: 'forgot-password',
+    loadComponent: () => import('../forgot-password/forgot-password.component').then(m => m.ForgotPasswordComponent),
+  },
+  {
+    path: 'auth/reset-success',
+    loadComponent: () => import('../reset-password-success/reset-password-success.component').then(m => m.ResetPasswordSuccessComponent),
+  },
+  {
     path: 'auth/reset-password',
     loadComponent: () => import('../reset-password/reset-password.component').then(m => m.ResetPasswordComponent),
   },

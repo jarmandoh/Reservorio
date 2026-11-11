@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { of, throwError } from 'rxjs';
+import { firstValueFrom } from 'rxjs';
 import { AuthService } from './auth.service';
 import { ApiService } from './api.service';
 import { SupabaseAuthService } from './supabase-auth.service';
@@ -13,6 +14,7 @@ describe('AuthService auth flows', () => {
     enabled: boolean;
     accessToken: ReturnType<typeof signal<string | null>>;
     initialized: ReturnType<typeof signal<boolean>>;
+    signInWithPassword: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(() => {
@@ -23,6 +25,7 @@ describe('AuthService auth flows', () => {
       enabled: false,
       accessToken: signal<string | null>(null),
       initialized: signal(true),
+      signInWithPassword: vi.fn(),
     };
 
     TestBed.configureTestingModule({
@@ -103,6 +106,19 @@ describe('AuthService auth flows', () => {
     TestBed.flushEffects();
 
     expect(sessionStorage.getItem('reservorio_owner_jwt')).toBeNull();
+  });
+
+  it('explains how to recover when Supabase rejects valid-password login credentials', async () => {
+    supabaseAuth.enabled = true;
+    supabaseAuth.signInWithPassword.mockResolvedValue({
+      data: { session: null },
+      error: { code: 'invalid_credentials', message: 'Invalid login credentials' },
+    });
+    service = TestBed.inject(AuthService);
+
+    await expect(firstValueFrom(service.loginWithPassword('ana@example.com', 'password123'))).rejects.toThrow(
+      'Si creaste tu cuenta con un código de acceso, restablece tu contraseña.'
+    );
   });
 });
 

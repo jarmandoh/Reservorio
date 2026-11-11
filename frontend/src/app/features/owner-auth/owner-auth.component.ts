@@ -208,10 +208,27 @@ function passwordMatchValidator(group: { get(controlName: string): { value: unkn
       </div>
       @if (mode() === 'login') {
         <p class="mt-1 text-right">
-          <a routerLink="/auth/reset-password" class="text-xs text-primary font-semibold hover:underline">
+          <a
+            routerLink="/forgot-password"
+            [queryParams]="{ role: 'owner' }"
+            class="text-xs text-primary font-semibold hover:underline"
+          >
             ¿Olvidaste tu contraseña?
           </a>
         </p>
+        @if (showResend()) {
+          <div class="rounded-2xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 space-y-2">
+            <p>Tu correo puede no estar confirmado. ¿Reenviamos el correo de confirmación?</p>
+            <button type="button" class="btn-secondary btn-sm" (click)="resendConfirmation()" [disabled]="loading()">
+              Reenviar correo de confirmación
+            </button>
+          </div>
+        }
+        @if (resendNotice()) {
+          <p class="rounded-2xl bg-primary/10 border border-primary/30 text-sm text-primary p-3" role="status">
+            {{ resendNotice() }}
+          </p>
+        }
       }
     </app-auth-card>
   `,
@@ -287,20 +304,22 @@ export class OwnerAuthComponent implements AfterViewInit, OnInit {
   }
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
+  readonly showResend = signal(false);
+  readonly resendNotice = signal<string | null>(null);
   readonly showPassword = signal(false);
   readonly showConfirmPassword = signal(false);
   readonly mode = signal<OwnerAuthMode>('login');
 
   readonly loginForm = this.fb.group({
     email: ['', [Validators.required, Validators.email]],
-    password: ['', [Validators.required, Validators.minLength(6)]],
+    password: ['', [Validators.required, Validators.minLength(12)]],
   });
 
   readonly registerForm = this.fb.group(
     {
       name: ['', [Validators.required, Validators.minLength(2)]],
       email: ['', [Validators.required, Validators.email]],
-      password: ['', [Validators.required, Validators.minLength(6)]],
+      password: ['', [Validators.required, Validators.minLength(12)]],
       confirmPassword: ['', [Validators.required]],
       termsAccepted: [false, [Validators.requiredTrue]],
       privacyAccepted: [false, [Validators.requiredTrue]],
@@ -329,6 +348,31 @@ export class OwnerAuthComponent implements AfterViewInit, OnInit {
 
   togglePassword(): void {
     this.showPassword.update(v => !v);
+  }
+
+  resendConfirmation(): void {
+    const email = this.loginForm.value.email?.trim() ?? '';
+    if (!email) {
+      this.error.set('Introduce tu correo electrónico primero.');
+      return;
+    }
+    this.loading.set(true);
+    this.error.set(null);
+    this.resendNotice.set(null);
+    this.auth
+      .resendConfirmation(email)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.loading.set(false);
+          this.resendNotice.set('Te reenviamos el correo de confirmación. Revisa tu bandeja de entrada.');
+          this.showResend.set(false);
+        },
+        error: err => {
+          this.loading.set(false);
+          this.error.set(err instanceof Error ? err.message : 'No se pudo reenviar el correo.');
+        },
+      });
   }
 
   toggleConfirmPassword(): void {
@@ -366,6 +410,7 @@ export class OwnerAuthComponent implements AfterViewInit, OnInit {
           error: err => {
             const message = err instanceof Error ? err.message : 'Credenciales inválidas.';
             this.error.set(message);
+            this.showResend.set(/invalid login credentials/i.test(message));
             this.loading.set(false);
           },
         });

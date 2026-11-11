@@ -330,9 +330,9 @@ export class AccountCreateComponent {
       phone.clearValidators();
       phone.setValue('');
       password.enable();
-      password.setValidators([Validators.required, Validators.minLength(6)]);
+      password.setValidators([Validators.required, Validators.minLength(12)]);
       confirmPassword.enable();
-      confirmPassword.setValidators([Validators.required, Validators.minLength(6)]);
+      confirmPassword.setValidators([Validators.required, Validators.minLength(12)]);
     }
     phone.updateValueAndValidity();
     password.updateValueAndValidity();

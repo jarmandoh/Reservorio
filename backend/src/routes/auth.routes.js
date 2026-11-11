@@ -57,9 +57,9 @@ router.post(
   body('email').trim().isEmail().withMessage('email inválido'),
   body('password')
     .trim()
-    .isLength({ min: 8, max: 128 })
-    .withMessage('password requiere al menos 8 caracteres')
-    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/)
+    .isLength({ min: 12, max: 128 })
+    .withMessage('password requiere al menos 12 caracteres')
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{12,}$/)
     .withMessage('password debe incluir mayúscula, minúscula, número y símbolo'),
   handleValidation,
   async (req, res) => {

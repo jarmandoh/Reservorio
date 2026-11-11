@@ -164,7 +164,7 @@ export class CustomerRegisterComponent {
     {
       name: ['', [Validators.required, Validators.minLength(2)]],
       email: ['', [Validators.required, Validators.email]],
-      password: ['', [Validators.required, Validators.minLength(6)]],
+      password: ['', [Validators.required, Validators.minLength(12)]],
       confirmPassword: ['', [Validators.required]],
       dataConsent: [false, [Validators.requiredTrue]],
     },
