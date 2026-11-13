@@ -30,7 +30,30 @@ describe('Legacy routes', () => {
     expect(response.body.message).toContain('Token requerido');
   });
 
-  test('POST /api/reservations creates reservation without auth', async () => {
+  test('GET /api/reservations denies customers without business access', async () => {
+    const token = sign({ role: 'customer', customerId: 'customer-1' });
+    const response = await request(app)
+      .get('/api/reservations')
+      .set('Authorization', `Bearer ${token}`)
+      .query({ businessId: 'negocio1' });
+
+    expect(response.status).toBe(403);
+    expect(db.query).not.toHaveBeenCalled();
+  });
+
+  test('POST /api/reservations rejects anonymous requests', async () => {
+    const response = await request(app).post('/api/reservations').send({
+      businessId: 'negocio1',
+      franja: '09:00',
+      cliente: 'Juan',
+      telefono: '+1234567890',
+    });
+
+    expect(response.status).toBe(401);
+    expect(db.query).not.toHaveBeenCalled();
+  });
+
+  test('POST /api/reservations creates reservation for the authorized business', async () => {
     db.query.mockResolvedValueOnce({ rows: [] }).mockResolvedValueOnce({
       rows: [
         {
@@ -45,14 +68,18 @@ describe('Legacy routes', () => {
       ],
     });
 
-    const response = await request(app).post('/api/reservations').send({
-      businessId: 'negocio1',
-      franja: '09:00',
-      cliente: 'Juan',
-      telefono: '+1234567890',
-      servicio: 'Corte',
-      notas: '',
-    });
+    const token = sign({ role: 'business-admin', businessId: 'negocio1' });
+    const response = await request(app)
+      .post('/api/reservations')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        businessId: 'negocio1',
+        franja: '09:00',
+        cliente: 'Juan',
+        telefono: '+1234567890',
+        servicio: 'Corte',
+        notas: '',
+      });
 
     expect(response.status).toBe(201);
     expect(response.body.ok).toBe(true);
@@ -62,11 +89,15 @@ describe('Legacy routes', () => {
   });
 
   test('POST /api/reservations requires businessId', async () => {
-    const response = await request(app).post('/api/reservations').send({
-      franja: '09:00',
-      cliente: 'Juan',
-      telefono: '+1234567890',
-    });
+    const token = sign({ role: 'admin' });
+    const response = await request(app)
+      .post('/api/reservations')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        franja: '09:00',
+        cliente: 'Juan',
+        telefono: '+1234567890',
+      });
 
     expect(response.status).toBe(400);
     expect(response.body.ok).toBe(false);
@@ -76,18 +107,38 @@ describe('Legacy routes', () => {
   test('POST /api/reservations rejects a duplicate occupied slot', async () => {
     db.query.mockResolvedValueOnce({ rows: [{ id: 99 }] });
 
-    const response = await request(app).post('/api/reservations').send({
-      businessId: 'negocio1',
-      franja: '09:00',
-      cliente: 'Juan',
-      telefono: '+1234567890',
-      servicio: 'Corte',
-      notas: '',
-    });
+    const token = sign({ role: 'business-admin', businessId: 'negocio1' });
+    const response = await request(app)
+      .post('/api/reservations')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        businessId: 'negocio1',
+        franja: '09:00',
+        cliente: 'Juan',
+        telefono: '+1234567890',
+        servicio: 'Corte',
+        notas: '',
+      });
 
     expect(response.status).toBe(409);
     expect(response.body.ok).toBe(false);
     expect(response.body.message).toBe('Franja no disponible');
+  });
+
+  test('POST /api/reservations denies customers without business access', async () => {
+    const token = sign({ role: 'customer', customerId: 'customer-1' });
+    const response = await request(app)
+      .post('/api/reservations')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        businessId: 'negocio1',
+        franja: '09:00',
+        cliente: 'Juan',
+        telefono: '+1234567890',
+      });
+
+    expect(response.status).toBe(403);
+    expect(db.query).not.toHaveBeenCalled();
   });
 
   test('PUT /api/reservations/:id allows admin update', async () => {

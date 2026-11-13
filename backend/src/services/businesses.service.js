@@ -76,6 +76,8 @@ function safenegocio(b) {
     id: b.id,
     name: b.name,
     category: b.category,
+    categoryId: b.category_id == null ? null : Number(b.category_id),
+    professionCategoryId: b.profession_category_id == null ? null : Number(b.profession_category_id),
     businessType: b.business_type ?? 'appointment',
     profession: b.profession ?? '',
     description: b.description,
@@ -103,6 +105,21 @@ function safenegocio(b) {
     total: 0,
     routePath: `/booking/${b.id}`,
   };
+}
+
+async function resolveCategorySelection(categoryId, professionCategoryId = null) {
+  if (categoryId == null || categoryId === '') {
+    return professionCategoryId == null || professionCategoryId === ''
+      ? { ok: true, data: null }
+      : { ok: false, message: 'Selecciona una categoría general para el oficio' };
+  }
+
+  const { rows } = await businessRepository.findCategorySelection(categoryId, professionCategoryId || null);
+  const selection = rows[0];
+  if (!selection || (professionCategoryId && !selection.profession_category_id)) {
+    return { ok: false, message: 'La categoría u oficio seleccionado no es válido' };
+  }
+  return { ok: true, data: selection };
 }
 
 async function listBusinesses(filters = {}) {
@@ -175,6 +192,8 @@ async function createBusiness(payload, ownerId = null) {
   const {
     name,
     category,
+    categoryId,
+    professionCategoryId,
     businessType,
     profession,
     description,
@@ -197,7 +216,11 @@ async function createBusiness(payload, ownerId = null) {
 
   const normalizedBusinessType = businessType ?? 'appointment';
   const normalizedProfession = clean(profession ?? '', 100);
-  if (normalizedBusinessType === 'onsite_service' && !normalizedProfession) {
+  const taxonomy = await resolveCategorySelection(categoryId, professionCategoryId);
+  if (!taxonomy.ok) return { ok: false, status: 400, message: taxonomy.message };
+  const normalizedCategory = taxonomy.data?.category_name ?? category;
+  const canonicalProfession = taxonomy.data?.profession_name ?? normalizedProfession;
+  if (normalizedBusinessType === 'onsite_service' && !canonicalProfession) {
     return { ok: false, status: 400, message: 'La profesión es obligatoria para servicios presenciales' };
   }
 
@@ -215,9 +238,11 @@ async function createBusiness(payload, ownerId = null) {
     {
       id,
       name,
-      category,
+      category: normalizedCategory,
+      categoryId: taxonomy.data?.category_id ?? null,
+      professionCategoryId: taxonomy.data?.profession_category_id ?? null,
       businessType: normalizedBusinessType,
-      profession: normalizedProfession || null,
+      profession: canonicalProfession || null,
       description,
       location,
       rating,
@@ -263,6 +288,12 @@ async function updateBusiness(businessId, payload) {
   const sets = [];
   const vals = [];
   let idx = 1;
+  let taxonomy = null;
+  if (payload?.categoryId !== undefined || payload?.professionCategoryId !== undefined) {
+    const selection = await resolveCategorySelection(payload.categoryId, payload.professionCategoryId);
+    if (!selection.ok) return { ok: false, status: 400, message: selection.message };
+    taxonomy = selection.data;
+  }
 
   const strFields = [
     'name',
@@ -282,10 +313,24 @@ async function updateBusiness(businessId, payload) {
     'linkedin',
   ];
   for (const key of strFields) {
+    if (key === 'category' && taxonomy) continue;
     if (payload?.[key] !== undefined) {
       const column = key === 'storeCoverImage' ? 'store_cover_image' : key;
       sets.push(`${column} = $${idx++}`);
       vals.push(clean(payload[key]));
+    }
+  }
+
+  if (taxonomy) {
+    sets.push(`category = $${idx++}`);
+    vals.push(taxonomy.category_name);
+    sets.push(`category_id = $${idx++}`);
+    vals.push(taxonomy.category_id);
+    sets.push(`profession_category_id = $${idx++}`);
+    vals.push(taxonomy.profession_category_id ?? null);
+    if (taxonomy.profession_name && payload.profession === undefined) {
+      sets.push(`profession = $${idx++}`);
+      vals.push(taxonomy.profession_name);
     }
   }
 

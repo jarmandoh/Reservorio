@@ -73,20 +73,20 @@ export class BusinessAdminService {
     return this.api.getBusinessReservations(negocioId, token);
   }
 
-  loadMarketplaceBookings(): Observable<BookingRecord[]> {
-    return this.api.getBookings();
+  loadMarketplaceBookings(token: string): Observable<BookingRecord[]> {
+    return this.api.getBookings(token);
   }
 
-  loadCustomers(): Observable<Customer[]> {
-    return this.api.getCustomers();
+  loadCustomers(token: string): Observable<Customer[]> {
+    return this.api.getCustomers(token);
   }
 
-  loadPayments(): Observable<Payment[]> {
-    return this.api.getPayments();
+  loadPayments(token: string): Observable<Payment[]> {
+    return this.api.getPayments(token);
   }
 
-  loadNotifications(businessId: string, bookingId?: string): Observable<NotificationItem[]> {
-    return this.api.getNotifications(businessId, bookingId);
+  loadNotifications(businessId: string, token: string, bookingId?: string): Observable<NotificationItem[]> {
+    return this.api.getNotifications(businessId, token, bookingId);
   }
 
   createNotification(payload: {
@@ -108,9 +108,10 @@ export class BusinessAdminService {
 
   createCheckoutSession(
     payload: PaymentRequest & { successUrl?: string; cancelUrl?: string },
-    idempotencyKey: string
+    idempotencyKey: string,
+    token: string
   ): Observable<ApiResponse<CheckoutSession>> {
-    return this.api.createCheckoutSession(payload, idempotencyKey);
+    return this.api.createCheckoutSession(payload, idempotencyKey, token);
   }
 
   loadServices(negocioId: string): Observable<{ nombre: string; precio: number | null; variaciones: string }[]> {

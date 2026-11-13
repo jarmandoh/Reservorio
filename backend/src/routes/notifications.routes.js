@@ -1,7 +1,7 @@
 'use strict';
 
 const express = require('express');
-const { body, query } = require('express-validator');
+const { body } = require('express-validator');
 const { handleValidation } = require('../middleware/validation');
 const { requireAuth } = require('../middleware/auth');
 const {
@@ -21,7 +21,7 @@ const notificationValidators = [
   handleValidation,
 ];
 
-router.get('/', async (req, res) => {
+router.get('/', requireAuth, async (req, res) => {
   try {
     const result = await listNotifications({
       businessId: String(req.query.businessId ?? ''),

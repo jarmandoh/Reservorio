@@ -8,6 +8,8 @@ import { BusinessService } from './business.service';
 export interface OwnerBusinessFormValues {
   name: string | null;
   category: string | null;
+  categoryId?: number | null;
+  professionCategoryId?: number | null | string;
   businessType: 'appointment' | 'onsite_service' | 'no_appointments' | null;
   profession: string | null;
   description: string | null;
@@ -56,6 +58,8 @@ export class OwnerBusinessService {
     return {
       name: '',
       category: '',
+      categoryId: null,
+      professionCategoryId: null,
       businessType: 'appointment',
       profession: '',
       description: '',
@@ -76,6 +80,8 @@ export class OwnerBusinessService {
     return {
       name: negocio.name ?? '',
       category: negocio.category ?? '',
+      categoryId: negocio.categoryId ?? null,
+      professionCategoryId: negocio.professionCategoryId ?? null,
       businessType: negocio.businessType ?? 'appointment',
       profession: negocio.profession ?? '',
       description: negocio.description ?? '',
@@ -101,6 +107,8 @@ export class OwnerBusinessService {
     return {
       name: String(formValues.name ?? '').trim(),
       category: String(formValues.category ?? '').trim(),
+      categoryId: Number(formValues.categoryId) || undefined,
+      professionCategoryId: Number(formValues.categoryId) ? Number(formValues.professionCategoryId) || null : undefined,
       businessType: formValues.businessType ?? 'appointment',
       profession: String(formValues.profession ?? '').trim(),
       description: String(formValues.description ?? '').trim(),

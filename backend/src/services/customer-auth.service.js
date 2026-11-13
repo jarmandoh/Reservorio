@@ -22,7 +22,7 @@ const OTP_TTL_MS = 10 * 60 * 1000; // 10 min
 const MAGIC_TTL_MS = 15 * 60 * 1000; // 15 min
 const MAX_ATTEMPTS = 5;
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:4200';
-const otpDebug = () => process.env.OTP_DEBUG === '1';
+const otpDebug = () => process.env.NODE_ENV !== 'production' && process.env.OTP_DEBUG === '1';
 
 // Backoff simple por email para solicitudes OTP/magic-link (anti-spam)
 // Mantiene respuesta genérica para evitar enumeración

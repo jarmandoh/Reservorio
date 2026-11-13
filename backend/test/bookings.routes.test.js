@@ -5,6 +5,7 @@ process.env.DATABASE_URL = 'postgres://test';
 
 const request = require('supertest');
 const express = require('express');
+const jwt = require('jsonwebtoken');
 
 jest.mock('../src/db', () => ({ query: jest.fn() }));
 
@@ -14,6 +15,7 @@ const bookingsRoutes = require('../src/routes/bookings.routes');
 const app = express();
 app.use(express.json());
 app.use('/api/bookings', bookingsRoutes);
+const customerAuth = `Bearer ${jwt.sign({ role: 'customer', customerId: 'customer1' }, 'test-secret')}`;
 
 describe('Bookings routes', () => {
   beforeEach(() => {
@@ -34,7 +36,10 @@ describe('Bookings routes', () => {
       .mockResolvedValueOnce({ rows: [{ id: 'customer1' }] })
       .mockRejectedValueOnce({ code: '23505', message: 'duplicate key value violates unique constraint' });
 
-    const response = await request(app).post('/api/bookings').send(bookingPayload);
+    const response = await request(app)
+      .post('/api/bookings')
+      .set('Authorization', customerAuth)
+      .send(bookingPayload);
 
     expect(response.status).toBe(409);
     expect(response.body.ok).toBe(false);
@@ -65,11 +70,19 @@ describe('Bookings routes', () => {
 
     const response = await request(app)
       .post('/api/bookings')
+      .set('Authorization', customerAuth)
       .send({ ...bookingPayload, notes: 'Primera vez' });
 
     expect(response.status).toBe(201);
     expect(response.body.ok).toBe(true);
     expect(response.body.data.id).toBe('booking-1');
     expect(response.body.data.status).toBe('pending');
+    expect(db.query.mock.calls[1][1]).toEqual(['customer1']);
+  });
+
+  test('POST /api/bookings rejects anonymous callers', async () => {
+    const response = await request(app).post('/api/bookings').send(bookingPayload);
+    expect(response.status).toBe(401);
+    expect(db.query).not.toHaveBeenCalled();
   });
 });

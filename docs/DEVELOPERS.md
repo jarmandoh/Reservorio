@@ -280,7 +280,8 @@ POST /api/businesses/:id/auth  {pin}
 ### Cliente — login por credenciales
 
 ```
-POST /api/auth/customer/login {email, phone?}
+POST /api/auth/customer/otp/request {email}
+POST /api/auth/customer/otp/verify {email, code}
     → valida el email contra la BD; si el cliente guardó teléfono al registrarse, exige que coincida
     → devuelve JWT role: "customer" + datos del cliente
     → frontend guarda token en localStorage (clave: reservorio_customer_jwt)

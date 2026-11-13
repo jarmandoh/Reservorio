@@ -17,7 +17,7 @@ Authorization: Bearer <token>
 | `admin`          | `POST /api/auth/admin`                            | 2 h        |
 | `owner`          | `POST /api/auth/owner/register` / `owner/login`   | 8 h        |
 | `business-admin` | `POST /api/businesses/:id/auth`                   | 8 h        |
-| `customer`       | `POST /api/auth/customer/login`, OTP o magic-link | 8 h        |
+| `customer`       | OTP o magic-link verificado                      | 8 h        |
 
 ### Formato de respuesta
 
@@ -109,13 +109,7 @@ Requiere **owner**. Devuelve `{ id, name, email, created_at }`.
 
 ### `POST /api/auth/customer/login`
 
-Login de cliente sin contraseña por email (+ teléfono si lo registró).
-
-```json
-{ "email": "cliente@correo.com", "phone": "+34600111222" }
-// 200
-{ "ok": true, "data": { "token": "<jwt customer, 8h>", "customer": { "id": "...", "name": "...", "email": "...", "phone": "..." } } }
-```
+Retirado por seguridad. Devuelve `410`; usa OTP o magic-link verificado.
 
 ### `POST /api/auth/customer/otp/request`
 
@@ -158,7 +152,7 @@ Envía un email con `<FRONTEND_URL>/customer/verify?token=<token>` (TTL 15 min, 
 
 ### `GET /api/businesses`
 
-Listado público de negocios activos. Opcional `?category=` y `?tag=` para filtrar. Cada negocio incluye `businessType` (`appointment` o `onsite_service`), `profession` para servicios presenciales, `cantidadReservasHoy`/`cantidadReservasTotales`, `verified`, `cancellationPolicy`, redes sociales, etc.
+Listado público de negocios activos. Se puede filtrar por texto heredado (`category`), `categoryId` (categoría general), `professionCategoryId` (oficio), `tag`, `location`, `q`, `verified`, `minRating` y orden. Cada negocio incluye `categoryId` y `professionCategoryId` cuando está clasificado, además de `profession` como texto compatible.
 
 ### `GET /api/businesses/all`
 
@@ -176,6 +170,8 @@ Requiere **admin** u **owner**. Crea un negocio.
 {
   "name": "Cancha Central",
   "category": "Deportes",
+  "categoryId": 15,
+  "professionCategoryId": null,
   "businessType": "appointment",
   "pin": "5678",
   "description": "...",
@@ -193,6 +189,9 @@ Requiere **admin** u **owner**. Crea un negocio.
 `businessType` puede ser `appointment` (valor predeterminado) u `onsite_service`.
 Para servicios presenciales se debe indicar `profession` (por ejemplo, `Electricista`,
 `Ebanista` o `Cerrajero`); esa profesión se incluye en la búsqueda pública.
+`categoryId` y `professionCategoryId` son opcionales para clientes antiguos. Cuando se envían,
+el backend verifica que la categoría sea general y que el oficio pertenezca a ella, y usa los
+nombres oficiales del catálogo.
 
 ### `POST /api/businesses/:id/auth`
 
@@ -292,7 +291,7 @@ Requiere **business-admin**. Elimina el servicio (codifica el nombre en la URL).
 
 ### `GET /api/customers`
 
-Requiere **admin**. Listado de clientes.
+Requiere autenticación. Solo devuelve el perfil propio del cliente o clientes con reservas en los negocios accesibles por el token; **admin** ve el listado completo.
 
 Parámetros opcionales: `page` y `pageSize` (máx 200, default 25). Si se pasan, la respuesta incluye `meta: { total, page, pageSize }` y `data` es la página correspondiente; sin ellos se devuelve el listado completo como hasta ahora.
 
@@ -308,7 +307,7 @@ Público. Alta de cliente (se usa en el checkout):
 
 ### `GET /api/customers/email/:email`
 
-Público. Busca un cliente por email.
+Requiere **admin**. Busca un cliente por email.
 
 ### `GET /api/customers/me`
 
@@ -338,13 +337,13 @@ Requiere **customer** (solo el propio `id`; otro id → `403`). Derecho al olvid
 
 ### `GET /api/bookings`
 
-Requiere **admin**. Lista todas las reservas del marketplace.
+Requiere autenticación. La respuesta se limita a las reservas propias del cliente o a las del negocio accesible por el token.
 
 Parámetros opcionales: `page`/`pageSize` (máx 200, default 25); con ellos la respuesta incluye `meta: { total, page, pageSize }`.
 
 ### `POST /api/bookings`
 
-Público. Crea una reserva:
+Requiere **customer**. El `customerId` del cuerpo se ignora; el backend lo toma del token:
 
 ```json
 {
@@ -359,21 +358,18 @@ Público. Crea una reserva:
 
 ### `GET /api/payments`
 
-Requiere **admin**. Listado de pagos. Filtros opcionales por query (`providerId`). Paginación opcional con `page`/`pageSize` (máx 200, default 25) → añade `meta: { total, page, pageSize }`.
+Requiere autenticación. Los pagos se limitan al cliente o negocio del token. Filtros opcionales por query (`providerId`). Paginación opcional con `page`/`pageSize` (máx 200, default 25) → añade `meta: { total, page, pageSize }`.
 
 ### `POST /api/payments`
 
-Público. Registra un pago:
+Requiere autenticación. Registra un pago `pending`; el importe, moneda, proveedor y cliente se toman de la reserva y el precio configurado del servicio. No se acepta un estado de pago desde el cliente.
 
 ```json
 {
   "bookingId": "...",
   "providerId": "...",
   "customerId": "...",
-  "amount": 50000,
-  "currency": "COP",
-  "method": "card",
-  "status": "pending"
+  "method": "card"
 }
 ```
 
@@ -383,7 +379,7 @@ Métodos: `card | paypal | transfer | cash`.
 
 ### `POST /api/payments/checkout`
 
-Público. Crea una sesión de checkout (mismos campos + `successUrl`/`cancelUrl` opcionales).
+Requiere **customer**, **business-admin**, **owner** o **admin** con acceso a la reserva. El backend calcula el importe desde el precio del servicio; `deposit: true` solicita el anticipo permitido del 30%. `successUrl`/`cancelUrl` son opcionales.
 
 ### `POST /api/payments/webhook`
 
@@ -395,7 +391,7 @@ Requiere **auth**. Actualiza el estado (`pending | paid | failed | refunded`). S
 
 ### `GET /api/notifications?businessId=&bookingId=`
 
-Público (con o sin filtro). Lista de avisos internos.
+Requiere autenticación. Solo devuelve avisos visibles al cliente o negocio del token.
 
 ### `POST /api/notifications`
 
@@ -431,9 +427,14 @@ Rating de un negocio (limitado por IP):
 { "rating": 5, "review": "Muy buen servicio" }
 ```
 
-### `GET /api/categories` · `GET /api/categories/all`
+### `GET /api/categories/all`
 
-Lista de categorías. `all` se usa para prellenar filtros en el panel.
+Lista de categorías generales activas, para mantener compatibilidad con clientes existentes.
+
+### `GET /api/categories/tree`
+
+Devuelve categorías generales con sus oficios anidados en `children`. Cada nodo incluye `id`,
+`name`, `slug`, `parent_id` y `sort_order`.
 
 ### `GET /api/tags/all`
 

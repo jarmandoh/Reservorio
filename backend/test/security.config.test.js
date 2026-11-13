@@ -7,6 +7,7 @@ describe('Runtime security validation', () => {
 
   beforeEach(() => {
     process.env = { ...originalEnv };
+    delete process.env.OTP_DEBUG;
   });
 
   afterAll(() => {
@@ -65,5 +66,17 @@ describe('Runtime security validation', () => {
 
     process.env.FRONTEND_URL = 'http://app.example.com';
     expect(() => validateRuntimeConfig()).toThrow(/FRONTEND_URL/i);
+  });
+
+  test('throws when OTP_DEBUG is enabled in production', () => {
+    process.env.NODE_ENV = 'production';
+    process.env.DATABASE_URL = 'postgres://user:pass@localhost:5432/reservorio';
+    process.env.JWT_SECRET = 'a_very_long_and_secure_production_secret_123';
+    process.env.CORS_ORIGINS = 'https://app.example.com';
+    process.env.FRONTEND_URL = 'https://app.example.com';
+    process.env.ADMIN_PIN = 'clave-segura-9876';
+    process.env.OTP_DEBUG = '1';
+
+    expect(() => validateRuntimeConfig()).toThrow(/OTP_DEBUG/i);
   });
 });

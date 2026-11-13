@@ -2,7 +2,7 @@
 
 const express = require('express');
 const rateLimit = require('express-rate-limit');
-const { body, param } = require('express-validator');
+const { body, param, query } = require('express-validator');
 const { clean } = require('../middleware/sanitize');
 const {
   requireAdmin,
@@ -31,6 +31,11 @@ const pinLimiter = rateLimit({
 const businessCreateValidators = [
   body('name').trim().notEmpty().withMessage('name requerido'),
   body('category').trim().notEmpty().withMessage('category requerido'),
+  body('categoryId').optional().isInt({ min: 1 }).withMessage('categoryId inválido'),
+  body('professionCategoryId')
+    .optional({ nullable: true })
+    .isInt({ min: 1 })
+    .withMessage('professionCategoryId inválido'),
   body('businessType')
     .optional()
     .isIn(['appointment', 'onsite_service', 'no_appointments'])
@@ -51,6 +56,11 @@ const businessCreateValidators = [
 
 const businessUpdateValidators = [
   param('id').trim().notEmpty().withMessage('id requerido'),
+  body('categoryId').optional().isInt({ min: 1 }).withMessage('categoryId inválido'),
+  body('professionCategoryId')
+    .optional({ nullable: true })
+    .isInt({ min: 1 })
+    .withMessage('professionCategoryId inválido'),
   body('businessType')
     .optional()
     .isIn(['appointment', 'onsite_service', 'no_appointments'])
@@ -110,6 +120,15 @@ const serviceValidators = [
 
 const serviceNameParamValidator = [param('nombre').trim().notEmpty().withMessage('nombre requerido'), handleValidation];
 
+const businessListValidators = [
+  query('categoryId').optional().isInt({ min: 1 }).withMessage('categoryId inválido'),
+  query('professionCategoryId').optional().isInt({ min: 1 }).withMessage('professionCategoryId inválido'),
+  query('verified').optional().isBoolean().withMessage('verified inválido'),
+  query('minRating').optional().isFloat({ min: 0, max: 5 }).withMessage('minRating inválido'),
+  query('sortBy').optional().isIn(['rating', 'name']).withMessage('sortBy inválido'),
+  handleValidation,
+];
+
 const checkoutValidators = [
   body('franja').trim().notEmpty().withMessage('franja requerido'),
   body('cliente').trim().notEmpty().withMessage('cliente requerido'),
@@ -125,8 +144,8 @@ const checkoutValidators = [
   handleValidation,
 ];
 
-// GET /api/businesses  -> activos, publico, con filtros de busqueda y etiquetas. Soporta paginación ?page=&pageSize=
-router.get('/', async (req, res) => {
+// GET /api/businesses -> activos con búsqueda, ubicación, categorías, verificación, rating y paginación.
+router.get('/', businessListValidators, async (req, res) => {
   try {
     const result = await businessesService.listBusinesses(req.query);
     res.status(result.status).json({

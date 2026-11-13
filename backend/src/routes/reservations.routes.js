@@ -49,6 +49,7 @@ router.use((_req, res, next) => {
 // Ruta legacy — requiere businessId como query param.
 router.get('/', requireAuth, reservationListValidators, async (req, res) => {
   const negocioId = req.query.businessId;
+  if (!canAccessBusinessId(req, res, negocioId)) return;
   try {
     const { rows } = await db.query('SELECT * FROM reservations WHERE business_id = $1 ORDER BY franja', [negocioId]);
     res.json({ ok: true, data: rows });
@@ -58,8 +59,10 @@ router.get('/', requireAuth, reservationListValidators, async (req, res) => {
 });
 
 // ── POST /api/reservations ────────────────────────────────────────────────
-router.post('/', reservationCreateValidators, validateReservation, async (req, res) => {
+// Ruta legacy — los clientes deben usar /api/businesses/:id/checkout.
+router.post('/', requireAuth, reservationCreateValidators, validateReservation, async (req, res) => {
   const { businessId, franja, cliente, telefono, servicio, notas } = req.body ?? {};
+  if (!canAccessBusinessId(req, res, businessId)) return;
   try {
     const { rows: taken } = await db.query(
       `SELECT id FROM reservations WHERE business_id = $1 AND franja = $2 AND disponibilidad != 'Disponible'`,

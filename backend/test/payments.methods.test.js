@@ -14,6 +14,7 @@ jest.doMock('../src/services/notifications.service', () => ({
 const { sign } = require('../src/middleware/jwt');
 const paymentsRoutes = require('../src/routes/payments.routes');
 const notificationsService = require('../src/services/notifications.service');
+const customerAuth = `Bearer ${sign({ role: 'customer', customerId: 'c1' })}`;
 
 const ORIGINAL_DB_URL = process.env.DATABASE_URL;
 const ORIGINAL_FRONTEND_URL = process.env.FRONTEND_URL;
@@ -48,6 +49,7 @@ describe('payments — más canales y confirmación manual', () => {
     }
     state.idempotency.clear();
     state.payments.clear();
+    state.bookingPaymentDetails.clear();
     state.webhookEvents.clear();
     state.notifications.length = 0;
     db.query.mockClear();
@@ -76,6 +78,7 @@ describe('payments — más canales y confirmación manual', () => {
   test('POST /checkout con método transfer devuelve instrucciones bancarias sin pasarela', async () => {
     const res = await request(buildApp())
       .post('/api/payments/checkout')
+      .set('Authorization', customerAuth)
       .send({
         bookingId: 'b1',
         providerId: 'neg1',
@@ -97,6 +100,7 @@ describe('payments — más canales y confirmación manual', () => {
   test('POST /checkout con método cash devuelve instrucciones en efectivo', async () => {
     const res = await request(buildApp())
       .post('/api/payments/checkout')
+      .set('Authorization', customerAuth)
       .send({
         bookingId: 'b1',
         providerId: 'neg1',
@@ -115,6 +119,7 @@ describe('payments — más canales y confirmación manual', () => {
   test('POST /checkout con card sin Stripe devuelve flujo dev', async () => {
     const res = await request(buildApp())
       .post('/api/payments/checkout')
+      .set('Authorization', customerAuth)
       .send({
         bookingId: 'b1',
         providerId: 'neg1',
@@ -132,6 +137,7 @@ describe('payments — más canales y confirmación manual', () => {
   test('POST /checkout acepta URLs de retorno del frontend configurado', async () => {
     const res = await request(buildApp())
       .post('/api/payments/checkout')
+      .set('Authorization', customerAuth)
       .send({
         bookingId: 'b1',
         providerId: 'neg1',
@@ -150,7 +156,7 @@ describe('payments — más canales y confirmación manual', () => {
   });
 
   test('POST /checkout rechaza URLs de retorno fuera del origen de frontend', async () => {
-    const res = await request(buildApp()).post('/api/payments/checkout').send({
+    const res = await request(buildApp()).post('/api/payments/checkout').set('Authorization', customerAuth).send({
       bookingId: 'b1',
       providerId: 'neg1',
       customerId: 'c1',
@@ -167,7 +173,7 @@ describe('payments — más canales y confirmación manual', () => {
   });
 
   test('POST /checkout rechaza rutas de retorno no correspondientes al pago', async () => {
-    const res = await request(buildApp()).post('/api/payments/checkout').send({
+    const res = await request(buildApp()).post('/api/payments/checkout').set('Authorization', customerAuth).send({
       bookingId: 'b1',
       providerId: 'neg1',
       customerId: 'c1',
@@ -187,6 +193,7 @@ describe('payments — más canales y confirmación manual', () => {
     process.env.FRONTEND_URL = 'https://reservorio.example';
     const validResponse = await request(buildApp())
       .post('/api/payments/checkout')
+      .set('Authorization', customerAuth)
       .send({
         bookingId: 'b1',
         providerId: 'neg1',
@@ -203,7 +210,7 @@ describe('payments — más canales y confirmación manual', () => {
 
     db.query.mockClear();
     db.connect.mockClear();
-    const invalidResponse = await request(buildApp()).post('/api/payments/checkout').send({
+    const invalidResponse = await request(buildApp()).post('/api/payments/checkout').set('Authorization', customerAuth).send({
       bookingId: 'b1',
       providerId: 'neg1',
       customerId: 'c1',

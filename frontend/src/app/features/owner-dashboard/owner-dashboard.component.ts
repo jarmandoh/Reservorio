@@ -433,6 +433,8 @@ export class OwnerDashboardComponent implements OnInit {
   readonly businessForm = this.fb.group({
     name: ['', [Validators.required, Validators.minLength(2)]],
     category: ['', Validators.required],
+    categoryId: [null as number | null],
+    professionCategoryId: [null as number | string | null],
     businessType: ['appointment' as 'appointment' | 'onsite_service' | 'no_appointments'],
     profession: [''],
     description: [''],
@@ -485,6 +487,8 @@ export class OwnerDashboardComponent implements OnInit {
       businessType: 'appointment',
       name: '',
       category: '',
+      categoryId: null,
+      professionCategoryId: null,
       profession: '',
       description: '',
       location: '',
@@ -506,6 +510,8 @@ export class OwnerDashboardComponent implements OnInit {
     this.businessForm.patchValue({
       name: business.name,
       category: business.category,
+      categoryId: business.categoryId ?? null,
+      professionCategoryId: business.professionCategoryId ?? null,
       businessType: business.businessType ?? 'appointment',
       profession: business.profession ?? '',
       description: business.description ?? '',

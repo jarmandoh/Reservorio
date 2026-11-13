@@ -6,23 +6,98 @@ const { clean } = require('../middleware/sanitize');
 function buildBusinessWhereClauses(filters = {}) {
   const { q, category, tags, location, interest } = filters;
   const values = [];
-  const clauses = ['active = true'];
+  const clauses = ['b.active = true'];
+
+  const categoryId = Number(filters.categoryId);
+  if (Number.isInteger(categoryId) && categoryId > 0) {
+    values.push(categoryId);
+    clauses.push(`EXISTS (
+      SELECT 1
+        FROM categories selected
+       WHERE selected.id = $${values.length}
+         AND (
+           (selected.parent_id IS NULL AND (
+             b.category_id = selected.id
+             OR EXISTS (
+               SELECT 1 FROM categories child
+                WHERE child.parent_id = selected.id
+                  AND b.profession_category_id = child.id
+             )
+             OR (
+               b.category_id IS NULL
+               AND (
+                 LOWER(BTRIM(b.category)) = LOWER(selected.name)
+                 OR EXISTS (
+                   SELECT 1 FROM categories child
+                    WHERE child.parent_id = selected.id
+                      AND (
+                        LOWER(BTRIM(b.profession)) = LOWER(child.name)
+                        OR LOWER(BTRIM(b.category)) = LOWER(child.name)
+                      )
+                 )
+               )
+             )
+           ))
+           OR (selected.parent_id IS NOT NULL AND (
+             b.profession_category_id = selected.id
+             OR (
+               b.profession_category_id IS NULL
+               AND LOWER(BTRIM(b.profession)) = LOWER(selected.name)
+             )
+           ))
+         )
+    )`);
+  }
+
+  const professionCategoryId = Number(filters.professionCategoryId);
+  if (Number.isInteger(professionCategoryId) && professionCategoryId > 0) {
+    values.push(professionCategoryId);
+    clauses.push(`(
+      b.profession_category_id = $${values.length}
+      OR (
+        b.profession_category_id IS NULL
+        AND LOWER(BTRIM(b.profession)) = (
+          SELECT LOWER(name) FROM categories WHERE id = $${values.length} AND parent_id IS NOT NULL
+        )
+      )
+    )`);
+  }
 
   if (category) {
     values.push(`%${clean(String(category))}%`);
-    clauses.push(`category ILIKE $${values.length}`);
+    clauses.push(`b.category ILIKE $${values.length}`);
   }
 
   if (location) {
     values.push(`%${clean(String(location))}%`);
-    clauses.push(`location ILIKE $${values.length}`);
+    clauses.push(`b.location ILIKE $${values.length}`);
   }
 
   const search = String(q ?? '').trim();
   if (search) {
     values.push(`%${clean(search)}%`);
     clauses.push(
-      `(name ILIKE $${values.length} OR description ILIKE $${values.length} OR location ILIKE $${values.length} OR category ILIKE $${values.length} OR profession ILIKE $${values.length} OR tags ILIKE $${values.length})`
+      `(b.name ILIKE $${values.length} OR b.description ILIKE $${values.length} OR b.location ILIKE $${values.length} OR b.category ILIKE $${values.length} OR b.profession ILIKE $${values.length} OR b.tags ILIKE $${values.length})`
+    );
+  }
+
+  const verified = String(filters.verified ?? '').toLowerCase();
+  if (verified === 'true' || verified === 'false') {
+    values.push(verified === 'true');
+    clauses.push(`b.verified = $${values.length}`);
+  }
+
+  const minRating = Number(filters.minRating);
+  if (
+    filters.minRating !== undefined &&
+    filters.minRating !== '' &&
+    Number.isFinite(minRating) &&
+    minRating >= 0 &&
+    minRating <= 5
+  ) {
+    values.push(minRating);
+    clauses.push(
+      `COALESCE((SELECT AVG(r.rating) FROM ratings r WHERE r.business_id = b.id), b.rating) >= $${values.length}`
     );
   }
 
@@ -34,7 +109,7 @@ function buildBusinessWhereClauses(filters = {}) {
       .filter(Boolean);
     for (const tag of tagList) {
       values.push(`%${clean(tag)}%`);
-      clauses.push(`tags ILIKE $${values.length}`);
+      clauses.push(`b.tags ILIKE $${values.length}`);
     }
   }
 
@@ -43,8 +118,13 @@ function buildBusinessWhereClauses(filters = {}) {
 
 async function listBusinesses(filters = {}, pagination = null) {
   const { clauses, values } = buildBusinessWhereClauses(filters);
+  const sortBy = String(filters.sortBy ?? '');
+  const orderBy =
+    sortBy === 'rating'
+      ? 'COALESCE((SELECT AVG(r.rating) FROM ratings r WHERE r.business_id = b.id), b.rating) DESC, b.name'
+      : 'b.name';
 
-  let query = `SELECT * FROM businesses WHERE ${clauses.join(' AND ')} ORDER BY name`;
+  let query = `SELECT b.* FROM businesses b WHERE ${clauses.join(' AND ')} ORDER BY ${orderBy}`;
   if (pagination && pagination.paginated) {
     query += ` LIMIT $${values.length + 1} OFFSET $${values.length + 2}`;
     values.push(pagination.limit, pagination.offset);
@@ -54,7 +134,7 @@ async function listBusinesses(filters = {}, pagination = null) {
 
 async function countBusinesses(filters = {}) {
   const { clauses, values } = buildBusinessWhereClauses(filters);
-  const query = `SELECT COUNT(*)::int AS total FROM businesses WHERE ${clauses.join(' AND ')}`;
+  const query = `SELECT COUNT(*)::int AS total FROM businesses b WHERE ${clauses.join(' AND ')}`;
   const { rows } = await db.query(query, values);
   return Number(rows[0]?.total) || 0;
 }
@@ -77,11 +157,31 @@ async function findBusinessById(businessId) {
   return db.query('SELECT * FROM businesses WHERE id = $1', [businessId]);
 }
 
+async function findCategorySelection(categoryId, professionCategoryId = null) {
+  return db.query(
+    `SELECT category.id AS category_id,
+            category.name AS category_name,
+            profession.id AS profession_category_id,
+            profession.name AS profession_name
+       FROM categories category
+       LEFT JOIN categories profession
+         ON profession.id = $2
+        AND profession.parent_id = category.id
+        AND profession.is_active = true
+      WHERE category.id = $1
+        AND category.parent_id IS NULL
+        AND category.is_active = true`,
+    [categoryId, professionCategoryId]
+  );
+}
+
 async function createBusiness(payload, ownerId = null) {
   const {
     id,
     name,
     category,
+    categoryId,
+    professionCategoryId,
     businessType,
     profession,
     description,
@@ -104,15 +204,17 @@ async function createBusiness(payload, ownerId = null) {
 
   const result = await db.query(
     `INSERT INTO businesses
-       (id, name, category, business_type, profession, description, location, rating, reviews,
+       (id, name, category, category_id, profession_category_id, business_type, profession, description, location, rating, reviews,
         tags, gradient, icon, schedule, logo, phone,
         facebook, instagram, tiktok, whatsapp, linkedin,
         active, pin_hash)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)`,
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)`,
     [
       id,
       clean(name),
       clean(category),
+      categoryId ?? null,
+      professionCategoryId ?? null,
       businessType ?? 'appointment',
       profession ? clean(profession, 100) : null,
       clean(description ?? ''),
@@ -230,6 +332,7 @@ module.exports = {
   listAllBusinesses,
   listOwnerBusinesses,
   findBusinessById,
+  findCategorySelection,
   getBusinessById: findBusinessById,
   createBusiness,
   updateBusiness,

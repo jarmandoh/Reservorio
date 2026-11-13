@@ -355,18 +355,6 @@ export class AuthService {
     );
   }
 
-  loginCustomer(email: string, phone: string): Observable<ApiResponse<{ token: string; customer: Customer }>> {
-    return this.api.loginCustomer(email, phone).pipe(
-      tap(res => {
-        if (res.data?.token) this.setCustomerToken(res.data.token);
-      }),
-      catchError(err => {
-        this.clearCustomerToken();
-        return throwError(() => err);
-      })
-    );
-  }
-
   resendConfirmation(email: string): Observable<void> {
     return from(this.supabase.resendConfirmation(email)).pipe(
       map(({ error }) => {

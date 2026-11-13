@@ -58,4 +58,22 @@ describe('payments.service — no degradación silenciosa', () => {
     expect(res.ok).toBe(false);
     expect(res.status).toBe(500);
   });
+
+  test('en producción rechaza webhooks sin configuración Stripe', async () => {
+    const originalNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
+    try {
+      const result = await payments.processWebhook({
+        event: { type: 'checkout.session.completed' },
+        rawBody: Buffer.from('{}'),
+        signature: 'unsigned',
+      });
+
+      expect(result).toMatchObject({ ok: false, status: 503 });
+      expect(db.connect).not.toHaveBeenCalled();
+    } finally {
+      if (originalNodeEnv === undefined) delete process.env.NODE_ENV;
+      else process.env.NODE_ENV = originalNodeEnv;
+    }
+  });
 });

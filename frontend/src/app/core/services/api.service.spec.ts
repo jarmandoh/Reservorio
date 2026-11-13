@@ -77,6 +77,36 @@ describe('ApiService', () => {
     expect(result).toEqual({ businesses: [{ id: 'business-1' }], total: 21, page: 2, pageSize: 10 });
   });
 
+  it('sends directory rating, verification, and sorting filters to the backend', () => {
+    service.getBusinessesPage({ page: 1, pageSize: 12, verified: true, minRating: 4.5, sortBy: 'rating' }).subscribe();
+
+    const request = http.expectOne(req => req.url === `${apiUrl}/businesses`);
+    expect(request.request.params.get('verified')).toBe('true');
+    expect(request.request.params.get('minRating')).toBe('4.5');
+    expect(request.request.params.get('sortBy')).toBe('rating');
+    request.flush({ data: [], meta: { total: 0, page: 1, pageSize: 12 } });
+  });
+
+  it('sends category and profession taxonomy ids as directory filters', () => {
+    service.getBusinessesPage({ page: 1, pageSize: 12, categoryId: 7, professionCategoryId: 19 }).subscribe();
+
+    const request = http.expectOne(req => req.url === `${apiUrl}/businesses`);
+    expect(request.request.params.get('categoryId')).toBe('7');
+    expect(request.request.params.get('professionCategoryId')).toBe('19');
+    request.flush({ data: [], meta: { total: 0, page: 1, pageSize: 12 } });
+  });
+
+  it('returns nested category and profession taxonomy data', () => {
+    let result: unknown;
+    service.getCategoryTree().subscribe(value => (result = value));
+
+    const request = http.expectOne(`${apiUrl}/categories/tree`);
+    expect(request.request.method).toBe('GET');
+    request.flush({ data: [{ id: 2, name: 'Reparaciones', children: [{ id: 8, name: 'Electricista' }] }] });
+
+    expect(result).toEqual([{ id: 2, name: 'Reparaciones', children: [{ id: 8, name: 'Electricista' }] }]);
+  });
+
   it('falls back to the returned business count and requested page values', () => {
     let result: unknown;
     service.getBusinessesPage({ page: 3, pageSize: 5 }).subscribe(value => (result = value));
@@ -160,9 +190,10 @@ describe('ApiService', () => {
 
   it('includes the optional booking filter for notifications', () => {
     let notifications: unknown;
-    service.getNotifications('business-1', 'booking-1').subscribe(value => (notifications = value));
+    service.getNotifications('business-1', 'business-token', 'booking-1').subscribe(value => (notifications = value));
 
     const request = http.expectOne(`${apiUrl}/notifications?businessId=business-1&bookingId=booking-1`);
+    expect(request.request.headers.get('Authorization')).toBe('Bearer business-token');
     request.flush({ data: [{ id: 'notification-1' }] });
 
     expect(notifications).toEqual([{ id: 'notification-1' }]);

@@ -326,14 +326,40 @@ END $$;
 
 CREATE TABLE IF NOT EXISTS categories (
   id SERIAL PRIMARY KEY,
-  name TEXT NOT NULL UNIQUE
+  name TEXT NOT NULL UNIQUE,
+  slug TEXT NOT NULL DEFAULT '',
+  parent_id INT REFERENCES categories(id) ON DELETE CASCADE,
+  sort_order INT NOT NULL DEFAULT 0,
+  is_active BOOLEAN NOT NULL DEFAULT true
 );
+
+ALTER TABLE categories ADD COLUMN IF NOT EXISTS slug TEXT NOT NULL DEFAULT '';
+ALTER TABLE categories ADD COLUMN IF NOT EXISTS parent_id INT REFERENCES categories(id) ON DELETE CASCADE;
+ALTER TABLE categories ADD COLUMN IF NOT EXISTS sort_order INT NOT NULL DEFAULT 0;
+ALTER TABLE categories ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT true;
+
+UPDATE categories
+   SET slug = CONCAT(
+     NULLIF(TRIM(BOTH '-' FROM REGEXP_REPLACE(LOWER(name), '[^a-z0-9]+', '-', 'g')), ''),
+     '-',
+     id
+   )
+ WHERE slug = '';
+
+CREATE INDEX IF NOT EXISTS idx_categories_parent_active_order
+  ON categories(parent_id, is_active, sort_order, name);
+
+ALTER TABLE businesses ADD COLUMN IF NOT EXISTS category_id INT REFERENCES categories(id);
+ALTER TABLE businesses ADD COLUMN IF NOT EXISTS profession_category_id INT REFERENCES categories(id);
 
 CREATE TABLE IF NOT EXISTS business_categories (
   business_id TEXT NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
   category_id INT NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
   PRIMARY KEY (business_id, category_id)
 );
+
+CREATE INDEX IF NOT EXISTS idx_businesses_category_id ON businesses(category_id);
+CREATE INDEX IF NOT EXISTS idx_businesses_profession_category_id ON businesses(profession_category_id);
 
 CREATE TABLE IF NOT EXISTS schedules (
   id SERIAL PRIMARY KEY,
@@ -389,6 +415,79 @@ CREATE INDEX IF NOT EXISTS idx_ratings_business ON ratings(business_id);
 
 
 --datos inicales para categorías y etiquetas--
+INSERT INTO categories (name, slug, sort_order) VALUES
+  ('Reparaciones del hogar', 'reparaciones-del-hogar', 10),
+  ('Construcción y acabados', 'construccion-y-acabados', 20),
+  ('Automotores y movilidad', 'automotores-y-movilidad', 30),
+  ('Belleza y cuidado personal', 'belleza-y-cuidado-personal', 40),
+  ('Jardinería y limpieza', 'jardineria-y-limpieza', 50),
+  ('Salud y bienestar', 'salud-y-bienestar', 60),
+  ('Educación y asesorías', 'educacion-y-asesorias', 70),
+  ('Servicios digitales y creativos', 'servicios-digitales-y-creativos', 80),
+  ('Eventos y entretenimiento', 'eventos-y-entretenimiento', 90),
+  ('Mascotas', 'mascotas', 100),
+  ('Transporte y diligencias', 'transporte-y-diligencias', 110)
+ON CONFLICT (name) DO NOTHING;
+
+INSERT INTO categories (name, slug, parent_id, sort_order)
+SELECT profession.name, profession.slug, parent.id, profession.sort_order
+  FROM (VALUES
+    ('Electricista', 'electricista', 'reparaciones-del-hogar', 10),
+    ('Plomero', 'plomero', 'reparaciones-del-hogar', 20),
+    ('Cerrajero', 'cerrajero', 'reparaciones-del-hogar', 30),
+    ('Técnico de electrodomésticos', 'tecnico-de-electrodomesticos', 'reparaciones-del-hogar', 40),
+    ('Técnico de aire acondicionado', 'tecnico-de-aire-acondicionado', 'reparaciones-del-hogar', 50),
+    ('Técnico de refrigeración', 'tecnico-de-refrigeracion', 'reparaciones-del-hogar', 60),
+    ('Carpintero', 'carpintero', 'construccion-y-acabados', 10),
+    ('Ebanista', 'ebanista', 'construccion-y-acabados', 20),
+    ('Albañil', 'albanil', 'construccion-y-acabados', 30),
+    ('Pintor', 'pintor', 'construccion-y-acabados', 40),
+    ('Soldador', 'soldador', 'construccion-y-acabados', 50),
+    ('Instalador de pisos', 'instalador-de-pisos', 'construccion-y-acabados', 60),
+    ('Mecánico automotriz', 'mecanico-automotriz', 'automotores-y-movilidad', 10),
+    ('Mecánico de motos', 'mecanico-de-motos', 'automotores-y-movilidad', 20),
+    ('Electricista automotriz', 'electricista-automotriz', 'automotores-y-movilidad', 30),
+    ('Latonero y pintor automotriz', 'latonero-y-pintor-automotriz', 'automotores-y-movilidad', 40),
+    ('Reparador de bicicletas', 'reparador-de-bicicletas', 'automotores-y-movilidad', 50),
+    ('Peluquero', 'peluquero', 'belleza-y-cuidado-personal', 10),
+    ('Barbero', 'barbero', 'belleza-y-cuidado-personal', 20),
+    ('Manicurista', 'manicurista', 'belleza-y-cuidado-personal', 30),
+    ('Maquillador', 'maquillador', 'belleza-y-cuidado-personal', 40),
+    ('Esteticista', 'esteticista', 'belleza-y-cuidado-personal', 50),
+    ('Jardinero', 'jardinero', 'jardineria-y-limpieza', 10),
+    ('Fumigador', 'fumigador', 'jardineria-y-limpieza', 20),
+    ('Personal de limpieza', 'personal-de-limpieza', 'jardineria-y-limpieza', 30),
+    ('Limpiador de muebles y colchones', 'limpiador-de-muebles-y-colchones', 'jardineria-y-limpieza', 40),
+    ('Limpiador de piscinas', 'limpiador-de-piscinas', 'jardineria-y-limpieza', 50),
+    ('Psicólogo', 'psicologo', 'salud-y-bienestar', 10),
+    ('Fisioterapeuta', 'fisioterapeuta', 'salud-y-bienestar', 20),
+    ('Nutricionista', 'nutricionista', 'salud-y-bienestar', 30),
+    ('Entrenador personal', 'entrenador-personal', 'salud-y-bienestar', 40),
+    ('Tutor escolar', 'tutor-escolar', 'educacion-y-asesorias', 10),
+    ('Profesor de idiomas', 'profesor-de-idiomas', 'educacion-y-asesorias', 20),
+    ('Profesor de música', 'profesor-de-musica', 'educacion-y-asesorias', 30),
+    ('Contador', 'contador', 'educacion-y-asesorias', 40),
+    ('Abogado', 'abogado', 'educacion-y-asesorias', 50),
+    ('Diseñador gráfico', 'disenador-grafico', 'servicios-digitales-y-creativos', 10),
+    ('Desarrollador de software', 'desarrollador-de-software', 'servicios-digitales-y-creativos', 20),
+    ('Diseñador web', 'disenador-web', 'servicios-digitales-y-creativos', 30),
+    ('Fotógrafo', 'fotografo', 'servicios-digitales-y-creativos', 40),
+    ('Gestor de redes sociales', 'gestor-de-redes-sociales', 'servicios-digitales-y-creativos', 50),
+    ('Organizador de eventos', 'organizador-de-eventos', 'eventos-y-entretenimiento', 10),
+    ('Decorador de eventos', 'decorador-de-eventos', 'eventos-y-entretenimiento', 20),
+    ('DJ', 'dj', 'eventos-y-entretenimiento', 30),
+    ('Músico', 'musico', 'eventos-y-entretenimiento', 40),
+    ('Paseador de perros', 'paseador-de-perros', 'mascotas', 10),
+    ('Cuidador de mascotas', 'cuidador-de-mascotas', 'mascotas', 20),
+    ('Entrenador canino', 'entrenador-canino', 'mascotas', 30),
+    ('Veterinario', 'veterinario', 'mascotas', 40),
+    ('Mensajero', 'mensajero', 'transporte-y-diligencias', 10),
+    ('Transportador de carga', 'transportador-de-carga', 'transporte-y-diligencias', 20),
+    ('Guía turístico', 'guia-turistico', 'transporte-y-diligencias', 30)
+  ) AS profession(name, slug, parent_slug, sort_order)
+  JOIN categories parent ON parent.slug = profession.parent_slug
+ON CONFLICT (name) DO NOTHING;
+
 INSERT INTO categories (name) VALUES
 ('Abarrotes'),
 ('Agencia de Viajes'),
@@ -451,6 +550,57 @@ INSERT INTO categories (name) VALUES
 ('Tienda de Ropa Deportiva'),
 ('Zapatería')
 ON CONFLICT (name) DO NOTHING;
+
+UPDATE categories
+   SET slug = CONCAT(
+     NULLIF(TRIM(BOTH '-' FROM REGEXP_REPLACE(LOWER(name), '[^a-z0-9]+', '-', 'g')), ''),
+     '-',
+     id
+   )
+ WHERE slug = '';
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_categories_slug
+  ON categories(slug)
+  WHERE slug <> '';
+
+UPDATE categories child
+   SET parent_id = parent.id
+  FROM (VALUES
+    ('Barbería', 'belleza-y-cuidado-personal'),
+    ('Peluquería', 'belleza-y-cuidado-personal'),
+    ('Servicios de limpieza', 'jardineria-y-limpieza'),
+    ('Servicios de mantenimiento', 'reparaciones-del-hogar')
+  ) AS legacy(name, parent_slug)
+  JOIN categories parent ON parent.slug = legacy.parent_slug
+ WHERE child.name = legacy.name
+   AND child.parent_id IS NULL;
+
+UPDATE businesses business
+   SET category_id = parent.id,
+       profession_category_id = profession.id
+  FROM categories profession
+  JOIN categories parent ON parent.id = profession.parent_id
+ WHERE business.category_id IS NULL
+   AND NULLIF(BTRIM(business.profession), '') IS NOT NULL
+   AND LOWER(BTRIM(business.profession)) = LOWER(profession.name);
+
+UPDATE businesses business
+   SET category_id = category.id
+  FROM categories category
+ WHERE business.category_id IS NULL
+   AND category.parent_id IS NULL
+   AND LOWER(BTRIM(business.category)) = LOWER(category.name);
+
+UPDATE businesses business
+   SET category_id = profession.parent_id,
+       profession_category_id = profession.id
+  FROM categories profession
+ WHERE business.category_id IS NULL
+   AND profession.parent_id IS NOT NULL
+   AND (
+     LOWER(BTRIM(business.profession)) = LOWER(profession.name)
+     OR LOWER(BTRIM(business.category)) = LOWER(profession.name)
+   );
 
 INSERT INTO tags (name) VALUES
 ('Vegano'),
@@ -552,29 +702,35 @@ CREATE POLICY business_owners_rls ON business_owners USING (
 );
 CREATE POLICY owners_rls ON owners USING (app_rls_role() IN ('admin', 'auth') OR id = app_rls_owner_id());
 CREATE POLICY services_rls ON services USING (
-  (app_rls_role() = 'anon' AND active) OR app_rls_business_access(business_id)
+  (app_rls_role() IN ('anon', 'customer') AND active) OR app_rls_business_access(business_id)
 );
 CREATE POLICY reservations_rls ON reservations USING (
   app_rls_role() = 'anon' OR app_rls_business_access(business_id)
 );
 CREATE POLICY customers_rls ON customers USING (
-  app_rls_role() IN ('admin', 'anon', 'auth') OR id = app_rls_customer_id()
+  app_rls_role() IN ('admin', 'auth')
+  OR id = app_rls_customer_id()
+  OR EXISTS (
+    SELECT 1 FROM bookings
+    WHERE bookings.customer_id = customers.id
+      AND app_rls_business_access(bookings.provider_id)
+  )
 );
 CREATE POLICY customer_login_codes_rls ON customer_login_codes USING (
   app_rls_role() IN ('admin', 'auth') OR customer_id = app_rls_customer_id()
 );
 CREATE POLICY bookings_rls ON bookings USING (
-  app_rls_role() IN ('admin', 'anon')
+  app_rls_role() = 'admin'
   OR customer_id = app_rls_customer_id()
   OR app_rls_business_access(provider_id)
 );
 CREATE POLICY notifications_rls ON notifications USING (
-  app_rls_role() IN ('admin', 'anon')
+  app_rls_role() = 'admin'
   OR customer_id = app_rls_customer_id()
   OR app_rls_business_access(business_id)
 );
 CREATE POLICY payments_rls ON payments USING (
-  app_rls_role() IN ('admin', 'anon')
+  app_rls_role() = 'admin'
   OR customer_id = app_rls_customer_id()
   OR app_rls_business_access(provider_id)
 );

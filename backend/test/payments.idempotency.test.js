@@ -22,6 +22,14 @@ describe('payments idempotency', () => {
   beforeEach(() => {
     state.idempotency.clear();
     state.payments.clear();
+    state.bookingPaymentDetails.clear();
+    state.bookingPaymentDetails.set('booking-1', {
+      id: 'booking-1',
+      provider_id: 'business-1',
+      customer_id: 'customer-1',
+      service_id: 'Corte',
+      precio: 25000,
+    });
     state.webhookEvents.clear();
     state.notifications.length = 0;
     db.connect.mockClear();
@@ -32,8 +40,14 @@ describe('payments idempotency', () => {
   });
 
   test('reintentar la creación del pago devuelve el mismo pago', async () => {
-    const first = await payments.createPayment(paymentPayload, 'payment-attempt-1');
-    const replay = await payments.createPayment(paymentPayload, 'payment-attempt-1');
+    const first = await payments.createPayment(paymentPayload, 'payment-attempt-1', {
+      role: 'customer',
+      customerId: 'customer-1',
+    });
+    const replay = await payments.createPayment(paymentPayload, 'payment-attempt-1', {
+      role: 'customer',
+      customerId: 'customer-1',
+    });
 
     expect(first.ok).toBe(true);
     expect(replay.data.id).toBe(first.data.id);
@@ -43,9 +57,15 @@ describe('payments idempotency', () => {
 
   test('reintentar checkout por transferencia reutiliza el pago y la respuesta', async () => {
     const payload = { ...paymentPayload, method: 'transfer' };
-    const first = await payments.createCheckoutSession(payload, 'checkout-attempt-1');
+    const first = await payments.createCheckoutSession(payload, 'checkout-attempt-1', {
+      role: 'customer',
+      customerId: 'customer-1',
+    });
     expect(first.ok).toBe(true);
-    const replay = await payments.createCheckoutSession(payload, 'checkout-attempt-1');
+    const replay = await payments.createCheckoutSession(payload, 'checkout-attempt-1', {
+      role: 'customer',
+      customerId: 'customer-1',
+    });
 
     expect(first.data.paymentId).toBe(replay.data.paymentId);
     expect(replay.replayed).toBe(true);

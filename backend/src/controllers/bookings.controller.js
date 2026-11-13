@@ -15,7 +15,7 @@ async function listBookings(req, res) {
 
 async function createBooking(req, res) {
   try {
-    const result = await bookingsService.createBooking(req.body);
+    const result = await bookingsService.createBooking({ ...req.body, customerId: req.customerId });
     return res
       .status(result.status)
       .json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });

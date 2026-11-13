@@ -117,9 +117,7 @@ function validateRuntimeConfig() {
     }
 
     if (String(process.env.OTP_DEBUG ?? '').toLowerCase() === '1') {
-      logger.warn(
-        'OTP_DEBUG=1 está ACTIVO en producción: los códigos one-time se exponen en las respuestas. Desactívalo.'
-      );
+      throw new Error('OTP_DEBUG no puede estar activo en producción.');
     }
   }
 
@@ -500,10 +498,6 @@ function startServer() {
     if (!process.env.DATABASE_URL) logger.warn('[WARN] DATABASE_URL no configurado en .env');
     if (!process.env.ADMIN_PIN) logger.warn('[WARN] ADMIN_PIN no configurado — usando "1234" por defecto');
     if (!process.env.JWT_SECRET) logger.warn('[WARN] JWT_SECRET no configurado — usando secreto inseguro');
-    if (process.env.OTP_DEBUG === '1' && (process.env.NODE_ENV || 'development') === 'production') {
-      logger.warn('[WARN] OTP_DEBUG=1 está activo en producción — los códigos de acceso se exponen en la respuesta');
-    }
-
     // Worker de recordatorios (opt-in; no corre en tests)
     if (process.env.ENABLE_REMINDER_WORKER === '1') {
       const { startReminderWorker } = require('./services/reminders.worker');

@@ -80,6 +80,7 @@ export interface PaymentRequest {
   currency?: string;
   method: PaymentMethod;
   status?: PaymentStatus;
+  deposit?: boolean;
 }
 
 export interface CheckoutInstructions {
@@ -94,6 +95,8 @@ export interface CheckoutSession {
   sessionId?: string;
   checkoutUrl: string | null;
   paymentId?: string;
+  amount?: number;
+  currency?: string;
   method?: PaymentMethod;
   status?: PaymentStatus;
   instructions?: CheckoutInstructions;

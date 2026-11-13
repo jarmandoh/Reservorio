@@ -220,4 +220,22 @@ describe('Auth API — OTP y magic-link de cliente', () => {
       delete process.env.OTP_DEBUG;
     }
   });
+
+  test('no expone el código cuando NODE_ENV es production aunque OTP_DEBUG esté activo', async () => {
+    const originalNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
+    process.env.OTP_DEBUG = '1';
+    try {
+      db.query.mockResolvedValueOnce({ rows: [{ ...CUSTOMER, phone: '' }] }).mockResolvedValue({ rows: [] });
+
+      const res = await request(app).post('/api/auth/customer/otp/request').send({ email: 'ana@example.com' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.debugCode).toBeUndefined();
+    } finally {
+      if (originalNodeEnv === undefined) delete process.env.NODE_ENV;
+      else process.env.NODE_ENV = originalNodeEnv;
+      delete process.env.OTP_DEBUG;
+    }
+  });
 });

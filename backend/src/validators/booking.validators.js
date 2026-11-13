@@ -6,7 +6,6 @@ const { handleValidation } = require('../middleware/validation');
 const bookingValidators = {
   create: [
     body('providerId').trim().notEmpty().withMessage('providerId requerido'),
-    body('customerId').trim().notEmpty().withMessage('customerId requerido'),
     body('serviceId').trim().notEmpty().withMessage('serviceId requerido'),
     body('date').isISO8601().withMessage('date inválida'),
     body('slot').trim().notEmpty().withMessage('slot requerido'),

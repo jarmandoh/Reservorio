@@ -2,7 +2,7 @@
 
 const express = require('express');
 const { customerValidators } = require('../validators/customer.validators');
-const { requireCustomer } = require('../middleware/auth');
+const { requireAuth, requireAdmin, requireCustomer } = require('../middleware/auth');
 const {
   listCustomers,
   createCustomer,
@@ -15,9 +15,9 @@ const {
 
 const router = express.Router();
 
-router.get('/', listCustomers);
+router.get('/', requireAuth, listCustomers);
 router.post('/', customerValidators.create, createCustomer);
-router.get('/email/:email', findCustomerByEmail);
+router.get('/email/:email', requireAdmin, findCustomerByEmail);
 router.get('/me', requireCustomer, getCustomerProfile);
 router.get('/:id/history', requireCustomer, getCustomerHistory);
 router.get('/:id/export', requireCustomer, exportCustomerData);

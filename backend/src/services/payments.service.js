@@ -39,24 +39,72 @@ const allowedPaymentMethods = ['card', 'paypal', 'transfer', 'cash'];
 
 function normalizePaymentInput(payload = {}) {
   const bookingId = String(payload.bookingId ?? '').trim();
-  const providerId = String(payload.providerId ?? '').trim();
-  const customerId = String(payload.customerId ?? '').trim();
-  const amount = Number(payload.amount ?? 0);
-  const currency = normalizeCurrency(payload.currency);
   const method = String(payload.method ?? 'card')
     .trim()
     .toLowerCase();
-  const status = String(payload.status ?? 'pending').trim();
 
   return {
     bookingId,
-    providerId,
-    customerId,
-    amount,
-    currency,
     method: allowedPaymentMethods.includes(method) ? method : 'card',
-    status,
   };
+}
+
+async function getBookingPaymentDetails(bookingId) {
+  const { rows } = await db.query(
+    `SELECT b.id, b.provider_id, b.customer_id, b.service_id, s.precio
+       FROM bookings b
+       LEFT JOIN services s
+         ON s.business_id = b.provider_id
+        AND s.nombre = b.service_id
+        AND s.active = true
+      WHERE b.id = $1`,
+    [bookingId]
+  );
+  if (!rows.length) return { ok: false, status: 404, message: 'Reserva no encontrada' };
+
+  const price = Number(rows[0].precio);
+  if (!Number.isFinite(price) || price <= 0) {
+    return { ok: false, status: 409, message: 'El servicio no tiene un precio válido configurado' };
+  }
+
+  return {
+    ok: true,
+    booking: rows[0],
+    amount: price,
+    currency: DEFAULT_CURRENCY,
+  };
+}
+
+function validateBookingPaymentIdentity(payload, booking) {
+  const requestedCustomerId = String(payload.customerId ?? '').trim();
+  const requestedProviderId = String(payload.providerId ?? '').trim();
+
+  if (requestedCustomerId && requestedCustomerId !== String(booking.customer_id)) {
+    return { ok: false, status: 403, message: 'Sin acceso a esta reserva' };
+  }
+  if (requestedProviderId && requestedProviderId !== String(booking.provider_id)) {
+    return { ok: false, status: 403, message: 'Proveedor no corresponde a la reserva' };
+  }
+
+  return { ok: true };
+}
+
+function canAccessPaymentBooking(authPayload, booking) {
+  if (!authPayload) return { ok: false, status: 401, message: 'Token requerido' };
+  if (authPayload.role === 'admin' || authPayload.role === 'owner') return { ok: true };
+  if (
+    authPayload.role === 'customer' &&
+    String(authPayload.customerId) === String(booking.customer_id)
+  ) {
+    return { ok: true };
+  }
+  if (
+    authPayload.role === 'business-admin' &&
+    String(authPayload.businessId) === String(booking.provider_id)
+  ) {
+    return { ok: true };
+  }
+  return { ok: false, status: 403, message: 'Sin acceso a esta reserva' };
 }
 
 async function listPayments(filters = {}) {
@@ -98,29 +146,42 @@ async function listPayments(filters = {}) {
   }
 }
 
-async function createPayment(payload = {}, idempotencyKey) {
-  const { bookingId, providerId, customerId, amount, currency, method, status } = normalizePaymentInput(payload);
+async function createPayment(payload = {}, idempotencyKey, authPayload) {
+  const { bookingId, method } = normalizePaymentInput(payload);
 
-  if (!bookingId || !providerId || !customerId) {
-    return { ok: false, status: 400, message: 'bookingId, providerId y customerId son requeridos' };
-  }
-
-  if (!Number.isFinite(amount) || amount <= 0) {
-    return { ok: false, status: 400, message: 'amount debe ser un número mayor que 0' };
+  if (!bookingId) {
+    return { ok: false, status: 400, message: 'bookingId requerido' };
   }
 
   if (!allowedPaymentMethods.includes(method)) {
     return { ok: false, status: 400, message: 'method inválido' };
   }
 
-  if (!['pending', 'paid', 'failed'].includes(status)) {
-    return { ok: false, status: 400, message: 'status inválido' };
-  }
-
   if (!process.env.DATABASE_URL) {
     logger.error('[payments] createPayment: DATABASE_URL no configurado');
     return { ok: false, status: 500, message: 'DATABASE_URL no configurado; el servicio requiere PostgreSQL' };
   }
+
+  let bookingDetails;
+  try {
+    bookingDetails = await getBookingPaymentDetails(bookingId);
+  } catch (error) {
+    logger.error('[payments] createPayment: no se pudo validar la reserva:', error.message);
+    return { ok: false, status: 500, message: 'Error al validar la reserva' };
+  }
+  if (!bookingDetails.ok) return bookingDetails;
+
+  const { booking } = bookingDetails;
+  const identity = validateBookingPaymentIdentity(payload, booking);
+  if (!identity.ok) return identity;
+  const access = canAccessPaymentBooking(authPayload, booking);
+  if (!access.ok) return access;
+
+  const providerId = booking.provider_id;
+  const customerId = booking.customer_id;
+  const amount = bookingDetails.amount;
+  const currency = bookingDetails.currency;
+  const status = 'pending';
 
   const scope = `payment-create:${bookingId}`;
   let claimed;
@@ -336,15 +397,11 @@ async function updatePaymentStatus(id, status) {
   }
 }
 
-async function createCheckoutSession(payload = {}, idempotencyKey) {
-  const { bookingId, providerId, customerId, amount, currency, method } = normalizePaymentInput(payload);
+async function createCheckoutSession(payload = {}, idempotencyKey, authPayload) {
+  const { bookingId, method } = normalizePaymentInput(payload);
 
-  if (!bookingId || !providerId || !customerId) {
-    return { ok: false, status: 400, message: 'bookingId, providerId y customerId son requeridos' };
-  }
-
-  if (!Number.isFinite(amount) || amount <= 0) {
-    return { ok: false, status: 400, message: 'amount debe ser un número mayor que 0' };
+  if (!bookingId) {
+    return { ok: false, status: 400, message: 'bookingId requerido' };
   }
 
   if (!allowedPaymentMethods.includes(method)) {
@@ -358,6 +415,29 @@ async function createCheckoutSession(payload = {}, idempotencyKey) {
   const returnUrls = getCheckoutReturnUrls(payload, bookingId);
   if (!returnUrls) {
     return { ok: false, status: 400, message: 'successUrl o cancelUrl inválida' };
+  }
+
+  let bookingDetails;
+  try {
+    bookingDetails = await getBookingPaymentDetails(bookingId);
+  } catch (error) {
+    logger.error('[payments] createCheckoutSession: no se pudo validar la reserva:', error.message);
+    return { ok: false, status: 500, message: 'Error al validar la reserva' };
+  }
+  if (!bookingDetails.ok) return bookingDetails;
+
+  const { booking } = bookingDetails;
+  const identity = validateBookingPaymentIdentity(payload, booking);
+  if (!identity.ok) return identity;
+  const access = canAccessPaymentBooking(authPayload, booking);
+  if (!access.ok) return access;
+
+  const providerId = booking.provider_id;
+  const customerId = booking.customer_id;
+  const amount = payload.deposit === true ? Math.round(bookingDetails.amount * 0.3) : bookingDetails.amount;
+  const currency = bookingDetails.currency;
+  if (amount <= 0) {
+    return { ok: false, status: 409, message: 'El importe del servicio no permite iniciar el pago' };
   }
 
   const scope = `payment-checkout:${bookingId}`;
@@ -458,6 +538,8 @@ async function createCheckoutSession(payload = {}, idempotencyKey) {
         checkoutUrl: null,
         status: 'pending',
         instructions: getTransferInstructions(bookingId),
+        amount,
+        currency,
       },
     });
   }
@@ -472,6 +554,8 @@ async function createCheckoutSession(payload = {}, idempotencyKey) {
         checkoutUrl: null,
         status: 'pending',
         instructions: { message: 'Paga en efectivo en el establecimiento al completar el servicio.' },
+        amount,
+        currency,
       },
     });
   }
@@ -521,6 +605,8 @@ async function createCheckoutSession(payload = {}, idempotencyKey) {
             sessionId: session.id,
             checkoutUrl: session.url,
             paymentId: paymentRow.id,
+            amount,
+            currency,
           },
         },
         session.id
@@ -541,6 +627,8 @@ async function createCheckoutSession(payload = {}, idempotencyKey) {
         sessionId,
         checkoutUrl: `${successUrl}&dev=1&session_id=${encodeURIComponent(sessionId)}`,
         paymentId: paymentRow.id,
+        amount,
+        currency,
       },
     },
     sessionId
@@ -551,7 +639,15 @@ async function processWebhook({ rawBody, signature, event }) {
   let processedEvent = event;
   const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
-  if (endpointSecret && stripeClient) {
+  if (process.env.NODE_ENV === 'production' && (!endpointSecret || !stripeClient)) {
+    logger.error('[payments] webhook rechazado: Stripe webhook no está configurado');
+    return { ok: false, status: 503, message: 'Webhook de pagos no configurado' };
+  }
+
+  if (endpointSecret || stripeClient) {
+    if (!endpointSecret || !stripeClient) {
+      return { ok: false, status: 503, message: 'Webhook de pagos no configurado' };
+    }
     if (!rawBody || !Buffer.isBuffer(rawBody) || !signature) {
       return { ok: false, status: 400, message: 'Firma de webhook inválida' };
     }

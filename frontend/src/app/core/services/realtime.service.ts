@@ -12,57 +12,84 @@ export class RealtimeService {
   private readonly zone = inject(NgZone);
 
   /**
-   * Conecta a SSE `GET /api/realtime/stream?businessId=xxx`.
-   * Devuelve Observable que emite eventos; se reconecta automáticamente cada 5s si se corta.
-   * Usa EventSource nativo (sin polyfill).
+   * Conecta al SSE del negocio autenticado y reintenta si se corta la conexión.
    */
-  connect(businessId?: string): Observable<RealtimeEvent> {
-    if (typeof window === 'undefined' || typeof EventSource === 'undefined') {
+  connect(businessId: string, token: string): Observable<RealtimeEvent> {
+    if (typeof window === 'undefined' || !businessId || !token) {
       return new Observable(subscriber => subscriber.complete());
     }
 
     const url = new URL(`${environment.apiUrl}/realtime/stream`, window.location.origin);
-    if (businessId) url.searchParams.set('businessId', businessId);
+    url.searchParams.set('businessId', businessId);
 
     return new Observable<RealtimeEvent>(subscriber => {
-      let es: EventSource | null = null;
       let closed = false;
+      let controller: AbortController | null = null;
+      let retryTimer: ReturnType<typeof setTimeout> | null = null;
 
-      const open = () => {
+      const open = async () => {
         if (closed) return;
-        es = new EventSource(url.toString(), { withCredentials: false } as EventSourceInit);
-
-        const handler = (e: MessageEvent) => {
-          this.zone.run(() => {
-            try {
-              const data = JSON.parse(e.data);
-              const evt = (e as MessageEvent & { type?: string }).type || 'message';
-              subscriber.next({ event: evt || 'message', data });
-            } catch {
-              subscriber.next({ event: 'message', data: e.data });
-            }
+        controller = new AbortController();
+        try {
+          const response = await fetch(url.toString(), {
+            headers: { Authorization: `Bearer ${token}`, Accept: 'text/event-stream' },
+            signal: controller.signal,
           });
-        };
-
-        // Eventos tipados
-        es.addEventListener('booking_created', handler as EventListener);
-        es.addEventListener('booking_updated', handler as EventListener);
-        es.addEventListener('message', handler as EventListener);
-
-        es.onerror = () => {
-          // EventSource reconecta solo; cerramos y reabrimos con backoff si se cierra por completo
-          if (es && es.readyState === EventSource.CLOSED && !closed) {
-            es.close();
-            setTimeout(open, 3000);
+          if (!response.ok || !response.body) {
+            if (response.status === 401 || response.status === 403) {
+              subscriber.error(new Error('No tienes acceso a las actualizaciones de este negocio.'));
+              return;
+            }
+            throw new Error(`Realtime request failed (${response.status})`);
           }
-        };
+
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = '';
+          while (!closed) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+
+            let boundary = buffer.indexOf('\n\n');
+            while (boundary >= 0) {
+              const block = buffer.slice(0, boundary);
+              buffer = buffer.slice(boundary + 2);
+              let event = 'message';
+              const data: string[] = [];
+              for (const line of block.split(/\r?\n/)) {
+                if (line.startsWith('event:')) event = line.slice(6).trim();
+                if (line.startsWith('data:')) data.push(line.slice(5).trimStart());
+              }
+              if (data.length) {
+                this.zone.run(() => {
+                  try {
+                    subscriber.next({ event, data: JSON.parse(data.join('\n')) });
+                  } catch {
+                    subscriber.next({ event, data: data.join('\n') });
+                  }
+                });
+              }
+              boundary = buffer.indexOf('\n\n');
+            }
+          }
+        } catch (error) {
+          if (closed || controller?.signal.aborted) return;
+          if (error instanceof Error && error.message.startsWith('No tienes acceso')) {
+            subscriber.error(error);
+            return;
+          }
+        }
+
+        if (!closed && !subscriber.closed) retryTimer = setTimeout(open, 5000);
       };
 
       open();
 
       return () => {
         closed = true;
-        if (es) es.close();
+        controller?.abort();
+        if (retryTimer) clearTimeout(retryTimer);
       };
     });
   }

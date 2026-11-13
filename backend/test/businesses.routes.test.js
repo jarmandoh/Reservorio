@@ -28,6 +28,22 @@ describe('Businesses routes', () => {
     expect(response.body.message).toContain('Token requerido');
   });
 
+  test('GET /api/businesses rejects invalid public directory filters', async () => {
+    const response = await request(app).get('/api/businesses?verified=maybe&minRating=6&sortBy=unsafe');
+
+    expect(response.status).toBe(400);
+    expect(response.body.ok).toBe(false);
+    expect(db.query).not.toHaveBeenCalled();
+  });
+
+  test('GET /api/businesses rejects non-numeric taxonomy filters', async () => {
+    const response = await request(app).get('/api/businesses?categoryId=home&professionCategoryId=trade');
+
+    expect(response.status).toBe(400);
+    expect(response.body.ok).toBe(false);
+    expect(db.query).not.toHaveBeenCalled();
+  });
+
   test('POST /api/businesses requires a profession for onsite service providers', async () => {
     const token = sign({ role: 'admin' });
     const response = await request(app).post('/api/businesses').set('Authorization', `Bearer ${token}`).send({

@@ -71,7 +71,7 @@ Todos bajo `/api/` salvo `/health` y `/metrics`.
 | `POST /auth/owner/register`                                                     | —                                   | Alta de dueño (nombre, email, password)                                                              |
 | `POST /auth/owner/login`                                                        | —                                   | Login de dueño (email, password)                                                                     |
 | `GET /auth/owner/me`                                                            | owner                               | Perfil del dueño                                                                                     |
-| `POST /auth/customer/login`                                                     | —                                   | Login de cliente por email/teléfono → JWT                                                            |
+| `POST /auth/customer/login`                                                     | —                                   | Retirado (`410`); los clientes deben usar OTP o magic-link verificado                                 |
 | `POST /auth/customer/otp/request`                                               | —                                   | Solicita un código OTP por email/SMS                                                                 |
 | `POST /auth/customer/otp/verify`                                                | —                                   | Canjea el OTP por un JWT de cliente                                                                  |
 | `POST /auth/customer/magic-link/request`                                        | —                                   | Solicita un enlace de acceso por email                                                               |
@@ -92,14 +92,15 @@ Todos bajo `/api/` salvo `/health` y `/metrics`.
 | `POST /businesses/:id/checkout`                                                 | —                                   | Checkout de reserva (crea booking + pago)                                                            |
 | `GET/POST /businesses/:id/services`                                             | POST: business-admin                | Servicios del negocio                                                                                |
 | `DELETE /businesses/:id/services/:nombre`                                       | business-admin                      | Eliminar servicio                                                                                    |
-| `GET/POST /customers`                                                           | —                                   | Listado (admin) / alta de cliente                                                                    |
-| `GET /customers/email/:email`                                                   | —                                   | Buscar cliente por email                                                                             |
+| `GET/POST /customers`                                                           | auth (GET) / — (POST)               | Clientes propios o vinculados a negocios accesibles / alta de cliente                                 |
+| `GET /customers/email/:email`                                                   | admin                               | Buscar cliente por email                                                                             |
 | `GET /customers/me`                                                             | customer                            | Perfil del cliente logueado                                                                          |
 | `GET /customers/:id/history`                                                    | customer (self)                     | Historial de reservas del cliente                                                                    |
-| `GET/POST /bookings`                                                            | —                                   | Reservas del marketplace                                                                             |
-| `GET/POST /payments`, `POST /payments/checkout`                                 | PATCH: auth                         | Pagos y sesión de checkout                                                                           |
+| `GET/POST /bookings`                                                            | auth / customer (POST)              | Reservas propias o del negocio; el cliente se toma del token                                         |
+| `GET/POST /payments`, `POST /payments/checkout`                                 | auth                                | Pagos con importe calculado desde el servicio; el estado inicial siempre es `pending`                |
 | `POST /payments/webhook`                                                        | —                                   | Webhook de pasarela (firma `stripe-signature`)                                                       |
-| `GET/POST /notifications`, `POST /notifications/reminder`                       | —                                   | Avisos internos y recordatorios                                                                      |
+| `GET /notifications`                                                            | auth                                | Avisos propios del cliente o negocio                                                                 |
+| `POST /notifications`, `POST /notifications/reminder`                            | auth                                | Avisos internos y recordatorios                                                                      |
 | `GET/POST /ratings/:businessId`, `GET /ratings/:businessId/average`             | —                                   | Valoraciones                                                                                         |
 | `GET /categories`, `GET /categories/all`                                        | —                                   | Categorías                                                                                           |
 | `GET /tags/all`                                                                 | —                                   | Etiquetas                                                                                            |
@@ -121,7 +122,7 @@ Referencia completa de contratos: [docs/API.md](../docs/API.md).
 | `admin`          | `POST /auth/admin`                           | 2h         | Panel global                                |
 | `owner`          | `POST /auth/owner/register` / `login`        | 8h         | Panel de dueños                             |
 | `business-admin` | `POST /businesses/:id/auth`                  | 8h         | Panel del negocio (`businessId` en payload) |
-| `customer`       | `POST /auth/customer/login` o OTP/magic-link | 8h         | Panel "Mi cuenta"                           |
+| `customer`       | OTP o magic-link verificado                  | 8h         | Panel "Mi cuenta"                           |
 
 > **Renovación**: `POST /auth/refresh` re-firma el token de cualquier rol (admin 2 h, resto 8 h) dentro de la ventana de gracia, evitando cortar sesiones activas. El frontend lo llama de forma periódica y silenciosa.
 

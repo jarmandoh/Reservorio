@@ -23,7 +23,7 @@ import { Business } from '../../core/models/business.model';
 import { BusinessPage } from '../../core/services/api.service';
 import { CategoryFiltersComponent, HomeFilters } from './category-filters/category-filters.component';
 import { BusinessCardComponent } from './business-card/business-card.component';
-import { StatsBarComponent, StatsBarItem } from '../../shared/components/stats-bar/stats-bar.component';
+import { Categoria } from '../../core/models/categorias.model';
 
 // Fallback estático mientras no haya datos en la API
 const FALLBACK_BUSINESSES: Business[] = [
@@ -361,9 +361,6 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   private intersectionObserver?: IntersectionObserver;
   @ViewChild('loadMoreSentinel') private loadMoreSentinel?: ElementRef<HTMLElement>;
 
-  /** Intervalo de refresco en ms (30 seg) */
-  private readonly POLL_MS = 30_000;
-
   // ── Cuenta: dropdown y nombre cuando está logueado ────────────────────
   readonly showAccountMenu = signal(false);
   private readonly accountMenuTriggerRef = viewChild<ElementRef<HTMLButtonElement>>('accountMenuTrigger');
@@ -374,8 +371,13 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
 
   businesses: Business[] = [];
   categories = ['Todos', ...DEFAULT_CATEGORIES];
+  private categoryTaxonomy: Categoria[] = [];
   searchQuery = '';
   filters: HomeFilters = { category: 'Todos', location: '' };
+  readonly onlyVerified = signal(false);
+  readonly minRating = signal(0);
+  readonly businessesError = signal(false);
+  sortBy: 'featured' | 'rating' | 'name' = 'featured';
   readonly loading = signal(true);
   readonly negocioLoading = signal(false);
   readonly loadingMore = signal(false);
@@ -388,9 +390,28 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   filtered(): Business[] {
     const q = this.searchQuery.toLowerCase();
     return this.businesses.filter(negocio => {
-      const matchCat = this.filters.category === 'Todos' || negocio.category === this.filters.category;
+      const selectedCategory = this.selectedCategoryTaxonomy();
+      const selectedProfession = selectedCategory?.children?.find(
+        profession => profession.id === this.filters.professionCategoryId
+      );
+      const matchCat =
+        this.filters.category === 'Todos' ||
+        (selectedProfession
+          ? negocio.professionCategoryId === selectedProfession.id ||
+            this.normalizeTaxonomyName(negocio.profession) === this.normalizeTaxonomyName(selectedProfession.name)
+          : selectedCategory
+            ? negocio.categoryId === selectedCategory.id ||
+              this.normalizeTaxonomyName(negocio.category) === this.normalizeTaxonomyName(selectedCategory.name) ||
+              (selectedCategory.children ?? []).some(
+                profession =>
+                  this.normalizeTaxonomyName(negocio.category) === this.normalizeTaxonomyName(profession.name) ||
+                  this.normalizeTaxonomyName(negocio.profession) === this.normalizeTaxonomyName(profession.name)
+              )
+            : negocio.category === this.filters.category);
       const matchLocation =
         !this.filters.location || negocio.location.toLowerCase().includes(this.filters.location.toLowerCase());
+      const matchVerified = !this.onlyVerified() || negocio.verified === true;
+      const matchRating = negocio.rating >= this.minRating();
       const matchQ =
         !q ||
         negocio.name.toLowerCase().includes(q) ||
@@ -399,49 +420,15 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
         negocio.tags.some(t => t.toLowerCase().includes(q)) ||
         negocio.category.toLowerCase().includes(q) ||
         (negocio.profession ?? '').toLowerCase().includes(q);
-      return matchCat && matchLocation && matchQ;
+      return matchCat && matchLocation && matchVerified && matchRating && matchQ;
     });
   }
 
   displayedBusinesses(): Business[] {
-    return this.filtered().sort((left, right) => this.openPriority(left) - this.openPriority(right));
-  }
-
-  totalAvailable(): number {
-    return this.displayedBusinesses().reduce((sum, b) => sum + b.available, 0);
-  }
-
-  heroStats(): StatsBarItem[] {
-    const visibleBusinesses = this.displayedBusinesses();
-    const businessCount = this.totalBusinessCount() || visibleBusinesses.length;
-    const highlyRated = visibleBusinesses.filter(business => business.rating >= 4).length;
-
-    return [
-      {
-        icon: 'store',
-        value: `${businessCount}`,
-        label: 'negocios disponibles',
-        detail: 'Encuentra una opción cerca de ti',
-      },
-      {
-        icon: 'schedule',
-        value: `${this.totalAvailable()}`,
-        label: 'horarios libres',
-        detail: 'Consulta disponibilidad en tiempo real',
-      },
-      {
-        icon: 'star',
-        value: `${highlyRated}`,
-        label: 'negocios 4+ estrellas',
-        detail: 'Calificados por la comunidad',
-      },
-      {
-        icon: 'event_available',
-        value: '24/7',
-        label: 'reservas online',
-        detail: 'Agenda cuando quieras',
-      },
-    ];
+    const businesses = this.filtered();
+    return this.sortBy === 'featured'
+      ? businesses.sort((left, right) => this.openPriority(left) - this.openPriority(right))
+      : businesses;
   }
 
   ngOnInit(): void {
@@ -463,10 +450,29 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     this.intersectionObserver.observe(this.loadMoreSentinel.nativeElement);
   }
 
+  selectCategory(category: string): void {
+    if (this.filters.category === category && !this.filters.professionCategoryId) return;
+    const selected = this.categoryTaxonomy.find(item => item.name === category);
+    this.filters = {
+      ...this.filters,
+      category,
+      categoryId: selected?.id,
+      professionCategoryId: undefined,
+    };
+    this.loadBusinesses();
+  }
+
   onFiltersChange(filters: HomeFilters): void {
     const categoryChanged = filters.category !== this.filters.category;
     const locationChanged = filters.location !== this.filters.location;
-    this.filters = filters;
+    const selected = categoryChanged ? this.categoryTaxonomy.find(item => item.name === filters.category) : undefined;
+    this.filters = {
+      ...filters,
+      categoryId: categoryChanged ? selected?.id : (filters.categoryId ?? this.filters.categoryId),
+      professionCategoryId: categoryChanged
+        ? undefined
+        : (filters.professionCategoryId ?? this.filters.professionCategoryId),
+    };
     if (categoryChanged) {
       if (this.filterReloadTimer) clearTimeout(this.filterReloadTimer);
       this.loadBusinesses();
@@ -476,16 +482,68 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
+  selectProfession(profession: Categoria | null): void {
+    if (this.filters.professionCategoryId === profession?.id) return;
+    this.filters = { ...this.filters, professionCategoryId: profession?.id };
+    this.loadBusinesses();
+  }
+
+  selectedCategoryTaxonomy(): Categoria | undefined {
+    return this.categoryTaxonomy.find(category => category.id === this.filters.categoryId);
+  }
+
+  onSearchInput(event: Event): void {
+    this.onSearchQueryChange((event.target as HTMLInputElement).value);
+  }
+
+  submitSearch(event: Event): void {
+    event.preventDefault();
+    if (this.searchReloadTimer) clearTimeout(this.searchReloadTimer);
+    this.loadBusinesses();
+  }
+
+  onLocationInput(event: Event): void {
+    this.filters = { ...this.filters, location: (event.target as HTMLInputElement).value };
+    if (this.filterReloadTimer) clearTimeout(this.filterReloadTimer);
+    this.filterReloadTimer = setTimeout(() => this.loadBusinesses(), 350);
+  }
+
+  onMinimumRatingChange(event: Event): void {
+    const value = Number((event.target as HTMLSelectElement).value);
+    this.minRating.set([0, 4, 4.5].includes(value) ? value : 0);
+    this.loadBusinesses();
+  }
+
+  onVerifiedChange(event: Event): void {
+    this.onlyVerified.set((event.target as HTMLInputElement).checked);
+    this.loadBusinesses();
+  }
+
+  onSortChange(event: Event): void {
+    const value = (event.target as HTMLSelectElement).value;
+    this.sortBy = value === 'rating' || value === 'name' ? value : 'featured';
+    this.loadBusinesses();
+  }
+
   clearAllFilters(): void {
     this.searchQuery = '';
     this.filters = { category: 'Todos', location: '' };
+    this.onlyVerified.set(false);
+    this.minRating.set(0);
+    this.sortBy = 'featured';
     if (this.searchReloadTimer) clearTimeout(this.searchReloadTimer);
     if (this.filterReloadTimer) clearTimeout(this.filterReloadTimer);
     this.loadBusinesses();
   }
 
   hasActiveFilters(): boolean {
-    return this.filters.category !== 'Todos' || !!this.filters.location;
+    return (
+      !!this.searchQuery.trim() ||
+      this.filters.category !== 'Todos' ||
+      !!this.filters.location ||
+      this.onlyVerified() ||
+      this.minRating() > 0
+    );
   }
 
   private isOpenNow(schedule?: string): boolean | null {
@@ -532,15 +590,24 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private loadCategories(): void {
     this.api
-      .getCategories()
+      .getCategoryTree()
       .pipe(catchError(() => of([])))
       .subscribe(list => {
+        this.categoryTaxonomy = list;
         const names = list.map(category => category.name.trim()).filter(Boolean);
         this.categories = ['Todos', ...new Set(names.length ? names : DEFAULT_CATEGORIES)];
         if (this.filters.category !== 'Todos' && !this.categories.includes(this.filters.category)) {
-          this.filters = { ...this.filters, category: 'Todos' };
+          this.filters = { ...this.filters, category: 'Todos', categoryId: undefined, professionCategoryId: undefined };
         }
       });
+  }
+
+  private normalizeTaxonomyName(value?: string): string {
+    return String(value ?? '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toLowerCase();
   }
 
   @HostListener('document:click', ['$event'])
@@ -632,6 +699,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     this.hasMore.set(false);
     this.loadingMore.set(false);
     this.loadMoreError.set(false);
+    this.businessesError.set(false);
     this.loading.set(true);
     this.negocioLoading.set(true);
     this.fetchBusinessesPage(1, true);
@@ -653,8 +721,17 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
 
     const query = {
       q: this.searchQuery,
-      category: this.filters.category !== 'Todos' ? this.filters.category : undefined,
+      category: this.filters.categoryId
+        ? undefined
+        : this.filters.category !== 'Todos'
+          ? this.filters.category
+          : undefined,
+      categoryId: this.filters.categoryId,
+      professionCategoryId: this.filters.professionCategoryId,
       location: this.filters.location || undefined,
+      verified: this.onlyVerified() ? true : undefined,
+      minRating: this.minRating() || undefined,
+      sortBy: this.sortBy === 'featured' ? undefined : this.sortBy,
       page,
       pageSize: this.PAGE_SIZE,
     };
@@ -662,7 +739,8 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       .getBusinessesPage(query)
       .pipe(
         catchError(() => {
-          if (!reset) this.loadMoreError.set(true);
+          if (reset) this.businessesError.set(true);
+          else this.loadMoreError.set(true);
           const fallback = reset ? FALLBACK_BUSINESSES : [];
           return of({
             businesses: fallback,
@@ -729,9 +807,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   resetFilters(): void {
-    this.searchQuery = '';
-    this.filters = { category: 'Todos', location: '' };
-    this.loadBusinesses();
+    this.clearAllFilters();
   }
 
   goToBooking(negocio: Business): void {

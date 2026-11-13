@@ -5,6 +5,7 @@ process.env.DATABASE_URL = 'postgres://test';
 
 const request = require('supertest');
 const express = require('express');
+const jwt = require('jsonwebtoken');
 
 const { parsePagination } = require('../src/utils/pagination');
 
@@ -54,6 +55,7 @@ function buildApp(routes) {
 
 const routes = { bookings: bookingsRoutes, payments: paymentsRoutes, customers: customersRoutes };
 const app = buildApp(routes);
+const adminAuthorization = `Bearer ${jwt.sign({ role: 'admin' }, 'test-secret')}`;
 
 describe('Paginación en listados (endpoints)', () => {
   beforeEach(() => {
@@ -80,7 +82,9 @@ describe('Paginación en listados (endpoints)', () => {
       })
       .mockResolvedValueOnce({ rows: [{ total: 42 }] });
 
-    const res = await request(app).get('/api/bookings?page=1&pageSize=5');
+    const res = await request(app)
+      .get('/api/bookings?page=1&pageSize=5')
+      .set('Authorization', adminAuthorization);
     expect(res.status).toBe(200);
     expect(res.body.meta).toEqual({ total: 42, page: 1, pageSize: 5 });
     expect(db.query).toHaveBeenNthCalledWith(1, expect.stringContaining('LIMIT $1 OFFSET $2'), [5, 0]);
@@ -89,7 +93,7 @@ describe('Paginación en listados (endpoints)', () => {
 
   test('GET /api/bookings sin parámetros no ejecuta COUNT ni LIMIT', async () => {
     db.query.mockResolvedValue({ rows: [] });
-    const res = await request(app).get('/api/bookings');
+    const res = await request(app).get('/api/bookings').set('Authorization', adminAuthorization);
     expect(res.status).toBe(200);
     expect(res.body.meta).toBeUndefined();
     expect(db.query).toHaveBeenCalledTimes(1);
@@ -98,7 +102,9 @@ describe('Paginación en listados (endpoints)', () => {
   test('GET /api/payments?page=2&pageSize=10 con providerId filtra y pagina', async () => {
     db.query.mockResolvedValueOnce({ rows: [] }).mockResolvedValueOnce({ rows: [{ total: 7 }] });
 
-    const res = await request(app).get('/api/payments?providerId=neg1&page=2&pageSize=10');
+    const res = await request(app)
+      .get('/api/payments?providerId=neg1&page=2&pageSize=10')
+      .set('Authorization', adminAuthorization);
     expect(res.status).toBe(200);
     expect(res.body.meta).toEqual({ total: 7, page: 2, pageSize: 10 });
     expect(db.query).toHaveBeenNthCalledWith(1, expect.stringContaining('WHERE provider_id = $1'), ['neg1', 10, 10]);
@@ -120,7 +126,7 @@ describe('Paginación en listados (endpoints)', () => {
         },
       ],
     });
-    const res = await request(app).get('/api/payments');
+    const res = await request(app).get('/api/payments').set('Authorization', adminAuthorization);
     expect(res.status).toBe(200);
     expect(res.body.meta).toBeUndefined();
     expect(Array.isArray(res.body.data)).toBe(true);
@@ -133,7 +139,9 @@ describe('Paginación en listados (endpoints)', () => {
       })
       .mockResolvedValueOnce({ rows: [{ total: 3 }] });
 
-    const res = await request(app).get('/api/customers?page=1&pageSize=5');
+    const res = await request(app)
+      .get('/api/customers?page=1&pageSize=5')
+      .set('Authorization', adminAuthorization);
     expect(res.status).toBe(200);
     expect(res.body.meta).toEqual({ total: 3, page: 1, pageSize: 5 });
   });

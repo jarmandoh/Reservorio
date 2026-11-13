@@ -143,7 +143,6 @@ function isLoginAttempt(url: string): boolean {
     url.includes('/auth/admin') ||
     url.includes('/auth/owner/login') ||
     url.includes('/auth/owner/register') ||
-    url.includes('/auth/customer/login') ||
     url.includes('/auth/customer/otp/request') ||
     url.includes('/auth/customer/otp/verify') ||
     url.includes('/auth/customer/magic-link/request') ||

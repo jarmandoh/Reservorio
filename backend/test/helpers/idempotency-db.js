@@ -4,6 +4,7 @@ function createIdempotencyDb() {
   const state = {
     idempotency: new Map(),
     payments: new Map(),
+    bookingPaymentDetails: new Map(),
     webhookEvents: new Set(),
     reservations: [],
     bookings: [],
@@ -66,6 +67,17 @@ function createIdempotencyDb() {
       if (state.webhookEvents.has(event)) return { rows: [], rowCount: 0 };
       state.webhookEvents.add(event);
       return { rows: [{ event_id: event }], rowCount: 1 };
+    }
+
+    if (text.startsWith('SELECT b.id, b.provider_id, b.customer_id, b.service_id, s.precio')) {
+      const booking = state.bookingPaymentDetails.get(values[0]) || {
+        id: values[0],
+        provider_id: 'neg1',
+        customer_id: 'c1',
+        service_id: 'Corte',
+        precio: 30,
+      };
+      return { rows: [{ ...booking }], rowCount: 1 };
     }
 
     if (text.startsWith('INSERT INTO payments')) {

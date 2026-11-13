@@ -992,6 +992,7 @@ export class BookingComponent implements OnInit, OnDestroy {
   readonly reviews = signal<Review[]>([]);
   readonly ratingStats = signal<RatingStats | null>(null);
   readonly services = signal<string[]>([]);
+  readonly servicePrices = signal<Record<string, number>>({});
   readonly selectedSlot = signal<Reservation | null>(null);
   readonly selectedService = signal<string | null>(null);
   readonly confirmed = signal<ConfirmedBooking | null>(null);
@@ -1142,7 +1143,7 @@ export class BookingComponent implements OnInit, OnDestroy {
 
   private setupRealtime(): void {
     this.realtime
-      .connect(this.businessId)
+      .connect(this.businessId, this.auth.getCustomerToken() ?? '')
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(evt => {
         if (evt.event === 'booking_created' || evt.event === 'booking_updated') {
@@ -1364,6 +1365,7 @@ export class BookingComponent implements OnInit, OnDestroy {
     priceNumber: number;
   } {
     const lowercase = service.toLowerCase();
+    const configuredPrice = this.servicePrices()[service];
 
     if (
       lowercase.includes('facial') ||
@@ -1372,60 +1374,60 @@ export class BookingComponent implements OnInit, OnDestroy {
       lowercase.includes('pedi')
     ) {
       return {
-        price: formatCurrency(39000),
+        price: formatCurrency(configuredPrice ?? 39000),
         duration: '45 min',
         availability: 'Hoy',
         summary: 'Tratamiento completo con cuidado personalizado.',
         tag: 'popular',
         durationMinutes: 45,
-        priceNumber: 39000,
+        priceNumber: configuredPrice ?? 39000,
       };
     }
 
     if (lowercase.includes('corte') || lowercase.includes('barba') || lowercase.includes('peinado')) {
       return {
-        price: formatCurrency(28000),
+        price: formatCurrency(configuredPrice ?? 28000),
         duration: '30 min',
         availability: '2 huecos',
         summary: 'Tiempos rápidos para una cita eficiente.',
         tag: 'quick',
         durationMinutes: 30,
-        priceNumber: 28000,
+        priceNumber: configuredPrice ?? 28000,
       };
     }
 
     if (lowercase.includes('maquillaje') || lowercase.includes('celebr') || lowercase.includes('evento')) {
       return {
-        price: formatCurrency(95000),
+        price: formatCurrency(configuredPrice ?? 95000),
         duration: '75 min',
         availability: 'Agotado',
         summary: 'Servicio premium para eventos y finishing touch.',
         tag: 'premium',
         durationMinutes: 75,
-        priceNumber: 95000,
+        priceNumber: configuredPrice ?? 95000,
       };
     }
 
     if (lowercase.includes('depil') || lowercase.includes('laser')) {
       return {
-        price: formatCurrency(54000),
+        price: formatCurrency(configuredPrice ?? 54000),
         duration: '50 min',
         availability: 'Hoy',
         summary: 'Ideal para rutinas de mantenimiento y confort.',
         tag: 'popular',
         durationMinutes: 50,
-        priceNumber: 54000,
+        priceNumber: configuredPrice ?? 54000,
       };
     }
 
     return {
-      price: formatCurrency(49000),
+      price: formatCurrency(configuredPrice ?? 49000),
       duration: '60 min',
       availability: 'Disponible',
       summary: 'Servicio de consulta y atención personalizada.',
       tag: 'popular',
       durationMinutes: 60,
-      priceNumber: 49000,
+      priceNumber: configuredPrice ?? 49000,
     };
   }
 
@@ -1461,6 +1463,13 @@ export class BookingComponent implements OnInit, OnDestroy {
         next: data => {
           const names = data.map(s => (typeof s === 'string' ? s : s.nombre));
           this.services.set(names);
+          this.servicePrices.set(
+            Object.fromEntries(
+              data
+                .filter(s => typeof s !== 'string' && Number.isFinite(s.precio) && s.precio !== null)
+                .map(s => [s.nombre, Number(s.precio)])
+            )
+          );
           if (this.initialServiceName && names.includes(this.initialServiceName)) {
             this.selectedService.set(this.initialServiceName);
             if (this.embedded) this.goToStep(2);
@@ -1563,7 +1572,7 @@ export class BookingComponent implements OnInit, OnDestroy {
       amount,
       currency: DEFAULT_CURRENCY,
       method,
-      status: 'pending' as const,
+      deposit: this.depositActive(),
       successUrl,
       cancelUrl,
     };
@@ -1573,7 +1582,8 @@ export class BookingComponent implements OnInit, OnDestroy {
         {
           ...checkoutPayload,
         },
-        this.paymentAttempt.key
+        this.paymentAttempt.key,
+        this.auth.getCustomerToken() ?? ''
       )
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({

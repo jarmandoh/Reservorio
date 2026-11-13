@@ -41,6 +41,8 @@ describe('OwnerBusinessService', () => {
         {
           name: 'Mi negocio',
           category: 'Gastronomía',
+          categoryId: 7,
+          professionCategoryId: 17,
           businessType: 'onsite_service',
           profession: 'Electricista',
           description: 'Un lugar genial',
@@ -63,6 +65,8 @@ describe('OwnerBusinessService', () => {
       expect.objectContaining({
         name: 'Mi negocio',
         category: 'Gastronomía',
+        categoryId: 7,
+        professionCategoryId: 17,
         businessType: 'onsite_service',
         profession: 'Electricista',
         tags: ['café', 'brunch'],

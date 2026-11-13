@@ -3,7 +3,6 @@
 const express = require('express');
 const { body } = require('express-validator');
 const { handleValidation } = require('../middleware/validation');
-const { SUPPORTED_CURRENCIES } = require('../config/currency');
 const { requireAuth, canAccessBusinessId } = require('../middleware/auth');
 const {
   listPayments,
@@ -18,35 +17,16 @@ const router = express.Router();
 
 const allowedPaymentMethods = ['card', 'paypal', 'transfer', 'cash'];
 
-const currencyValidator = body('currency')
-  .optional()
-  .trim()
-  .custom(value => {
-    if (!value) return true;
-    if (!SUPPORTED_CURRENCIES.includes(String(value).trim().toUpperCase())) {
-      throw new Error(`currency debe ser uno de: ${SUPPORTED_CURRENCIES.join(', ')}`);
-    }
-    return true;
-  });
-
 const paymentValidators = [
   body('bookingId').trim().notEmpty().withMessage('bookingId requerido'),
-  body('providerId').trim().notEmpty().withMessage('providerId requerido'),
-  body('customerId').trim().notEmpty().withMessage('customerId requerido'),
-  body('amount').isFloat({ min: 0 }).withMessage('amount inválido'),
-  currencyValidator,
   body('method').isIn(allowedPaymentMethods).withMessage('method inválido'),
-  body('status').optional().isIn(['pending', 'paid', 'failed']).withMessage('status inválido'),
   handleValidation,
 ];
 
 const checkoutValidators = [
   body('bookingId').trim().notEmpty().withMessage('bookingId requerido'),
-  body('providerId').trim().notEmpty().withMessage('providerId requerido'),
-  body('customerId').trim().notEmpty().withMessage('customerId requerido'),
-  body('amount').isFloat({ min: 0 }).withMessage('amount inválido'),
-  currencyValidator,
   body('method').optional().isIn(allowedPaymentMethods).withMessage('method inválido'),
+  body('deposit').optional().isBoolean().withMessage('deposit inválido'),
   body('successUrl')
     .optional()
     .isURL({ require_protocol: true, require_tld: false })
@@ -55,7 +35,7 @@ const checkoutValidators = [
   handleValidation,
 ];
 
-router.get('/', async (req, res) => {
+router.get('/', requireAuth, async (req, res) => {
   try {
     const result = await listPayments(req.query);
     const body = { ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) };
@@ -66,9 +46,9 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.post('/', paymentValidators, async (req, res) => {
+router.post('/', requireAuth, paymentValidators, async (req, res) => {
   try {
-    const result = await createPayment(req.body, req.get('Idempotency-Key'));
+    const result = await createPayment(req.body, req.get('Idempotency-Key'), req.authPayload);
     if (result.replayed) res.set('Idempotency-Replayed', 'true');
     if (result.inProgress) res.set('Retry-After', '1');
     return res
@@ -79,9 +59,9 @@ router.post('/', paymentValidators, async (req, res) => {
   }
 });
 
-router.post('/checkout', checkoutValidators, async (req, res) => {
+router.post('/checkout', requireAuth, checkoutValidators, async (req, res) => {
   try {
-    const result = await createCheckoutSession(req.body, req.get('Idempotency-Key'));
+    const result = await createCheckoutSession(req.body, req.get('Idempotency-Key'), req.authPayload);
     if (result.replayed) res.set('Idempotency-Replayed', 'true');
     if (result.inProgress) res.set('Retry-After', '1');
     return res

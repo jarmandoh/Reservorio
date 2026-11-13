@@ -437,23 +437,9 @@
                   <input type="text" class="form-input" formControlName="name" />
                 </div>
               </div>
-              <div>
-                <label class="form-label">Categoría *</label>
-                <select class="form-select" formControlName="category" autocomplete="">
-                  <option value="" disabled>Selecciona una categoría</option>
-                  @if (isCategoriesLoading) {
-                    <option disabled>Cargando categorías...</option>
-                  } @else {
-                    @for (cat of categorias; track cat.id) {
-                      <option value="{{ cat.name }}">{{ cat.name }}</option>
-                    }
-                  }
-                </select>
-                <!-- <input type="text" class="form-input" formControlName="category"
-                         placeholder="Ej. Salud & Bienestar" /> -->
-              </div>
+              <app-business-category-selector [formGroup]="businessForm" class="sm:col-span-2" />
             </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
               <div>
                 <label class="form-label" for="admin-business-type">Tipo de negocio</label>
                 <select
@@ -467,23 +453,6 @@
                   <option value="no_appointments">Negocio sin agenda</option>
                 </select>
               </div>
-              @if (businessForm.get('businessType')?.value === 'onsite_service') {
-                <div>
-                  <label class="form-label" for="admin-business-profession">Profesión *</label>
-                  <div class="icon-field">
-                    <span class="material-icons-round" aria-hidden="true">work</span>
-                    <input
-                      id="admin-business-profession"
-                      type="text"
-                      class="form-input"
-                      formControlName="profession"
-                      placeholder="Ej. electricista, ebanista, cerrajero"
-                      maxlength="100"
-                      required
-                    />
-                  </div>
-                </div>
-              }
             </div>
             <div>
               <label class="form-label">Descripción</label>

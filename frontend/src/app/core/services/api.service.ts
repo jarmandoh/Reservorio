@@ -34,9 +34,14 @@ import { OfflineService } from './offline.service';
 export interface BusinessQuery {
   q?: string;
   category?: string;
+  categoryId?: number;
+  professionCategoryId?: number;
   tags?: string;
   location?: string;
   interest?: string;
+  verified?: boolean;
+  minRating?: number;
+  sortBy?: 'rating' | 'name';
   page?: number;
   pageSize?: number;
 }
@@ -126,12 +131,6 @@ export class ApiService {
   loginOwner(email: string, password: string): Observable<ApiResponse<{ token: string }>> {
     return this.http
       .post<ApiResponse<{ token: string }>>(`${this.base}/auth/owner/login`, { email, password })
-      .pipe(catchError(this.handleError));
-  }
-
-  loginCustomer(email: string, phone: string): Observable<ApiResponse<{ token: string; customer: Customer }>> {
-    return this.http
-      .post<ApiResponse<{ token: string; customer: Customer }>>(`${this.base}/auth/customer/login`, { email, phone })
       .pipe(catchError(this.handleError));
   }
 
@@ -486,8 +485,8 @@ export class ApiService {
 
   // ── Marketplace real flow ─────────────────────────────────────────────
 
-  getCustomers(): Observable<Customer[]> {
-    return this.http.get<ApiResponse<Customer[]>>(`${this.base}/customers`).pipe(
+  getCustomers(token?: string): Observable<Customer[]> {
+    return this.http.get<ApiResponse<Customer[]>>(`${this.base}/customers`, token ? this.authHeader(token) : {}).pipe(
       map(r => r.data ?? []),
       catchError(this.handleError)
     );
@@ -497,8 +496,8 @@ export class ApiService {
     return this.http.post<ApiResponse<Customer>>(`${this.base}/customers`, payload).pipe(catchError(this.handleError));
   }
 
-  getBookings(): Observable<BookingRecord[]> {
-    return this.http.get<ApiResponse<BookingRecord[]>>(`${this.base}/bookings`).pipe(
+  getBookings(token?: string): Observable<BookingRecord[]> {
+    return this.http.get<ApiResponse<BookingRecord[]>>(`${this.base}/bookings`, token ? this.authHeader(token) : {}).pipe(
       map(r => r.data ?? []),
       catchError(this.handleError)
     );
@@ -510,23 +509,28 @@ export class ApiService {
       .pipe(catchError(this.handleError));
   }
 
-  getPayments(): Observable<Payment[]> {
-    return this.http.get<ApiResponse<Payment[]>>(`${this.base}/payments`).pipe(
+  getPayments(token?: string): Observable<Payment[]> {
+    return this.http.get<ApiResponse<Payment[]>>(`${this.base}/payments`, token ? this.authHeader(token) : {}).pipe(
       map(r => r.data ?? []),
       catchError(this.handleError)
     );
   }
 
-  getNotifications(businessId: string, bookingId?: string): Observable<NotificationItem[]> {
+  getNotifications(businessId: string, token?: string, bookingId?: string): Observable<NotificationItem[]> {
     let httpParams = new HttpParams().set('businessId', businessId);
     if (bookingId) {
       httpParams = httpParams.set('bookingId', bookingId);
     }
 
-    return this.http.get<ApiResponse<NotificationItem[]>>(`${this.base}/notifications`, { params: httpParams }).pipe(
-      map(r => r.data ?? []),
-      catchError(this.handleError)
-    );
+    return this.http
+      .get<ApiResponse<NotificationItem[]>>(`${this.base}/notifications`, {
+        params: httpParams,
+        ...(token ? this.authHeader(token) : {}),
+      })
+      .pipe(
+        map(r => r.data ?? []),
+        catchError(this.handleError)
+      );
   }
 
   createNotification(payload: {
@@ -574,11 +578,12 @@ export class ApiService {
 
   createCheckoutSession(
     payload: PaymentRequest & { successUrl?: string; cancelUrl?: string },
-    idempotencyKey: string
+    idempotencyKey: string,
+    token?: string
   ): Observable<ApiResponse<CheckoutSession>> {
     return this.http
       .post<ApiResponse<CheckoutSession>>(`${this.base}/payments/checkout`, payload, {
-        headers: { 'Idempotency-Key': idempotencyKey },
+        headers: { 'Idempotency-Key': idempotencyKey, ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       })
       .pipe(catchError(this.handleError));
   }
@@ -751,6 +756,13 @@ export class ApiService {
 
   getCategories(): Observable<Categoria[]> {
     return this.http.get<ApiResponse<Categoria[]>>(`${this.base}/categories/all`).pipe(
+      map(r => r.data ?? []),
+      catchError(this.handleError)
+    );
+  }
+
+  getCategoryTree(): Observable<Categoria[]> {
+    return this.http.get<ApiResponse<Categoria[]>>(`${this.base}/categories/tree`).pipe(
       map(r => r.data ?? []),
       catchError(this.handleError)
     );

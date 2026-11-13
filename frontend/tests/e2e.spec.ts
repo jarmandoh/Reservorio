@@ -82,7 +82,10 @@ const E2E_CUSTOMER_PHONE = '+573001234567';
 const E2E_CUSTOMER_NAME = 'E2E Usuario';
 
 async function ensureE2ECustomer(request: APIRequestContext): Promise<string> {
-  // Crea cliente si no existe (ignora 409) y loguea para obtener JWT
+  const configuredToken = process.env['PLAYWRIGHT_CUSTOMER_TOKEN'];
+  if (configuredToken) return configuredToken;
+
+  // Crea cliente si no existe (ignora 409) y obtiene un JWT por OTP verificado.
   await request.post(`${API_BASE}/api/customers`, {
     data: {
       name: E2E_CUSTOMER_NAME,
@@ -93,11 +96,20 @@ async function ensureE2ECustomer(request: APIRequestContext): Promise<string> {
     },
   });
 
-  const loginRes = await request.post(`${API_BASE}/api/auth/customer/login`, {
-    data: { email: E2E_CUSTOMER_EMAIL, phone: E2E_CUSTOMER_PHONE },
+  const otpRes = await request.post(`${API_BASE}/api/auth/customer/otp/request`, {
+    data: { email: E2E_CUSTOMER_EMAIL },
   });
-  expect(loginRes.ok()).toBeTruthy();
-  const body = await loginRes.json();
+  expect(otpRes.ok()).toBeTruthy();
+  const otp = (await otpRes.json()).data?.debugCode as string | undefined;
+  if (!otp) {
+    throw new Error('E2E authentication requires OTP_DEBUG=1 in non-production or PLAYWRIGHT_CUSTOMER_TOKEN.');
+  }
+
+  const verifyRes = await request.post(`${API_BASE}/api/auth/customer/otp/verify`, {
+    data: { email: E2E_CUSTOMER_EMAIL, code: otp },
+  });
+  expect(verifyRes.ok()).toBeTruthy();
+  const body = await verifyRes.json();
   return body.data.token as string;
 }
 

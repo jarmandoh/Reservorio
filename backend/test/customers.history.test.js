@@ -25,6 +25,10 @@ function customerToken(id) {
   return jwt.sign({ role: 'customer', customerId: id }, 'test-secret');
 }
 
+function adminToken() {
+  return jwt.sign({ role: 'admin' }, 'test-secret');
+}
+
 describe('customers — historial y recuerdo por email', () => {
   beforeEach(() => {
     process.env.DATABASE_URL = 'postgres://test';
@@ -40,14 +44,21 @@ describe('customers — historial y recuerdo por email', () => {
     }
   });
 
-  test('GET /email/:email resuelve el cliente por email', async () => {
+  test('GET /email/:email requiere admin', async () => {
+    const res = await request(buildApp()).get('/api/customers/email/ana@example.com');
+    expect(res.status).toBe(401);
+  });
+
+  test('GET /email/:email resuelve el cliente para admin', async () => {
     db.query.mockResolvedValueOnce({
       rows: [
         { id: 'c1', name: 'Ana', email: 'ana@example.com', phone: '600123456', created_at: new Date().toISOString() },
       ],
     });
 
-    const res = await request(buildApp()).get('/api/customers/email/ana@example.com');
+    const res = await request(buildApp())
+      .get('/api/customers/email/ana@example.com')
+      .set('Authorization', `Bearer ${adminToken()}`);
 
     expect(res.status).toBe(200);
     expect(res.body.data.id).toBe('c1');
@@ -56,7 +67,9 @@ describe('customers — historial y recuerdo por email', () => {
   test('GET /email/:email devuelve 404 si no hay historial', async () => {
     db.query.mockResolvedValueOnce({ rows: [] });
 
-    const res = await request(buildApp()).get('/api/customers/email/nobody@example.com');
+    const res = await request(buildApp())
+      .get('/api/customers/email/nobody@example.com')
+      .set('Authorization', `Bearer ${adminToken()}`);
 
     expect(res.status).toBe(404);
   });

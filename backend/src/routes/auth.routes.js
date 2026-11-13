@@ -123,31 +123,9 @@ router.get('/owner/me', requireAuth, async (req, res) => {
   }
 });
 
-/** POST /api/auth/customer/login */
-router.post(
-  '/customer/login',
-  authLimiter,
-  body('email').trim().isEmail().withMessage('email inválido'),
-  body('phone')
-    .optional({ values: 'falsy' })
-    .trim()
-    .isLength({ min: 7, max: 20 })
-    .withMessage('phone inválido (7-20 caracteres)'),
-  handleValidation,
-  async (req, res) => {
-    try {
-      const result = await authService.loginCustomer({
-        email: req.body.email,
-        phone: req.body.phone,
-      });
-      return res
-        .status(result.status)
-        .json({ ok: result.ok, ...(result.ok ? { data: result.data } : { message: result.message }) });
-    } catch (error) {
-      logger.error('Error en login de cliente:', error);
-      return res.status(500).json({ ok: false, message: 'Server error' });
-    }
-  }
+/** El login de cliente por email/teléfono fue retirado; usar OTP o magic-link verificado. */
+router.post('/customer/login', (_req, res) =>
+  res.status(410).json({ ok: false, message: 'Usa el acceso verificado por OTP o enlace de correo.' })
 );
 
 /** POST /api/auth/customer/otp/request  solicita un OTP por email/SMS */

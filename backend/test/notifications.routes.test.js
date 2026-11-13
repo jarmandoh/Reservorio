@@ -4,6 +4,7 @@ process.env.JWT_SECRET = 'test-secret';
 
 const request = require('supertest');
 const express = require('express');
+const jwt = require('jsonwebtoken');
 
 jest.mock('../src/db', () => ({ query: jest.fn() }));
 
@@ -13,6 +14,7 @@ const notificationsRoutes = require('../src/routes/notifications.routes');
 const app = express();
 app.use(express.json());
 app.use('/api/notifications', notificationsRoutes);
+const businessAuth = `Bearer ${jwt.sign({ role: 'business-admin', businessId: 'negocio1' }, 'test-secret')}`;
 
 describe('Notifications routes', () => {
   beforeEach(() => {
@@ -37,12 +39,21 @@ describe('Notifications routes', () => {
       ],
     });
 
-    const response = await request(app).get('/api/notifications').query({ businessId: 'negocio1' });
+    const response = await request(app)
+      .get('/api/notifications')
+      .set('Authorization', businessAuth)
+      .query({ businessId: 'negocio1' });
 
     expect(response.status).toBe(200);
     expect(response.body.ok).toBe(true);
     expect(Array.isArray(response.body.data)).toBe(true);
     expect(response.body.data[0].businessId).toBe('negocio1');
     expect(response.body.data[0].type).toBe('booking_created');
+  });
+
+  test('GET /api/notifications rejects anonymous callers', async () => {
+    const response = await request(app).get('/api/notifications');
+    expect(response.status).toBe(401);
+    expect(db.query).not.toHaveBeenCalled();
   });
 });

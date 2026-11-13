@@ -4,6 +4,8 @@ export interface Business {
   id: string;
   name: string;
   category: string;
+  categoryId?: number | null;
+  professionCategoryId?: number | null;
   businessType: 'appointment' | 'onsite_service' | 'no_appointments';
   profession?: string;
   description: string;
@@ -37,6 +39,8 @@ export interface Business {
 export interface NewBusinessPayload {
   name: string;
   category: string;
+  categoryId?: number;
+  professionCategoryId?: number | null;
   businessType?: 'appointment' | 'onsite_service' | 'no_appointments';
   profession?: string;
   description?: string;

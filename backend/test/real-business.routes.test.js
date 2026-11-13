@@ -26,6 +26,7 @@ const request = require('supertest');
 const express = require('express');
 
 const db = require('../src/db');
+const { runWithRlsContext } = require('../src/db-context');
 const { sign } = require('../src/middleware/jwt');
 
 const customersRoutes = require('../src/routes/customers.routes');
@@ -64,6 +65,11 @@ async function seed() {
     'cliente@it.test',
     '600000000',
   ]);
+  await db.query('INSERT INTO services (business_id, nombre, precio) VALUES ($1, $2, $3)', [
+    BUSINESS_ID,
+    'Corte',
+    30,
+  ]);
 }
 
 const bookingPayload = {
@@ -73,6 +79,8 @@ const bookingPayload = {
   date: '2026-10-01',
   slot: '10:00',
 };
+const customerToken = sign({ role: 'customer', customerId: CUSTOMER_ID });
+const businessToken = sign({ role: 'business-admin', businessId: BUSINESS_ID });
 
 maybeDescribe('Integración con PostgreSQL real', () => {
   beforeAll(async () => {
@@ -89,7 +97,10 @@ maybeDescribe('Integración con PostgreSQL real', () => {
   });
 
   test('POST /api/bookings crea la reserva y persiste su notificación', async () => {
-    const res = await request(app).post('/api/bookings').send(bookingPayload);
+    const res = await request(app)
+      .post('/api/bookings')
+      .set('Authorization', `Bearer ${customerToken}`)
+      .send(bookingPayload);
 
     expect(res.status).toBe(201);
     expect(res.body.ok).toBe(true);
@@ -98,6 +109,7 @@ maybeDescribe('Integración con PostgreSQL real', () => {
 
     const notifications = await request(app)
       .get('/api/notifications')
+      .set('Authorization', `Bearer ${businessToken}`)
       .query({ businessId: BUSINESS_ID, bookingId: res.body.data.id });
 
     expect(notifications.status).toBe(200);
@@ -106,11 +118,15 @@ maybeDescribe('Integración con PostgreSQL real', () => {
   });
 
   test('el índice único real rechaza una doble reserva en la misma franja (bug #2)', async () => {
-    const first = await request(app).post('/api/bookings').send(bookingPayload);
+    const first = await request(app)
+      .post('/api/bookings')
+      .set('Authorization', `Bearer ${customerToken}`)
+      .send(bookingPayload);
     expect(first.status).toBe(201);
 
     const second = await request(app)
       .post('/api/bookings')
+      .set('Authorization', `Bearer ${customerToken}`)
       .send({
         ...bookingPayload,
         customerId: 'cliente-it',
@@ -123,35 +139,47 @@ maybeDescribe('Integración con PostgreSQL real', () => {
   });
 
   test('confirmar un pago actualiza el booking a confirmed y notifica payment_received (bug #3)', async () => {
-    const booking = await request(app).post('/api/bookings').send(bookingPayload);
+    const booking = await request(app)
+      .post('/api/bookings')
+      .set('Authorization', `Bearer ${customerToken}`)
+      .send(bookingPayload);
     expect(booking.status).toBe(201);
     const bookingId = booking.body.data.id;
 
-    const payment = await request(app).post('/api/payments').set('Idempotency-Key', 'integration-payment-create').send({
-      bookingId,
-      providerId: BUSINESS_ID,
-      customerId: CUSTOMER_ID,
-      amount: 30,
-      currency: 'EUR',
-      method: 'cash',
-      status: 'pending',
-    });
+    const payment = await request(app)
+      .post('/api/payments')
+      .set('Authorization', `Bearer ${businessToken}`)
+      .set('Idempotency-Key', 'integration-payment-create')
+      .send({
+        bookingId,
+        providerId: BUSINESS_ID,
+        customerId: CUSTOMER_ID,
+        amount: 1,
+        method: 'cash',
+        status: 'paid',
+      });
     expect(payment.status).toBe(201);
     const paymentId = payment.body.data.id;
+    expect(payment.body.data.amount).toBe(30);
+    expect(payment.body.data.status).toBe('pending');
 
-    const token = sign({ role: 'business-admin', businessId: BUSINESS_ID });
     const confirm = await request(app)
       .patch(`/api/payments/${paymentId}`)
-      .set('Authorization', `Bearer ${token}`)
+      .set('Authorization', `Bearer ${businessToken}`)
       .send({ status: 'paid' });
 
     expect(confirm.status).toBe(200);
     expect(confirm.body.data.status).toBe('paid');
 
-    const bookingRow = await db.query('SELECT status FROM bookings WHERE id = $1', [bookingId]);
+    const bookingRow = await runWithRlsContext({ role: 'admin' }, () =>
+      db.query('SELECT status FROM bookings WHERE id = $1', [bookingId])
+    );
     expect(bookingRow.rows[0].status).toBe('confirmed');
 
-    const notifications = await request(app).get('/api/notifications').query({ businessId: BUSINESS_ID, bookingId });
+    const notifications = await request(app)
+      .get('/api/notifications')
+      .set('Authorization', `Bearer ${businessToken}`)
+      .query({ businessId: BUSINESS_ID, bookingId });
 
     expect(notifications.body.data.some(n => n.type === 'payment_received')).toBe(true);
   });

@@ -4,6 +4,8 @@ import { FormsModule } from '@angular/forms';
 export interface HomeFilters {
   category: string;
   location: string;
+  categoryId?: number;
+  professionCategoryId?: number;
 }
 
 const EMPTY_FILTERS: HomeFilters = {

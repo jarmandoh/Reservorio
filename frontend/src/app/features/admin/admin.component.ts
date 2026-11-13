@@ -17,12 +17,12 @@ import {
 } from '../../core/models/reservation.model';
 import { Business, NewBusinessPayload } from '../../core/models/business.model';
 import { filterReservations, getReservationStats } from './admin.selectors';
-import { Categoria } from '../../core/models/categorias.model';
 import { MapModalComponent, MapCoordinates } from '../../shared/components/map-modal/map-modal.component';
 import { AdminOverviewComponent } from './admin-overview.component';
 import { AdminReviewsComponent } from './admin-reviews.component';
 import { AdminPaymentsComponent } from './admin-payments.component';
 import { AdminBusinessesComponent } from './admin-businesses.component';
+import { BusinessCategorySelectorComponent } from '../../shared/components/business-category-selector/business-category-selector.component';
 
 type AdminTab = 'panel' | 'resenas' | 'pagos' | 'reservas' | 'servicios' | 'ajustes' | 'negocios';
 
@@ -37,6 +37,7 @@ type AdminTab = 'panel' | 'resenas' | 'pagos' | 'reservas' | 'servicios' | 'ajus
     AdminReviewsComponent,
     AdminPaymentsComponent,
     AdminBusinessesComponent,
+    BusinessCategorySelectorComponent,
   ],
   templateUrl: './admin.component.html',
 })
@@ -171,6 +172,8 @@ export class AdminComponent implements OnInit {
   readonly businessForm = this.fb.group({
     name: ['', [Validators.required, Validators.minLength(2)]],
     category: ['', Validators.required],
+    categoryId: [null as number | null],
+    professionCategoryId: [null as number | string | null],
     businessType: ['appointment' as 'appointment' | 'onsite_service' | 'no_appointments'],
     profession: [''],
     description: [''],
@@ -421,13 +424,13 @@ export class AdminComponent implements OnInit {
 
   opennegocioModal(negocio: Business | null): void {
     this.editingBusiness.set(negocio);
-    this.loadCategories();
     this.loadTags();
-    console.log('Categorías cargadas:', this.categorias);
     if (negocio) {
       this.businessForm.patchValue({
         name: negocio.name,
         category: negocio.category,
+        categoryId: negocio.categoryId ?? null,
+        professionCategoryId: negocio.professionCategoryId ?? null,
         businessType: negocio.businessType ?? 'appointment',
         profession: negocio.profession ?? '',
         description: negocio.description,
@@ -463,6 +466,8 @@ export class AdminComponent implements OnInit {
         cancellationPolicy: '',
         businessType: 'appointment',
         profession: '',
+        categoryId: null,
+        professionCategoryId: null,
       });
       this.gradientFrom.set('#005bbf');
       this.gradientTo.set('#1a73e8');
@@ -507,6 +512,8 @@ export class AdminComponent implements OnInit {
       const updates: Partial<NewBusinessPayload> & { pin?: string } = {};
       updates.name = v.name!;
       updates.category = v.category!;
+      updates.categoryId = Number(v.categoryId) || undefined;
+      updates.professionCategoryId = Number(v.categoryId) ? Number(v.professionCategoryId) || null : undefined;
       updates.businessType = v.businessType ?? 'appointment';
       updates.profession = v.profession ?? '';
       updates.description = v.description ?? '';
@@ -544,6 +551,8 @@ export class AdminComponent implements OnInit {
       const payload: NewBusinessPayload = {
         name: v.name!,
         category: v.category!,
+        categoryId: Number(v.categoryId) || undefined,
+        professionCategoryId: Number(v.categoryId) ? Number(v.professionCategoryId) || null : undefined,
         businessType: v.businessType ?? 'appointment',
         profession: v.profession ?? '',
         description: v.description ?? '',
@@ -812,32 +821,5 @@ export class AdminComponent implements OnInit {
 
   getInputValue(e: Event): string {
     return (e.target as HTMLInputElement | HTMLSelectElement).value;
-  }
-
-  categorias: Categoria[] = [];
-  isCategoriesLoading = false;
-
-  async loadCategories(): Promise<void> {
-    if (this.categorias.length > 0) return; // Ya cargadas
-    this.isCategoriesLoading = true;
-    try {
-      console.log('Cargando categorías...');
-      await this.adminService
-        .getCategories()
-        .pipe(takeUntilDestroyed(this.destroyRef))
-        .subscribe({
-          next: data => {
-            this.categorias = data;
-            this.isCategoriesLoading = false;
-          },
-          error: () => {
-            this.isCategoriesLoading = false;
-          },
-        });
-    } catch (err) {
-      console.error('Error loading categories:', err);
-    } finally {
-      this.isCategoriesLoading = false;
-    }
   }
 }

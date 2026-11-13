@@ -1267,8 +1267,9 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
 
   readonly paymentAmount = computed(() => {
     const booking = this.checkoutBooking();
-    const paid = this.payments().find(p => p.bookingId === booking?.id)?.amount ?? 89;
-    return paid || 89;
+    const existing = this.payments().find(p => p.bookingId === booking?.id)?.amount;
+    const servicePrice = this.services().find(service => service.nombre === booking?.serviceId)?.precio;
+    return existing ?? servicePrice ?? 0;
   });
 
   fieldInvalid(name: string): boolean {
@@ -1391,7 +1392,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
 
   private setupRealtime(): void {
     this.realtime
-      .connect(this.negocioId)
+      .connect(this.negocioId, this.token)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(evt => {
         if (evt.event === 'booking_created' || evt.event === 'booking_updated') {
@@ -1407,7 +1408,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
 
   loadMarketplaceData(): void {
     this.businessAdminService
-      .loadMarketplaceBookings()
+      .loadMarketplaceBookings(this.token)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: data => this.marketplaceBookings.set(data),
@@ -1415,7 +1416,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
       });
 
     this.businessAdminService
-      .loadNotifications(this.negocioId)
+      .loadNotifications(this.negocioId, this.token)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: data => this.notifications.set(data),
@@ -1423,7 +1424,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
       });
 
     this.businessAdminService
-      .loadCustomers()
+      .loadCustomers(this.token)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: data => this.customers.set(data),
@@ -1431,7 +1432,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
       });
 
     this.businessAdminService
-      .loadPayments()
+      .loadPayments(this.token)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: data => {
@@ -1504,7 +1505,8 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
         {
           ...checkoutPayload,
         },
-        this.checkoutAttempt.key
+        this.checkoutAttempt.key,
+        this.token
       )
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
@@ -1519,8 +1521,8 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
                 bookingId: booking.id,
                 providerId: booking.providerId,
                 customerId: booking.customerId,
-                amount: this.paymentAmount(),
-                currency: DEFAULT_CURRENCY,
+                amount: checkoutData.amount ?? this.paymentAmount(),
+                currency: checkoutData.currency ?? DEFAULT_CURRENCY,
                 method: 'card',
                 status: 'pending',
                 createdAt: new Date().toISOString(),
@@ -1545,7 +1547,7 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
 
   loadNotifications(): void {
     this.businessAdminService
-      .loadNotifications(this.negocioId)
+      .loadNotifications(this.negocioId, this.token)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: data => this.notifications.set(data),

@@ -2,16 +2,16 @@
 
 /**
  * SSE realtime broadcaster para bookings.
- * Mantiene un Set de clientes conectados y difunde eventos.
+ * Mantiene clientes conectados por negocio y difunde eventos solo a ese ámbito.
  * Usado por bookings.service y businesses.service en create/update.
  */
 
 const logger = require('../logger');
 
-const clients = new Set();
+const clients = new Map();
 
-function addClient(res) {
-  clients.add(res);
+function addClient(res, businessId) {
+  clients.set(res, businessId);
   // ping cada 25s para mantener conexión viva tras proxies
   const ping = setInterval(() => {
     try {
@@ -37,7 +37,11 @@ function removeClient(res) {
 
 function broadcast(event, data) {
   const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
-  for (const res of [...clients]) {
+  const businessId = String(data.providerId ?? data.businessId ?? '');
+  if (!businessId) return;
+
+  for (const [res, subscribedBusinessId] of [...clients]) {
+    if (subscribedBusinessId !== businessId) continue;
     try {
       res.write(payload);
     } catch (e) {
@@ -70,16 +74,15 @@ function broadcastBookingUpdated(booking) {
 }
 
 function sseHandler(req, res) {
-  const businessId = String(req.query.businessId ?? '').trim();
+  const businessId = req.businessId;
 
-  res.writeHead(200, {
+  res.status(200).set({
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache, no-transform',
     Connection: 'keep-alive',
     'X-Accel-Buffering': 'no',
-    'Access-Control-Allow-Origin': req.headers.origin || '*',
-    'Access-Control-Allow-Credentials': 'true',
   });
+  res.flushHeaders();
 
   // Enviar retry y evento inicial
   res.write('retry: 5000\n');
@@ -87,10 +90,7 @@ function sseHandler(req, res) {
     `data: ${JSON.stringify({ type: 'connected', businessId: businessId || null, at: new Date().toISOString() })}\n\n`
   );
 
-  addClient(res);
-
-  // Filtrado por businessId se hace en cliente (EventSource) para simplicidad;
-  // el servidor difunde a todos y el cliente ignora otros negocios.
+  addClient(res, businessId);
 }
 
 module.exports = {

@@ -3,11 +3,12 @@ import { Component, DestroyRef, EventEmitter, Input, OnInit, Output, inject, sig
 import { FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { BusinessCategorySelectorComponent } from '../business-category-selector/business-category-selector.component';
 
 @Component({
   selector: 'app-business-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, BusinessCategorySelectorComponent],
   template: `
     <form [formGroup]="formGroup" (ngSubmit)="formSubmit.emit()" class="grid gap-4">
       <div class="grid sm:grid-cols-2 gap-4">
@@ -18,13 +19,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
             <input id="business-name" class="form-input" formControlName="name" required aria-required="true" />
           </div>
         </div>
-        <div>
-          <label class="form-label" for="business-category">Categoría *</label>
-          <div class="icon-field">
-            <span class="material-icons-round" aria-hidden="true">category</span>
-            <input id="business-category" class="form-input" formControlName="category" required aria-required="true" />
-          </div>
-        </div>
+        <app-business-category-selector [formGroup]="formGroup" class="sm:col-span-2" />
       </div>
 
       <div class="grid sm:grid-cols-2 gap-4">
@@ -44,22 +39,6 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
             </select>
           </div>
         </div>
-        @if (formGroup.get('businessType')?.value === 'onsite_service') {
-          <div>
-            <label class="form-label" for="business-profession">Profesión *</label>
-            <div class="icon-field">
-              <span class="material-icons-round" aria-hidden="true">work</span>
-              <input
-                id="business-profession"
-                class="form-input"
-                formControlName="profession"
-                placeholder="Ej. electricista, ebanista, cerrajero"
-                required
-                maxlength="100"
-              />
-            </div>
-          </div>
-        }
       </div>
 
       <div>
