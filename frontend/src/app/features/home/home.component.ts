@@ -54,20 +54,10 @@ const DEFAULT_CATEGORIES = ['Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci�
   template: `
     <div class="min-h-screen bg-surface flex flex-col">
       <!-- ══ HERO ═══════════════════════════════════════════════════════ -->
-      <header
-        class="relative overflow-hidden text-white bg-gradient-to-br from-brand-strong via-primary to-primary-container"
-      >
-        <!-- Decorative circles -->
-        <div
-          class="hero-decoration hero-decoration-top absolute -top-20 -right-20 w-72 h-72 rounded-full opacity-10"
-        ></div>
-        <div
-          class="hero-decoration hero-decoration-bottom absolute -bottom-10 -left-16 w-48 h-48 rounded-full opacity-10"
-        ></div>
-
-        <div class="relative max-w-4xl mx-auto px-6 pt-12 pb-10">
-          <!-- Top nav -->
-          <div class="flex items-center justify-between mb-10">
+      <header class="home-hero relative overflow-hidden text-white">
+        <div class="hero-grid-pattern" aria-hidden="true"></div>
+        <div class="relative max-w-6xl mx-auto px-5 pt-5 pb-12 sm:px-8 sm:pt-6 sm:pb-16">
+          <nav class="flex items-center justify-between mb-12 sm:mb-14" aria-label="Navegación principal">
             <div class="g-nav-logo flex items-center gap-2">
               <div class="hero-logo-mark w-8 h-8 rounded-lg flex items-center justify-center">
                 <span class="material-icons-round text-base">
@@ -135,23 +125,93 @@ const DEFAULT_CATEGORIES = ['Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci�
                 }
               </div>
             </div>
-          </div>
+          </nav>
 
-          <!-- Hero text -->
-          <div class="flex flex-col gap-3 mb-8">
-            <h1 class="g-title font-display font-bold text-[2rem] sm:text-[2.75rem] leading-tight">
-              Reserva en segundos
-            </h1>
-            <p class="g-sub text-base opacity-80 max-w-md">Encuentra negocios y servicios cerca de ti.</p>
-          </div>
+          <div class="hero-layout">
+            <div class="hero-copy">
+              <p class="hero-eyebrow">
+                <span class="hero-eyebrow-dot" aria-hidden="true"></span>
+                Negocios locales, a tu manera
+              </p>
+              <h1 class="hero-title font-display">
+                Descubre negocios.
+                <span>Reserva tu momento.</span>
+              </h1>
+              <p class="hero-description">
+                Explora negocios, conoce sus servicios y reserva un horario desde un mismo lugar, sin complicaciones.
+              </p>
 
-          <!-- <div class="mt-6">
-            <app-stats-bar [stats]="heroStats()" />
-          </div> -->
+              <div class="hero-actions">
+                <a class="hero-primary-action" href="#explorar">
+                  Explorar negocios
+                  <span class="material-icons-round" aria-hidden="true">arrow_downward</span>
+                </a>
+                <a class="hero-business-action" routerLink="/propietario/auth">
+                  ¿Tienes un negocio?
+                  <span>Empieza aquí</span>
+                  <span class="material-icons-round" aria-hidden="true">arrow_forward</span>
+                </a>
+              </div>
+
+              <div class="hero-categories" aria-label="Explora por categoría">
+                @for (category of categories.slice(1, 4); track category) {
+                  <a class="hero-category-chip" href="#explorar" (click)="selectCategory(category)">
+                    {{ category }}
+                    <span class="material-icons-round" aria-hidden="true">north_east</span>
+                  </a>
+                }
+              </div>
+            </div>
+
+            <div class="hero-art" aria-hidden="true">
+              <div class="hero-art-orbit"></div>
+              <div class="hero-floating-label">
+                <span class="material-icons-round">category</span>
+                Elige por categoría
+              </div>
+              <div class="hero-booking-card">
+                <div class="hero-card-heading">
+                  <div>
+                    <span class="hero-card-overline">RESERVAR, MÁS FÁCIL</span>
+                    <p class="hero-card-title font-display">Tu tiempo, bien agendado.</p>
+                  </div>
+                  <span class="hero-calendar-icon material-icons-round">event_available</span>
+                </div>
+                <div class="hero-booking-steps">
+                  <div class="hero-booking-step">
+                    <span class="hero-step-number">01</span>
+                    <span class="material-icons-round hero-step-icon">travel_explore</span>
+                    <span class="hero-step-copy"><strong>Descubre</strong><small>Negocios y servicios</small></span>
+                  </div>
+                  <div class="hero-booking-step">
+                    <span class="hero-step-number">02</span>
+                    <span class="material-icons-round hero-step-icon">design_services</span>
+                    <span class="hero-step-copy"><strong>Elige</strong><small>Lo que necesitas</small></span>
+                  </div>
+                  <div class="hero-booking-step">
+                    <span class="hero-step-number">03</span>
+                    <span class="material-icons-round hero-step-icon">calendar_month</span>
+                    <span class="hero-step-copy"><strong>Reserva</strong><small>Cuando te convenga</small></span>
+                    <span class="material-icons-round hero-step-check">check_circle</span>
+                  </div>
+                </div>
+                <div class="hero-card-footer">
+                  <span class="material-icons-round">touch_app</span>
+                  Todo desde un solo lugar
+                </div>
+              </div>
+              <div class="hero-floating-icon">
+                <span class="material-icons-round">calendar_today</span>
+              </div>
+            </div>
+          </div>
         </div>
       </header>
 
-      <div class="sticky top-0 z-10 bg-surface/95 backdrop-blur-md border-b border-outline-variant/20">
+      <div
+        id="explorar"
+        class="hero-discovery-anchor sticky top-0 z-10 bg-surface/95 backdrop-blur-md border-b border-outline-variant/20"
+      >
         <div class="max-w-4xl mx-auto px-4 py-3">
           <app-category-filters
             [categories]="categories"
@@ -282,12 +342,381 @@ const DEFAULT_CATEGORIES = ['Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci�
         overflow: hidden;
       }
 
-      .hero-decoration {
-        background: #fff;
+      .home-hero {
+        isolation: isolate;
+        background:
+          radial-gradient(ellipse at 82% 55%, rgba(84, 177, 255, 0.28), transparent 33%),
+          radial-gradient(ellipse at 10% 110%, rgba(255, 204, 102, 0.12), transparent 35%),
+          linear-gradient(118deg, #062746 0%, #074b7e 57%, #12629c 100%);
+      }
+
+      .hero-grid-pattern {
+        position: absolute;
+        inset: 0;
+        z-index: -1;
+        pointer-events: none;
+        opacity: 0.18;
+        background-image:
+          linear-gradient(rgba(255, 255, 255, 0.13) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.13) 1px, transparent 1px);
+        background-size: 56px 56px;
+        mask-image: linear-gradient(90deg, transparent, #000 38%, #000);
       }
 
       .hero-logo-mark {
         background: rgba(255, 255, 255, 0.2);
+      }
+
+      .hero-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1.08fr) minmax(18rem, 0.92fr);
+        align-items: center;
+        gap: clamp(2rem, 6vw, 5rem);
+      }
+
+      .hero-copy {
+        max-width: 43rem;
+      }
+
+      .hero-eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.65rem;
+        margin: 0 0 1.35rem;
+        padding: 0.55rem 0.85rem;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 999px;
+        color: #e4f2ff;
+        background: rgba(255, 255, 255, 0.08);
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+      }
+
+      .hero-eyebrow-dot {
+        width: 0.5rem;
+        height: 0.5rem;
+        border-radius: 50%;
+        background: #ffda7c;
+        box-shadow: 0 0 0 4px rgba(255, 218, 124, 0.16);
+      }
+
+      .hero-title {
+        margin: 0;
+        color: #fff;
+        font-size: clamp(2.6rem, 4.1vw, 3.85rem);
+        font-weight: 800;
+        letter-spacing: -0.055em;
+        line-height: 1.01;
+      }
+
+      .hero-title span {
+        display: block;
+        margin-top: 0.12em;
+        color: #ffda7c;
+      }
+
+      .hero-description {
+        max-width: 34rem;
+        margin: 1.45rem 0 0;
+        color: rgba(239, 247, 255, 0.82);
+        font-size: clamp(1rem, 1.3vw, 1.125rem);
+        line-height: 1.75;
+      }
+
+      .hero-actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 1.1rem 1.5rem;
+        margin-top: 1.8rem;
+      }
+
+      .hero-primary-action,
+      .hero-business-action {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.65rem;
+        border-radius: 999px;
+        text-decoration: none;
+        transition:
+          transform 160ms ease,
+          background-color 160ms ease,
+          box-shadow 160ms ease;
+      }
+
+      .hero-primary-action {
+        min-height: 3.25rem;
+        padding: 0.8rem 1.25rem;
+        color: #092b4b;
+        background: #ffda7c;
+        box-shadow: 0 8px 24px rgba(3, 25, 45, 0.22);
+        font-size: 0.95rem;
+        font-weight: 800;
+      }
+
+      .hero-primary-action:hover {
+        transform: translateY(-2px);
+        background: #ffe6a5;
+        box-shadow: 0 12px 28px rgba(3, 25, 45, 0.28);
+      }
+
+      .hero-primary-action .material-icons-round {
+        font-size: 1.1rem;
+      }
+
+      .hero-business-action {
+        justify-content: flex-start;
+        gap: 0.38rem;
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 0.85rem;
+      }
+
+      .hero-business-action span:nth-child(2) {
+        color: #fff;
+        font-weight: 700;
+      }
+
+      .hero-business-action .material-icons-round {
+        margin-left: 0.1rem;
+        font-size: 1rem;
+        transition: transform 160ms ease;
+      }
+
+      .hero-business-action:hover .material-icons-round {
+        transform: translateX(3px);
+      }
+
+      .hero-primary-action:focus-visible,
+      .hero-business-action:focus-visible,
+      .hero-category-chip:focus-visible {
+        outline: 3px solid #fff;
+        outline-offset: 4px;
+      }
+
+      .hero-categories {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+        margin-top: 2rem;
+      }
+
+      .hero-category-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        min-height: 2.35rem;
+        padding: 0.45rem 0.75rem;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 999px;
+        color: #eef7ff;
+        background: rgba(255, 255, 255, 0.08);
+        font-size: 0.78rem;
+        font-weight: 600;
+        text-decoration: none;
+        transition:
+          background-color 160ms ease,
+          border-color 160ms ease,
+          transform 160ms ease;
+      }
+
+      .hero-category-chip:hover {
+        transform: translateY(-1px);
+        border-color: rgba(255, 218, 124, 0.65);
+        background: rgba(255, 255, 255, 0.15);
+      }
+
+      .hero-category-chip .material-icons-round {
+        color: #ffda7c;
+        font-size: 0.9rem;
+      }
+
+      .hero-art {
+        position: relative;
+        display: grid;
+        min-height: 22rem;
+        place-items: center;
+      }
+
+      .hero-art-orbit {
+        position: absolute;
+        width: min(28rem, 110%);
+        aspect-ratio: 1;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(130, 200, 255, 0.14), transparent 67%);
+      }
+
+      .hero-booking-card {
+        position: relative;
+        z-index: 1;
+        width: min(100%, 25rem);
+        padding: 1.55rem;
+        border: 1px solid rgba(255, 255, 255, 0.72);
+        border-radius: 1.65rem;
+        color: #16344f;
+        background: #fff;
+        box-shadow: 0 28px 80px rgba(0, 23, 45, 0.28);
+        transform: rotate(1.2deg);
+      }
+
+      .hero-card-heading {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1rem;
+        padding-bottom: 1.15rem;
+      }
+
+      .hero-card-overline {
+        color: #638099;
+        font-size: 0.63rem;
+        font-weight: 800;
+        letter-spacing: 0.13em;
+      }
+
+      .hero-card-title {
+        max-width: 14rem;
+        margin: 0.35rem 0 0;
+        color: #102b46;
+        font-size: 1.35rem;
+        font-weight: 800;
+        letter-spacing: -0.04em;
+        line-height: 1.15;
+      }
+
+      .hero-calendar-icon {
+        display: grid;
+        width: 2.75rem;
+        height: 2.75rem;
+        flex: 0 0 auto;
+        place-items: center;
+        border-radius: 0.9rem;
+        color: #0c5d96;
+        background: #e9f5ff;
+        font-size: 1.45rem;
+      }
+
+      .hero-booking-steps {
+        padding: 0.1rem 0;
+        border-top: 1px solid #e8eef3;
+      }
+
+      .hero-booking-step {
+        display: grid;
+        grid-template-columns: 2rem 2.25rem minmax(0, 1fr) 1.2rem;
+        align-items: center;
+        gap: 0.65rem;
+        min-height: 4.15rem;
+        border-bottom: 1px solid #e8eef3;
+      }
+
+      .hero-step-number {
+        color: #8ca0b0;
+        font-size: 0.69rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+      }
+
+      .hero-step-icon {
+        display: grid;
+        width: 2.15rem;
+        height: 2.15rem;
+        place-items: center;
+        border-radius: 0.7rem;
+        color: #0b5b91;
+        background: #edf6fc;
+        font-size: 1.15rem;
+      }
+
+      .hero-step-copy {
+        display: flex;
+        flex-direction: column;
+        gap: 0.15rem;
+      }
+
+      .hero-step-copy strong {
+        color: #17364f;
+        font-size: 0.8rem;
+      }
+
+      .hero-step-copy small {
+        color: #72889a;
+        font-size: 0.7rem;
+      }
+
+      .hero-step-check {
+        color: #21836c;
+        font-size: 1.15rem;
+      }
+
+      .hero-card-footer {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-top: 1rem;
+        padding: 0.7rem 0.8rem;
+        border-radius: 0.8rem;
+        color: #245c79;
+        background: #eff8fc;
+        font-size: 0.72rem;
+        font-weight: 700;
+      }
+
+      .hero-card-footer .material-icons-round {
+        color: #0e6b9f;
+        font-size: 1rem;
+      }
+
+      .hero-floating-label,
+      .hero-floating-icon {
+        position: absolute;
+        z-index: 2;
+        display: inline-flex;
+        align-items: center;
+        box-shadow: 0 12px 32px rgba(0, 26, 48, 0.2);
+      }
+
+      .hero-floating-label {
+        top: 5%;
+        right: -0.4rem;
+        gap: 0.45rem;
+        padding: 0.7rem 0.95rem;
+        border: 1px solid rgba(255, 255, 255, 0.8);
+        border-radius: 999px;
+        color: #143550;
+        background: #fff;
+        font-size: 0.75rem;
+        font-weight: 800;
+        transform: rotate(3deg);
+      }
+
+      .hero-floating-label .material-icons-round {
+        color: #0c70a8;
+        font-size: 1rem;
+      }
+
+      .hero-floating-icon {
+        bottom: 5%;
+        left: 0;
+        width: 3.3rem;
+        height: 3.3rem;
+        justify-content: center;
+        border: 4px solid rgba(255, 255, 255, 0.4);
+        border-radius: 1.1rem;
+        color: #173752;
+        background: #ffda7c;
+        transform: rotate(-8deg);
+      }
+
+      .hero-floating-icon .material-icons-round {
+        font-size: 1.45rem;
+      }
+
+      .hero-discovery-anchor {
+        scroll-margin-top: 5rem;
       }
 
       .g-nav-btn {
@@ -304,6 +733,50 @@ const DEFAULT_CATEGORIES = ['Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci�
 
       .g-nav-btn:active {
         transform: scale(0.98);
+      }
+
+      @media (max-width: 767px) {
+        .hero-layout {
+          grid-template-columns: minmax(0, 1fr);
+          gap: 1.1rem;
+        }
+
+        .hero-art {
+          min-height: 21rem;
+          margin: 0 0.5rem;
+        }
+      }
+
+      @media (max-width: 420px) {
+        .hero-title {
+          font-size: clamp(2.5rem, 12vw, 3.2rem);
+        }
+
+        .hero-actions {
+          align-items: flex-start;
+          flex-direction: column;
+          gap: 1rem;
+        }
+
+        .hero-art {
+          min-height: 20rem;
+          margin: 0;
+        }
+
+        .hero-booking-card {
+          padding: 1.15rem;
+          border-radius: 1.35rem;
+        }
+
+        .hero-floating-label {
+          top: 0;
+          right: 0;
+        }
+
+        .hero-floating-icon {
+          bottom: 0;
+          left: 0;
+        }
       }
 
       .business-grid {
