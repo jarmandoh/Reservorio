@@ -4,30 +4,33 @@ Marca cada tarea al completarla. Las estimaciones son iniciales y deben ajustars
 
 ## Priorización
 
-| Orden | Mejora | Impacto | Esfuerzo |
-|---:|---|---|---|
-| 1 | Flujo de reserva y checkout | Alto | Medio |
-| 2 | Seguridad y validación backend | Alto | Medio |
-| 3 | Accesibilidad crítica | Alto | Medio |
-| 4 | Rendimiento de carga | Alto | Medio |
-| 5 | SEO y datos estructurados | Medio | Medio |
-| 6 | Analítica y observabilidad | Medio | Medio |
-| 7 | Soporte offline / PWA | Medio | Medio |
-| 8 | Mantenibilidad y deuda técnica | Medio | Bajo-Medio |
-| 9 | Refinamientos secundarios de UX | Bajo | Bajo |
+| Orden | Mejora                          | Impacto | Esfuerzo   |
+| ----: | ------------------------------- | ------- | ---------- |
+|     1 | Flujo de reserva y checkout     | Alto    | Medio      |
+|     2 | Seguridad y validación backend  | Alto    | Medio      |
+|     3 | Accesibilidad crítica           | Alto    | Medio      |
+|     4 | Rendimiento de carga            | Alto    | Medio      |
+|     5 | SEO y datos estructurados       | Medio   | Medio      |
+|     6 | Analítica y observabilidad      | Medio   | Medio      |
+|     7 | Soporte offline / PWA           | Medio   | Medio      |
+|     8 | Mantenibilidad y deuda técnica  | Medio   | Bajo-Medio |
+|     9 | Refinamientos secundarios de UX | Bajo    | Bajo       |
 
 ## Checklist por prioridad
 
 ### 1. Flujo de reserva y checkout
-- [ ] Documentar el flujo actual de reserva y pago.
-- [ ] Identificar pasos redundantes y puntos de abandono.
+
+- [x] Documentar el flujo actual de reserva y pago. Ver `docs/flujo-reserva-checkout.md`.
+- [x] Identificar pasos redundantes y puntos de abandono. Ver `docs/diagnostico-friccion-reserva-checkout.md`.
 - [ ] Simplificar el flujo sin perder información necesaria.
 - [ ] Mostrar estados claros de carga, éxito y error.
 - [ ] Mejorar los mensajes de validación y error.
 - [ ] Añadir confirmación previa al pago.
+- [x] Mostrar el importe exacto en la acción de pago, también al elegir anticipo u otro método.
 - [ ] Verificar el feedback al usuario en cada etapa.
 
 ### 2. Seguridad y validación backend
+
 - [ ] Revisar validación y saneamiento de entradas en endpoints críticos.
 - [ ] Revisar sesiones y manejo de tokens.
 - [ ] Verificar rate limiting en autenticación, reservas y pagos.
@@ -35,6 +38,7 @@ Marca cada tarea al completarla. Las estimaciones son iniciales y deben ajustars
 - [ ] Revisar que los errores no expongan información sensible.
 
 ### 3. Accesibilidad crítica
+
 - [ ] Comprobar navegación por teclado en los flujos principales.
 - [ ] Asegurar que el foco sea visible y siga un orden lógico.
 - [ ] Hacer accesibles los mensajes de error y cambios de estado.
@@ -42,6 +46,7 @@ Marca cada tarea al completarla. Las estimaciones son iniciales y deben ajustars
 - [ ] Revisar semántica y etiquetas de formularios y diálogos.
 
 ### 4. Rendimiento de carga
+
 - [ ] Medir la carga inicial y el rendimiento de las páginas principales.
 - [ ] Optimizar imágenes de inicio y páginas de detalle.
 - [ ] Aplicar carga diferida a contenido y módulos no críticos.
@@ -49,12 +54,14 @@ Marca cada tarea al completarla. Las estimaciones son iniciales y deben ajustars
 - [ ] Revisar tiempos de interacción y corregir los cuellos de botella principales.
 
 ### 5. SEO y datos estructurados
+
 - [ ] Definir títulos y descripciones por negocio y servicio.
 - [ ] Añadir metadatos Open Graph para compartir páginas.
 - [ ] Incorporar y validar datos estructurados JSON-LD pertinentes.
 - [ ] Revisar previews sociales y metadata de páginas públicas.
 
 ### 6. Analítica y observabilidad
+
 - [ ] Definir los eventos del funnel: visita, selección, reserva, pago y abandono.
 - [ ] Instrumentar los eventos evitando recopilar datos personales innecesarios.
 - [ ] Registrar errores funcionales relevantes.
@@ -62,12 +69,14 @@ Marca cada tarea al completarla. Las estimaciones son iniciales y deben ajustars
 - [ ] Revisar métricas periódicamente y priorizar problemas observados.
 
 ### 7. Soporte offline / PWA
+
 - [ ] Mostrar claramente el estado de conectividad.
 - [ ] Definir qué contenido se puede consultar sin conexión.
 - [ ] Comunicar qué acciones no están disponibles sin conexión.
 - [ ] Verificar la instalación y el comportamiento de la app como PWA.
 
 ### 8. Mantenibilidad y deuda técnica
+
 - [ ] Identificar servicios y validaciones duplicados.
 - [ ] Consolidar lógica compartida donde reduzca duplicación.
 - [ ] Revisar modelos repetidos y aclarar sus responsabilidades.
@@ -75,6 +84,7 @@ Marca cada tarea al completarla. Las estimaciones son iniciales y deben ajustars
 - [ ] Eliminar componentes o estados redundantes relacionados con estos cambios.
 
 ### 9. Refinamientos secundarios de UX
+
 - [ ] Unificar estados visuales de botones, formularios y tarjetas.
 - [ ] Pulir interacciones de hover y focus sin depender solo del color.
 - [ ] Mejorar el feedback visual de acciones importantes.
@@ -83,6 +93,7 @@ Marca cada tarea al completarla. Las estimaciones son iniciales y deben ajustars
 ## Roadmap 30/60/90 días
 
 ### Días 0–30: conversión y riesgo
+
 - [ ] Completar las tareas prioritarias de reserva y checkout.
 - [ ] Revisar seguridad y validaciones de los endpoints críticos.
 - [ ] Corregir barreras de accesibilidad en los flujos principales.
@@ -90,6 +101,7 @@ Marca cada tarea al completarla. Las estimaciones son iniciales y deben ajustars
 - [ ] Verificar los resultados con pruebas de los flujos críticos.
 
 ### Días 31–60: crecimiento y confianza
+
 - [ ] Completar metadata y datos estructurados de páginas públicas.
 - [ ] Instrumentar eventos clave del funnel.
 - [ ] Publicar métricas básicas de conversión y errores.
@@ -97,6 +109,7 @@ Marca cada tarea al completarla. Las estimaciones son iniciales y deben ajustars
 - [ ] Revisar formularios, estados vacíos y feedback de errores.
 
 ### Días 61–90: sostenibilidad y escala
+
 - [ ] Reducir duplicación en servicios y validaciones.
 - [ ] Ampliar pruebas automatizadas para reservas, pagos y errores clave.
 - [ ] Refinar consistencia de componentes y estados visuales.
@@ -105,6 +118,7 @@ Marca cada tarea al completarla. Las estimaciones son iniciales y deben ajustars
 ## Ejecución por sprints
 
 ### Sprint 1 — Conversión y estabilidad
+
 **Objetivo:** aumentar la finalización de reservas y reducir fricción.
 
 - [ ] Documentar el flujo actual de reserva.
@@ -118,6 +132,7 @@ Marca cada tarea al completarla. Las estimaciones son iniciales y deben ajustars
 - [ ] Validar el flujo completo mediante pruebas.
 
 ### Sprint 2 — Seguridad, confianza y datos
+
 **Objetivo:** proteger las operaciones y medir el comportamiento del usuario.
 
 - [ ] Revisar autenticación y seguridad de pagos.
@@ -129,6 +144,7 @@ Marca cada tarea al completarla. Las estimaciones son iniciales y deben ajustars
 - [ ] Verificar manejo de errores para que no exponga datos sensibles.
 
 ### Sprint 3 — Mantenibilidad y refinamiento
+
 **Objetivo:** preparar el producto para crecer con menos regresiones.
 
 - [ ] Consolidar servicios duplicados.
@@ -139,6 +155,7 @@ Marca cada tarea al completarla. Las estimaciones son iniciales y deben ajustars
 - [ ] Revisar resultados y priorizar el siguiente ciclo de trabajo.
 
 ## Criterios de cierre
+
 - [ ] Las tareas completadas tienen pruebas o verificación documentada.
 - [ ] Los cambios del flujo de reserva no rompen pagos ni confirmaciones.
 - [ ] Las mejoras de accesibilidad se verificaron con teclado.

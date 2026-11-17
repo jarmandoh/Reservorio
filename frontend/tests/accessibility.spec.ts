@@ -25,25 +25,31 @@ test.beforeEach(async ({ page }) => {
   await page.route('**/api/**', route => {
     const path = new URL(route.request().url()).pathname;
     const data =
-      path === '/api/businesses'
+      path === '/api/categories/tree'
         ? [
-            {
-              id: 'a11y-business',
-              name: 'Negocio accesible',
-              category: 'Belleza',
-              description: 'Servicio para prueba automatizada de accesibilidad.',
-              location: 'Bogotá',
-              rating: 4.8,
-              reviews: 12,
-              tags: ['Cita'],
-              available: 2,
-              total: 3,
-              routePath: '/booking/a11y-business',
-              gradient: 'linear-gradient(135deg, #005bbf, #1a73e8)',
-              icon: 'event',
-            },
+            { id: 1, name: 'Reparaciones del hogar', children: [] },
+            { id: 2, name: 'Construcción y acabados', children: [] },
+            { id: 3, name: 'Automotores y movilidad', children: [] },
           ]
-        : [];
+        : path === '/api/businesses'
+          ? [
+              {
+                id: 'a11y-business',
+                name: 'Negocio accesible',
+                category: 'Belleza',
+                description: 'Servicio para prueba automatizada de accesibilidad.',
+                location: 'Bogotá',
+                rating: 4.8,
+                reviews: 12,
+                tags: ['Cita'],
+                available: 2,
+                total: 3,
+                routePath: '/booking/a11y-business',
+                gradient: 'linear-gradient(135deg, #005bbf, #1a73e8)',
+                icon: 'event',
+              },
+            ]
+          : [];
     return route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -55,6 +61,16 @@ test.beforeEach(async ({ page }) => {
 test('home has no WCAG 2.1 A/AA axe violations', async ({ page }) => {
   await expectAccessible(page, '/');
   await expect(page.getByRole('link', { name: /Negocio accesible/ })).toBeVisible();
+});
+
+test('home replaces fallback category chips with categories loaded from the API', async ({ page }) => {
+  await page.goto('/');
+
+  const categoryLinks = page.locator('.hero-categories a');
+  await expect(categoryLinks.nth(0)).toContainText('Reparaciones del hogar');
+  await expect(categoryLinks.nth(1)).toContainText('Construcción y acabados');
+  await expect(categoryLinks.nth(2)).toContainText('Automotores y movilidad');
+  await expect(categoryLinks.filter({ hasText: 'Salud & Bienestar' })).toHaveCount(0);
 });
 
 test('booking has no WCAG 2.1 A/AA axe violations', async ({ page }) => {

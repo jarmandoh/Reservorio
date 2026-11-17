@@ -154,7 +154,7 @@ const DEFAULT_CATEGORIES = ['Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci√
               </div>
 
               <div class="hero-categories" aria-label="Explora por categor√≠a">
-                @for (category of categories.slice(1, 4); track category) {
+                @for (category of categories().slice(1, 4); track category) {
                   <a class="hero-category-chip" href="#explorar" (click)="selectCategory(category)">
                     {{ category }}
                     <span class="material-icons-round" aria-hidden="true">north_east</span>
@@ -214,7 +214,7 @@ const DEFAULT_CATEGORIES = ['Salud & Bienestar', 'Belleza', 'Fitness', 'Educaci√
       >
         <div class="max-w-4xl mx-auto px-4 py-3">
           <app-category-filters
-            [categories]="categories"
+            [categories]="categories()"
             [filters]="filters"
             [searchQuery]="searchQuery"
             (searchQueryChange)="onSearchQueryChange($event)"
@@ -843,7 +843,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly accountDisplayName = computed(() => this.customerName() || this.ownerName() || this.businessName());
 
   businesses: Business[] = [];
-  categories = ['Todos', ...DEFAULT_CATEGORIES];
+  readonly categories = signal(['Todos', ...DEFAULT_CATEGORIES]);
   private categoryTaxonomy: Categoria[] = [];
   searchQuery = '';
   filters: HomeFilters = { category: 'Todos', location: '' };
@@ -1068,8 +1068,9 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       .subscribe(list => {
         this.categoryTaxonomy = list;
         const names = list.map(category => category.name.trim()).filter(Boolean);
-        this.categories = ['Todos', ...new Set(names.length ? names : DEFAULT_CATEGORIES)];
-        if (this.filters.category !== 'Todos' && !this.categories.includes(this.filters.category)) {
+        const categories = ['Todos', ...new Set(names.length ? names : DEFAULT_CATEGORIES)];
+        this.categories.set(categories);
+        if (this.filters.category !== 'Todos' && !categories.includes(this.filters.category)) {
           this.filters = { ...this.filters, category: 'Todos', categoryId: undefined, professionCategoryId: undefined };
         }
       });

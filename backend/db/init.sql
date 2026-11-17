@@ -340,11 +340,11 @@ ALTER TABLE categories ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAU
 
 UPDATE categories
    SET slug = CONCAT(
-     NULLIF(TRIM(BOTH '-' FROM REGEXP_REPLACE(LOWER(name), '[^a-z0-9]+', '-', 'g')), ''),
+     NULLIF(TRIM(BOTH '-' FROM REGEXP_REPLACE(TRANSLATE(LOWER(name), 'áéíóúüñ', 'aeiouun'), '[^a-z0-9]+', '-', 'g')), ''),
      '-',
      id
    )
- WHERE slug = '';
+ WHERE slug = '' OR slug ~ '-[0-9]+$';
 
 CREATE INDEX IF NOT EXISTS idx_categories_parent_active_order
   ON categories(parent_id, is_active, sort_order, name);
@@ -553,7 +553,7 @@ ON CONFLICT (name) DO NOTHING;
 
 UPDATE categories
    SET slug = CONCAT(
-     NULLIF(TRIM(BOTH '-' FROM REGEXP_REPLACE(LOWER(name), '[^a-z0-9]+', '-', 'g')), ''),
+     NULLIF(TRIM(BOTH '-' FROM REGEXP_REPLACE(TRANSLATE(LOWER(name), 'áéíóúüñ', 'aeiouun'), '[^a-z0-9]+', '-', 'g')), ''),
      '-',
      id
    )

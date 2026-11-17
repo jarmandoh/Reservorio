@@ -13,8 +13,8 @@ const categoryIdValidator = [param('id').isInt({ min: 1 }).withMessage('ID de ca
 router.get('/all', async (req, res) => {
   try {
     const { rows } = await db.query(
-      `SELECT id, name, slug, parent_id, sort_order
-         FROM categories
+      `SELECT id, name, COALESCE(to_jsonb(category)->>'slug', '') AS slug, parent_id, sort_order
+         FROM categories category
         WHERE is_active = true AND parent_id IS NULL
         ORDER BY sort_order, name`
     );
@@ -27,8 +27,8 @@ router.get('/all', async (req, res) => {
 router.get('/tree', async (_req, res) => {
   try {
     const { rows } = await db.query(
-      `SELECT id, name, slug, parent_id, sort_order
-         FROM categories
+      `SELECT id, name, COALESCE(to_jsonb(category)->>'slug', '') AS slug, parent_id, sort_order
+         FROM categories category
         WHERE is_active = true
         ORDER BY sort_order, name`
     );
@@ -38,7 +38,7 @@ router.get('/tree', async (_req, res) => {
     for (const category of categories) {
       const parent = category.parent_id == null ? null : byId.get(category.parent_id);
       if (parent) parent.children.push(category);
-      else if (category.parent_id == null) tree.push(category);
+      else tree.push(category);
     }
     res.status(200).json({ ok: true, data: tree });
   } catch (err) {
@@ -51,8 +51,8 @@ router.get('/:id', categoryIdValidator, async (req, res) => {
   const { id } = req.params;
   try {
     const { rows } = await db.query(
-      `SELECT id, name, slug, parent_id, sort_order
-         FROM categories
+      `SELECT id, name, COALESCE(to_jsonb(category)->>'slug', '') AS slug, parent_id, sort_order
+         FROM categories category
         WHERE id = $1 AND is_active = true`,
       [id]
     );

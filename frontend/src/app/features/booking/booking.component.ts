@@ -27,6 +27,11 @@ interface ConfirmedBooking {
   notas: string;
 }
 
+interface BookingProgress {
+  service: string;
+  slotRowIndex: number;
+}
+
 @Component({
   selector: 'app-booking',
   imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink],
@@ -466,15 +471,6 @@ interface ConfirmedBooking {
                       </div>
                     }
 
-                    <div class="rounded-2xl bg-success-container p-4 m-2">
-                      <div class="flex items-center gap-2">
-                        <span class="material-icons-round text-success flex-shrink-0">security</span>
-                        <div>
-                          <p class="text-sm font-semibold text-success-on">Pago 100% Seguro</p>
-                          <p class="text-xs text-success mt-1">Procesado con Stripe, encriptado y protegido por SSL</p>
-                        </div>
-                      </div>
-                    </div>
                     <div class="flex flex-col gap-5 px-5 py-5">
                       <div class="rounded-2xl border border-primary-fixed bg-brand-soft-high p-4">
                         <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">Paso 3</p>
@@ -553,18 +549,12 @@ interface ConfirmedBooking {
                             </div>
                           </div>
                           <div class="flex flex-col sm:flex-row gap-2">
-                            <a
-                              routerLink="/usuario/auth"
-                              [queryParams]="{ redirect: '/booking/' + businessId }"
-                              class="btn-primary btn-sm flex-1 text-center"
-                              >Iniciar sesión</a
-                            >
-                            <a
-                              routerLink="/usuario/auth"
-                              [queryParams]="{ redirect: '/booking/' + businessId }"
-                              class="btn-secondary btn-sm flex-1 text-center"
-                              >Crear cuenta</a
-                            >
+                            <button type="button" class="btn-primary btn-sm flex-1" (click)="goToCustomerAuth()">
+                              Iniciar sesión
+                            </button>
+                            <button type="button" class="btn-secondary btn-sm flex-1" (click)="goToCustomerAuth()">
+                              Crear cuenta
+                            </button>
                           </div>
                         </div>
                       }
@@ -722,11 +712,30 @@ interface ConfirmedBooking {
                       </div>
 
                       <div class="rounded-2xl border border-primary/15 bg-primary-fixed px-4 py-4 text-sm text-primary">
-                        La confirmación del negocio suele llegar en pocos minutos. Si quieres terminar antes, puedes
-                        pagar ahora con un flujo seguro desde la misma reserva.
+                        Tu reserva ya quedó registrada. Puedes pagar ahora o revisar el pago más tarde desde tus reservas.
                       </div>
 
                       <div class="rounded-2xl border border-outline-variant bg-white p-5">
+                        <h3 class="font-display text-lg font-semibold text-on-surface">¿Cómo quieres continuar?</h3>
+                        <p class="mt-1 text-sm text-on-surface-variant">
+                          Pagar ahora no cambia la reserva; eliges el método y el importe en el siguiente paso.
+                        </p>
+                        <div class="mt-4 flex flex-col gap-2 sm:flex-row">
+                          <button
+                            type="button"
+                            class="btn-primary flex-1"
+                            [attr.aria-expanded]="paymentDetailsOpen()"
+                            aria-controls="payment-details"
+                            (click)="paymentDetailsOpen.set(true)"
+                          >
+                            Pagar ahora
+                          </button>
+                          <a routerLink="/customer/history" class="btn-secondary flex-1 text-center">Ver mis reservas</a>
+                        </div>
+                      </div>
+
+                      @if (paymentDetailsOpen()) {
+                        <div id="payment-details" class="rounded-2xl border border-outline-variant bg-white p-5">
                         <p class="section-label">Método de pago</p>
                         <div class="grid grid-cols-2 gap-2" role="group" aria-label="Método de pago">
                           @for (opt of paymentOptions; track opt.id) {
@@ -773,7 +782,8 @@ interface ConfirmedBooking {
                             formatCurrency(dueAmount())
                           }}</span>
                         </div>
-                      </div>
+                        </div>
+                      }
 
                       @if (checkoutInstructions()) {
                         <div class="instructions-box">
@@ -808,6 +818,7 @@ interface ConfirmedBooking {
                         <button
                           type="button"
                           class="btn-primary flex-1"
+                          data-testid="payment-action"
                           [disabled]="paymentLoading()"
                           [attr.aria-busy]="paymentLoading()"
                           (click)="startCheckout()"
@@ -973,6 +984,7 @@ export class BookingComponent implements OnInit, OnDestroy {
   private readonly destroyRef = inject(DestroyRef);
   private reservationAttempt: IdempotencyAttempt | null = null;
   private paymentAttempt: IdempotencyAttempt | null = null;
+  private pendingBookingProgress: BookingProgress | null = null;
 
   @Input() businessIdOverride = '';
   @Input() initialServiceName = '';
@@ -1000,6 +1012,7 @@ export class BookingComponent implements OnInit, OnDestroy {
   readonly customerId = signal<string>('');
   readonly paymentMethod = signal<PaymentMethod>('card');
   readonly depositActive = signal(false);
+  readonly paymentDetailsOpen = signal(false);
   readonly checkoutInstructions = signal<CheckoutInstructions | null>(null);
   readonly lastBooking = signal<{ servicio: string; franja: string; cliente: string; telefono: string } | null>(null);
   readonly paymentOptions: { id: PaymentMethod; label: string; icon: string }[] = [
@@ -1017,15 +1030,17 @@ export class BookingComponent implements OnInit, OnDestroy {
   readonly isCustomerAuthenticated = computed(() => this.auth.isCustomerUnlocked());
   readonly paymentLabel = computed(() => {
     if (this.paymentLoading()) return '';
+    const amount = formatCurrency(this.dueAmount());
+    const payLabel = this.depositActive() ? `Pagar anticipo (${amount})` : `Pagar ${amount}`;
     switch (this.paymentMethod()) {
       case 'paypal':
-        return 'Pagar con PayPal';
+        return `${payLabel} con PayPal`;
       case 'transfer':
-        return 'Ver datos de transferencia';
+        return `Ver instrucciones de transferencia (${amount})`;
       case 'cash':
-        return 'Confirmar pago en efectivo';
+        return `Confirmar pago en efectivo (${amount})`;
       default:
-        return this.depositActive() ? `Pagar anticipo (${formatCurrency(this.dueAmount())})` : 'Pagar';
+        return payLabel;
     }
   });
   readonly bookingSteps = [
@@ -1092,6 +1107,7 @@ export class BookingComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.businessId = this.businessIdOverride || this.route.snapshot.params['businessId'] || '';
+    this.restoreBookingProgress();
     this.bookingForm.statusChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.bookingFormValid.set(this.bookingForm.valid));
@@ -1158,6 +1174,48 @@ export class BookingComponent implements OnInit, OnDestroy {
 
   private lastBookingKey(): string {
     return `reservorio_last_booking_${this.businessId}`;
+  }
+
+  private bookingProgressKey(): string {
+    return `reservorio_booking_progress_${this.businessId}`;
+  }
+
+  private restoreBookingProgress(): void {
+    try {
+      const raw = sessionStorage.getItem(this.bookingProgressKey());
+      if (!raw) return;
+      sessionStorage.removeItem(this.bookingProgressKey());
+      const progress = JSON.parse(raw) as Partial<BookingProgress>;
+      if (typeof progress.service === 'string' && Number.isInteger(progress.slotRowIndex)) {
+        this.pendingBookingProgress = { service: progress.service, slotRowIndex: progress.slotRowIndex };
+      }
+    } catch {
+      // El flujo sigue funcionando si el almacenamiento de sesión no está disponible.
+    }
+  }
+
+  private applyBookingProgress(): void {
+    const progress = this.pendingBookingProgress;
+    if (!progress || !this.services().includes(progress.service)) return;
+    const slot = this.reservations().find(row => row._rowIndex === progress.slotRowIndex && !this.isTaken(row));
+    if (!slot) return;
+    this.selectedService.set(progress.service);
+    this.selectedSlot.set(slot);
+    this.pendingBookingProgress = null;
+    this.goToStep(2);
+  }
+
+  goToCustomerAuth(): void {
+    const service = this.selectedService();
+    const slot = this.selectedSlot();
+    if (service && slot) {
+      try {
+        sessionStorage.setItem(this.bookingProgressKey(), JSON.stringify({ service, slotRowIndex: slot._rowIndex }));
+      } catch {
+        // El usuario puede autenticarse aunque el navegador bloquee el almacenamiento de sesión.
+      }
+    }
+    this.router.navigate(['/usuario/auth'], { queryParams: { redirect: `/booking/${this.businessId}` } });
   }
 
   private loadLastBooking(): void {
@@ -1264,6 +1322,7 @@ export class BookingComponent implements OnInit, OnDestroy {
       .subscribe({
         next: data => {
           this.reservations.set(data);
+          this.applyBookingProgress();
           this.loading.set(false);
         },
         error: err => {
@@ -1444,7 +1503,7 @@ export class BookingComponent implements OnInit, OnDestroy {
     } else if (s === 2 && this.selectedSlot()) {
       if (!this.isCustomerAuthenticated()) {
         this.toast.error('Debes iniciar sesión para reservar. Redirigiendo...');
-        this.router.navigate(['/usuario/auth'], { queryParams: { redirect: `/booking/${this.businessId}` } });
+        this.goToCustomerAuth();
         return;
       }
       this.goToStep(3);
@@ -1470,6 +1529,7 @@ export class BookingComponent implements OnInit, OnDestroy {
                 .map(s => [s.nombre, Number(s.precio)])
             )
           );
+          this.applyBookingProgress();
           if (this.initialServiceName && names.includes(this.initialServiceName)) {
             this.selectedService.set(this.initialServiceName);
             if (this.embedded) this.goToStep(2);
@@ -1533,6 +1593,7 @@ export class BookingComponent implements OnInit, OnDestroy {
           this.confirmed.set(payload);
           this.reservationId.set(checkout.data?.bookingId ?? '');
           this.customerId.set(checkout.data?.customerId ?? '');
+          this.paymentDetailsOpen.set(false);
           this.rememberBooking();
           this.toast.success('¡Reserva enviada con éxito! Ya está lista para pagar o confirmar.');
           this.goToStep(4);
@@ -1620,6 +1681,7 @@ export class BookingComponent implements OnInit, OnDestroy {
     this.reservationId.set('');
     this.customerId.set('');
     this.depositActive.set(false);
+    this.paymentDetailsOpen.set(false);
     this.checkoutInstructions.set(null);
     this.paymentMethod.set('card');
     this.bookingForm.reset();

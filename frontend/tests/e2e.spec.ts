@@ -187,6 +187,25 @@ test.describe('Reserva y administración', () => {
     await page.getByRole('button', { name: 'Confirmar reserva' }).click();
     await expect(page.getByRole('heading', { name: 'Reserva registrada' })).toBeVisible({ timeout: 10000 });
     await expect(page.locator('text=Estado de la reserva')).toBeVisible({ timeout: 10000 });
+    await page.getByRole('button', { name: 'Pagar ahora' }).click();
+
+    const dueAmount = page.getByText('Importe de hoy').locator('..').locator('span').nth(1);
+    const paymentButton = page.getByTestId('payment-action');
+    await expect(paymentButton).toContainText(await dueAmount.innerText());
+
+    await page
+      .locator('label')
+      .filter({ hasText: 'Pagar ahora solo el anticipo' })
+      .locator('input[type="checkbox"]')
+      .check();
+    const depositAmount = await dueAmount.innerText();
+    await expect(paymentButton).toContainText('anticipo');
+    await expect(paymentButton).toContainText(depositAmount);
+
+    for (const method of ['PayPal', 'Transferencia', 'Efectivo']) {
+      await page.locator('button.payment-option').filter({ hasText: method }).click();
+      await expect(paymentButton).toContainText(depositAmount);
+    }
   });
 
   test('flujo de administración de negocio permite login y agregar servicio', async ({ page }) => {

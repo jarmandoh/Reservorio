@@ -6,7 +6,7 @@ const { getRlsContext } = require('./db-context');
 
 //const supabase = require('@supabase/supabase-js');
 //supabase.createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
-logger.error('---> [DB] Conectando a la base de datos con URL:', process.env.DATABASE_URL);
+logger.info('[DB] Configurando conexión a PostgreSQL');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
