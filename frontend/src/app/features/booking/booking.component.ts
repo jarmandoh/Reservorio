@@ -29,7 +29,7 @@ interface ConfirmedBooking {
 
 interface BookingProgress {
   service: string;
-  slotRowIndex: number;
+  slotRowIndex: number | undefined;
 }
 
 @Component({
@@ -1083,7 +1083,7 @@ export class BookingComponent implements OnInit, OnDestroy {
     notas: [''],
     dataConsent: [false, [Validators.requiredTrue]],
   });
-  readonly bookingFormValid = signal(true);
+  readonly bookingFormValid = signal(false);
   readonly submitAttempted = signal(false);
 
   readonly reviewForm = this.fb.group({
