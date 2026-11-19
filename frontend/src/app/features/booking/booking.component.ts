@@ -1,10 +1,19 @@
-import { Component, OnInit, OnDestroy, signal, computed, inject, DestroyRef, Input } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  OnDestroy,
+  signal,
+  computed,
+  inject,
+  DestroyRef,
+  Input,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { ReactiveFormsModule, FormBuilder, Validators, AbstractControl } from '@angular/forms';
+import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { interval, Subscription, switchMap, startWith, catchError, of, fromEvent } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+
 import { ApiService } from '../../core/services/api.service';
 import { ToastService } from '../../core/services/toast.service';
 import { RealtimeService } from '../../core/services/realtime.service';
@@ -13,46 +22,44 @@ import { DEFAULT_CURRENCY, formatCurrency } from '../../core/config/currency';
 import { isAllowedCheckoutRedirect } from '../../core/config/checkout-url';
 import { IdempotencyAttempt, clearIdempotencyAttempt, idempotencyAttempt } from '../../core/config/idempotency-key';
 import { formatTime24 } from '../../core/config/time';
-import { Reservation, PaymentMethod, CheckoutInstructions } from '../../core/models/reservation.model';
-import { Business } from '../../core/models/business.model';
-import { Review, RatingStats } from '../../core/models/reviews.model';
+import type { BookingStep, ConfirmedBooking, BookingProgress } from './booking.types';
 
-type Step = 1 | 2 | 3 | 4;
-
-interface ConfirmedBooking {
-  franja: string;
-  cliente: string;
-  telefono: string;
-  servicio: string;
-  notas: string;
-}
-
-interface BookingProgress {
-  service: string;
-  slotRowIndex: number | undefined;
-}
+import { BookingStateService } from './booking-state.service';
+import { BookingStep1ServiceComponent } from './steps/booking-step1-service.component';
+import { BookingStep2SlotComponent } from './steps/booking-step2-slot.component';
+import { BookingStep3FormComponent } from './steps/booking-step3-form.component';
+import { BookingStep4ConfirmationComponent } from './steps/booking-step4-confirmation.component';
+import { BookingReviewsComponent } from './booking-reviews.component';
 
 @Component({
   selector: 'app-booking',
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink],
+  standalone: true,
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    RouterLink,
+    BookingStep1ServiceComponent,
+    BookingStep2SlotComponent,
+    BookingStep3FormComponent,
+    BookingStep4ConfirmationComponent,
+    BookingReviewsComponent,
+  ],
+  providers: [BookingStateService],
   template: `
     <div
       class="booking-shell min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(26,115,232,0.26),_transparent_32%),linear-gradient(180deg,#040814_0%,#091324_52%,#0c1628_100%)] text-white"
       [class.booking-embedded]="embedded"
     >
       <div class="booking-container mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
-        <div
-          class="booking-layout grid gap-8 lg:min-h-[calc(100vh-5rem)] lg:grid-cols-[minmax(0,1fr)_430px] lg:items-start lg:gap-12"
-        >
+        <div class="booking-layout grid gap-8 lg:min-h-[calc(100vh-5rem)] lg:grid-cols-[minmax(0,1fr)_430px] lg:items-start lg:gap-12">
+
+          <!-- ── Left panel: hero + steps (hidden in embedded mode) ── -->
           @if (!embedded) {
-            <section
-              class="order-2 lg:order-1 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto lg:overscroll-contain lg:pr-6"
-            >
+            <section class="order-2 lg:order-1 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto lg:overscroll-contain lg:pr-6">
               <div class="flex flex-col justify-center gap-8 lg:min-h-full">
+                <!-- Headline -->
                 <div class="space-y-5">
-                  <span
-                    class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] text-brand-light backdrop-blur-sm"
-                  >
+                  <span class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] text-brand-light backdrop-blur-sm">
                     <span class="material-icons-round text-[0.9rem]">bolt</span>
                     Reserva sin esperas
                   </span>
@@ -61,36 +68,41 @@ interface BookingProgress {
                     <span class="mt-1 block text-brand-sky">Rápido, claro y al instante.</span>
                   </h1>
                   <p class="max-w-xl text-sm leading-6 text-slate-300 sm:text-base">
-                    Elige tu servicio, revisa la disponibilidad y deja tus datos para pedir la reserva en un flujo
-                    simple.
+                    Elige tu servicio, revisa la disponibilidad y deja tus datos para pedir la reserva en un flujo simple.
                   </p>
                 </div>
 
+                <!-- Step guide list -->
                 <ol class="flex flex-col">
                   @for (item of instructionItems; track item.order; let last = $last) {
                     <li class="relative flex gap-4" [class.pb-7]="!last" [class.pb-1]="last">
                       @if (!last) {
-                        <span
-                          class="absolute left-4 top-9 h-[calc(100%-2.25rem)] w-px bg-gradient-to-b from-white/25 to-transparent"
-                          aria-hidden="true"
-                        ></span>
+                        <span class="absolute left-4 top-9 h-[calc(100%-2.25rem)] w-px bg-gradient-to-b from-white/25 to-transparent" aria-hidden="true"></span>
                       }
                       <span
-                        class="relative z-10 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/10 font-mono text-xs font-semibold text-white backdrop-blur-sm"
+                        class="relative z-10 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full font-mono text-xs font-semibold text-white backdrop-blur-sm transition"
+                        [class.border]="state.step() < item.stepValue"
+                        [class.border-white/20]="state.step() < item.stepValue"
+                        [class.bg-white/10]="state.step() < item.stepValue"
+                        [class.bg-primary]="state.step() >= item.stepValue"
+                        [class.border-primary]="state.step() >= item.stepValue"
                       >
-                        {{ item.order }}
+                        @if (state.step() > item.stepValue) {
+                          <span class="material-icons-round text-[0.85rem]">check</span>
+                        } @else {
+                          {{ item.order }}
+                        }
                       </span>
                       <div class="pt-0.5">
-                        <p class="font-display text-base font-semibold text-white">{{ item.title }}</p>
-                        <p class="mt-1 text-sm leading-6 text-slate-300">{{ item.description }}</p>
+                        <p class="font-display text-base font-semibold text-white" [class.opacity-50]="state.step() < item.stepValue">{{ item.title }}</p>
+                        <p class="mt-1 text-sm leading-6 text-slate-300" [class.opacity-50]="state.step() < item.stepValue">{{ item.description }}</p>
                       </div>
                     </li>
                   }
                 </ol>
 
-                <div
-                  class="flex items-start gap-3 rounded-2xl border-l-2 border-brand-sky/60 bg-white/[0.07] px-4 py-3.5 backdrop-blur-sm sm:max-w-xl"
-                >
+                <!-- Tip -->
+                <div class="flex items-start gap-3 rounded-2xl border-l-2 border-brand-sky/60 bg-white/[0.07] px-4 py-3.5 backdrop-blur-sm sm:max-w-xl">
                   <span class="material-icons-round mt-0.5 flex-shrink-0 text-brand-light">lightbulb</span>
                   <p class="text-sm leading-6 text-slate-200">
                     <span class="font-semibold text-white">Puedes volver atrás en cualquier momento.</span>
@@ -101,23 +113,21 @@ interface BookingProgress {
             </section>
           }
 
+          <!-- ── Right panel: booking card ── -->
           <section class="order-1 flex justify-center lg:order-2 lg:justify-end">
-            <div
-              class="booking-card-shell w-full max-w-[430px] rounded-[2.1rem] border border-white/10 bg-white/5 p-3 shadow-[0_32px_80px_rgba(0,0,0,0.45)] backdrop-blur-md"
-            >
-              <div
-                class="overflow-hidden rounded-[1.8rem] border border-primary-fixed/20 bg-surface-lowest text-on-surface shadow-soft"
-              >
-                <header
-                  class="border-b border-white/10 bg-gradient-to-br from-brand-strong via-primary to-primary-container px-5 py-4 text-white"
-                >
+            <div class="booking-card-shell w-full max-w-[430px] rounded-[2.1rem] border border-white/10 bg-white/5 p-3 shadow-[0_32px_80px_rgba(0,0,0,0.45)] backdrop-blur-md">
+              <div class="overflow-hidden rounded-[1.8rem] border border-primary-fixed/20 bg-surface-lowest text-on-surface shadow-soft">
+
+                <!-- Card header -->
+                <header class="border-b border-white/10 bg-gradient-to-br from-brand-strong via-primary to-primary-container px-5 py-4 text-white">
                   <div class="flex items-center gap-3">
+                    <!-- Back / done icon -->
                     @if (!embedded) {
-                      @if (step() < 4) {
+                      @if (state.step() < 4) {
                         <button
                           class="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 transition hover:bg-white/15"
                           (click)="goBack()"
-                          aria-label="Volver"
+                          aria-label="Volver al paso anterior"
                         >
                           <span class="material-icons-round text-[1.15rem]">arrow_back</span>
                         </button>
@@ -128,803 +138,114 @@ interface BookingProgress {
                       }
                     }
 
+                    <!-- Business info -->
                     <div class="min-w-0 flex-1">
-                      <div class="min-w-0 flex-1">
-                        <div class="flex items-center gap-2">
-                          <p class="truncate text-sm font-semibold">{{ business()?.name ?? 'Reserva tu cita' }}</p>
-                          @if (business()?.verified) {
-                            <span
-                              class="material-icons-round text-[0.9rem] text-green-500 flex-shrink-0"
-                              title="Negocio verificado"
-                              >verified</span
-                            >
-                          }
-                        </div>
-                        <div class="flex items-center gap-2 mt-0.5">
-                          <p class="text-xs text-white/80">Reserva online</p>
-                          @if (ratingStats()?.averageRating && ratingStats()!.averageRating > 0) {
-                            <div class="flex items-center gap-1 text-xs bg-white/10 px-2 py-0.5 rounded">
-                              @for (i of [1, 2, 3, 4, 5]; track i) {
-                                <span
-                                  class="material-icons-round text-[0.75rem]"
-                                  [class.text-yellow-400]="i <= Math.round(ratingStats()!.averageRating)"
-                                  [class.text-white/30]="i > Math.round(ratingStats()!.averageRating)"
-                                >
-                                  {{
-                                    i <= Math.floor(ratingStats()!.averageRating)
-                                      ? 'star'
-                                      : i === Math.ceil(ratingStats()!.averageRating)
-                                        ? 'star_half'
-                                        : 'star_outline'
-                                  }}
-                                </span>
-                              }
-                              <span class="text-white/80 ml-0.5">{{
-                                (ratingStats()?.averageRating || 0).toFixed(1)
-                              }}</span>
-                            </div>
-                          }
-                        </div>
+                      <div class="flex items-center gap-2">
+                        <p class="truncate text-sm font-semibold">{{ state.business()?.name ?? 'Reserva tu cita' }}</p>
+                        @if (state.business()?.verified) {
+                          <span class="material-icons-round text-[0.9rem] text-green-400 flex-shrink-0" title="Negocio verificado">verified</span>
+                        }
+                      </div>
+                      <div class="flex items-center gap-2 mt-0.5">
+                        <p class="text-xs text-white/80">Reserva online</p>
+                        @if (state.ratingStats()?.averageRating && state.ratingStats()!.averageRating > 0) {
+                          <div class="flex items-center gap-1 text-xs bg-white/10 px-2 py-0.5 rounded-full">
+                            <span class="material-icons-round text-[0.7rem] text-yellow-300">star</span>
+                            <span class="text-white/90">{{ (state.ratingStats()?.averageRating || 0).toFixed(1) }}</span>
+                          </div>
+                        }
                       </div>
                     </div>
 
-                    @if (step() < 4) {
+                    <!-- Refresh button -->
+                    @if (state.step() < 4) {
                       <button
                         class="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 transition hover:bg-white/15"
                         (click)="startPolling()"
-                        aria-label="Actualizar"
-                        [disabled]="loading()"
+                        aria-label="Actualizar disponibilidad"
+                        [disabled]="state.loading()"
                       >
-                        <span class="material-icons-round text-[1.15rem]" [class.animate-spin]="loading()"
-                          >refresh</span
-                        >
+                        <span class="material-icons-round text-[1.15rem]" [class.animate-spin]="state.loading()">refresh</span>
                       </button>
                     }
                   </div>
 
+                  <!-- Progress bar -->
                   <div class="mt-4">
                     <div class="flex items-center justify-between mb-2">
                       <span class="text-xs font-semibold uppercase tracking-[0.18em] text-white/80">
-                        Paso {{ step() }} de 4
+                        Paso {{ state.step() }} de 4
                       </span>
-                      <span class="text-xs font-medium text-white/60">{{
-                        step() === 1 ? 'Servicio' : step() === 2 ? 'Horario' : step() === 3 ? 'Datos' : 'Confirmación'
-                      }}</span>
+                      <span class="text-xs font-medium text-white/60">
+                        {{ state.step() === 1 ? 'Servicio' : state.step() === 2 ? 'Horario' : state.step() === 3 ? 'Datos' : 'Confirmación' }}
+                      </span>
                     </div>
-                    <div class="h-2 w-full rounded-full bg-white/15 overflow-hidden">
-                      <div
-                        class="h-full rounded-full bg-white transition-[width] duration-500 ease-out"
-                        [style.width.%]="stepProgress()"
-                      ></div>
+                    <!-- Step dots -->
+                    <div class="flex gap-1.5 mb-2">
+                      @for (s of [1,2,3,4]; track s) {
+                        <div
+                          class="h-1.5 flex-1 rounded-full transition-all duration-300"
+                          [class.bg-white]="s <= state.step()"
+                          [class.bg-white/25]="s > state.step()"
+                        ></div>
+                      }
                     </div>
                   </div>
                 </header>
 
+                <!-- ── Step content ── -->
                 <div class="flex flex-col">
-                  @if (step() === 1) {
-                    <div class="flex flex-col gap-5 px-5 py-5">
-                      <div class="rounded-2xl border border-primary-fixed bg-brand-soft-high p-4 text-primary">
-                        <p class="text-[11px] font-semibold uppercase tracking-[0.2em]">Paso 1</p>
-                        <h2 class="mt-2 font-display text-2xl font-semibold text-on-surface">Elige tu servicio</h2>
-                        <p class="mt-1 text-sm text-on-surface-variant">Empieza por el servicio que quieres agendar.</p>
-                      </div>
-
-                      @if (lastBooking() && !servicesLoading() && services().includes(lastBooking()!.servicio)) {
-                        <button
-                          type="button"
-                          class="btn-tertiary btn-sm w-full justify-start gap-2 border border-dashed border-primary/40"
-                          (click)="repeatLastService()"
-                        >
-                          <span class="material-icons-round text-base">history</span>
-                          Repetir tu última reserva ({{ lastBooking()!.servicio }})
-                        </button>
-                      }
-
-                      @if (servicesLoading()) {
-                        <div
-                          class="flex flex-col gap-3"
-                          role="status"
-                          aria-live="polite"
-                          aria-label="Cargando servicios"
-                        >
-                          <div class="skeleton h-20 rounded-2xl"></div>
-                          <div class="skeleton h-20 rounded-2xl"></div>
-                          <div class="skeleton h-20 rounded-2xl"></div>
-                        </div>
-                      }
-
-                      @if (servicesError() && !servicesLoading()) {
-                        <div class="rounded-2xl bg-error-container p-5" role="alert">
-                          <div class="flex items-start gap-3 text-error-on-container">
-                            <span class="material-icons-round mt-0.5">warning</span>
-                            <div>
-                              <p class="font-semibold">No se pudieron cargar los servicios</p>
-                              <p class="mt-1 text-sm">{{ servicesError() }}</p>
-                              <button type="button" class="btn-secondary btn-sm mt-4" (click)="loadServices()">
-                                Reintentar
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      }
-
-                      @if (!servicesLoading() && !servicesError()) {
-                        @if (services().length) {
-                          <div class="space-y-3">
-                            <div class="flex gap-1.5 overflow-x-auto pb-1" role="group" aria-label="Filtrar servicios">
-                              @for (filter of serviceFilters; track filter.id) {
-                                <button
-                                  type="button"
-                                  class="shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition"
-                                  [class.border-primary]="serviceFilter() === filter.id"
-                                  [class.bg-primary]="serviceFilter() === filter.id"
-                                  [class.text-white]="serviceFilter() === filter.id"
-                                  [class.border-outline-variant]="serviceFilter() !== filter.id"
-                                  [class.bg-white]="serviceFilter() !== filter.id"
-                                  [class.text-on-surface-variant]="serviceFilter() !== filter.id"
-                                  [class.hover:bg-surface-low]="serviceFilter() !== filter.id"
-                                  [attr.aria-pressed]="serviceFilter() === filter.id"
-                                  (click)="serviceFilter.set(filter.id)"
-                                >
-                                  {{ filter.label }}
-                                </button>
-                              }
-                            </div>
-
-                            <div class="flex flex-col gap-2.5">
-                              @for (svc of visibleServices(); track svc) {
-                                <button
-                                  type="button"
-                                  class="w-full rounded-2xl border p-4 text-left transition"
-                                  [class.border-primary]="selectedService() === svc"
-                                  [class.bg-brand-soft-high]="selectedService() === svc"
-                                  [class.shadow-card]="selectedService() === svc"
-                                  [class.border-outline-variant]="selectedService() !== svc"
-                                  [class.bg-white]="selectedService() !== svc"
-                                  [class.hover:border-primary/50]="selectedService() !== svc"
-                                  [attr.aria-pressed]="selectedService() === svc"
-                                  (click)="selectService(svc)"
-                                >
-                                  <div class="flex items-center justify-between gap-3">
-                                    <div class="flex min-w-0 items-center gap-3">
-                                      <div
-                                        class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary-container text-white"
-                                      >
-                                        <span class="material-icons-round text-[1.1rem]">{{ serviceIcon(svc) }}</span>
-                                      </div>
-                                      <div class="min-w-0">
-                                        <p class="truncate font-display text-base font-semibold text-on-surface">
-                                          {{ svc }}
-                                        </p>
-                                        <p class="text-xs leading-5 text-on-surface-variant">
-                                          {{ serviceMeta(svc).summary }}
-                                        </p>
-                                      </div>
-                                    </div>
-
-                                    <span
-                                      class="material-icons-round flex-shrink-0 text-primary transition duration-200"
-                                      [class.opacity-0]="selectedService() !== svc"
-                                      [class.scale-75]="selectedService() !== svc"
-                                    >
-                                      check_circle
-                                    </span>
-                                  </div>
-
-                                  <div
-                                    class="mt-3.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs font-medium text-on-surface-variant"
-                                  >
-                                    <span class="inline-flex items-center gap-1">
-                                      <span class="material-icons-round text-[0.95rem] text-primary">payments</span>
-                                      {{ serviceMeta(svc).price }}
-                                    </span>
-                                    <span class="inline-flex items-center gap-1">
-                                      <span class="material-icons-round text-[0.95rem] text-primary">schedule</span>
-                                      {{ serviceMeta(svc).duration }}
-                                    </span>
-                                    <span class="inline-flex items-center gap-1">
-                                      <span class="material-icons-round text-[0.95rem] text-primary">bolt</span>
-                                      {{ serviceMeta(svc).availability }}
-                                    </span>
-                                  </div>
-                                </button>
-                              }
-                            </div>
-                          </div>
-                        } @else {
-                          <div
-                            class="rounded-2xl border border-dashed border-outline-variant bg-surface-low p-8 text-center"
-                          >
-                            <span class="material-icons-round text-[3rem] text-outline">category</span>
-                            <p class="mt-3 font-display text-lg font-semibold text-on-surface">
-                              Aun no hay servicios cargados
-                            </p>
-                            <p class="mt-1 text-sm text-on-surface-variant">
-                              Cuando el negocio configure sus servicios apareceran aqui.
-                            </p>
-                          </div>
-                        }
-                      }
-                    </div>
+                  @if (state.step() === 1) {
+                    <app-booking-step1-service
+                      (repeatLast)="repeatLastService()"
+                      (retryServices)="loadServices()"
+                    />
                   }
 
-                  @if (step() === 2) {
-                    <div class="flex flex-col gap-5 px-5 py-5">
-                      <div class="rounded-2xl border border-primary-fixed bg-brand-soft-high p-4">
-                        <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">Paso 2</p>
-                        <h2 class="mt-2 font-display text-2xl font-semibold text-on-surface">Selecciona el horario</h2>
-                        <p class="mt-1 text-sm text-on-surface-variant">
-                          Escoge el horario disponible que mejor te funcione.
-                        </p>
-                      </div>
-
-                      <div
-                        class="flex items-center justify-between rounded-2xl border border-outline-variant bg-white px-4 py-3"
-                      >
-                        <div class="flex items-center gap-3">
-                          <div
-                            class="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary-fixed text-primary"
-                          >
-                            <span class="material-icons-round text-[1.1rem]">spa</span>
-                          </div>
-                          <div>
-                            <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">Servicio</p>
-                            <p class="font-display font-semibold text-on-surface">{{ selectedService() }}</p>
-                          </div>
-                        </div>
-                        <button type="button" class="btn-tertiary btn-sm" (click)="goToStep(1)">Cambiar</button>
-                      </div>
-
-                      @if (loading()) {
-                        <div
-                          class="grid grid-cols-3 gap-2"
-                          role="status"
-                          aria-live="polite"
-                          aria-label="Cargando horarios"
-                        >
-                          @for (i of [1, 2, 3, 4, 5, 6, 7, 8, 9]; track i) {
-                            <div class="skeleton h-12 rounded-xl"></div>
-                          }
-                        </div>
-                      }
-
-                      @if (error() && !loading()) {
-                        <div class="rounded-2xl bg-error-container p-5" role="alert">
-                          <div class="flex items-start gap-3 text-error-on-container">
-                            <span class="material-icons-round mt-0.5">warning</span>
-                            <div>
-                              <p class="font-semibold">No se pudo cargar la disponibilidad</p>
-                              <p class="mt-1 text-sm">{{ error() }}</p>
-                              <p class="mt-1 text-sm">Verifica que la hoja del negocio este publicada.</p>
-                              <button type="button" class="btn-secondary btn-sm mt-4" (click)="startPolling()">
-                                Reintentar
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      }
-
-                      @if (!loading() && !error()) {
-                        <div>
-                          <div class="rounded-2xl border border-outline-variant bg-white p-4">
-                            <label class="form-label" for="slotSelect">Elige tu horario</label>
-                            @if (availableSlotsCount() > 0) {
-                              <select
-                                id="slotSelect"
-                                class="form-select w-full text-base"
-                                [value]="selectedSlot()?._rowIndex ?? ''"
-                                (change)="onSlotSelect($event)"
-                              >
-                                <option value="" disabled>Selecciona un horario disponible</option>
-                                @for (row of reservations(); track row._rowIndex) {
-                                  @if (!isTaken(row)) {
-                                    <option
-                                      [value]="row._rowIndex"
-                                      [selected]="selectedSlot()?._rowIndex === row._rowIndex"
-                                    >
-                                      {{ formatTime24(row.franja) }}
-                                    </option>
-                                  }
-                                }
-                              </select>
-                            } @else {
-                              <p class="rounded-2xl bg-surface-low px-4 py-6 text-center text-sm text-outline">
-                                No hay franjas disponibles por ahora.
-                              </p>
-                            }
-                          </div>
-                        </div>
-
-                        @if (selectedSlot()) {
-                          <div class="rounded-2xl border border-primary/15 bg-brand-soft-high p-4">
-                            <p class="section-label">Seleccion actual</p>
-                            <div class="flex items-center gap-3">
-                              <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary text-white">
-                                <span class="material-icons-round text-[1.1rem]">schedule</span>
-                              </div>
-                              <div>
-                                <p class="font-display text-lg font-semibold text-on-surface">
-                                  {{ formatTime24(selectedSlot()!.franja) }}
-                                </p>
-                                <p class="text-sm text-on-surface-variant">Listo para continuar con tus datos</p>
-                              </div>
-                            </div>
-                            @if (selectedSlot()!.notas) {
-                              <p class="mt-3 text-sm text-on-surface-variant">{{ selectedSlot()!.notas }}</p>
-                            }
-                          </div>
-                        }
-                      }
-                    </div>
+                  @if (state.step() === 2) {
+                    <app-booking-step2-slot
+                      (changeService)="goToStep(1)"
+                      (retry)="startPolling()"
+                    />
                   }
 
-                  @if (step() === 3) {
-                    @if (business()?.cancellationPolicy) {
-                      <div class="rounded-2xl bg-orange-50 p-4 m-2">
-                        <div class="flex items-center gap-2">
-                          <span class="material-icons-round text-orange-600 flex-shrink-0">info</span>
-                          <div>
-                            <p class="text-sm font-semibold text-orange-900">Política de Cancelación</p>
-                            <p class="text-xs text-deep-orange-700 mt-1">{{ business()!.cancellationPolicy }}</p>
-                          </div>
-                        </div>
-                      </div>
-                    }
-
-                    <div class="flex flex-col gap-5 px-5 py-5">
-                      <div class="rounded-2xl border border-primary-fixed bg-brand-soft-high p-4">
-                        <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">Paso 3</p>
-                        <h2 class="mt-2 font-display text-2xl font-semibold text-on-surface">Completa tus datos</h2>
-                        <p class="mt-1 text-sm text-on-surface-variant">
-                          Dejanos tus datos para confirmar la solicitud contigo.
-                        </p>
-                      </div>
-
-                      <div class="flex flex-wrap gap-2">
-                        @if (business()?.verified) {
-                          <span
-                            class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-700"
-                          >
-                            <span class="material-icons-round text-[12px]">verified</span>
-                            Negocio verificado
-                          </span>
-                        }
-                        <span
-                          class="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2.5 py-1 text-[10px] font-semibold text-sky-700"
-                        >
-                          <span class="material-icons-round text-[12px]">security</span>
-                          Pago seguro
-                        </span>
-                        <span
-                          class="inline-flex items-center gap-1 rounded-full bg-violet-50 px-2.5 py-1 text-[10px] font-semibold text-violet-700"
-                        >
-                          <span class="material-icons-round text-[12px]">star</span>
-                          {{ reviews().length || 0 }} reseña{{ reviews().length === 1 ? '' : 's' }}
-                        </span>
-                        @if (business()?.cancellationPolicy) {
-                          <span
-                            class="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-semibold text-amber-700"
-                          >
-                            <span class="material-icons-round text-[12px]">info</span>
-                            Cancelación clara
-                          </span>
-                        }
-                      </div>
-
-                      <div class="grid gap-3 sm:grid-cols-1">
-                        <div class="rounded-2xl border border-outline-variant bg-white p-4">
-                          <div class="flex items-start justify-between gap-3">
-                            <div>
-                              <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">Servicio</p>
-                              <p class="mt-1 font-display text-lg font-semibold text-on-surface">
-                                {{ selectedService() }}
-                              </p>
-                            </div>
-                            <button type="button" class="btn-tertiary btn-sm" (click)="goToStep(1)">Editar</button>
-                          </div>
-                        </div>
-
-                        <div class="rounded-2xl border border-outline-variant bg-white p-4">
-                          <div class="flex items-start justify-between gap-3">
-                            <div>
-                              <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">Horario</p>
-                              <p class="mt-1 font-display text-lg font-semibold text-on-surface">
-                                {{ formatTime24(selectedSlot()?.franja) }}
-                              </p>
-                            </div>
-                            <button type="button" class="btn-tertiary btn-sm" (click)="goToStep(2)">Editar</button>
-                          </div>
-                        </div>
-                      </div>
-
-                      @if (!isCustomerAuthenticated()) {
-                        <div class="rounded-2xl border border-amber-200 bg-amber-50 p-4 flex flex-col gap-3">
-                          <div class="flex items-start gap-3">
-                            <span class="material-icons-round text-amber-600">lock</span>
-                            <div class="flex-1">
-                              <p class="text-sm font-semibold text-amber-900">Debes estar registrado para reservar</p>
-                              <p class="text-xs text-amber-700 mt-1">
-                                Inicia sesión o crea tu cuenta para confirmar esta reserva. Tus datos se precargarán.
-                              </p>
-                            </div>
-                          </div>
-                          <div class="flex flex-col sm:flex-row gap-2">
-                            <button type="button" class="btn-primary btn-sm flex-1" (click)="goToCustomerAuth()">
-                              Iniciar sesión
-                            </button>
-                            <button type="button" class="btn-secondary btn-sm flex-1" (click)="goToCustomerAuth()">
-                              Crear cuenta
-                            </button>
-                          </div>
-                        </div>
-                      }
-
-                      <form
-                        [formGroup]="bookingForm"
-                        class="flex flex-col gap-3"
-                        (ngSubmit)="submit()"
-                        [attr.aria-describedby]="submitAttempted() && bookingForm.invalid ? 'booking-form-error' : null"
-                      >
-                        @if (submitAttempted() && bookingForm.invalid) {
-                          <p
-                            id="booking-form-error"
-                            class="rounded-xl bg-error-container px-3 py-2 text-sm text-error-on-container"
-                            role="alert"
-                            aria-live="assertive"
-                          >
-                            Revisa los campos señalados antes de continuar.
-                          </p>
-                        }
-                        <div>
-                          <label class="form-label" for="cliente">Tu nombre</label>
-                          <div class="icon-field">
-                            <span class="material-icons-round" aria-hidden="true">person</span>
-                            <input
-                              id="cliente"
-                              type="text"
-                              class="form-input min-h-[48px]"
-                              formControlName="cliente"
-                              placeholder="Ana Garcia"
-                              autocomplete="name"
-                              required
-                              minlength="2"
-                              [attr.aria-invalid]="fieldInvalid('cliente') ? 'true' : null"
-                              [attr.aria-describedby]="fieldInvalid('cliente') ? 'cliente-error' : null"
-                            />
-                          </div>
-                          @if (fieldInvalid('cliente')) {
-                            <p id="cliente-error" class="mt-1 text-xs text-error" role="alert">
-                              Escribe tu nombre (mínimo 2 caracteres).
-                            </p>
-                          }
-                        </div>
-
-                        <div>
-                          <label class="form-label" for="telefono">Tu teléfono</label>
-                          <div class="icon-field">
-                            <span class="material-icons-round" aria-hidden="true">phone</span>
-                            <input
-                              id="telefono"
-                              type="tel"
-                              class="form-input min-h-[48px]"
-                              formControlName="telefono"
-                              placeholder="300 123 4567"
-                              autocomplete="tel"
-                              required
-                              pattern="[0-9+\\s-]{7,15}"
-                              [attr.aria-invalid]="fieldInvalid('telefono') ? 'true' : null"
-                              [attr.aria-describedby]="fieldInvalid('telefono') ? 'telefono-error' : null"
-                            />
-                          </div>
-                          @if (fieldInvalid('telefono')) {
-                            <p id="telefono-error" class="mt-1 text-xs text-error" role="alert">
-                              Introduce un teléfono válido (7-15 caracteres).
-                            </p>
-                          }
-                        </div>
-
-                        <label
-                          class="flex cursor-pointer items-start gap-3 rounded-2xl border border-outline-variant bg-white p-3"
-                        >
-                          <input
-                            id="dataConsent"
-                            type="checkbox"
-                            formControlName="dataConsent"
-                            class="mt-0.5 h-5 w-5 accent-primary"
-                            required
-                            [attr.aria-invalid]="fieldInvalid('dataConsent') ? 'true' : null"
-                            [attr.aria-describedby]="fieldInvalid('dataConsent') ? 'data-consent-error' : null"
-                          />
-                          <span class="flex-1 text-xs leading-5 text-on-surface-variant">
-                            He leído y acepto la
-                            <a routerLink="/privacy" class="font-semibold text-primary underline"
-                              >política de privacidad</a
-                            >
-                            y el tratamiento de mis datos para gestionar esta reserva.
-                          </span>
-                        </label>
-                        @if (fieldInvalid('dataConsent')) {
-                          <p id="data-consent-error" class="mt-1 text-xs text-error" role="alert">
-                            Debes aceptar la política de privacidad.
-                          </p>
-                        }
-
-                        <div
-                          class="rounded-2xl border border-primary/15 bg-primary-fixed px-3 py-3 text-xs sm:text-sm text-primary"
-                        >
-                          Completa y envía. El negocio confirmará en minutos.
-                        </div>
-                      </form>
-                    </div>
+                  @if (state.step() === 3) {
+                    <app-booking-step3-form
+                      [form]="bookingForm"
+                      [isAuthenticated]="isCustomerAuthenticated()"
+                      [verified]="state.business()?.verified ?? false"
+                      [reviewCount]="state.reviews().length"
+                      [cancellationPolicy]="state.business()?.cancellationPolicy"
+                      (editService)="goToStep(1)"
+                      (editSlot)="goToStep(2)"
+                      (goToAuth)="goToCustomerAuth()"
+                      (submitForm)="submit()"
+                    />
                   }
 
-                  @if (step() === 4) {
-                    <div class="flex flex-col gap-5 px-5 py-5">
-                      <div
-                        class="rounded-[1.75rem] bg-gradient-to-br from-primary to-primary-container p-6 text-center text-white"
-                        role="status"
-                        aria-live="polite"
-                        aria-atomic="true"
-                      >
-                        <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white/20">
-                          <span class="material-icons-round text-3xl">check_circle</span>
-                        </div>
-                        <h2 class="mt-4 font-display text-2xl font-semibold">Reserva registrada</h2>
-                        <p class="mt-2 text-sm text-white/85">
-                          Tu solicitud ya está creada y queda pendiente de confirmación por parte del negocio.
-                        </p>
-                      </div>
-
-                      <div class="rounded-2xl border border-outline-variant bg-white p-5">
-                        <div class="mb-4 flex items-center justify-between gap-3">
-                          <p class="section-label">Estado de la reserva</p>
-                          <span class="badge badge-info">Pendiente</span>
-                        </div>
-
-                        <div class="mt-2 flex flex-col gap-4 text-sm">
-                          <div class="flex items-center justify-between gap-4">
-                            <span class="text-on-surface-variant">Servicio</span>
-                            <span class="service-tag">{{ confirmed()?.servicio }}</span>
-                          </div>
-                          <div class="h-px bg-outline-variant/30"></div>
-                          <div class="flex items-center justify-between gap-4">
-                            <span class="text-on-surface-variant">Horario</span>
-                            <span class="font-semibold text-on-surface">{{ formatTime24(confirmed()?.franja) }}</span>
-                          </div>
-                          <div class="h-px bg-outline-variant/30"></div>
-                          <div class="flex items-center justify-between gap-4">
-                            <span class="text-on-surface-variant">Cliente</span>
-                            <span class="font-semibold text-on-surface">{{ confirmed()?.cliente }}</span>
-                          </div>
-                          <div class="h-px bg-outline-variant/30"></div>
-                          <div class="flex items-center justify-between gap-4">
-                            <span class="text-on-surface-variant">Telefono</span>
-                            <span class="font-semibold text-on-surface">{{ confirmed()?.telefono }}</span>
-                          </div>
-                          @if (reservationId()) {
-                            <div class="h-px bg-outline-variant/30"></div>
-                            <div class="flex items-center justify-between gap-4">
-                              <span class="text-on-surface-variant">Referencia</span>
-                              <span class="font-semibold text-on-surface">{{ reservationId() }}</span>
-                            </div>
-                          }
-                        </div>
-                      </div>
-
-                      <div class="rounded-2xl border border-primary/15 bg-primary-fixed px-4 py-4 text-sm text-primary">
-                        Tu reserva ya quedó registrada. Puedes pagar ahora o revisar el pago más tarde desde tus reservas.
-                      </div>
-
-                      <div class="rounded-2xl border border-outline-variant bg-white p-5">
-                        <h3 class="font-display text-lg font-semibold text-on-surface">¿Cómo quieres continuar?</h3>
-                        <p class="mt-1 text-sm text-on-surface-variant">
-                          Pagar ahora no cambia la reserva; eliges el método y el importe en el siguiente paso.
-                        </p>
-                        <div class="mt-4 flex flex-col gap-2 sm:flex-row">
-                          <button
-                            type="button"
-                            class="btn-primary flex-1"
-                            [attr.aria-expanded]="paymentDetailsOpen()"
-                            aria-controls="payment-details"
-                            (click)="paymentDetailsOpen.set(true)"
-                          >
-                            Pagar ahora
-                          </button>
-                          <a routerLink="/customer/history" class="btn-secondary flex-1 text-center">Ver mis reservas</a>
-                        </div>
-                      </div>
-
-                      @if (paymentDetailsOpen()) {
-                        <div id="payment-details" class="rounded-2xl border border-outline-variant bg-white p-5">
-                        <p class="section-label">Método de pago</p>
-                        <div class="grid grid-cols-2 gap-2" role="group" aria-label="Método de pago">
-                          @for (opt of paymentOptions; track opt.id) {
-                            <button
-                              type="button"
-                              class="payment-option"
-                              [class.selected]="paymentMethod() === opt.id"
-                              [attr.aria-pressed]="paymentMethod() === opt.id"
-                              (click)="paymentMethod.set(opt.id)"
-                            >
-                              <span class="material-icons-round text-primary flex-shrink-0">{{ opt.icon }}</span>
-                              <span class="text-sm font-semibold whitespace-nowrap">{{ opt.label }}</span>
-                            </button>
-                          }
-                        </div>
-
-                        <label
-                          class="mt-3 flex cursor-pointer items-center gap-3 rounded-xl bg-surface-low px-3 py-2.5"
-                        >
-                          <input
-                            type="checkbox"
-                            class="h-5 w-5 accent-primary"
-                            [checked]="depositActive()"
-                            (change)="depositActive.set(!depositActive())"
-                          />
-                          <span class="flex-1">
-                            <span class="block text-sm font-semibold text-on-surface"
-                              >Pagar ahora solo el anticipo</span
-                            >
-                            <span class="block text-xs text-on-surface-variant"
-                              >30% del total para asegurar tu cita</span
-                            >
-                          </span>
-                          <span class="text-sm font-bold text-primary">{{
-                            depositActive() ? formatCurrency(dueAmount()) : '—'
-                          }}</span>
-                        </label>
-
-                        <div
-                          class="mt-4 flex items-center justify-between gap-3 rounded-xl border border-primary/15 bg-brand-soft-high px-3 py-2.5 text-sm"
-                        >
-                          <span class="text-on-surface-variant">Importe de hoy</span>
-                          <span class="font-display text-lg font-bold text-primary">{{
-                            formatCurrency(dueAmount())
-                          }}</span>
-                        </div>
-                        </div>
-                      }
-
-                      @if (checkoutInstructions()) {
-                        <div class="instructions-box">
-                          <p class="mb-1 font-semibold text-primary">
-                            {{ paymentMethod() === 'transfer' ? 'Instrucciones de transferencia' : 'Pago en efectivo' }}
-                          </p>
-                          @if (paymentMethod() === 'transfer' && checkoutInstructions()!.iban) {
-                            <div class="flex flex-col gap-1 text-sm">
-                              <p>
-                                <span class="text-on-surface-variant">Beneficiario: </span
-                                >{{ checkoutInstructions()!.beneficiary }}
-                              </p>
-                              <p>
-                                <span class="text-on-surface-variant">IBAN: </span
-                                ><span class="font-mono font-semibold">{{ checkoutInstructions()!.iban }}</span>
-                              </p>
-                              <p>
-                                <span class="text-on-surface-variant">Banco: </span>{{ checkoutInstructions()!.bank }}
-                              </p>
-                              <p>
-                                <span class="text-on-surface-variant">Referencia: </span
-                                ><span class="font-mono font-semibold">{{ checkoutInstructions()!.reference }}</span>
-                              </p>
-                            </div>
-                          } @else {
-                            <p class="text-sm">{{ checkoutInstructions()!.message }}</p>
-                          }
-                        </div>
-                      }
-
-                      <div class="flex flex-col gap-2 sm:flex-row sm:gap-3">
-                        <button
-                          type="button"
-                          class="btn-primary flex-1"
-                          data-testid="payment-action"
-                          [disabled]="paymentLoading()"
-                          [attr.aria-busy]="paymentLoading()"
-                          (click)="startCheckout()"
-                        >
-                          @if (paymentLoading()) {
-                            <span class="material-icons-round animate-spin text-base">refresh</span>
-                          } @else {
-                            <span>{{ paymentLabel() }}</span>
-                            <span class="material-icons-round text-base">payment</span>
-                          }
-                        </button>
-                        <button type="button" class="btn-secondary flex-1" (click)="resetFlow()">
-                          <span class="material-icons-round text-base">add</span>
-                          <span class="hidden sm:inline">Nueva reserva</span>
-                        </button>
-                      </div>
-
-                      <div class="mt-6 border-t border-outline-variant pt-6">
-                        <h3 class="font-display text-lg font-semibold text-on-surface mb-4">Reseñas</h3>
-
-                        @if (reviews().length > 0) {
-                          <div class="flex flex-col gap-3 mb-5">
-                            @for (review of reviews(); track review.id) {
-                              <div class="rounded-2xl border border-outline-variant/30 bg-white/50 p-4">
-                                <div class="flex items-start gap-2 mb-2">
-                                  @for (i of [1, 2, 3, 4, 5]; track i) {
-                                    <span
-                                      class="material-icons-round text-[0.9rem]"
-                                      [class.text-yellow-400]="i <= review.rating"
-                                      [class.text-outline/30]="i > review.rating"
-                                      >star</span
-                                    >
-                                  }
-                                </div>
-                                @if (review.review) {
-                                  <p class="text-sm text-on-surface">{{ review.review }}</p>
-                                }
-                                <p class="text-xs text-on-surface-variant mt-2">
-                                  {{ review.createdAt | date: 'short' }}
-                                </p>
-                              </div>
-                            }
-                          </div>
-                        } @else {
-                          <p class="text-sm text-on-surface-variant mb-4">
-                            No hay reseñas aún. ¡Sé el primero en compartir tu experiencia!
-                          </p>
-                        }
-
-                        <div class="rounded-2xl border border-primary-fixed bg-brand-soft-high p-4 mt-5">
-                          <p class="text-sm font-semibold text-primary mb-3">Deja tu reseña</p>
-                          <div class="flex gap-2 mb-4">
-                            @for (i of [1, 2, 3, 4, 5]; track i) {
-                              <button
-                                class="p-2 rounded-lg transition hover:bg-white/50 cursor-pointer"
-                                type="button"
-                                (click)="reviewForm.patchValue({ rating: i })"
-                                [class.bg-yellow-400/20]="i <= (reviewForm.get('rating')?.value || 0)"
-                                [attr.aria-label]="i + ' estrellas'"
-                                [attr.aria-pressed]="i === (reviewForm.get('rating')?.value || 0)"
-                              >
-                                <span
-                                  class="material-icons-round text-[1.5rem]"
-                                  [class.text-yellow-400]="i <= (reviewForm.get('rating')?.value || 0)"
-                                  [class.text-outline/30]="i > (reviewForm.get('rating')?.value || 0)"
-                                  >star</span
-                                >
-                              </button>
-                            }
-                          </div>
-                          <label for="review-text" class="sr-only">Tu reseña (opcional)</label>
-                          <textarea
-                            id="review-text"
-                            class="w-full rounded-lg border border-outline p-2 text-sm resize-none focus:outline-none focus:border-primary"
-                            formControlName="review"
-                            placeholder="Cuenta tu experiencia (opcional)"
-                            maxlength="500"
-                            [attr.rows]="2"
-                          ></textarea>
-                          <button
-                            class="btn-primary w-full mt-3 min-h-[44px]"
-                            type="button"
-                            [disabled]="(reviewForm.get('rating')?.value || 0) === 0 || submitting()"
-                            (click)="submitReview()"
-                          >
-                            @if (submitting()) {
-                              <span class="material-icons-round animate-spin text-base">refresh</span>
-                            } @else {
-                              <span>Enviar reseña</span>
-                            }
-                          </button>
-                        </div>
-                      </div>
-                    </div>
+                  @if (state.step() === 4) {
+                    <app-booking-step4-confirmation
+                      (startCheckout)="startCheckout()"
+                      (newBooking)="resetFlow()"
+                    />
+                    <app-booking-reviews
+                      [form]="reviewForm"
+                      (submitReview)="submitReview()"
+                    />
                   }
 
-                  @if (step() < 4) {
+                  <!-- ── Sticky bottom CTA (steps 1-3) ── -->
+                  @if (state.step() < 4) {
                     <div class="border-t border-outline-variant/20 bg-white px-5 py-4">
                       <button
-                        class="btn-primary w-full min-h-[56px] sm:min-h-[auto] text-lg sm:text-base"
-                        [disabled]="!canProceed() || submitting()"
+                        class="btn-primary w-full min-h-[56px] text-base"
+                        [disabled]="!canProceed() || state.submitting()"
                         (click)="handleNext()"
+                        [attr.aria-label]="nextLabel()"
                       >
-                        @if (submitting()) {
+                        @if (state.submitting()) {
                           <span class="material-icons-round animate-spin text-base">refresh</span>
-                          <span class="hidden sm:inline">Enviando...</span>
+                          <span>Enviando...</span>
                         } @else {
                           <span>{{ nextLabel() }}</span>
                           <span class="material-icons-round text-base">arrow_forward</span>
@@ -936,197 +257,130 @@ interface BookingProgress {
               </div>
             </div>
           </section>
+
         </div>
       </div>
     </div>
   `,
-  styles: [
-    `
-      .booking-embedded {
-        min-height: 0 !important;
-        height: auto;
-        background: transparent !important;
-      }
-      .booking-embedded .booking-container {
-        max-width: none;
-        padding: 0;
-      }
-      .booking-embedded .booking-layout {
-        display: block;
-        min-height: 0;
-      }
-      .booking-embedded .booking-card-shell {
-        max-width: none;
-        padding: 0;
-        border: 0;
-        border-radius: 0;
-        background: transparent;
-        box-shadow: none;
-        backdrop-filter: none;
-      }
-      @media (prefers-reduced-motion: reduce) {
-        .booking-embedded * {
-          scroll-behavior: auto !important;
-        }
-      }
-    `,
-  ],
+  styles: [`
+    .booking-embedded {
+      min-height: 0 !important;
+      height: auto;
+      background: transparent !important;
+    }
+    .booking-embedded .booking-container {
+      max-width: none;
+      padding: 0;
+    }
+    .booking-embedded .booking-layout {
+      display: block;
+      min-height: 0;
+    }
+    .booking-embedded .booking-card-shell {
+      max-width: none;
+      padding: 0;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      box-shadow: none;
+      backdrop-filter: none;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .booking-embedded * { scroll-behavior: auto !important; }
+    }
+  `],
 })
 export class BookingComponent implements OnInit, OnDestroy {
-  private api = inject(ApiService);
-  private toast = inject(ToastService);
-  private realtime = inject(RealtimeService);
-  private auth = inject(AuthService);
-  readonly Math = Math;
-  private fb = inject(FormBuilder);
-  private router = inject(Router);
-  private route = inject(ActivatedRoute);
+  // ── DI ────────────────────────────────────────────────────────────────
+  private readonly api = inject(ApiService);
+  private readonly toast = inject(ToastService);
+  private readonly realtime = inject(RealtimeService);
+  private readonly auth = inject(AuthService);
+  private readonly fb = inject(FormBuilder);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
+  readonly state = inject(BookingStateService);
+
+  // ── Idempotency ────────────────────────────────────────────────────────
   private reservationAttempt: IdempotencyAttempt | null = null;
   private paymentAttempt: IdempotencyAttempt | null = null;
   private pendingBookingProgress: BookingProgress | null = null;
 
+  // ── Inputs ─────────────────────────────────────────────────────────────
   @Input() businessIdOverride = '';
   @Input() initialServiceName = '';
   @Input() embedded = false;
 
-  readonly business = signal<Business | null>(null);
   businessId = '';
 
-  readonly step = signal<Step>(1);
-  readonly loading = signal(false);
-  readonly servicesLoading = signal(false);
-  readonly servicesError = signal<string | null>(null);
-  readonly submitting = signal(false);
-  readonly paymentLoading = signal(false);
-  readonly error = signal<string | null>(null);
-  readonly reservations = signal<Reservation[]>([]);
-  readonly reviews = signal<Review[]>([]);
-  readonly ratingStats = signal<RatingStats | null>(null);
-  readonly services = signal<string[]>([]);
-  readonly servicePrices = signal<Record<string, number>>({});
-  readonly selectedSlot = signal<Reservation | null>(null);
-  readonly selectedService = signal<string | null>(null);
-  readonly confirmed = signal<ConfirmedBooking | null>(null);
-  readonly reservationId = signal<string>('');
-  readonly customerId = signal<string>('');
-  readonly paymentMethod = signal<PaymentMethod>('card');
-  readonly depositActive = signal(false);
-  readonly paymentDetailsOpen = signal(false);
-  readonly checkoutInstructions = signal<CheckoutInstructions | null>(null);
-  readonly lastBooking = signal<{ servicio: string; franja: string; cliente: string; telefono: string } | null>(null);
-  readonly paymentOptions: { id: PaymentMethod; label: string; icon: string }[] = [
-    { id: 'card', label: 'Tarjeta', icon: 'credit_card' },
-    { id: 'paypal', label: 'PayPal', icon: 'account_balance_wallet' },
-    { id: 'transfer', label: 'Transferencia', icon: 'account_balance' },
-    { id: 'cash', label: 'Efectivo', icon: 'payments' },
-  ];
-  readonly baseAmount = computed(() =>
-    this.confirmed() ? this.serviceMeta(this.confirmed()!.servicio).priceNumber : 0
-  );
-  readonly dueAmount = computed(() => (this.depositActive() ? Math.round(this.baseAmount() * 0.3) : this.baseAmount()));
-  readonly formatCurrency = formatCurrency;
-  readonly formatTime24 = formatTime24;
-  readonly isCustomerAuthenticated = computed(() => this.auth.isCustomerUnlocked());
-  readonly paymentLabel = computed(() => {
-    if (this.paymentLoading()) return '';
-    const amount = formatCurrency(this.dueAmount());
-    const payLabel = this.depositActive() ? `Pagar anticipo (${amount})` : `Pagar ${amount}`;
-    switch (this.paymentMethod()) {
-      case 'paypal':
-        return `${payLabel} con PayPal`;
-      case 'transfer':
-        return `Ver instrucciones de transferencia (${amount})`;
-      case 'cash':
-        return `Confirmar pago en efectivo (${amount})`;
-      default:
-        return payLabel;
-    }
-  });
-  readonly bookingSteps = [
-    { value: 1, label: 'Servicio' },
-    { value: 2, label: 'Horario' },
-    { value: 3, label: 'Datos' },
-    { value: 4, label: 'Listo' },
-  ] as const;
-  readonly serviceFilter = signal<'all' | 'popular' | 'quick' | 'premium'>('all');
-  readonly serviceFilters = [
-    { id: 'all', label: 'Todos' },
-    { id: 'popular', label: 'Populares' },
-    { id: 'quick', label: 'Rápidos' },
-    { id: 'premium', label: 'Premium' },
-  ] as const;
-  readonly stepProgress = computed(() => ((this.step() - 1) / (this.bookingSteps.length - 1)) * 100);
-  readonly availableSlotsCount = computed(() => this.reservations().filter(row => !this.isTaken(row)).length);
-  readonly reservedSlotsCount = computed(() => this.reservations().filter(row => this.isTaken(row)).length);
-  readonly instructionItems = [
-    {
-      order: '01',
-      title: 'Elige qué quieres reservar',
-      description: 'Selecciona el servicio y avanza al siguiente paso.',
-    },
-    {
-      order: '02',
-      title: 'Escoge el mejor horario',
-      description: 'Revisa la disponibilidad y toma la franja que mejor te sirva.',
-    },
-    {
-      order: '03',
-      title: 'Confirma en un momento',
-      description: 'Deja tus datos, revisa el resumen y envía la reserva.',
-    },
-  ] as const;
-
+  // ── Forms ──────────────────────────────────────────────────────────────
   readonly bookingForm = this.fb.group({
     cliente: ['', [Validators.required, Validators.minLength(2)]],
     telefono: ['', [Validators.required, Validators.pattern(/^[0-9+\s\-]{7,15}$/)]],
     notas: [''],
     dataConsent: [false, [Validators.requiredTrue]],
   });
-  readonly bookingFormValid = signal(false);
-  readonly submitAttempted = signal(false);
 
   readonly reviewForm = this.fb.group({
     rating: [0, [Validators.required, Validators.min(1), Validators.max(5)]],
     review: ['', [Validators.maxLength(500)]],
   });
 
+  // ── Computed ───────────────────────────────────────────────────────────
+  readonly isCustomerAuthenticated = computed(() => this.auth.isCustomerUnlocked());
+
   readonly canProceed = computed(() => {
-    if (this.step() === 1) return !!this.selectedService();
-    if (this.step() === 2) return !!this.selectedSlot();
-    if (this.step() === 3) return this.bookingFormValid() && this.isCustomerAuthenticated();
+    const s = this.state.step();
+    if (s === 1) return !!this.state.selectedService();
+    if (s === 2) return !!this.state.selectedSlot();
+    if (s === 3) return this.bookingFormValid() && this.isCustomerAuthenticated();
     return false;
   });
 
   readonly nextLabel = computed(() => {
-    if (this.step() === 1) return this.selectedService() ? 'Continuar al horario' : 'Selecciona un servicio';
-    if (this.step() === 2) return this.selectedSlot() ? 'Continuar con tus datos' : 'Selecciona un horario';
-    if (this.step() === 3) return 'Confirmar reserva';
+    const s = this.state.step();
+    if (s === 1) return this.state.selectedService() ? 'Continuar al horario' : 'Selecciona un servicio';
+    if (s === 2) return this.state.selectedSlot() ? 'Continuar con tus datos' : 'Selecciona un horario';
+    if (s === 3) return 'Confirmar reserva';
     return '';
   });
 
+  private readonly bookingFormValid = signal(false);
+
+  // ── Polling ────────────────────────────────────────────────────────────
+  private readonly POLL_MS = 15_000;
+  private pollSub?: Subscription;
+
+  readonly instructionItems = [
+    { order: '01', stepValue: 1, title: 'Elige qué quieres reservar', description: 'Selecciona el servicio y avanza al siguiente paso.' },
+    { order: '02', stepValue: 2, title: 'Escoge el mejor horario', description: 'Revisa la disponibilidad y toma la franja que mejor te sirva.' },
+    { order: '03', stepValue: 3, title: 'Confirma en un momento', description: 'Deja tus datos, revisa el resumen y envía la reserva.' },
+  ] as const;
+
+  // ── Lifecycle ──────────────────────────────────────────────────────────
   ngOnInit(): void {
     this.businessId = this.businessIdOverride || this.route.snapshot.params['businessId'] || '';
     this.restoreBookingProgress();
+
+    // Sync form validity to signal
     this.bookingForm.statusChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.bookingFormValid.set(this.bookingForm.valid));
+
     this.loadLastBooking();
     this.setupVisibilityPause();
-    // Load business info
+
+    // Load business metadata
     this.api
       .getBusinesses()
-      .pipe(
-        catchError(() => of([])),
-        takeUntilDestroyed(this.destroyRef)
-      )
+      .pipe(catchError(() => of([])), takeUntilDestroyed(this.destroyRef))
       .subscribe(list => {
         const found = list.find(b => b.id === this.businessId);
-        if (!found) location.replace('/'); // Redirect if business not found
-        if (found) {
-          this.business.set(found);
-        }
+        if (!found) { location.replace('/'); return; }
+        this.state.business.set(found);
       });
+
     this.api.trackBusinessView(this.businessId).subscribe();
     this.loadServices();
     this.loadReviews();
@@ -1136,18 +390,320 @@ export class BookingComponent implements OnInit, OnDestroy {
     this.prefillFromCustomer();
   }
 
+  ngOnDestroy(): void {
+    this.pollSub?.unsubscribe();
+  }
+
+  // ── Data loading ──────────────────────────────────────────────────────
+
+  loadServices(): void {
+    this.state.servicesLoading.set(true);
+    this.state.servicesError.set(null);
+    this.api
+      .getBusinessServices(this.businessId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: data => {
+          const names = data.map(s => (typeof s === 'string' ? s : s.nombre));
+          this.state.services.set(names);
+          this.state.servicePrices.set(
+            Object.fromEntries(
+              data
+                .filter(s => typeof s !== 'string' && Number.isFinite(s.precio) && s.precio !== null)
+                .map(s => [s.nombre, Number(s.precio)])
+            )
+          );
+          this.applyBookingProgress();
+          if (this.initialServiceName && names.includes(this.initialServiceName)) {
+            this.state.selectedService.set(this.initialServiceName);
+            if (this.embedded) this.goToStep(2);
+          }
+          this.state.servicesLoading.set(false);
+        },
+        error: err => {
+          this.state.servicesError.set(err.message);
+          this.state.services.set([]);
+          this.state.servicesLoading.set(false);
+        },
+      });
+  }
+
+  loadReviews(): void {
+    this.api
+      .getReviews(this.businessId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: data => this.state.reviews.set(data),
+        error: () => this.state.reviews.set([]),
+      });
+  }
+
+  loadRatingStats(): void {
+    this.api
+      .getAverageRating(this.businessId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: data => this.state.ratingStats.set(data),
+        error: () => this.state.ratingStats.set(null),
+      });
+  }
+
+  startPolling(): void {
+    if (typeof document !== 'undefined' && document.hidden) return;
+    this.pollSub?.unsubscribe();
+    this.pollSub = interval(this.POLL_MS)
+      .pipe(
+        startWith(0),
+        switchMap(() => {
+          this.state.loading.set(true);
+          this.state.error.set(null);
+          return this.api.getBusinessAvailability(this.businessId);
+        })
+      )
+      .subscribe({
+        next: data => {
+          this.state.reservations.set(data);
+          this.applyBookingProgress();
+          this.state.loading.set(false);
+        },
+        error: err => {
+          this.state.error.set(err.message);
+          this.state.loading.set(false);
+        },
+      });
+  }
+
+  // ── Navigation ────────────────────────────────────────────────────────
+
+  goToStep(s: BookingStep): void {
+    if (s === 3) this.prefillFromLastBooking();
+    this.state.step.set(s);
+    // Scroll the booking card into view on mobile
+    if (typeof window !== 'undefined') {
+      const el = document.querySelector('.booking-card-shell');
+      el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
+  goBack(): void {
+    const s = this.state.step();
+    if (s > 1) this.goToStep((s - 1) as BookingStep);
+    else this.router.navigate(['/']);
+  }
+
+  handleNext(): void {
+    const s = this.state.step();
+    if (s === 1 && this.state.selectedService()) {
+      this.goToStep(2);
+    } else if (s === 2 && this.state.selectedSlot()) {
+      if (!this.isCustomerAuthenticated()) {
+        this.toast.error('Debes iniciar sesión para reservar. Redirigiendo...');
+        this.goToCustomerAuth();
+        return;
+      }
+      this.goToStep(3);
+    } else if (s === 3) {
+      this.submit();
+    }
+  }
+
+  goToCustomerAuth(): void {
+    const service = this.state.selectedService();
+    const slot = this.state.selectedSlot();
+    if (service && slot) {
+      try {
+        sessionStorage.setItem(this.bookingProgressKey(), JSON.stringify({ service, slotRowIndex: slot._rowIndex }));
+      } catch { /* storage blocked */ }
+    }
+    this.router.navigate(['/customer/login'], { queryParams: { redirect: `/booking/${this.businessId}` } });
+  }
+
+  // ── Booking submission ────────────────────────────────────────────────
+
+  submit(): void {
+    if (!this.isCustomerAuthenticated()) {
+      this.toast.error('Debes estar registrado para hacer una reserva.');
+      this.goToCustomerAuth();
+      return;
+    }
+    this.bookingForm.markAllAsTouched();
+    if (this.bookingForm.invalid || !this.state.selectedSlot() || !this.state.selectedService()) {
+      this.state.submitAttempted.set(true);
+      return;
+    }
+
+    const { cliente, telefono, notas, dataConsent } = this.bookingForm.value;
+    const payload: ConfirmedBooking = {
+      franja: this.state.selectedSlot()!.franja,
+      cliente: cliente!.trim(),
+      telefono: telefono!.trim(),
+      servicio: this.state.selectedService()!,
+      notas: notas?.trim() ?? '',
+    };
+
+    const checkoutPayload = { ...payload, dataConsent: dataConsent === true };
+    this.state.submitting.set(true);
+    this.reservationAttempt = idempotencyAttempt(`reservation:${this.businessId}`, this.reservationAttempt, {
+      businessId: this.businessId,
+      payload: checkoutPayload,
+    });
+
+    this.api
+      .createBusinessCheckout(this.businessId, checkoutPayload, this.reservationAttempt.key)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: checkout => {
+          clearIdempotencyAttempt(`reservation:${this.businessId}`, this.reservationAttempt);
+          const selected = this.state.selectedSlot();
+          if (selected) {
+            this.state.reservations.set(
+              this.state.reservations().map(row =>
+                row._rowIndex === selected._rowIndex ? { ...row, disponibilidad: 'Reservado' } : row
+              )
+            );
+          }
+          this.state.confirmed.set(payload);
+          this.state.reservationId.set(checkout.data?.bookingId ?? '');
+          this.state.customerId.set(checkout.data?.customerId ?? '');
+          this.state.paymentDetailsOpen.set(false);
+          this.rememberBooking(payload);
+          this.toast.success('¡Reserva enviada con éxito! Ya está lista para pagar o confirmar.');
+          this.goToStep(4);
+          this.state.submitting.set(false);
+        },
+        error: err => {
+          this.toast.error(err?.message ?? 'La franja seleccionada ya no está disponible. Elige otra opción.');
+          this.startPolling();
+          this.state.submitting.set(false);
+        },
+      });
+  }
+
+  // ── Payment ───────────────────────────────────────────────────────────
+
+  startCheckout(): void {
+    const booking = this.state.confirmed();
+    if (!booking) return;
+    const bookingId = this.state.reservationId();
+    const customerId = this.state.customerId();
+    if (!bookingId || !customerId) {
+      this.toast.error('No se pudo preparar el checkout; vuelve a intentar la reserva.');
+      return;
+    }
+
+    this.state.paymentLoading.set(true);
+    this.state.checkoutInstructions.set(null);
+    const providerId = this.businessId;
+    const baseAmount = this.state.serviceMeta(booking.servicio).priceNumber;
+    const amount = this.state.depositActive() ? Math.round(baseAmount * 0.3) : baseAmount;
+    const method = this.state.paymentMethod();
+    const successUrl = `${window.location.origin}/payment/success?bookingId=${encodeURIComponent(bookingId)}&providerId=${encodeURIComponent(providerId)}&customerId=${encodeURIComponent(customerId)}`;
+    const cancelUrl = `${window.location.origin}/payment/cancel?bookingId=${encodeURIComponent(bookingId)}&providerId=${encodeURIComponent(providerId)}&customerId=${encodeURIComponent(customerId)}`;
+
+    const checkoutPayload = {
+      bookingId, providerId, customerId, amount,
+      currency: DEFAULT_CURRENCY, method,
+      deposit: this.state.depositActive(),
+      successUrl, cancelUrl,
+    };
+    this.paymentAttempt = idempotencyAttempt(`payment:${bookingId}`, this.paymentAttempt, checkoutPayload);
+
+    this.api
+      .createCheckoutSession({ ...checkoutPayload }, this.paymentAttempt.key, this.auth.getCustomerToken() ?? '')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: result => {
+          clearIdempotencyAttempt(`payment:${bookingId}`, this.paymentAttempt);
+          this.state.paymentLoading.set(false);
+          const data = result.data;
+          if (data?.checkoutUrl && isAllowedCheckoutRedirect(data.checkoutUrl)) {
+            window.location.href = data.checkoutUrl;
+            return;
+          }
+          if (data?.instructions) {
+            this.state.checkoutInstructions.set(data.instructions);
+            this.toast.success(
+              method === 'transfer'
+                ? 'Transferencia registrada: completa el pago con los datos indicados.'
+                : 'Pago en efectivo registrado: paga al completar el servicio.'
+            );
+            return;
+          }
+          this.toast.success('Reserva registrada; el pago quedará listo para completar después.');
+        },
+        error: err => {
+          this.state.paymentLoading.set(false);
+          this.toast.error(err?.message ?? 'No se pudo iniciar el pago en este momento');
+        },
+      });
+  }
+
+  // ── Reviews ───────────────────────────────────────────────────────────
+
+  submitReview(): void {
+    const rating = this.reviewForm.get('rating')?.value || 0;
+    if (rating === 0) return;
+    this.state.submitting.set(true);
+    this.api
+      .createReview(this.businessId, {
+        rating,
+        review: this.reviewForm.get('review')?.value?.trim() || undefined,
+      })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.toast.success('¡Gracias por tu reseña!');
+          this.reviewForm.reset({ rating: 0, review: '' });
+          this.loadReviews();
+          this.loadRatingStats();
+          this.state.submitting.set(false);
+        },
+        error: err => {
+          this.toast.error(err?.message ?? 'Error al enviar reseña');
+          this.state.submitting.set(false);
+        },
+      });
+  }
+
+  // ── Reset ─────────────────────────────────────────────────────────────
+
+  resetFlow(): void {
+    this.state.resetFlow();
+    this.bookingForm.reset();
+    this.reviewForm.reset({ rating: 0, review: '' });
+    this.pollSub?.unsubscribe();
+    this.loadServices();
+    this.loadReviews();
+    this.loadRatingStats();
+    this.startPolling();
+  }
+
+  // ── Repeat last service ───────────────────────────────────────────────
+
+  repeatLastService(): void {
+    const last = this.state.lastBooking();
+    if (!last) return;
+    if (!this.state.services().includes(last.servicio)) {
+      this.toast.error('Ese servicio ya no está disponible actualmente.');
+      return;
+    }
+    this.state.selectedService.set(last.servicio);
+    this.state.serviceFilter.set('all');
+    const slot = this.state.reservations().find(r => r.franja === last.franja && !this.state.isTaken(r));
+    if (slot) this.state.selectedSlot.set(slot);
+    this.goToStep(2);
+  }
+
+  // ── Private helpers ───────────────────────────────────────────────────
+
   private prefillFromCustomer(): void {
     if (!this.isCustomerAuthenticated()) return;
     const token = this.auth.getCustomerToken();
     const payload = this.auth.getCustomerPayload();
-    const customerId = (payload?.customerId as string) ?? null;
-    if (!token || !customerId) return;
+    if (!token || !payload?.customerId) return;
     this.api
       .getCustomerMe(token)
-      .pipe(
-        takeUntilDestroyed(this.destroyRef),
-        catchError(() => of(null))
-      )
+      .pipe(takeUntilDestroyed(this.destroyRef), catchError(() => of(null)))
       .subscribe(customer => {
         if (!customer) return;
         const patch: Record<string, string> = {};
@@ -1165,19 +721,50 @@ export class BookingComponent implements OnInit, OnDestroy {
         if (evt.event === 'booking_created' || evt.event === 'booking_updated') {
           const data = evt.data as { providerId?: string };
           if (!data?.providerId || data.providerId === this.businessId) {
-            // SSE es push; recarga suave sin spinner
-            this.api.getBusinessAvailability(this.businessId).subscribe(d => this.reservations.set(d));
+            this.api.getBusinessAvailability(this.businessId).subscribe(d => this.state.reservations.set(d));
           }
         }
       });
   }
 
-  private lastBookingKey(): string {
-    return `reservorio_last_booking_${this.businessId}`;
+  private setupVisibilityPause(): void {
+    if (typeof document === 'undefined') return;
+    fromEvent(document, 'visibilitychange')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        if (document.hidden) this.pollSub?.unsubscribe();
+        else this.startPolling();
+      });
   }
 
-  private bookingProgressKey(): string {
-    return `reservorio_booking_progress_${this.businessId}`;
+  private lastBookingKey = () => `reservorio_last_booking_${this.businessId}`;
+  private bookingProgressKey = () => `reservorio_booking_progress_${this.businessId}`;
+
+  private loadLastBooking(): void {
+    try {
+      const raw = localStorage.getItem(this.lastBookingKey());
+      if (raw) this.state.lastBooking.set(JSON.parse(raw));
+    } catch { /* storage unavailable */ }
+  }
+
+  private rememberBooking(booking: ConfirmedBooking): void {
+    try {
+      localStorage.setItem(this.lastBookingKey(), JSON.stringify({
+        servicio: booking.servicio, franja: booking.franja,
+        cliente: booking.cliente, telefono: booking.telefono,
+      }));
+    } catch { /* storage unavailable */ }
+  }
+
+  private prefillFromLastBooking(): void {
+    const last = this.state.lastBooking();
+    if (!last) return;
+    if (!this.bookingForm.get('cliente')?.value && last.cliente) {
+      this.bookingForm.patchValue({ cliente: last.cliente });
+    }
+    if (!this.bookingForm.get('telefono')?.value && last.telefono) {
+      this.bookingForm.patchValue({ telefono: last.telefono });
+    }
   }
 
   private restoreBookingProgress(): void {
@@ -1189,534 +776,19 @@ export class BookingComponent implements OnInit, OnDestroy {
       if (typeof progress.service === 'string' && Number.isInteger(progress.slotRowIndex)) {
         this.pendingBookingProgress = { service: progress.service, slotRowIndex: progress.slotRowIndex };
       }
-    } catch {
-      // El flujo sigue funcionando si el almacenamiento de sesión no está disponible.
-    }
+    } catch { /* storage unavailable */ }
   }
 
   private applyBookingProgress(): void {
     const progress = this.pendingBookingProgress;
-    if (!progress || !this.services().includes(progress.service)) return;
-    const slot = this.reservations().find(row => row._rowIndex === progress.slotRowIndex && !this.isTaken(row));
+    if (!progress || !this.state.services().includes(progress.service)) return;
+    const slot = this.state.reservations().find(
+      row => row._rowIndex === progress.slotRowIndex && !this.state.isTaken(row)
+    );
     if (!slot) return;
-    this.selectedService.set(progress.service);
-    this.selectedSlot.set(slot);
+    this.state.selectedService.set(progress.service);
+    this.state.selectedSlot.set(slot);
     this.pendingBookingProgress = null;
     this.goToStep(2);
-  }
-
-  goToCustomerAuth(): void {
-    const service = this.selectedService();
-    const slot = this.selectedSlot();
-    if (service && slot) {
-      try {
-        sessionStorage.setItem(this.bookingProgressKey(), JSON.stringify({ service, slotRowIndex: slot._rowIndex }));
-      } catch {
-        // El usuario puede autenticarse aunque el navegador bloquee el almacenamiento de sesión.
-      }
-    }
-    this.router.navigate(['/usuario/auth'], { queryParams: { redirect: `/booking/${this.businessId}` } });
-  }
-
-  private loadLastBooking(): void {
-    try {
-      const raw = localStorage.getItem(this.lastBookingKey());
-      if (raw) this.lastBooking.set(JSON.parse(raw));
-    } catch (_error) {
-      // almacenamiento no disponible
-    }
-  }
-
-  private rememberBooking(): void {
-    const booking = this.confirmed();
-    if (!booking) return;
-    try {
-      localStorage.setItem(
-        this.lastBookingKey(),
-        JSON.stringify({
-          servicio: booking.servicio,
-          franja: booking.franja,
-          cliente: booking.cliente,
-          telefono: booking.telefono,
-        })
-      );
-    } catch (_error) {
-      // almacenamiento no disponible
-    }
-  }
-
-  private prefillFromLastBooking(): void {
-    const last = this.lastBooking();
-    if (!last) return;
-    if (!this.bookingForm.get('cliente')?.value && last.cliente) {
-      this.bookingForm.patchValue({ cliente: last.cliente });
-    }
-    if (!this.bookingForm.get('telefono')?.value && last.telefono) {
-      this.bookingForm.patchValue({ telefono: last.telefono });
-    }
-  }
-
-  repeatLastService(): void {
-    const last = this.lastBooking();
-    if (!last) return;
-    if (!this.services().includes(last.servicio)) {
-      this.toast.error('Ese servicio ya no está disponible actualmente.');
-      return;
-    }
-    this.selectedService.set(last.servicio);
-    this.serviceFilter.set('all');
-    const slot = this.reservations().find(r => r.franja === last.franja && !this.isTaken(r));
-    if (slot) this.selectedSlot.set(slot);
-    this.goToStep(2);
-  }
-
-  loadReviews(): void {
-    this.api
-      .getReviews(this.businessId)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: data => this.reviews.set(data),
-        error: () => this.reviews.set([]),
-      });
-  }
-
-  loadRatingStats(): void {
-    this.api
-      .getAverageRating(this.businessId)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: data => this.ratingStats.set(data),
-        error: () => this.ratingStats.set(null),
-      });
-  }
-
-  private readonly POLL_MS = 15_000;
-  private pollSub?: Subscription;
-
-  private setupVisibilityPause(): void {
-    if (typeof document === 'undefined') return;
-    fromEvent(document, 'visibilitychange')
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => {
-        if (document.hidden) {
-          this.pollSub?.unsubscribe();
-        } else {
-          this.startPolling();
-        }
-      });
-  }
-
-  startPolling(): void {
-    // No poll si la pestaña está oculta (ahorro de batería/red, P3)
-    if (typeof document !== 'undefined' && document.hidden) return;
-    this.pollSub?.unsubscribe();
-    this.pollSub = interval(this.POLL_MS)
-      .pipe(
-        startWith(0),
-        switchMap(() => {
-          this.loading.set(true);
-          this.error.set(null);
-          return this.api.getBusinessAvailability(this.businessId);
-        })
-      )
-      .subscribe({
-        next: data => {
-          this.reservations.set(data);
-          this.applyBookingProgress();
-          this.loading.set(false);
-        },
-        error: err => {
-          this.error.set(err.message);
-          this.loading.set(false);
-        },
-      });
-  }
-
-  ngOnDestroy(): void {
-    this.pollSub?.unsubscribe();
-  }
-
-  isTaken(row: Reservation): boolean {
-    const d = (row.disponibilidad ?? '').toLowerCase();
-    return (
-      d.includes('ocup') ||
-      d.includes('reserv') ||
-      d.includes('conf') ||
-      d.includes('pend') ||
-      d.includes('book') ||
-      d.includes('taken')
-    );
-  }
-
-  onSlotSelect(event: Event): void {
-    const value = (event.target as HTMLSelectElement).value;
-    if (!value) {
-      this.selectedSlot.set(null);
-      return;
-    }
-    const row = this.reservations().find(r => String(r._rowIndex) === value);
-    if (!row || this.isTaken(row)) {
-      this.selectedSlot.set(null);
-      return;
-    }
-    this.selectedSlot.set(row);
-  }
-
-  selectService(svc: string): void {
-    this.selectedService.set(svc);
-  }
-
-  goToStep(s: Step): void {
-    if (s === 3) this.prefillFromLastBooking();
-    this.step.set(s);
-  }
-
-  readonly visibleServices = computed(() => {
-    const list = this.services();
-    const currentFilter = this.serviceFilter();
-
-    if (currentFilter === 'all') return list;
-
-    return list.filter(service => {
-      const meta = this.serviceMeta(service);
-
-      if (currentFilter === 'popular') return meta.tag === 'popular';
-      if (currentFilter === 'quick') return meta.durationMinutes <= 45;
-      if (currentFilter === 'premium') return meta.priceNumber >= 90;
-      return true;
-    });
-  });
-
-  serviceIcon(service: string): string {
-    const lowercase = service.toLowerCase();
-
-    if (
-      lowercase.includes('facial') ||
-      lowercase.includes('spa') ||
-      lowercase.includes('mani') ||
-      lowercase.includes('pedi')
-    ) {
-      return 'spa';
-    }
-
-    if (lowercase.includes('corte') || lowercase.includes('barba') || lowercase.includes('peinado')) {
-      return 'content_cut';
-    }
-
-    if (lowercase.includes('maquillaje') || lowercase.includes('celebr') || lowercase.includes('evento')) {
-      return 'brush';
-    }
-
-    if (lowercase.includes('depil') || lowercase.includes('laser')) {
-      return 'auto_awesome';
-    }
-
-    return 'self_improvement';
-  }
-
-  serviceMeta(service: string): {
-    price: string;
-    duration: string;
-    availability: string;
-    summary: string;
-    tag: 'popular' | 'quick' | 'premium';
-    durationMinutes: number;
-    priceNumber: number;
-  } {
-    const lowercase = service.toLowerCase();
-    const configuredPrice = this.servicePrices()[service];
-
-    if (
-      lowercase.includes('facial') ||
-      lowercase.includes('spa') ||
-      lowercase.includes('mani') ||
-      lowercase.includes('pedi')
-    ) {
-      return {
-        price: formatCurrency(configuredPrice ?? 39000),
-        duration: '45 min',
-        availability: 'Hoy',
-        summary: 'Tratamiento completo con cuidado personalizado.',
-        tag: 'popular',
-        durationMinutes: 45,
-        priceNumber: configuredPrice ?? 39000,
-      };
-    }
-
-    if (lowercase.includes('corte') || lowercase.includes('barba') || lowercase.includes('peinado')) {
-      return {
-        price: formatCurrency(configuredPrice ?? 28000),
-        duration: '30 min',
-        availability: '2 huecos',
-        summary: 'Tiempos rápidos para una cita eficiente.',
-        tag: 'quick',
-        durationMinutes: 30,
-        priceNumber: configuredPrice ?? 28000,
-      };
-    }
-
-    if (lowercase.includes('maquillaje') || lowercase.includes('celebr') || lowercase.includes('evento')) {
-      return {
-        price: formatCurrency(configuredPrice ?? 95000),
-        duration: '75 min',
-        availability: 'Agotado',
-        summary: 'Servicio premium para eventos y finishing touch.',
-        tag: 'premium',
-        durationMinutes: 75,
-        priceNumber: configuredPrice ?? 95000,
-      };
-    }
-
-    if (lowercase.includes('depil') || lowercase.includes('laser')) {
-      return {
-        price: formatCurrency(configuredPrice ?? 54000),
-        duration: '50 min',
-        availability: 'Hoy',
-        summary: 'Ideal para rutinas de mantenimiento y confort.',
-        tag: 'popular',
-        durationMinutes: 50,
-        priceNumber: configuredPrice ?? 54000,
-      };
-    }
-
-    return {
-      price: formatCurrency(configuredPrice ?? 49000),
-      duration: '60 min',
-      availability: 'Disponible',
-      summary: 'Servicio de consulta y atención personalizada.',
-      tag: 'popular',
-      durationMinutes: 60,
-      priceNumber: configuredPrice ?? 49000,
-    };
-  }
-
-  goBack(): void {
-    const s = this.step();
-    if (s > 1) this.goToStep((s - 1) as Step);
-    else this.router.navigate(['/']);
-  }
-
-  handleNext(): void {
-    const s = this.step();
-    if (s === 1 && this.selectedService()) {
-      this.goToStep(2);
-    } else if (s === 2 && this.selectedSlot()) {
-      if (!this.isCustomerAuthenticated()) {
-        this.toast.error('Debes iniciar sesión para reservar. Redirigiendo...');
-        this.goToCustomerAuth();
-        return;
-      }
-      this.goToStep(3);
-    } else if (s === 3) {
-      this.submit();
-    }
-  }
-
-  loadServices(): void {
-    this.servicesLoading.set(true);
-    this.servicesError.set(null);
-    this.api
-      .getBusinessServices(this.businessId)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: data => {
-          const names = data.map(s => (typeof s === 'string' ? s : s.nombre));
-          this.services.set(names);
-          this.servicePrices.set(
-            Object.fromEntries(
-              data
-                .filter(s => typeof s !== 'string' && Number.isFinite(s.precio) && s.precio !== null)
-                .map(s => [s.nombre, Number(s.precio)])
-            )
-          );
-          this.applyBookingProgress();
-          if (this.initialServiceName && names.includes(this.initialServiceName)) {
-            this.selectedService.set(this.initialServiceName);
-            if (this.embedded) this.goToStep(2);
-          }
-          this.servicesLoading.set(false);
-        },
-        error: err => {
-          this.servicesError.set(err.message);
-          this.services.set([]);
-          this.servicesLoading.set(false);
-        },
-      });
-  }
-
-  fieldInvalid(name: string): boolean {
-    const ctrl = this.bookingForm.get(name) as AbstractControl;
-    return ctrl.invalid && (ctrl.dirty || ctrl.touched);
-  }
-
-  submit(): void {
-    if (!this.isCustomerAuthenticated()) {
-      this.toast.error('Debes estar registrado para hacer una reserva.');
-      this.router.navigate(['/usuario/auth'], { queryParams: { redirect: `/booking/${this.businessId}` } });
-      return;
-    }
-    this.bookingForm.markAllAsTouched();
-    if (this.bookingForm.invalid || !this.selectedSlot() || !this.selectedService()) {
-      this.submitAttempted.set(true);
-      return;
-    }
-
-    const { cliente, telefono, notas, dataConsent } = this.bookingForm.value;
-    const payload: ConfirmedBooking = {
-      franja: this.selectedSlot()!.franja,
-      cliente: cliente!.trim(),
-      telefono: telefono!.trim(),
-      servicio: this.selectedService()!,
-      notas: notas?.trim() ?? '',
-    };
-
-    const checkoutPayload = { ...payload, dataConsent: dataConsent === true };
-    this.submitting.set(true);
-    this.reservationAttempt = idempotencyAttempt(`reservation:${this.businessId}`, this.reservationAttempt, {
-      businessId: this.businessId,
-      payload: checkoutPayload,
-    });
-    this.api
-      .createBusinessCheckout(this.businessId, checkoutPayload, this.reservationAttempt.key)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: checkout => {
-          clearIdempotencyAttempt(`reservation:${this.businessId}`, this.reservationAttempt);
-          const selected = this.selectedSlot();
-          if (selected) {
-            this.reservations.set(
-              this.reservations().map(row =>
-                row._rowIndex === selected._rowIndex ? { ...row, disponibilidad: 'Reservado' } : row
-              )
-            );
-          }
-          this.confirmed.set(payload);
-          this.reservationId.set(checkout.data?.bookingId ?? '');
-          this.customerId.set(checkout.data?.customerId ?? '');
-          this.paymentDetailsOpen.set(false);
-          this.rememberBooking();
-          this.toast.success('¡Reserva enviada con éxito! Ya está lista para pagar o confirmar.');
-          this.goToStep(4);
-          this.submitting.set(false);
-        },
-        error: err => {
-          this.toast.error(err?.message ?? 'La franja seleccionada ya no está disponible. Elige otra opción.');
-          this.startPolling();
-          this.submitting.set(false);
-        },
-      });
-  }
-
-  startCheckout(): void {
-    const booking = this.confirmed();
-    if (!booking) return;
-
-    const bookingId = this.reservationId();
-    const customerId = this.customerId();
-    if (!bookingId || !customerId) {
-      this.toast.error('No se pudo preparar el checkout; vuelve a intentar la reserva.');
-      return;
-    }
-
-    this.paymentLoading.set(true);
-    this.checkoutInstructions.set(null);
-    const providerId = this.businessId;
-    const amount = this.dueAmount();
-    const method = this.paymentMethod();
-    const successUrl = `${window.location.origin}/payment/success?bookingId=${encodeURIComponent(bookingId)}&providerId=${encodeURIComponent(providerId)}&customerId=${encodeURIComponent(customerId)}`;
-    const cancelUrl = `${window.location.origin}/payment/cancel?bookingId=${encodeURIComponent(bookingId)}&providerId=${encodeURIComponent(providerId)}&customerId=${encodeURIComponent(customerId)}`;
-
-    const checkoutPayload = {
-      bookingId,
-      providerId,
-      customerId,
-      amount,
-      currency: DEFAULT_CURRENCY,
-      method,
-      deposit: this.depositActive(),
-      successUrl,
-      cancelUrl,
-    };
-    this.paymentAttempt = idempotencyAttempt(`payment:${bookingId}`, this.paymentAttempt, checkoutPayload);
-    this.api
-      .createCheckoutSession(
-        {
-          ...checkoutPayload,
-        },
-        this.paymentAttempt.key,
-        this.auth.getCustomerToken() ?? ''
-      )
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: result => {
-          clearIdempotencyAttempt(`payment:${bookingId}`, this.paymentAttempt);
-          this.paymentLoading.set(false);
-          const data = result.data;
-          if (data?.checkoutUrl && isAllowedCheckoutRedirect(data.checkoutUrl)) {
-            window.location.href = data.checkoutUrl;
-            return;
-          }
-          if (data?.instructions) {
-            this.checkoutInstructions.set(data.instructions);
-            this.toast.success(
-              method === 'transfer'
-                ? 'Transferencia registrada: completa el pago con los datos indicados.'
-                : 'Pago en efectivo registrado: paga al completar el servicio.'
-            );
-            return;
-          }
-          this.toast.success('Reserva registrada; el pago quedará listo para completar después.');
-        },
-        error: err => {
-          this.paymentLoading.set(false);
-          this.toast.error(err?.message ?? 'No se pudo iniciar el pago en este momento');
-        },
-      });
-  }
-
-  resetFlow(): void {
-    this.selectedSlot.set(null);
-    this.selectedService.set(null);
-    this.confirmed.set(null);
-    this.reservationId.set('');
-    this.customerId.set('');
-    this.depositActive.set(false);
-    this.paymentDetailsOpen.set(false);
-    this.checkoutInstructions.set(null);
-    this.paymentMethod.set('card');
-    this.bookingForm.reset();
-    this.pollSub?.unsubscribe();
-    this.loadServices();
-    this.loadReviews();
-    this.loadRatingStats();
-    this.startPolling();
-    this.reviewForm.reset({ rating: 0, review: '' });
-    this.goToStep(1);
-  }
-
-  submitReview(): void {
-    const rating = this.reviewForm.get('rating')?.value || 0;
-    if (rating === 0) return;
-
-    this.submitting.set(true);
-    this.api
-      .createReview(this.businessId, {
-        rating,
-        review: this.reviewForm.get('review')?.value?.trim() || undefined,
-      })
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: () => {
-          this.toast.success('¡Gracias por tu reseña!');
-          this.reviewForm.reset({ rating: 0, review: '' });
-          this.loadReviews();
-          this.loadRatingStats();
-          this.submitting.set(false);
-        },
-        error: err => {
-          this.toast.error(err?.message ?? 'Error al enviar reseña');
-          this.submitting.set(false);
-        },
-      });
   }
 }
