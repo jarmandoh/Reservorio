@@ -82,7 +82,7 @@ function passwordMatchValidator(group: { get(controlName: string): { value: unkn
                   class="form-input"
                   formControlName="password"
                   autocomplete="current-password"
-                  placeholder="Mínimo 6 caracteres"
+                  placeholder="Mínimo 12 caracteres"
                 />
                 <button
                   type="button"
@@ -142,7 +142,7 @@ function passwordMatchValidator(group: { get(controlName: string): { value: unkn
                   class="form-input"
                   formControlName="password"
                   autocomplete="new-password"
-                  placeholder="Mínimo 6 caracteres"
+                  placeholder="Mínimo 12 caracteres"
                 />
                 <button
                   type="button"

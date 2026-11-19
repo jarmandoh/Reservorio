@@ -63,7 +63,7 @@ import { AuthCardComponent } from '../../shared/components/auth-card/auth-card.c
             class="form-input"
             formControlName="password"
             autocomplete="current-password"
-            placeholder="Mínimo 6 caracteres"
+            placeholder="Mínimo 12 caracteres"
           />
           <button
             type="button"
@@ -78,7 +78,7 @@ import { AuthCardComponent } from '../../shared/components/auth-card/auth-card.c
           </button>
         </div>
         @if (form.controls.password.touched && form.controls.password.invalid) {
-          <p class="mt-1 text-xs text-error">La contraseña debe tener al menos 6 caracteres.</p>
+          <p class="mt-1 text-xs text-error">La contraseña debe tener al menos 12 caracteres.</p>
         }
       </div>
     </app-auth-card>
@@ -112,7 +112,7 @@ export class CustomerLoginComponent implements OnInit {
     if (this.auth.isCustomerUnlocked()) {
       const redirect = this.redirectUrl;
       if (redirect) this.router.navigateByUrl(redirect);
-      else this.router.navigate(['/customer/history']);
+      else this.router.navigate(['/dashboard']);
     }
   }
 
@@ -130,7 +130,7 @@ export class CustomerLoginComponent implements OnInit {
           this.loading.set(false);
           const redirect = this.redirectUrl;
           if (redirect) this.router.navigateByUrl(redirect);
-          else this.router.navigate(['/customer/history']);
+          else this.router.navigate(['/dashboard']);
         },
         error: err => {
           this.loading.set(false);

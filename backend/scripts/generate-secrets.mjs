@@ -23,12 +23,12 @@ let pin = process.argv[2];
 
 if (!pin) {
   const rl = readline.createInterface({ input, output });
-  pin = (await rl.question('ADMIN_PIN (mínimo 6 caracteres, no "1234"): ')).trim();
+  pin = (await rl.question('ADMIN_PIN (Mínimo 12 caracteres, no "1234"): ')).trim();
   rl.close();
 }
 
 if (!pin || pin === '1234' || pin.length < 6) {
-  console.error('ERROR: el PIN debe tener al menos 6 caracteres y no ser "1234".');
+  console.error('ERROR: el PIN debe tener al menos 12 caracteres y no ser "1234".');
   process.exit(1);
 }
 

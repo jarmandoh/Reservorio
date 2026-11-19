@@ -80,7 +80,7 @@ import { AuthCardComponent } from '../../shared/components/auth-card/auth-card.c
             class="form-input"
             formControlName="password"
             autocomplete="new-password"
-            placeholder="Mínimo 6 caracteres"
+            placeholder="Mínimo 12 caracteres"
           />
           <button
             type="button"
@@ -95,7 +95,7 @@ import { AuthCardComponent } from '../../shared/components/auth-card/auth-card.c
           </button>
         </div>
         @if (form.controls.password.touched && form.controls.password.invalid) {
-          <p class="mt-1 text-xs text-error">La contraseña debe tener al menos 6 caracteres.</p>
+          <p class="mt-1 text-xs text-error">La contraseña debe tener al menos 12 caracteres.</p>
         }
       </div>
 
@@ -199,7 +199,7 @@ export class CustomerRegisterComponent {
                   this.error.set('Cuenta creada. Confirma tu correo y luego inicia sesión.');
                   return;
                 }
-                this.router.navigate(['/customer/history']);
+                this.router.navigate(['/dashboard']);
               },
               error: err => {
                 this.loading.set(false);

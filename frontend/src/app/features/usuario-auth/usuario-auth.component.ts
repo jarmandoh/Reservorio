@@ -93,7 +93,7 @@ function passwordMatchValidator(group: { get(controlName: string): { value: unkn
                   class="form-input"
                   formControlName="password"
                   autocomplete="current-password"
-                  placeholder="Mínimo 6 caracteres"
+                  placeholder="Mínimo 12 caracteres"
                   [attr.aria-invalid]="
                     loginForm.controls.password.invalid && loginForm.controls.password.touched ? 'true' : null
                   "
@@ -115,7 +115,7 @@ function passwordMatchValidator(group: { get(controlName: string): { value: unkn
               </div>
               @if (loginForm.controls.password.touched && loginForm.controls.password.invalid) {
                 <p id="password-error" class="mt-1 text-xs text-error" role="alert">
-                  La contraseña debe tener al menos 6 caracteres.
+                  La contraseña debe tener al menos 12 caracteres.
                 </p>
               }
             </div>
@@ -198,7 +198,7 @@ function passwordMatchValidator(group: { get(controlName: string): { value: unkn
                   class="form-input"
                   formControlName="password"
                   autocomplete="new-password"
-                  placeholder="Mínimo 6 caracteres"
+                  placeholder="Mínimo 12 caracteres"
                   [attr.aria-invalid]="
                     registerForm.controls.password.invalid && registerForm.controls.password.touched ? 'true' : null
                   "
@@ -222,7 +222,7 @@ function passwordMatchValidator(group: { get(controlName: string): { value: unkn
               </div>
               @if (registerForm.controls.password.touched && registerForm.controls.password.invalid) {
                 <p id="register-password-error" class="mt-1 text-xs text-error" role="alert">
-                  La contraseña debe tener al menos 6 caracteres.
+                  La contraseña debe tener al menos 12 caracteres.
                 </p>
               }
             </div>
@@ -438,7 +438,7 @@ export class UsuarioAuthComponent implements AfterViewInit, OnInit {
     if (this.auth.isCustomerUnlocked()) {
       const redirect = this.redirectUrl;
       if (redirect) this.router.navigateByUrl(redirect);
-      else this.router.navigate(['/customer/history']);
+      else this.router.navigate(['/usuario/dashboard']);
     }
   }
 
@@ -459,7 +459,7 @@ export class UsuarioAuthComponent implements AfterViewInit, OnInit {
             this.loading.set(false);
             const redirect = this.redirectUrl;
             if (redirect) this.router.navigateByUrl(redirect);
-            else this.router.navigate(['/customer/history']);
+            else this.router.navigate(['/usuario/dashboard']);
           },
           error: err => {
             this.loading.set(false);
@@ -496,7 +496,7 @@ export class UsuarioAuthComponent implements AfterViewInit, OnInit {
                   this.error.set('Cuenta creada. Confirma tu correo y luego inicia sesión.');
                   return;
                 }
-                this.router.navigate(['/customer/history']);
+                this.router.navigate(['/usuario/dashboard']);
               },
               error: err => {
                 this.loading.set(false);

@@ -44,7 +44,7 @@ export class CustomerMagicVerifyComponent implements OnInit {
 
   ngOnInit(): void {
     if (this.auth.isCustomerUnlocked()) {
-      this.router.navigate(['/customer/history']);
+      this.router.navigate(['/dashboard']);
       return;
     }
 
@@ -60,7 +60,7 @@ export class CustomerMagicVerifyComponent implements OnInit {
               this.error.set('Esta cuenta no tiene permisos de cliente.');
               return;
             }
-            this.router.navigate(['/customer/history']);
+            this.router.navigate(['/dashboard']);
           },
           error: () => this.error.set('No se pudo validar el rol de esta cuenta.'),
         });
@@ -81,7 +81,7 @@ export class CustomerMagicVerifyComponent implements OnInit {
       .subscribe({
         next: () => {
           this.loading.set(false);
-          this.router.navigate(['/customer/history']);
+          this.router.navigate(['/dashboard']);
         },
         error: err => {
           this.loading.set(false);

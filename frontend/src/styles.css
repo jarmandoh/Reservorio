@@ -761,3 +761,10 @@
   background-color: #161d27;
   border-color: #3a4350;
 }
+
+/* ── View Transitions: mantener el menú y la barra lateral fijos ── */
+::view-transition-group(customer-sidebar),
+::view-transition-old(customer-sidebar),
+::view-transition-new(customer-sidebar) {
+  animation: none !important;
+}

@@ -1289,7 +1289,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   goCustomer(): void {
-    this.router.navigate(['/customer/history']);
+    this.router.navigate(['/dashboard']);
   }
 
   // ── Dropdown Mi cuenta ──────────────────────────────────────────────
@@ -1327,7 +1327,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   goAccount(): void {
     // Redirige al panel correspondiente según la sesión activa
     if (this.customerName()) {
-      this.router.navigate(['/customer/history']);
+      this.router.navigate(['/usuario/dashboard']);
     } else if (this.ownerName()) {
       this.router.navigate(['/propietario/dashboard']);
     } else if (this.businessName()) {

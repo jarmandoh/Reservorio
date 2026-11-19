@@ -152,7 +152,7 @@ type AccountType = 'usuario' | 'negocio';
               class="form-input"
               formControlName="password"
               autocomplete="new-password"
-              placeholder="Mínimo 6 caracteres"
+              placeholder="Mínimo 12 caracteres"
             />
             <button
               type="button"
@@ -182,7 +182,7 @@ type AccountType = 'usuario' | 'negocio';
               [type]="showPassword() ? 'text' : 'password'"
               class="form-input"
               formControlName="password"
-              placeholder="Mínimo 6 caracteres"
+              placeholder="Mínimo 12 caracteres"
               autocomplete="new-password"
               [attr.aria-invalid]="form.controls.password.touched && form.controls.password.invalid ? 'true' : null"
               [attr.aria-describedby]="
@@ -202,7 +202,7 @@ type AccountType = 'usuario' | 'negocio';
             </button>
           </div>
           @if (form.controls.password.touched && form.controls.password.invalid) {
-            <p id="password-error" class="text-xs text-error mt-1">Mínimo 6 caracteres</p>
+            <p id="password-error" class="text-xs text-error mt-1">Mínimo 12 caracteres</p>
           }
         </div>
         <div>
@@ -376,7 +376,7 @@ export class AccountCreateComponent {
                       this.notice.set('Cuenta creada. Confirma tu correo para activar el acceso.');
                       setTimeout(() => this.router.navigate(['/usuario/auth']), 1800);
                     } else {
-                      this.router.navigate(['/customer/history']);
+                      this.router.navigate(['/dashboard']);
                     }
                   },
                   error: err => {
@@ -402,7 +402,7 @@ export class AccountCreateComponent {
                       .loginCustomerWithOtp(email, res.data.debugCode)
                       .pipe(takeUntilDestroyed(this.destroyRef))
                       .subscribe({
-                        next: () => this.router.navigate(['/customer/history']),
+                        next: () => this.router.navigate(['/dashboard']),
                         error: () => {
                           this.notice.set('Cuenta creada. Revisa tu correo para el código de acceso.');
                           setTimeout(() => this.router.navigate(['/usuario/auth']), 1500);

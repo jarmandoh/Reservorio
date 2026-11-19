@@ -87,7 +87,7 @@ const PAYMENT_OPTIONS: { id: PaymentMethod; label: string; icon: string }[] = [
             <span class="material-icons-round text-base">payment</span>
             Pagar ahora
           </button>
-          <a routerLink="/customer/history" class="btn-secondary flex-1 text-center">
+          <a routerLink="/usuario/dashboard/historial" class="btn-secondary flex-1 text-center">
             <span class="material-icons-round text-base">history</span>
             Ver mis reservas
           </a>

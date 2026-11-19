@@ -161,7 +161,14 @@ function getRedirectForExpiry(router: Router, role?: string, businessId?: string
 
   // Al expirar la sesión de cliente, el destino coherente es su login. Evita
   // competir con CustomerHistoryComponent, que también gestiona el 401.
-  if (role === 'customer' || current.startsWith('/customer/history')) {
+  if (
+    role === 'customer' ||
+    current.startsWith('/customer') ||
+    current.startsWith('/dashboard') ||
+    current.startsWith('/historial') ||
+    current.startsWith('/favoritos') ||
+    current.startsWith('/perfil')
+  ) {
     return ['/usuario/auth'];
   }
 

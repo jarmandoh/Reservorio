@@ -353,7 +353,7 @@ export class AccountMenuComponent {
       return { label: 'Sesión de negocio activa', route: '/propietario/dashboard', icon: 'storefront' };
     }
     if (this.auth.getCustomerToken()) {
-      return { label: 'Sesión de cliente activa', route: '/customer/history', icon: 'person' };
+      return { label: 'Sesión de cliente activa', route: '/usuario/dashboard', icon: 'person' };
     }
     if (this.sessionStore.isAuthenticated() || this.auth.hasActiveSession()) {
       return { label: 'Sesión activa', route: '', icon: 'account_circle' };

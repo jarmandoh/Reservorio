@@ -98,7 +98,7 @@ function validateRuntimeConfig() {
     const hasAdminHash = /^\$2[aby]\$/.test(String(process.env.ADMIN_PIN_HASH ?? '').trim());
     if (!hasAdminHash && (!adminPin || adminPin === '1234' || adminPin.length < 6)) {
       throw new Error(
-        'ADMIN_PIN debe configurarse con una clave segura (≠ 1234, ≥ 6 caracteres) o definirse ADMIN_PIN_HASH (bcrypt) en producción'
+        'ADMIN_PIN debe configurarse con una clave segura (≠ 1234, ≥ 12 caracteres) o definirse ADMIN_PIN_HASH (bcrypt) en producción'
       );
     }
 
@@ -270,7 +270,7 @@ app.use((req, res, next) => {
       const labels = { method: req.method, route, status: String(res.statusCode) };
       httpRequestsTotal.inc(labels);
       httpRequestDuration.observe(labels, durationMs / 1000);
-    } catch {}
+    } catch { }
 
     const level = res.statusCode >= 500 ? 'error' : res.statusCode >= 400 ? 'warn' : 'info';
     logger[level](
@@ -448,7 +448,7 @@ function setupGracefulShutdown(server) {
     if (reminderIntervalRef) {
       try {
         clearInterval(reminderIntervalRef);
-      } catch {}
+      } catch { }
       reminderIntervalRef = null;
     }
     if (idempotencyCleanupIntervalRef) {

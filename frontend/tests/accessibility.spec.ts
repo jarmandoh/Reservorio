@@ -109,7 +109,7 @@ test('invalid login fields expose and associate their validation messages', asyn
   await password.press('Tab');
   await expect(password).toHaveAttribute('aria-invalid', 'true');
   await expect(password).toHaveAttribute('aria-describedby', 'password-error');
-  await expect(page.getByText('La contraseña debe tener al menos 6 caracteres.')).toBeVisible();
+  await expect(page.getByText('La contraseña debe tener al menos 12 caracteres.')).toBeVisible();
   await expectNoAxeViolations(page);
 });
 

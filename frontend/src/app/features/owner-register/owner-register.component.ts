@@ -64,7 +64,7 @@ import { AuthCardComponent } from '../../shared/components/auth-card/auth-card.c
             class="form-input"
             formControlName="password"
             autocomplete="new-password"
-            placeholder="Mínimo 6 caracteres"
+            placeholder="Mínimo 12 caracteres"
           />
           <button
             type="button"
