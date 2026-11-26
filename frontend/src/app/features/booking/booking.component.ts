@@ -1,13 +1,4 @@
-import {
-  Component,
-  OnInit,
-  OnDestroy,
-  signal,
-  computed,
-  inject,
-  DestroyRef,
-  Input,
-} from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, computed, inject, DestroyRef, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -37,7 +28,6 @@ import { BookingReviewsComponent } from './booking-reviews.component';
   imports: [
     CommonModule,
     ReactiveFormsModule,
-    RouterLink,
     BookingStep1ServiceComponent,
     BookingStep2SlotComponent,
     BookingStep3FormComponent,
@@ -51,15 +41,20 @@ import { BookingReviewsComponent } from './booking-reviews.component';
       [class.booking-embedded]="embedded"
     >
       <div class="booking-container mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
-        <div class="booking-layout grid gap-8 lg:min-h-[calc(100vh-5rem)] lg:grid-cols-[minmax(0,1fr)_430px] lg:items-start lg:gap-12">
-
+        <div
+          class="booking-layout grid gap-8 lg:min-h-[calc(100vh-5rem)] lg:grid-cols-[minmax(0,1fr)_430px] lg:items-start lg:gap-12"
+        >
           <!-- ── Left panel: hero + steps (hidden in embedded mode) ── -->
           @if (!embedded) {
-            <section class="order-2 lg:order-1 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto lg:overscroll-contain lg:pr-6">
+            <section
+              class="order-2 lg:order-1 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto lg:overscroll-contain lg:pr-6"
+            >
               <div class="flex flex-col justify-center gap-8 lg:min-h-full">
                 <!-- Headline -->
                 <div class="space-y-5">
-                  <span class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] text-brand-light backdrop-blur-sm">
+                  <span
+                    class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] text-brand-light backdrop-blur-sm"
+                  >
                     <span class="material-icons-round text-[0.9rem]">bolt</span>
                     Reserva sin esperas
                   </span>
@@ -68,7 +63,8 @@ import { BookingReviewsComponent } from './booking-reviews.component';
                     <span class="mt-1 block text-brand-sky">Rápido, claro y al instante.</span>
                   </h1>
                   <p class="max-w-xl text-sm leading-6 text-slate-300 sm:text-base">
-                    Elige tu servicio, revisa la disponibilidad y deja tus datos para pedir la reserva en un flujo simple.
+                    Elige tu servicio, revisa la disponibilidad y deja tus datos para pedir la reserva en un flujo
+                    simple.
                   </p>
                 </div>
 
@@ -77,7 +73,10 @@ import { BookingReviewsComponent } from './booking-reviews.component';
                   @for (item of instructionItems; track item.order; let last = $last) {
                     <li class="relative flex gap-4" [class.pb-7]="!last" [class.pb-1]="last">
                       @if (!last) {
-                        <span class="absolute left-4 top-9 h-[calc(100%-2.25rem)] w-px bg-gradient-to-b from-white/25 to-transparent" aria-hidden="true"></span>
+                        <span
+                          class="absolute left-4 top-9 h-[calc(100%-2.25rem)] w-px bg-gradient-to-b from-white/25 to-transparent"
+                          aria-hidden="true"
+                        ></span>
                       }
                       <span
                         class="relative z-10 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full font-mono text-xs font-semibold text-white backdrop-blur-sm transition"
@@ -94,15 +93,27 @@ import { BookingReviewsComponent } from './booking-reviews.component';
                         }
                       </span>
                       <div class="pt-0.5">
-                        <p class="font-display text-base font-semibold text-white" [class.opacity-50]="state.step() < item.stepValue">{{ item.title }}</p>
-                        <p class="mt-1 text-sm leading-6 text-slate-300" [class.opacity-50]="state.step() < item.stepValue">{{ item.description }}</p>
+                        <p
+                          class="font-display text-base font-semibold text-white"
+                          [class.opacity-50]="state.step() < item.stepValue"
+                        >
+                          {{ item.title }}
+                        </p>
+                        <p
+                          class="mt-1 text-sm leading-6 text-slate-300"
+                          [class.opacity-50]="state.step() < item.stepValue"
+                        >
+                          {{ item.description }}
+                        </p>
                       </div>
                     </li>
                   }
                 </ol>
 
                 <!-- Tip -->
-                <div class="flex items-start gap-3 rounded-2xl border-l-2 border-brand-sky/60 bg-white/[0.07] px-4 py-3.5 backdrop-blur-sm sm:max-w-xl">
+                <div
+                  class="flex items-start gap-3 rounded-2xl border-l-2 border-brand-sky/60 bg-white/[0.07] px-4 py-3.5 backdrop-blur-sm sm:max-w-xl"
+                >
                   <span class="material-icons-round mt-0.5 flex-shrink-0 text-brand-light">lightbulb</span>
                   <p class="text-sm leading-6 text-slate-200">
                     <span class="font-semibold text-white">Puedes volver atrás en cualquier momento.</span>
@@ -115,11 +126,16 @@ import { BookingReviewsComponent } from './booking-reviews.component';
 
           <!-- ── Right panel: booking card ── -->
           <section class="order-1 flex justify-center lg:order-2 lg:justify-end">
-            <div class="booking-card-shell w-full max-w-[430px] rounded-[2.1rem] border border-white/10 bg-white/5 p-3 shadow-[0_32px_80px_rgba(0,0,0,0.45)] backdrop-blur-md">
-              <div class="overflow-hidden rounded-[1.8rem] border border-primary-fixed/20 bg-surface-lowest text-on-surface shadow-soft">
-
+            <div
+              class="booking-card-shell w-full max-w-[430px] rounded-[2.1rem] border border-white/10 bg-white/5 p-3 shadow-[0_32px_80px_rgba(0,0,0,0.45)] backdrop-blur-md"
+            >
+              <div
+                class="overflow-hidden rounded-[1.8rem] border border-primary-fixed/20 bg-surface-lowest text-on-surface shadow-soft"
+              >
                 <!-- Card header -->
-                <header class="border-b border-white/10 bg-gradient-to-br from-brand-strong via-primary to-primary-container px-5 py-4 text-white">
+                <header
+                  class="border-b border-white/10 bg-gradient-to-br from-brand-strong via-primary to-primary-container px-5 py-4 text-white"
+                >
                   <div class="flex items-center gap-3">
                     <!-- Back / done icon -->
                     @if (!embedded) {
@@ -143,7 +159,11 @@ import { BookingReviewsComponent } from './booking-reviews.component';
                       <div class="flex items-center gap-2">
                         <p class="truncate text-sm font-semibold">{{ state.business()?.name ?? 'Reserva tu cita' }}</p>
                         @if (state.business()?.verified) {
-                          <span class="material-icons-round text-[0.9rem] text-green-400 flex-shrink-0" title="Negocio verificado">verified</span>
+                          <span
+                            class="material-icons-round text-[0.9rem] text-green-400 flex-shrink-0"
+                            title="Negocio verificado"
+                            >verified</span
+                          >
                         }
                       </div>
                       <div class="flex items-center gap-2 mt-0.5">
@@ -151,7 +171,9 @@ import { BookingReviewsComponent } from './booking-reviews.component';
                         @if (state.ratingStats()?.averageRating && state.ratingStats()!.averageRating > 0) {
                           <div class="flex items-center gap-1 text-xs bg-white/10 px-2 py-0.5 rounded-full">
                             <span class="material-icons-round text-[0.7rem] text-yellow-300">star</span>
-                            <span class="text-white/90">{{ (state.ratingStats()?.averageRating || 0).toFixed(1) }}</span>
+                            <span class="text-white/90">{{
+                              (state.ratingStats()?.averageRating || 0).toFixed(1)
+                            }}</span>
                           </div>
                         }
                       </div>
@@ -165,7 +187,9 @@ import { BookingReviewsComponent } from './booking-reviews.component';
                         aria-label="Actualizar disponibilidad"
                         [disabled]="state.loading()"
                       >
-                        <span class="material-icons-round text-[1.15rem]" [class.animate-spin]="state.loading()">refresh</span>
+                        <span class="material-icons-round text-[1.15rem]" [class.animate-spin]="state.loading()"
+                          >refresh</span
+                        >
                       </button>
                     }
                   </div>
@@ -177,12 +201,20 @@ import { BookingReviewsComponent } from './booking-reviews.component';
                         Paso {{ state.step() }} de 4
                       </span>
                       <span class="text-xs font-medium text-white/60">
-                        {{ state.step() === 1 ? 'Servicio' : state.step() === 2 ? 'Horario' : state.step() === 3 ? 'Datos' : 'Confirmación' }}
+                        {{
+                          state.step() === 1
+                            ? 'Servicio'
+                            : state.step() === 2
+                              ? 'Horario'
+                              : state.step() === 3
+                                ? 'Datos'
+                                : 'Confirmación'
+                        }}
                       </span>
                     </div>
                     <!-- Step dots -->
                     <div class="flex gap-1.5 mb-2">
-                      @for (s of [1,2,3,4]; track s) {
+                      @for (s of [1, 2, 3, 4]; track s) {
                         <div
                           class="h-1.5 flex-1 rounded-full transition-all duration-300"
                           [class.bg-white]="s <= state.step()"
@@ -196,17 +228,11 @@ import { BookingReviewsComponent } from './booking-reviews.component';
                 <!-- ── Step content ── -->
                 <div class="flex flex-col">
                   @if (state.step() === 1) {
-                    <app-booking-step1-service
-                      (repeatLast)="repeatLastService()"
-                      (retryServices)="loadServices()"
-                    />
+                    <app-booking-step1-service (repeatLast)="repeatLastService()" (retryServices)="loadServices()" />
                   }
 
                   @if (state.step() === 2) {
-                    <app-booking-step2-slot
-                      (changeService)="goToStep(1)"
-                      (retry)="startPolling()"
-                    />
+                    <app-booking-step2-slot (changeService)="goToStep(1)" (retry)="startPolling()" />
                   }
 
                   @if (state.step() === 3) {
@@ -224,14 +250,8 @@ import { BookingReviewsComponent } from './booking-reviews.component';
                   }
 
                   @if (state.step() === 4) {
-                    <app-booking-step4-confirmation
-                      (startCheckout)="startCheckout()"
-                      (newBooking)="resetFlow()"
-                    />
-                    <app-booking-reviews
-                      [form]="reviewForm"
-                      (submitReview)="submitReview()"
-                    />
+                    <app-booking-step4-confirmation (startCheckout)="startCheckout()" (newBooking)="resetFlow()" />
+                    <app-booking-reviews [form]="reviewForm" (submitReview)="submitReview()" />
                   }
 
                   <!-- ── Sticky bottom CTA (steps 1-3) ── -->
@@ -257,38 +277,41 @@ import { BookingReviewsComponent } from './booking-reviews.component';
               </div>
             </div>
           </section>
-
         </div>
       </div>
     </div>
   `,
-  styles: [`
-    .booking-embedded {
-      min-height: 0 !important;
-      height: auto;
-      background: transparent !important;
-    }
-    .booking-embedded .booking-container {
-      max-width: none;
-      padding: 0;
-    }
-    .booking-embedded .booking-layout {
-      display: block;
-      min-height: 0;
-    }
-    .booking-embedded .booking-card-shell {
-      max-width: none;
-      padding: 0;
-      border: 0;
-      border-radius: 0;
-      background: transparent;
-      box-shadow: none;
-      backdrop-filter: none;
-    }
-    @media (prefers-reduced-motion: reduce) {
-      .booking-embedded * { scroll-behavior: auto !important; }
-    }
-  `],
+  styles: [
+    `
+      .booking-embedded {
+        min-height: 0 !important;
+        height: auto;
+        background: transparent !important;
+      }
+      .booking-embedded .booking-container {
+        max-width: none;
+        padding: 0;
+      }
+      .booking-embedded .booking-layout {
+        display: block;
+        min-height: 0;
+      }
+      .booking-embedded .booking-card-shell {
+        max-width: none;
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
+        backdrop-filter: none;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .booking-embedded * {
+          scroll-behavior: auto !important;
+        }
+      }
+    `,
+  ],
 })
 export class BookingComponent implements OnInit, OnDestroy {
   // ── DI ────────────────────────────────────────────────────────────────
@@ -353,9 +376,24 @@ export class BookingComponent implements OnInit, OnDestroy {
   private pollSub?: Subscription;
 
   readonly instructionItems = [
-    { order: '01', stepValue: 1, title: 'Elige qué quieres reservar', description: 'Selecciona el servicio y avanza al siguiente paso.' },
-    { order: '02', stepValue: 2, title: 'Escoge el mejor horario', description: 'Revisa la disponibilidad y toma la franja que mejor te sirva.' },
-    { order: '03', stepValue: 3, title: 'Confirma en un momento', description: 'Deja tus datos, revisa el resumen y envía la reserva.' },
+    {
+      order: '01',
+      stepValue: 1,
+      title: 'Elige qué quieres reservar',
+      description: 'Selecciona el servicio y avanza al siguiente paso.',
+    },
+    {
+      order: '02',
+      stepValue: 2,
+      title: 'Escoge el mejor horario',
+      description: 'Revisa la disponibilidad y toma la franja que mejor te sirva.',
+    },
+    {
+      order: '03',
+      stepValue: 3,
+      title: 'Confirma en un momento',
+      description: 'Deja tus datos, revisa el resumen y envía la reserva.',
+    },
   ] as const;
 
   // ── Lifecycle ──────────────────────────────────────────────────────────
@@ -374,10 +412,16 @@ export class BookingComponent implements OnInit, OnDestroy {
     // Load business metadata
     this.api
       .getBusinesses()
-      .pipe(catchError(() => of([])), takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        catchError(() => of([])),
+        takeUntilDestroyed(this.destroyRef)
+      )
       .subscribe(list => {
         const found = list.find(b => b.id === this.businessId);
-        if (!found) { location.replace('/'); return; }
+        if (!found) {
+          location.replace('/');
+          return;
+        }
         this.state.business.set(found);
       });
 
@@ -513,7 +557,9 @@ export class BookingComponent implements OnInit, OnDestroy {
     if (service && slot) {
       try {
         sessionStorage.setItem(this.bookingProgressKey(), JSON.stringify({ service, slotRowIndex: slot._rowIndex }));
-      } catch { /* storage blocked */ }
+      } catch {
+        /* storage blocked */
+      }
     }
     this.router.navigate(['/customer/login'], { queryParams: { redirect: `/booking/${this.businessId}` } });
   }
@@ -557,9 +603,9 @@ export class BookingComponent implements OnInit, OnDestroy {
           const selected = this.state.selectedSlot();
           if (selected) {
             this.state.reservations.set(
-              this.state.reservations().map(row =>
-                row._rowIndex === selected._rowIndex ? { ...row, disponibilidad: 'Reservado' } : row
-              )
+              this.state
+                .reservations()
+                .map(row => (row._rowIndex === selected._rowIndex ? { ...row, disponibilidad: 'Reservado' } : row))
             );
           }
           this.state.confirmed.set(payload);
@@ -601,10 +647,15 @@ export class BookingComponent implements OnInit, OnDestroy {
     const cancelUrl = `${window.location.origin}/payment/cancel?bookingId=${encodeURIComponent(bookingId)}&providerId=${encodeURIComponent(providerId)}&customerId=${encodeURIComponent(customerId)}`;
 
     const checkoutPayload = {
-      bookingId, providerId, customerId, amount,
-      currency: DEFAULT_CURRENCY, method,
+      bookingId,
+      providerId,
+      customerId,
+      amount,
+      currency: DEFAULT_CURRENCY,
+      method,
       deposit: this.state.depositActive(),
-      successUrl, cancelUrl,
+      successUrl,
+      cancelUrl,
     };
     this.paymentAttempt = idempotencyAttempt(`payment:${bookingId}`, this.paymentAttempt, checkoutPayload);
 
@@ -703,7 +754,10 @@ export class BookingComponent implements OnInit, OnDestroy {
     if (!token || !payload?.customerId) return;
     this.api
       .getCustomerMe(token)
-      .pipe(takeUntilDestroyed(this.destroyRef), catchError(() => of(null)))
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        catchError(() => of(null))
+      )
       .subscribe(customer => {
         if (!customer) return;
         const patch: Record<string, string> = {};
@@ -744,16 +798,25 @@ export class BookingComponent implements OnInit, OnDestroy {
     try {
       const raw = localStorage.getItem(this.lastBookingKey());
       if (raw) this.state.lastBooking.set(JSON.parse(raw));
-    } catch { /* storage unavailable */ }
+    } catch {
+      /* storage unavailable */
+    }
   }
 
   private rememberBooking(booking: ConfirmedBooking): void {
     try {
-      localStorage.setItem(this.lastBookingKey(), JSON.stringify({
-        servicio: booking.servicio, franja: booking.franja,
-        cliente: booking.cliente, telefono: booking.telefono,
-      }));
-    } catch { /* storage unavailable */ }
+      localStorage.setItem(
+        this.lastBookingKey(),
+        JSON.stringify({
+          servicio: booking.servicio,
+          franja: booking.franja,
+          cliente: booking.cliente,
+          telefono: booking.telefono,
+        })
+      );
+    } catch {
+      /* storage unavailable */
+    }
   }
 
   private prefillFromLastBooking(): void {
@@ -776,15 +839,17 @@ export class BookingComponent implements OnInit, OnDestroy {
       if (typeof progress.service === 'string' && Number.isInteger(progress.slotRowIndex)) {
         this.pendingBookingProgress = { service: progress.service, slotRowIndex: progress.slotRowIndex };
       }
-    } catch { /* storage unavailable */ }
+    } catch {
+      /* storage unavailable */
+    }
   }
 
   private applyBookingProgress(): void {
     const progress = this.pendingBookingProgress;
     if (!progress || !this.state.services().includes(progress.service)) return;
-    const slot = this.state.reservations().find(
-      row => row._rowIndex === progress.slotRowIndex && !this.state.isTaken(row)
-    );
+    const slot = this.state
+      .reservations()
+      .find(row => row._rowIndex === progress.slotRowIndex && !this.state.isTaken(row));
     if (!slot) return;
     this.state.selectedService.set(progress.service);
     this.state.selectedSlot.set(slot);
