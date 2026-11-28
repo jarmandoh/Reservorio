@@ -1,4 +1,6 @@
-import { ApplicationConfig, isDevMode } from '@angular/core';
+import { ApplicationConfig, isDevMode, LOCALE_ID } from '@angular/core';
+import { registerLocaleData } from '@angular/common';
+import localeEsCo from '@angular/common/locales/es-CO';
 import {
   provideRouter,
   withInMemoryScrolling,
@@ -11,6 +13,8 @@ import { provideServiceWorker } from '@angular/service-worker';
 
 import { routes } from './app.routes';
 import { authInterceptor, errorInterceptor } from './core/interceptors/http.interceptor';
+
+registerLocaleData(localeEsCo);
 
 function isInternalShellTransition(from: ActivatedRouteSnapshot, to: ActivatedRouteSnapshot): boolean {
   const getUrl = (snapshot: ActivatedRouteSnapshot | null): string => {
@@ -40,6 +44,7 @@ function isInternalShellTransition(from: ActivatedRouteSnapshot, to: ActivatedRo
 
 export const appConfig: ApplicationConfig = {
   providers: [
+    { provide: LOCALE_ID, useValue: 'es-CO' },
     provideRouter(
       routes,
       withComponentInputBinding(),

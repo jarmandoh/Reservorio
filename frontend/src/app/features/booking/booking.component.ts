@@ -194,35 +194,75 @@ import { BookingReviewsComponent } from './booking-reviews.component';
                     }
                   </div>
 
-                  <!-- Progress bar -->
-                  <div class="mt-4">
-                    <div class="flex items-center justify-between mb-2">
-                      <span class="text-xs font-semibold uppercase tracking-[0.18em] text-white/80">
-                        Paso {{ state.step() }} de 4
-                      </span>
-                      <span class="text-xs font-medium text-white/60">
-                        {{
-                          state.step() === 1
-                            ? 'Servicio'
-                            : state.step() === 2
-                              ? 'Horario'
-                              : state.step() === 3
-                                ? 'Datos'
-                                : 'Confirmación'
-                        }}
-                      </span>
+                  @if (embedded) {
+                    <div class="booking-modal-summary" aria-label="Resumen de tu reserva">
+                      <div class="booking-modal-steps" aria-label="Progreso de la reserva">
+                        @for (item of bookingSteps; track item.value) {
+                          <div
+                            class="booking-modal-step"
+                            [class.is-complete]="state.step() > item.value"
+                            [class.is-current]="state.step() === item.value"
+                            [attr.aria-current]="state.step() === item.value ? 'step' : null"
+                          >
+                            <span class="booking-modal-step-icon material-icons-round" aria-hidden="true">
+                              {{ state.step() > item.value ? 'check' : item.icon }}
+                            </span>
+                            <span class="booking-modal-step-label">{{ item.label }}</span>
+                          </div>
+                        }
+                      </div>
+
+                      <div class="booking-selection-card">
+                        <div class="booking-selection-item">
+                          <span class="material-icons-round" aria-hidden="true">spa</span>
+                          <div>
+                            <span class="booking-selection-label">Servicio</span>
+                            <strong>{{ state.selectedService() || 'Por elegir' }}</strong>
+                          </div>
+                        </div>
+                        <div class="booking-selection-divider" aria-hidden="true"></div>
+                        <div class="booking-selection-item">
+                          <span class="material-icons-round" aria-hidden="true">schedule</span>
+                          <div>
+                            <span class="booking-selection-label">Horario</span>
+                            <strong class="booking-selection-time">{{
+                              formatTime24(state.selectedSlot()?.franja) || 'Por elegir'
+                            }}</strong>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    <!-- Step dots -->
-                    <div class="flex gap-1.5 mb-2">
-                      @for (s of [1, 2, 3, 4]; track s) {
-                        <div
-                          class="h-1.5 flex-1 rounded-full transition-all duration-300"
-                          [class.bg-white]="s <= state.step()"
-                          [class.bg-white/25]="s > state.step()"
-                        ></div>
-                      }
+                  } @else {
+                    <!-- Progress bar -->
+                    <div class="mt-4">
+                      <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-semibold uppercase tracking-[0.18em] text-white/80">
+                          Paso {{ state.step() }} de 4
+                        </span>
+                        <span class="text-xs font-medium text-white/60">
+                          {{
+                            state.step() === 1
+                              ? 'Servicio'
+                              : state.step() === 2
+                                ? 'Horario'
+                                : state.step() === 3
+                                  ? 'Datos'
+                                  : 'Confirmación'
+                          }}
+                        </span>
+                      </div>
+                      <!-- Step dots -->
+                      <div class="flex gap-1.5 mb-2">
+                        @for (s of [1, 2, 3, 4]; track s) {
+                          <div
+                            class="h-1.5 flex-1 rounded-full transition-all duration-300"
+                            [class.bg-white]="s <= state.step()"
+                            [class.bg-white/25]="s > state.step()"
+                          ></div>
+                        }
+                      </div>
                     </div>
-                  </div>
+                  }
                 </header>
 
                 <!-- ── Step content ── -->
@@ -232,7 +272,11 @@ import { BookingReviewsComponent } from './booking-reviews.component';
                   }
 
                   @if (state.step() === 2) {
-                    <app-booking-step2-slot (changeService)="goToStep(1)" (retry)="startPolling()" />
+                    <app-booking-step2-slot
+                      [showSelectedSlotSummary]="!embedded"
+                      (changeService)="goToStep(1)"
+                      (retry)="startPolling()"
+                    />
                   }
 
                   @if (state.step() === 3) {
@@ -242,6 +286,7 @@ import { BookingReviewsComponent } from './booking-reviews.component';
                       [verified]="state.business()?.verified ?? false"
                       [reviewCount]="state.reviews().length"
                       [cancellationPolicy]="state.business()?.cancellationPolicy"
+                      [showBookingSummary]="!embedded"
                       (editService)="goToStep(1)"
                       (editSlot)="goToStep(2)"
                       (goToAuth)="goToCustomerAuth()"
@@ -259,7 +304,7 @@ import { BookingReviewsComponent } from './booking-reviews.component';
                     <div class="border-t border-outline-variant/20 bg-white px-5 py-4">
                       <button
                         class="btn-primary w-full min-h-[56px] text-base"
-                        [disabled]="!canProceed() || state.submitting()"
+                        [disabled]="state.submitting()"
                         (click)="handleNext()"
                         [attr.aria-label]="nextLabel()"
                       >
@@ -305,9 +350,146 @@ import { BookingReviewsComponent } from './booking-reviews.component';
         box-shadow: none;
         backdrop-filter: none;
       }
+      .booking-embedded .booking-modal-summary {
+        margin-top: 1rem;
+      }
+      .booking-embedded .booking-modal-steps {
+        position: relative;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.35rem;
+      }
+      .booking-embedded .booking-modal-steps::before {
+        position: absolute;
+        top: 0.9rem;
+        right: 10%;
+        left: 10%;
+        z-index: 0;
+        height: 1px;
+        background: rgba(255, 255, 255, 0.22);
+        content: '';
+      }
+      .booking-embedded .booking-modal-step {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.35rem;
+        color: rgba(255, 255, 255, 0.58);
+        font-size: 0.62rem;
+        font-weight: 650;
+        text-align: center;
+      }
+      .booking-embedded .booking-modal-step-icon {
+        display: grid;
+        width: 1.85rem;
+        height: 1.85rem;
+        place-items: center;
+        border: 1px solid rgba(255, 255, 255, 0.24);
+        border-radius: 0.68rem;
+        background: #195b9e;
+        box-shadow: 0 0 0 4px #1671d6;
+        font-size: 0.95rem;
+        transition:
+          transform 180ms ease,
+          background 180ms ease,
+          color 180ms ease;
+      }
+      .booking-embedded .booking-modal-step.is-current {
+        color: white;
+      }
+      .booking-embedded .booking-modal-step.is-current .booking-modal-step-icon {
+        border-color: rgba(255, 255, 255, 0.7);
+        background: white;
+        box-shadow:
+          0 0 0 4px #1671d6,
+          0 0 0 7px rgba(186, 224, 255, 0.24);
+        color: #0757aa;
+        transform: translateY(-2px);
+      }
+      .booking-embedded .booking-modal-step.is-complete {
+        color: rgba(231, 247, 255, 0.9);
+      }
+      .booking-embedded .booking-modal-step.is-complete .booking-modal-step-icon {
+        border-color: rgba(190, 247, 224, 0.45);
+        background: #08755f;
+        color: white;
+      }
+      .booking-embedded .booking-selection-card {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr);
+        align-items: center;
+        gap: 0.65rem;
+        margin-top: 1rem;
+        padding: 0.75rem;
+        border: 1px solid rgba(213, 238, 255, 0.24);
+        border-radius: 1rem;
+        background: rgba(4, 37, 76, 0.3);
+        box-shadow: 0 1px 0 rgba(255, 255, 255, 0.1) inset;
+      }
+      .booking-embedded .booking-selection-item {
+        display: flex;
+        min-width: 0;
+        align-items: center;
+        gap: 0.55rem;
+      }
+      .booking-embedded .booking-selection-item > .material-icons-round {
+        display: grid;
+        width: 1.9rem;
+        height: 1.9rem;
+        flex: 0 0 auto;
+        place-items: center;
+        border-radius: 0.65rem;
+        background: rgba(255, 255, 255, 0.14);
+        color: #c3e4ff;
+        font-size: 1rem;
+      }
+      .booking-embedded .booking-selection-item div {
+        min-width: 0;
+      }
+      .booking-embedded .booking-selection-label {
+        display: block;
+        margin-bottom: 0.08rem;
+        color: rgba(228, 243, 255, 0.63);
+        font-size: 0.58rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+      .booking-embedded .booking-selection-item strong {
+        display: block;
+        overflow: hidden;
+        color: white;
+        font-size: 0.75rem;
+        font-weight: 650;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .booking-embedded .booking-selection-time {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-variant-numeric: tabular-nums;
+      }
+      .booking-embedded .booking-selection-divider {
+        width: 1px;
+        height: 2.4rem;
+        background: rgba(219, 238, 255, 0.2);
+      }
       @media (prefers-reduced-motion: reduce) {
         .booking-embedded * {
           scroll-behavior: auto !important;
+        }
+      }
+      @media (max-width: 390px) {
+        .booking-embedded .booking-modal-step-label {
+          font-size: 0.55rem;
+        }
+        .booking-embedded .booking-selection-card {
+          gap: 0.45rem;
+          padding: 0.65rem;
+        }
+        .booking-embedded .booking-selection-item strong {
+          font-size: 0.68rem;
         }
       }
     `,
@@ -324,6 +506,13 @@ export class BookingComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
   readonly state = inject(BookingStateService);
+  readonly formatTime24 = formatTime24;
+  readonly bookingSteps = [
+    { value: 1, label: 'Servicio', icon: 'spa' },
+    { value: 2, label: 'Horario', icon: 'schedule' },
+    { value: 3, label: 'Datos', icon: 'person' },
+    { value: 4, label: 'Listo', icon: 'task_alt' },
+  ];
 
   // ── Idempotency ────────────────────────────────────────────────────────
   private reservationAttempt: IdempotencyAttempt | null = null;
@@ -352,14 +541,6 @@ export class BookingComponent implements OnInit, OnDestroy {
 
   // ── Computed ───────────────────────────────────────────────────────────
   readonly isCustomerAuthenticated = computed(() => this.auth.isCustomerUnlocked());
-
-  readonly canProceed = computed(() => {
-    const s = this.state.step();
-    if (s === 1) return !!this.state.selectedService();
-    if (s === 2) return !!this.state.selectedSlot();
-    if (s === 3) return this.bookingFormValid() && this.isCustomerAuthenticated();
-    return false;
-  });
 
   readonly nextLabel = computed(() => {
     const s = this.state.step();
@@ -537,9 +718,17 @@ export class BookingComponent implements OnInit, OnDestroy {
 
   handleNext(): void {
     const s = this.state.step();
-    if (s === 1 && this.state.selectedService()) {
+    if (s === 1) {
+      if (!this.state.selectedService()) {
+        this.toast.show('Selecciona un servicio para continuar.', 'default');
+        return;
+      }
       this.goToStep(2);
-    } else if (s === 2 && this.state.selectedSlot()) {
+    } else if (s === 2) {
+      if (!this.state.selectedSlot()) {
+        this.toast.show('Elige un horario disponible para continuar.', 'default');
+        return;
+      }
       if (!this.isCustomerAuthenticated()) {
         this.toast.error('Debes iniciar sesión para reservar. Redirigiendo...');
         this.goToCustomerAuth();
@@ -575,6 +764,7 @@ export class BookingComponent implements OnInit, OnDestroy {
     this.bookingForm.markAllAsTouched();
     if (this.bookingForm.invalid || !this.state.selectedSlot() || !this.state.selectedService()) {
       this.state.submitAttempted.set(true);
+      this.toast.error(this.missingBookingInformationMessage());
       return;
     }
 
@@ -623,6 +813,18 @@ export class BookingComponent implements OnInit, OnDestroy {
           this.state.submitting.set(false);
         },
       });
+  }
+
+  private missingBookingInformationMessage(): string {
+    const missing: string[] = [];
+    if (!this.state.selectedService()) missing.push('servicio');
+    if (!this.state.selectedSlot()) missing.push('horario');
+    if (this.bookingForm.controls.cliente.invalid) missing.push('nombre');
+    if (this.bookingForm.controls.telefono.invalid) missing.push('teléfono');
+    if (this.bookingForm.controls.dataConsent.invalid) missing.push('aceptación de la política de privacidad');
+    return missing.length
+      ? `Completa la información obligatoria: ${missing.join(', ')}.`
+      : 'Revisa la información de tu reserva antes de continuar.';
   }
 
   // ── Payment ───────────────────────────────────────────────────────────

@@ -44,6 +44,11 @@ function rand(len: number) {
   return Math.floor(Math.random() * len);
 }
 
+function isInternalDashboardNavigation(fromUrl: string, toUrl: string): boolean {
+  const dashboardPaths = ['/usuario/dashboard', '/propietario/dashboard'];
+  return dashboardPaths.some(path => fromUrl.startsWith(path) && toUrl.startsWith(path));
+}
+
 @Component({
   selector: 'app-root',
   imports: [RouterOutlet, ToastComponent, AccountMenuComponent],
@@ -58,6 +63,7 @@ export class AppComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly toast = inject(ToastService);
   private readonly seo = inject(SeoService);
+  private readonly suppressedPageAnimations = new Set<number>();
   protected readonly themeService = inject(ThemeService);
   protected readonly online = this.offlineService.online;
   private busy = false;
@@ -135,6 +141,11 @@ export class AppComponent implements OnInit {
         const el = this.pageHost.nativeElement;
 
         if (event instanceof NavigationStart && hasInitialNavigationCompleted && !this.busy) {
+          if (isInternalDashboardNavigation(this.router.url, event.url)) {
+            this.suppressedPageAnimations.add(event.id);
+            return;
+          }
+
           this.busy = true;
           const i = rand(EXIT.length);
           void loadGsap()
@@ -147,6 +158,10 @@ export class AppComponent implements OnInit {
         }
 
         if (event instanceof NavigationEnd) {
+          if (this.suppressedPageAnimations.delete(event.id)) {
+            return;
+          }
+
           if (!hasInitialNavigationCompleted) {
             hasInitialNavigationCompleted = true;
             return;

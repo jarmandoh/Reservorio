@@ -136,9 +136,21 @@ function createIdempotencyDb() {
       return { rows: [], rowCount: payment ? 1 : 0 };
     }
 
-    if (text.startsWith('INSERT INTO reservations')) {
-      const row = { id: state.reservations.length + 1, business_id: values[0], franja: values[1] };
-      state.reservations.push(row);
+    if (text.startsWith("UPDATE reservations SET disponibilidad = 'Reservado'")) {
+      const row = state.reservations.find(
+        reservation =>
+          reservation.business_id === values[0] &&
+          reservation.franja === values[1] &&
+          reservation.disponibilidad === 'Disponible'
+      );
+      if (!row) return { rows: [], rowCount: 0 };
+      Object.assign(row, {
+        disponibilidad: 'Reservado',
+        cliente: values[2],
+        telefono: values[3],
+        servicio: values[4],
+        notas: values[5],
+      });
       return { rows: [{ id: row.id }], rowCount: 1 };
     }
     if (text.startsWith('SELECT id FROM businesses')) return { rows: [{ id: values[0] }], rowCount: 1 };

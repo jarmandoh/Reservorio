@@ -1,4 +1,4 @@
-import { Component, inject, output } from '@angular/core';
+import { Component, inject, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { BookingStateService } from '../booking-state.service';
 import { formatTime24 } from '../../../core/config/time';
@@ -33,7 +33,7 @@ import { formatTime24 } from '../../../core/config/time';
       <!-- Loading skeletons -->
       @if (state.loading()) {
         <div class="grid grid-cols-3 gap-2" role="status" aria-live="polite" aria-label="Cargando horarios">
-          @for (i of [1,2,3,4,5,6,7,8,9]; track i) {
+          @for (i of [1, 2, 3, 4, 5, 6, 7, 8, 9]; track i) {
             <div class="skeleton h-12 rounded-xl"></div>
           }
         </div>
@@ -76,7 +76,9 @@ import { formatTime24 } from '../../../core/config/time';
                     [class.hover:bg-brand-soft-high]="state.selectedSlot()?._rowIndex !== row._rowIndex"
                     [attr.aria-pressed]="state.selectedSlot()?._rowIndex === row._rowIndex"
                     (click)="state.selectedSlot.set(row)"
-                  >{{ formatTime24(row.franja) }}</button>
+                  >
+                    {{ formatTime24(row.franja) }}
+                  </button>
                 }
               }
             </div>
@@ -110,7 +112,7 @@ import { formatTime24 } from '../../../core/config/time';
         </div>
 
         <!-- Selected slot confirmation card -->
-        @if (state.selectedSlot()) {
+        @if (state.selectedSlot() && showSelectedSlotSummary()) {
           <div class="rounded-2xl border border-primary/20 bg-brand-soft-high p-4">
             <p class="section-label">Horario seleccionado</p>
             <div class="flex items-center gap-3 mt-2">
@@ -118,7 +120,9 @@ import { formatTime24 } from '../../../core/config/time';
                 <span class="material-icons-round text-[1.1rem]">schedule</span>
               </div>
               <div>
-                <p class="font-display text-lg font-semibold text-on-surface">{{ formatTime24(state.selectedSlot()!.franja) }}</p>
+                <p class="font-display text-lg font-semibold text-on-surface">
+                  {{ formatTime24(state.selectedSlot()!.franja) }}
+                </p>
                 <p class="text-sm text-on-surface-variant">Listo para continuar con tus datos</p>
               </div>
             </div>
@@ -134,15 +138,22 @@ import { formatTime24 } from '../../../core/config/time';
 export class BookingStep2SlotComponent {
   readonly state = inject(BookingStateService);
   readonly formatTime24 = formatTime24;
+  readonly showSelectedSlotSummary = input(true);
 
   readonly changeService = output<void>();
   readonly retry = output<void>();
 
   onDropdownSelect(event: Event): void {
     const value = (event.target as HTMLSelectElement).value;
-    if (!value) { this.state.selectedSlot.set(null); return; }
+    if (!value) {
+      this.state.selectedSlot.set(null);
+      return;
+    }
     const row = this.state.reservations().find(r => String(r._rowIndex) === value);
-    if (!row || this.state.isTaken(row)) { this.state.selectedSlot.set(null); return; }
+    if (!row || this.state.isTaken(row)) {
+      this.state.selectedSlot.set(null);
+      return;
+    }
     this.state.selectedSlot.set(row);
   }
 }

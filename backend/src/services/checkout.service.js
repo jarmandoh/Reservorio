@@ -51,9 +51,13 @@ async function checkoutForBusiness(businessId, payload = {}, idempotencyKey) {
     const { rows: businessRows } = await client.query('SELECT id FROM businesses WHERE id = $1', [data.businessId]);
     if (!businessRows.length) throw Object.assign(new Error('Negocio no encontrado'), { status: 404 });
 
+    // La tabla reservations contiene las franjas publicadas por el negocio.
+    // Reclamar la fila disponible en vez de insertar otra evita duplicar una
+    // franja existente y hace que la condición de carrera sea atómica.
     const { rows: reservationRows } = await client.query(
-      `INSERT INTO reservations (business_id, franja, disponibilidad, cliente, telefono, servicio, notas)
-       VALUES ($1, $2, 'Reservado', $3, $4, $5, $6)
+      `UPDATE reservations
+       SET disponibilidad = 'Reservado', cliente = $3, telefono = $4, servicio = $5, notas = $6, updated_at = now()
+       WHERE business_id = $1 AND franja = $2 AND disponibilidad = 'Disponible'
        RETURNING id`,
       [
         data.businessId,
@@ -65,7 +69,7 @@ async function checkoutForBusiness(businessId, payload = {}, idempotencyKey) {
       ]
     );
     const actualReservationId = reservationRows[0]?.id;
-    if (!actualReservationId) throw new Error('No se pudo recuperar la reserva creada');
+    if (!actualReservationId) throw Object.assign(new Error('Franja no disponible'), { status: 409 });
 
     let customerId = data.customerId;
     if (customerId) {

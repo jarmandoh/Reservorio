@@ -24,7 +24,9 @@
               <span class="text-sm font-medium text-on-surface truncate">{{ review.businessName }}</span>
             </div>
             <p class="text-sm text-on-surface">{{ review.review || 'Reseña sin texto.' }}</p>
-            <p class="text-xs text-on-surface-variant mt-1">{{ review.createdAt | date: 'short' }}</p>
+            <time [attr.datetime]="review.createdAt" class="text-xs text-on-surface-variant mt-1 block">{{
+              formatDateTime(review.createdAt)
+            }}</time>
           </div>
           <button
             class="btn-danger btn-sm gap-1 flex-shrink-0"

@@ -11,6 +11,8 @@ import { ToastService } from '../../core/services/toast.service';
 import { RealtimeService } from '../../core/services/realtime.service';
 import { BadgeComponent } from '../../shared/components/badge/badge.component';
 import { DEFAULT_CURRENCY, formatCurrency } from '../../core/config/currency';
+import { formatCalendarDate } from '../../core/config/date-time';
+import { formatTime24 } from '../../core/config/time';
 import { isAllowedCheckoutRedirect } from '../../core/config/checkout-url';
 import { IdempotencyAttempt, clearIdempotencyAttempt, idempotencyAttempt } from '../../core/config/idempotency-key';
 import {
@@ -290,7 +292,10 @@ type BusinessAdminTab = 'analytics' | 'reservas' | 'clientes' | 'servicios' | 'p
                         <div class="flex items-center justify-between gap-3">
                           <div>
                             <p class="font-medium">{{ booking.serviceId || 'Servicio' }}</p>
-                            <p class="text-xs text-on-surface-variant">{{ booking.date }} · {{ booking.slot }}</p>
+                            <p class="text-xs text-on-surface-variant">
+                              <time [attr.datetime]="booking.date">{{ formatCalendarDate(booking.date) }}</time> ·
+                              <span class="font-mono tabular-nums">{{ formatTime24(booking.slot) }}</span>
+                            </p>
                           </div>
                           <div class="flex flex-col items-end gap-1.5">
                             <span class="badge" [ngClass]="bookingOverallStateClass(booking.id)">
@@ -1096,6 +1101,8 @@ export class BusinessAdminComponent implements OnInit, OnDestroy {
   private realtime = inject(RealtimeService);
   private readonly destroyRef = inject(DestroyRef);
   readonly formatCurrency = formatCurrency;
+  readonly formatCalendarDate = formatCalendarDate;
+  readonly formatTime24 = formatTime24;
 
   readonly tabs = computed(() => {
     const all: { id: BusinessAdminTab; label: string; icon: string }[] = [

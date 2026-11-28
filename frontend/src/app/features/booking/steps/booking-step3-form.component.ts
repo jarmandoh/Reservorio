@@ -35,42 +35,52 @@ import { formatTime24 } from '../../../core/config/time';
         <!-- Trust badges -->
         <div class="flex flex-wrap gap-2">
           @if (verified()) {
-            <span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-700">
+            <span
+              class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-700"
+            >
               <span class="material-icons-round text-[12px]">verified</span>Negocio verificado
             </span>
           }
-          <span class="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2.5 py-1 text-[10px] font-semibold text-sky-700">
+          <span
+            class="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2.5 py-1 text-[10px] font-semibold text-sky-700"
+          >
             <span class="material-icons-round text-[12px]">security</span>Pago seguro
           </span>
           @if (reviewCount() > 0) {
-            <span class="inline-flex items-center gap-1 rounded-full bg-violet-50 px-2.5 py-1 text-[10px] font-semibold text-violet-700">
+            <span
+              class="inline-flex items-center gap-1 rounded-full bg-violet-50 px-2.5 py-1 text-[10px] font-semibold text-violet-700"
+            >
               <span class="material-icons-round text-[12px]">star</span>
               {{ reviewCount() }} reseña{{ reviewCount() === 1 ? '' : 's' }}
             </span>
           }
         </div>
 
-        <!-- Booking summary (service + slot) -->
-        <div class="grid gap-3">
-          <div class="rounded-2xl border border-outline-variant bg-white p-4">
-            <div class="flex items-start justify-between gap-3">
-              <div>
-                <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">Servicio</p>
-                <p class="mt-1 font-display text-lg font-semibold text-on-surface">{{ state.selectedService() }}</p>
+        @if (showBookingSummary()) {
+          <!-- Booking summary (service + slot) -->
+          <div class="grid gap-3">
+            <div class="rounded-2xl border border-outline-variant bg-white p-4">
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">Servicio</p>
+                  <p class="mt-1 font-display text-lg font-semibold text-on-surface">{{ state.selectedService() }}</p>
+                </div>
+                <button type="button" class="btn-tertiary btn-sm" (click)="editService.emit()">Editar</button>
               </div>
-              <button type="button" class="btn-tertiary btn-sm" (click)="editService.emit()">Editar</button>
+            </div>
+            <div class="rounded-2xl border border-outline-variant bg-white p-4">
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">Horario</p>
+                  <p class="mt-1 font-display text-lg font-semibold text-on-surface">
+                    {{ formatTime24(state.selectedSlot()?.franja) }}
+                  </p>
+                </div>
+                <button type="button" class="btn-tertiary btn-sm" (click)="editSlot.emit()">Editar</button>
+              </div>
             </div>
           </div>
-          <div class="rounded-2xl border border-outline-variant bg-white p-4">
-            <div class="flex items-start justify-between gap-3">
-              <div>
-                <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-outline">Horario</p>
-                <p class="mt-1 font-display text-lg font-semibold text-on-surface">{{ formatTime24(state.selectedSlot()?.franja) }}</p>
-              </div>
-              <button type="button" class="btn-tertiary btn-sm" (click)="editSlot.emit()">Editar</button>
-            </div>
-          </div>
-        </div>
+        }
 
         <!-- Auth wall (unauthenticated) -->
         @if (!isAuthenticated()) {
@@ -79,7 +89,9 @@ import { formatTime24 } from '../../../core/config/time';
               <span class="material-icons-round text-amber-600">lock</span>
               <div class="flex-1">
                 <p class="text-sm font-semibold text-amber-900">Debes estar registrado para reservar</p>
-                <p class="text-xs text-amber-700 mt-1">Inicia sesión o crea tu cuenta para confirmar esta reserva. Tus datos se precargarán.</p>
+                <p class="text-xs text-amber-700 mt-1">
+                  Inicia sesión o crea tu cuenta para confirmar esta reserva. Tus datos se precargarán.
+                </p>
               </div>
             </div>
             <div class="flex flex-col sm:flex-row gap-2">
@@ -96,16 +108,26 @@ import { formatTime24 } from '../../../core/config/time';
           (ngSubmit)="submitForm.emit()"
           [attr.aria-describedby]="state.submitAttempted() && form().invalid ? 'booking-form-error' : null"
         >
+          <p class="text-xs text-on-surface-variant">
+            <span class="font-bold text-error" aria-hidden="true">*</span> Campos obligatorios
+          </p>
           <!-- Global error banner -->
           @if (state.submitAttempted() && form().invalid) {
-            <p id="booking-form-error" class="rounded-xl bg-error-container px-3 py-2 text-sm text-error-on-container" role="alert" aria-live="assertive">
+            <p
+              id="booking-form-error"
+              class="rounded-xl bg-error-container px-3 py-2 text-sm text-error-on-container"
+              role="alert"
+              aria-live="assertive"
+            >
               Revisa los campos señalados antes de continuar.
             </p>
           }
 
           <!-- Nombre -->
           <div>
-            <label class="form-label" for="cliente">Tu nombre</label>
+            <label class="form-label" for="cliente"
+              >Tu nombre <span class="text-error" aria-hidden="true">*</span></label
+            >
             <div class="icon-field">
               <span class="material-icons-round" aria-hidden="true">person</span>
               <input
@@ -121,13 +143,17 @@ import { formatTime24 } from '../../../core/config/time';
               />
             </div>
             @if (fieldInvalid('cliente')) {
-              <p id="cliente-error" class="mt-1 text-xs text-error" role="alert">Escribe tu nombre (mínimo 2 caracteres).</p>
+              <p id="cliente-error" class="mt-1 text-xs text-error" role="alert">
+                Escribe tu nombre (mínimo 2 caracteres).
+              </p>
             }
           </div>
 
           <!-- Teléfono -->
           <div>
-            <label class="form-label" for="telefono">Tu teléfono</label>
+            <label class="form-label" for="telefono"
+              >Tu teléfono <span class="text-error" aria-hidden="true">*</span></label
+            >
             <div class="icon-field">
               <span class="material-icons-round" aria-hidden="true">phone</span>
               <input
@@ -143,13 +169,17 @@ import { formatTime24 } from '../../../core/config/time';
               />
             </div>
             @if (fieldInvalid('telefono')) {
-              <p id="telefono-error" class="mt-1 text-xs text-error" role="alert">Introduce un teléfono válido (7-15 dígitos).</p>
+              <p id="telefono-error" class="mt-1 text-xs text-error" role="alert">
+                Introduce un teléfono válido (7-15 dígitos).
+              </p>
             }
           </div>
 
           <!-- Notas (optional) -->
           <div>
-            <label class="form-label" for="notas">Notas adicionales <span class="text-outline font-normal">(opcional)</span></label>
+            <label class="form-label" for="notas"
+              >Notas adicionales <span class="text-outline font-normal">(opcional)</span></label
+            >
             <textarea
               id="notas"
               class="form-input min-h-[80px] resize-none"
@@ -172,13 +202,16 @@ import { formatTime24 } from '../../../core/config/time';
               [attr.aria-describedby]="fieldInvalid('dataConsent') ? 'data-consent-error' : null"
             />
             <span class="flex-1 text-xs leading-5 text-on-surface-variant">
-              He leído y acepto la
+              <span class="font-semibold text-on-surface">Acepto la</span>
               <a routerLink="/privacy" class="font-semibold text-primary underline">política de privacidad</a>
+              <span class="font-bold text-error" aria-hidden="true">*</span>
               y el tratamiento de mis datos para gestionar esta reserva.
             </span>
           </label>
           @if (fieldInvalid('dataConsent')) {
-            <p id="data-consent-error" class="mt-1 text-xs text-error" role="alert">Debes aceptar la política de privacidad.</p>
+            <p id="data-consent-error" class="mt-1 text-xs text-error" role="alert">
+              Debes aceptar la política de privacidad.
+            </p>
           }
 
           <!-- Hint -->
@@ -200,6 +233,7 @@ export class BookingStep3FormComponent {
   readonly verified = input(false);
   readonly reviewCount = input(0);
   readonly cancellationPolicy = input<string | undefined>(undefined);
+  readonly showBookingSummary = input(true);
 
   // Outputs
   readonly editService = output<void>();

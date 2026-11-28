@@ -4,6 +4,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { formatCurrency } from '../../core/config/currency';
+import { formatCalendarDate } from '../../core/config/date-time';
 import { formatTime24 } from '../../core/config/time';
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
@@ -18,7 +19,9 @@ type HistoryStatusFilter = 'all' | 'pending' | 'confirmed' | 'completed' | 'canc
   template: `
     <div class="space-y-6">
       <header class="flex flex-col gap-2 pb-2 border-b border-outline-variant/20">
-        <h1 class="font-display text-2xl sm:text-3xl font-bold text-on-surface tracking-tight">Historial de reservas</h1>
+        <h1 class="font-display text-2xl sm:text-3xl font-bold text-on-surface tracking-tight">
+          Historial de reservas
+        </h1>
         <p class="text-sm text-on-surface-variant">Consulta el registro de tus citas pasadas y estados de pago.</p>
       </header>
 
@@ -70,8 +73,13 @@ type HistoryStatusFilter = 'all' | 'pending' | 'confirmed' | 'completed' | 'canc
         </div>
 
         @if (filteredBookings().length === 0) {
-          <section class="card p-8 sm:p-12 border border-outline-variant/30 flex flex-col items-center gap-4 text-center">
-            <div class="h-16 w-16 rounded-3xl bg-surface-low text-on-surface-variant flex items-center justify-center mb-1" aria-hidden="true">
+          <section
+            class="card p-8 sm:p-12 border border-outline-variant/30 flex flex-col items-center gap-4 text-center"
+          >
+            <div
+              class="h-16 w-16 rounded-3xl bg-surface-low text-on-surface-variant flex items-center justify-center mb-1"
+              aria-hidden="true"
+            >
               <span class="material-icons-round text-3xl">event_busy</span>
             </div>
             @if (bookings().length === 0) {
@@ -81,7 +89,10 @@ type HistoryStatusFilter = 'all' | 'pending' | 'confirmed' | 'completed' | 'canc
                   Cuando reserves citas en cualquier negocio, podrás ver aquí el comprobante y repetir el agendamiento.
                 </p>
               </div>
-              <a routerLink="/" class="btn-primary min-h-[44px] px-5 py-2.5 inline-flex items-center gap-2 text-sm font-semibold mt-2">
+              <a
+                routerLink="/"
+                class="btn-primary min-h-[44px] px-5 py-2.5 inline-flex items-center gap-2 text-sm font-semibold mt-2"
+              >
                 <span class="material-icons-round text-base" aria-hidden="true">storefront</span>
                 Explorar negocios
               </a>
@@ -104,12 +115,16 @@ type HistoryStatusFilter = 'all' | 'pending' | 'confirmed' | 'completed' | 'canc
         } @else {
           <section class="space-y-3.5" aria-label="Lista de reservas">
             @for (b of filteredBookings(); track b.id) {
-              <article class="card p-4 sm:p-5 border border-outline-variant/30 shadow-xs hover:border-primary/40 transition-colors">
+              <article
+                class="card p-4 sm:p-5 border border-outline-variant/30 shadow-xs hover:border-primary/40 transition-colors"
+              >
                 <div class="flex flex-wrap items-start justify-between gap-3">
                   <div class="min-w-0 flex-1">
                     <div class="flex items-center gap-2">
                       <span class="material-icons-round text-primary text-base" aria-hidden="true">store</span>
-                      <h3 class="font-display font-bold text-base text-on-surface truncate">{{ b.businessName || 'Negocio' }}</h3>
+                      <h3 class="font-display font-bold text-base text-on-surface truncate">
+                        {{ b.businessName || 'Negocio' }}
+                      </h3>
                     </div>
                     <p class="text-sm font-semibold text-primary mt-1 flex items-center gap-1.5">
                       <span class="material-icons-round text-base" aria-hidden="true">spa</span>
@@ -117,17 +132,24 @@ type HistoryStatusFilter = 'all' | 'pending' | 'confirmed' | 'completed' | 'canc
                     </p>
                     <p class="text-sm text-on-surface-variant mt-1 flex items-center gap-2">
                       <span class="material-icons-round text-base opacity-70" aria-hidden="true">schedule</span>
-                      <span>{{ formatDate(b.date) }} · {{ formatTime24(b.slot) }}</span>
+                      <time [attr.datetime]="b.date" class="font-medium">{{ formatCalendarDate(b.date) }}</time>
+                      <span aria-hidden="true">·</span>
+                      <span class="font-mono tabular-nums">{{ formatTime24(b.slot) }}</span>
                     </p>
                   </div>
-                  <span class="badge inline-flex items-center gap-1.5 px-3 py-1 font-semibold text-xs rounded-full" [ngClass]="statusCss(b.status)">
+                  <span
+                    class="badge inline-flex items-center gap-1.5 px-3 py-1 font-semibold text-xs rounded-full"
+                    [ngClass]="statusCss(b.status)"
+                  >
                     <span class="material-icons-round text-sm" aria-hidden="true">{{ statusIcon(b.status) }}</span>
                     <span>{{ statusLabel(b.status) }}</span>
                   </span>
                 </div>
 
                 @if (b.paymentStatus || b.paymentAmount != null) {
-                  <div class="flex flex-wrap items-center gap-2 mt-3.5 pt-3 border-t border-outline-variant/20 rounded-xl bg-surface-low px-3 py-2 text-xs sm:text-sm">
+                  <div
+                    class="flex flex-wrap items-center gap-2 mt-3.5 pt-3 border-t border-outline-variant/20 rounded-xl bg-surface-low px-3 py-2 text-xs sm:text-sm"
+                  >
                     <span class="material-icons-round text-base text-primary" aria-hidden="true">payments</span>
                     <span class="font-medium">{{ paymentLabel(b) }}</span>
                   </div>
@@ -155,7 +177,10 @@ type HistoryStatusFilter = 'all' | 'pending' | 'confirmed' | 'completed' | 'canc
 
           <!-- Paginación accesible -->
           @if (total() != null && total()! > pageSize()) {
-            <nav class="flex items-center justify-between gap-3 pt-4 border-t border-outline-variant/30" aria-label="Paginación del historial">
+            <nav
+              class="flex items-center justify-between gap-3 pt-4 border-t border-outline-variant/30"
+              aria-label="Paginación del historial"
+            >
               <button
                 class="btn-tertiary min-h-[44px] px-4 py-2 flex items-center gap-1.5 text-sm font-semibold rounded-xl"
                 type="button"
@@ -295,11 +320,7 @@ export class CustomerHistoryComponent implements OnInit {
     this.changingPage.set(false);
   }
 
-  formatDate(date: string): string {
-    if (!date) return '';
-    const [y, m, d] = date.split('-');
-    return y && m && d ? `${d}/${m}/${y}` : date;
-  }
+  readonly formatCalendarDate = formatCalendarDate;
 
   formatTime24(slot: string): string {
     return formatTime24(slot);

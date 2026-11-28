@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { Payment, PaymentStatus } from '../../core/models/reservation.model';
+import { formatDateTime } from '../../core/config/date-time';
 
 @Component({
   selector: 'app-admin-payments',
@@ -8,6 +9,7 @@ import { Payment, PaymentStatus } from '../../core/models/reservation.model';
   templateUrl: './admin-payments.component.html',
 })
 export class AdminPaymentsComponent {
+  readonly formatDateTime = formatDateTime;
   @Input() payments: Payment[] = [];
   @Input() revenue = 0;
   @Input() filter: PaymentStatus | '' = '';

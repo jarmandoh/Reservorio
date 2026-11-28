@@ -25,6 +25,7 @@ describe('checkout.service idempotency', () => {
     state.reservations.length = 0;
     state.bookings.length = 0;
     state.notifications.length = 0;
+    state.reservations.push({ id: 1, business_id: 'neg1', franja: '10:00', disponibilidad: 'Disponible' });
     db.connect.mockClear();
   });
 
@@ -54,5 +55,15 @@ describe('checkout.service idempotency', () => {
 
     expect(result).toMatchObject({ ok: false, status: 400 });
     expect(db.connect).toHaveBeenCalledTimes(before);
+  });
+
+  test('rechaza una franja que ya no está disponible sin crear otra fila', async () => {
+    state.reservations[0].disponibilidad = 'Reservado';
+
+    const result = await checkoutForBusiness('neg1', payload, 'reservation-attempt-unavailable');
+
+    expect(result).toMatchObject({ ok: false, status: 409, message: 'Franja no disponible' });
+    expect(state.reservations).toHaveLength(1);
+    expect(state.bookings).toHaveLength(0);
   });
 });

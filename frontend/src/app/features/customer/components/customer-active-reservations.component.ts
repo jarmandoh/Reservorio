@@ -1,6 +1,7 @@
 import { Component, Input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { formatCurrency } from '../../../core/config/currency';
+import { formatCalendarDate } from '../../../core/config/date-time';
 import { formatTime24 } from '../../../core/config/time';
 import { CustomerHistoryBooking } from '../../../core/models/reservation.model';
 
@@ -11,13 +12,17 @@ import { CustomerHistoryBooking } from '../../../core/models/reservation.model';
   template: `
     @if (reservations.length === 0) {
       <section class="card p-8 sm:p-12 border border-outline-variant/30 flex flex-col items-center gap-4 text-center">
-        <div class="h-16 w-16 rounded-3xl bg-primary/10 text-primary flex items-center justify-center mb-1" aria-hidden="true">
+        <div
+          class="h-16 w-16 rounded-3xl bg-primary/10 text-primary flex items-center justify-center mb-1"
+          aria-hidden="true"
+        >
           <span class="material-icons-round text-3xl">event_available</span>
         </div>
         <div>
           <h3 class="font-display text-lg sm:text-xl font-bold text-on-surface">No tienes reservas pendientes</h3>
           <p class="text-sm text-on-surface-variant max-w-md mt-1.5 leading-relaxed">
-            Cuando agendes una cita con cualquier negocio de la plataforma, podrás consultar los detalles y horario aquí.
+            Cuando agendes una cita con cualquier negocio de la plataforma, podrás consultar los detalles y horario
+            aquí.
           </p>
         </div>
         <a
@@ -31,14 +36,21 @@ import { CustomerHistoryBooking } from '../../../core/models/reservation.model';
     } @else {
       <section class="space-y-3.5" aria-label="Listado de reservas activas">
         @for (reservation of reservations; track reservation.id) {
-          <article class="card p-4 sm:p-5 border border-outline-variant/30 shadow-xs hover:border-primary/40 transition-colors">
+          <article
+            class="card p-4 sm:p-5 border border-outline-variant/30 shadow-xs hover:border-primary/40 transition-colors"
+          >
             <div class="flex flex-wrap items-start justify-between gap-3">
               <div class="min-w-0 flex-1">
                 <div class="flex items-center gap-2">
-                  <div class="h-7 w-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0" aria-hidden="true">
+                  <div
+                    class="h-7 w-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0"
+                    aria-hidden="true"
+                  >
                     <span class="material-icons-round text-base">store</span>
                   </div>
-                  <h3 class="font-display font-bold text-base text-on-surface truncate">{{ reservation.businessName || 'Negocio' }}</h3>
+                  <h3 class="font-display font-bold text-base text-on-surface truncate">
+                    {{ reservation.businessName || 'Negocio' }}
+                  </h3>
                 </div>
 
                 <div class="mt-2.5 space-y-1.5">
@@ -48,7 +60,9 @@ import { CustomerHistoryBooking } from '../../../core/models/reservation.model';
                   </p>
                   <p class="text-sm text-on-surface-variant flex items-center gap-2">
                     <span class="material-icons-round text-base opacity-70" aria-hidden="true">calendar_today</span>
-                    <span class="font-medium text-on-surface">{{ formatDate(reservation.date) }}</span>
+                    <time [attr.datetime]="reservation.date" class="font-medium text-on-surface">{{
+                      formatCalendarDate(reservation.date)
+                    }}</time>
                     <span>·</span>
                     <span class="material-icons-round text-base opacity-70" aria-hidden="true">schedule</span>
                     <span class="font-medium text-on-surface">{{ formatSlot(reservation.slot) }}</span>
@@ -57,18 +71,27 @@ import { CustomerHistoryBooking } from '../../../core/models/reservation.model';
               </div>
 
               <!-- Badge con estado e icono accesible -->
-              <span class="badge inline-flex items-center gap-1.5 px-3 py-1 font-semibold text-xs rounded-full" [class]="statusCss(reservation.status)">
-                <span class="material-icons-round text-sm" aria-hidden="true">{{ statusIcon(reservation.status) }}</span>
+              <span
+                class="badge inline-flex items-center gap-1.5 px-3 py-1 font-semibold text-xs rounded-full"
+                [class]="statusCss(reservation.status)"
+              >
+                <span class="material-icons-round text-sm" aria-hidden="true">{{
+                  statusIcon(reservation.status)
+                }}</span>
                 <span>{{ statusLabel(reservation.status) }}</span>
               </span>
             </div>
 
             <!-- Importe o estado del pago si aplica -->
             @if (reservation.paymentAmount != null) {
-              <div class="flex items-center gap-2 mt-3.5 pt-3 border-t border-outline-variant/20 text-xs sm:text-sm text-on-surface-variant">
+              <div
+                class="flex items-center gap-2 mt-3.5 pt-3 border-t border-outline-variant/20 text-xs sm:text-sm text-on-surface-variant"
+              >
                 <span class="material-icons-round text-base text-primary" aria-hidden="true">payments</span>
                 <span>Importe:</span>
-                <span class="font-semibold text-on-surface font-mono">{{ formatAmount(reservation.paymentAmount, reservation.paymentCurrency) }}</span>
+                <span class="font-semibold text-on-surface font-mono">{{
+                  formatAmount(reservation.paymentAmount, reservation.paymentCurrency)
+                }}</span>
                 @if (reservation.paymentStatus) {
                   <span class="text-xs px-2 py-0.5 rounded-md bg-surface-low font-medium">
                     {{ reservation.paymentStatus === 'paid' ? 'Pagado' : 'Pago al asistir' }}
@@ -103,11 +126,7 @@ import { CustomerHistoryBooking } from '../../../core/models/reservation.model';
 export class CustomerActiveReservationsComponent {
   @Input({ required: true }) reservations: CustomerHistoryBooking[] = [];
 
-  formatDate(date: string): string {
-    if (!date) return '';
-    const [y, m, d] = date.split('-');
-    return y && m && d ? `${d}/${m}/${y}` : date;
-  }
+  readonly formatCalendarDate = formatCalendarDate;
 
   formatSlot(slot: string): string {
     return formatTime24(slot);

@@ -55,7 +55,11 @@
         <tbody>
           @for (payment of filteredPayments(); track payment.id) {
             <tr class="border-b border-outline-variant/20 hover:bg-surface-low transition">
-              <td class="px-5 py-3.5">{{ payment.createdAt | date: 'short' }}</td>
+              <td class="px-5 py-3.5">
+                <time [attr.datetime]="payment.createdAt" class="tabular-nums">{{
+                  formatDateTime(payment.createdAt)
+                }}</time>
+              </td>
               <td class="px-5 py-3.5 capitalize">{{ payment.method }}</td>
               <td class="px-5 py-3.5 font-display font-semibold">{{ payment.amount }} €</td>
               <td class="px-5 py-3.5">
@@ -101,7 +105,7 @@
             }}</span>
           </div>
           <p class="text-sm text-on-surface-variant capitalize">
-            {{ payment.method }} · {{ payment.createdAt | date: 'short' }}
+            {{ payment.method }} · {{ formatDateTime(payment.createdAt) }}
           </p>
           @if (payment.status === 'pending') {
             <button
